@@ -4,6 +4,7 @@ import (
 	"bitbucket.org/ctessum/sparse"
 	"fmt"
 	"math"
+	"time"
 )
 
 // Chemical mass conversions
@@ -26,8 +27,8 @@ const (
 	NtoNH4 = mwNH4 / mwN
 )
 
-//const nDaysCheckConvergence = 0.5
-const nDaysCheckConvergence = 0.05
+const nDaysCheckConvergence = 0.5
+//const nDaysCheckConvergence = 0.05
 const tolerance = 0.001
 const secondsPerDay = 1. / 3600. / 24.
 
@@ -54,6 +55,9 @@ var OutputNames = []string{"VOC", "SOA", "PrimaryPM2_5", "NH3", "pNH4",
 // of μg/s, and must only include the pollutants listed in "EmisNames".
 func (m *MetData) Run(emissions map[string]*sparse.DenseArray) (
 	outputConc map[string]*sparse.DenseArray) {
+
+	startTime := time.Now()
+	timeStepTime := time.Now()
 
 	// Emissions: all except PM2.5 go to gas phase
 	emisFlux := make(map[string]*sparse.DenseArray)
@@ -98,7 +102,9 @@ func (m *MetData) Run(emissions map[string]*sparse.DenseArray) (
 		m.setTstep() // set timestep
 		nDaysRun += m.Dt * secondsPerDay
 		nDaysSinceConvergenceCheck += m.Dt * secondsPerDay
-		fmt.Printf("马上。。。Iteration %v; timestep=%.0fs; day %.5g\n", iteration, m.Dt, nDaysRun)
+		fmt.Printf("马上。。。Iteration %v\twalltime=%v\tΔwalltime=%.2g\ttimestep=%.0fs\tday=%.3g\n",
+			iteration, time.Since(startTime).String, time.Since(timeStepTime).Seconds(), m.Dt, nDaysRun)
+		timeStepTime = time.Now()
 
 		// Add in emissions
 		for i, pol := range polNames {

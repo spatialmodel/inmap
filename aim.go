@@ -46,7 +46,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	const basedir = "/home/marshall/tessumcm/src/bitbucket.org/ctessum/aim/"
+	//const basedir = "/home/marshall/tessumcm/src/bitbucket.org/ctessum/aim/"
+	const basedir = "/home/chris/go/src/bitbucket.org/ctessum/aim/"
 	fmt.Println("Reading input data...")
 	m := aim.InitMetData(basedir+"wrf2aim/aimData.ncf", zFactor, yFactor, xFactor)
 	//	createImage(m.Ubins.Subset([]int{0, 0, 0, 0},
@@ -61,7 +62,8 @@ func main() {
 		velocity = 61.94 * 1097. / 3600.    // m/hr
 	)
 
-	var emisDir = "/home/marshall/tessumcm/GREET_spatial/output/FuelOptions_aim/" + *scenario + "/na12/"
+	//var emisDir = "/home/marshall/tessumcm/GREET_spatial/output/FuelOptions_aim/" + *scenario + "/na12/"
+	var emisDir = basedir
 
 	//	emissions := getEmissions("gasoline_na12.csv",m)
 	emissions := getEmissionsNCF(emisDir+
