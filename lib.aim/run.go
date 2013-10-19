@@ -26,8 +26,10 @@ const (
 	NtoNH4 = mwNH4 / mwN
 )
 
-const NdaysToRun = 15. // Number of days of simulation time to run
-const secondsPerDay = 1./3600./24.
+//const nDaysCheckConvergence = 0.5
+const nDaysCheckConvergence = 0.05
+const tolerance = 0.001
+const secondsPerDay = 1. / 3600. / 24.
 
 // These are the names of pollutants accepted as emissions (μg/s)
 var EmisNames = []string{"VOC", "NOx", "NH3", "SOx", "PM2_5"}
@@ -77,37 +79,33 @@ func (m *MetData) Run(emissions map[string]*sparse.DenseArray) (
 	initialConc := make([]*sparse.DenseArray, len(polNames))
 	// values at end of timestep
 	finalConc := make([]*sparse.DenseArray, len(polNames))
-	// values at end of last timestep (to calculate convergence)
+	// arrays for calculating convergence
 	oldFinalConcSum := make([]float64, len(polNames))
+	finalConcSum := make([]float64, len(polNames))
 	for i, _ := range polNames {
 		initialConc[i] = sparse.ZerosDense(m.Nz, m.Ny, m.Nx)
 		finalConc[i] = sparse.ZerosDense(m.Nz, m.Ny, m.Nx)
 	}
 
-	polsConverged := make([]bool, len(polNames)) // whether pollutant arrays have converged.
-
 	iteration := 0
 	nDaysRun := 0.
+	nDaysSinceConvergenceCheck := 0.
+	nIterationsSinceConvergenceCheck := 0
 	for {
 		iteration++
+		nIterationsSinceConvergenceCheck++
+		m.newRand()  // set new random number
+		m.setTstep() // set timestep
 		nDaysRun += m.Dt * secondsPerDay
-		fmt.Printf("马上。。。Iteration %v; day %.5g\n", iteration,nDaysRun)
+		nDaysSinceConvergenceCheck += m.Dt * secondsPerDay
+		fmt.Printf("马上。。。Iteration %v; timestep=%.0fs; day %.5g\n", iteration, m.Dt, nDaysRun)
 
 		// Add in emissions
 		for i, pol := range polNames {
 			if arr, ok := emisFlux[pol]; ok {
-				initialConc[i].AddDense(arr)
+				initialConc[i].AddDense(arr.ScaleCopy(m.Dt))
 			}
 		}
-
-		m.newRand() // set new random number
-
-		// Calculate minimum value which is to be considered nonzero
-		calcMin := max(initialConc[igOrg].Max(), initialConc[ipOrg].Max(),
-			initialConc[iPM2_5].Max(),
-			initialConc[igNH].Max(), initialConc[ipNH].Max(),
-			initialConc[igS].Max(), initialConc[ipS].Max(),
-			initialConc[igNO].Max(), initialConc[ipNO].Max()) * 1.e-6
 
 		type empty struct{}
 		sem := make(chan empty, m.Nz) // semaphore pattern
@@ -119,21 +117,19 @@ func (m *MetData) Run(emissions map[string]*sparse.DenseArray) (
 				tempconc := make([]float64, len(polNames)) // concentration holder
 				for j := 1; j < m.Ny-1; j += 1 {
 					for k := 0; k < m.Nz; k += 1 {
-						U := m.getBin(m.Ufreq, m.Ubins, k, j, i)
-						Unext := m.getBin(m.Ufreq, m.Ubins, k, j, i+1)
-						V := m.getBin(m.Vfreq, m.Vbins, k, j, i)
-						Vnext := m.getBin(m.Vfreq, m.Vbins, k, j+1, i)
-						W := m.getBin(m.Wfreq, m.Wbins, k, j, i)
-						Wnext := m.getBin(m.Wfreq, m.Wbins, k+1, j, i)
+						Uminus := m.getBin(m.Ufreq, m.Ubins, k, j, i)
+						Uplus := m.getBin(m.Ufreq, m.Ubins, k, j, i+1)
+						Vminus := m.getBin(m.Vfreq, m.Vbins, k, j, i)
+						Vplus := m.getBin(m.Vfreq, m.Vbins, k, j+1, i)
+						Wminus := m.getBin(m.Wfreq, m.Wbins, k, j, i)
+						Wplus := m.getBin(m.Wfreq, m.Wbins, k+1, j, i)
 						FillKneighborhood(d, m.verticalDiffusivity, k, j, i)
 						for q, Carr := range initialConc {
 							FillNeighborhood(c, Carr, m.Dz, k, j, i)
-							if c.belowThreshold(calcMin) {
-								continue
-							}
 							zdiff = m.DiffusiveFlux(c, d)
-							xadv, yadv, zadv = m.AdvectiveFlux(c, U, Unext,
-								V, Vnext, W, Wnext)
+							//xadv, yadv, zadv = m.AdvectiveFluxRungeKutta(
+							xadv, yadv, zadv = m.AdvectiveFluxUpwind(
+								c, Uminus, Uplus, Vminus, Vplus, Wminus, Wplus)
 
 							var gravSettling float64
 							var VOCoxidation float64
@@ -145,7 +141,7 @@ func (m *MetData) Run(emissions map[string]*sparse.DenseArray) (
 							}
 
 							tempconc[q] = Carr.Get(k, j, i) +
-								m.Dt*(xadv+yadv+zadv+gravSettling+VOCoxidation+
+								(xadv + yadv + zadv + gravSettling + VOCoxidation +
 									zdiff)
 						}
 						m.WetDeposition(tempconc, k, j, i)
@@ -162,20 +158,23 @@ func (m *MetData) Run(emissions map[string]*sparse.DenseArray) (
 		for i := 1; i < m.Nx-1; i++ { // wait for routines to finish
 			<-sem
 		}
-		timeToQuit := true
-		for q, polConverged := range polsConverged {
-			arrSum := finalConc[q].Sum()
-			if !polConverged {
-				polsConverged[q] = checkConvergence(arrSum,
-					oldFinalConcSum[q], polNames[q])
-				if !polsConverged[q] {
+		for i, arr := range finalConc {
+			finalConcSum[i] += arr.Sum()
+		}
+		if nDaysSinceConvergenceCheck > nDaysCheckConvergence {
+			timeToQuit := true
+			for q := 0; q < len(finalConcSum); q++ {
+				finalConcSum[q] /= float64(nIterationsSinceConvergenceCheck)
+				if !checkConvergence(finalConcSum[q], oldFinalConcSum[q], polNames[q]) {
 					timeToQuit = false
 				}
+				oldFinalConcSum[q] = finalConcSum[q]
 			}
-			oldFinalConcSum[q] = arrSum
-		}
-		if timeToQuit && nDaysRun > NdaysToRun {
-			break
+			nDaysSinceConvergenceCheck = 0.
+			nIterationsSinceConvergenceCheck = 0
+			if timeToQuit {
+				break
+			}
 		}
 		for q, _ := range finalConc {
 			initialConc[q] = finalConc[q].Copy()
@@ -210,7 +209,7 @@ func (m *MetData) calcEmisFlux(arr *sparse.DenseArray, scale float64) (
 		for j := 0; j < m.Ny; j++ {
 			for i := 0; i < m.Nx; i++ {
 				fluxScale := 1. / m.Dx / m.Dy /
-					m.Dz.Get(k, j, i) * m.Dt // μg/s /m/m/m * s = μg/m3
+					m.Dz.Get(k, j, i) // μg/s /m/m/m = μg/m3/s
 				emisFlux.Set(arr.Get(k, j, i)*scale*fluxScale, k, j, i)
 			}
 		}
@@ -231,7 +230,7 @@ func max(vals ...float64) float64 {
 func checkConvergence(newSum, oldSum float64, name string) bool {
 	bias := (newSum - oldSum) / oldSum
 	fmt.Printf("%v: difference = %3.2g%%\n", name, bias*100)
-	if bias > 0. || math.IsInf(bias,0) {
+	if math.Abs(bias) > tolerance || math.IsInf(bias, 0) {
 		return false
 	} else {
 		return true

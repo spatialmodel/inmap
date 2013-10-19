@@ -93,7 +93,6 @@ func InitMetData(filename string, zFactor, yFactor, xFactor int) *MetData {
 			}
 		}
 	}
-	m.setTstep()
 	// Settling velocity, m/s
 	m.vs = (rhop - rhof) * g * dp * dp / -18. / mu
 	fmt.Printf("Settling velocity: %v s\n", m.vs)
@@ -118,26 +117,26 @@ func (m *MetData) getBin(freqs, vals *sparse.DenseArray, k, j, i int) float64 {
 
 //  Set the time step using the Courant–Friedrichs–Lewy (CFL) condition.
 func (m *MetData) setTstep() {
-	const Cmax = 2.
-	Umax := m.Ubins.AbsMax()
-	Vmax := m.Vbins.AbsMax()
-	// Dz is variable, so calculate W parameter explicitly
-	Wval := 0.
-	for b := 0; b < m.nbins; b++ {
-		for k := 0; k < m.Nz; k++ {
-			for j := 0; j < m.Ny; j++ {
-				for i := 0; i < m.Nx; i++ {
-					val := math.Abs(m.Wbins.Get(b, k, j, i) /
-						m.Dz.Get(k, j, i))
-					if val > Wval {
-						Wval = val
-					}
-				}
-			}
-		}
-	}
-	m.Dt = Cmax / (Umax/m.Dx + Vmax/m.Dy + Wval) // seconds
-	fmt.Println("Timestep is: ", m.Dt, "s")
+	//m.Dt = m.Dx * 3 / 1000.
+	m.Dt = 30.
+	//	const Cmax = 1.26 * 0.75
+	//	val := 0.
+	//	// don't worry about the edges of the staggered grids.
+	//	for k := 0; k < m.Nz; k++ {
+	//		for j := 0; j < m.Ny; j++ {
+	//			for i := 0; i < m.Nx; i++ {
+	//				uval := math.Abs(m.getBin(m.Ufreq, m.Ubins,k, j, i)) / m.Dx
+	//				vval := math.Abs(m.getBin(m.Vfreq, m.Vbins,k, j, i)) / m.Dy
+	//				wval := math.Abs(m.getBin(m.Wfreq, m.Wbins,k, j, i)) /
+	//					m.Dz.Get(k, j, i)
+	//				thisval := max(uval,vval,wval)
+	//				if thisval > val {
+	//					val = thisval
+	//				}
+	//			}
+	//		}
+	//	}
+	//	m.Dt = Cmax / math.Pow(3., 0.5) / val // seconds
 }
 
 func min(v1, v2 float64) float64 {
@@ -233,6 +232,7 @@ func getWestBoundary(_, _ int) float64  { return 0. }
 
 type Neighborhood struct {
 	center, iplus, iminus, jplus, jminus, kplus, kminus float64
+	i2plus, j2plus, k2plus, i2minus, j2minus, k2minus   float64
 	Dz, Dzsquared                                       float64 // Dz varies by grid cell
 }
 
@@ -248,33 +248,63 @@ func FillNeighborhood(n *Neighborhood, A, Dz *sparse.DenseArray, k, j, i int) {
 	n.center = A.Elements[x]
 	if i == nx-1 {
 		n.iplus = getEastBoundary(k, j)
+		n.i2plus = getEastBoundary(k, j)
+	} else if i == nx-2 {
+		n.iplus = A.Elements[x+1]
+		n.i2plus = getEastBoundary(k, j)
 	} else {
 		n.iplus = A.Elements[x+1]
+		n.i2plus = A.Elements[x+2]
 	}
 	if i == 0 {
 		n.iminus = getWestBoundary(k, j)
+		n.i2minus = getWestBoundary(k, j)
+	} else if i == 1 {
+		n.iminus = A.Elements[x-1]
+		n.i2minus = getWestBoundary(k, j)
 	} else {
 		n.iminus = A.Elements[x-1]
+		n.i2minus = A.Elements[x-2]
 	}
 	if j == ny-1 {
 		n.jplus = getNorthBoundary(k, i)
+		n.j2plus = getNorthBoundary(k, i)
+	} else if j == ny-2 {
+		n.jplus = A.Elements[x+nx]
+		n.j2plus = getNorthBoundary(k, i)
 	} else {
 		n.jplus = A.Elements[x+nx]
+		n.j2plus = A.Elements[x+2*nx]
 	}
 	if j == 0 {
 		n.jminus = getSouthBoundary(k, i)
+		n.j2minus = getSouthBoundary(k, i)
+	} else if j == 1 {
+		n.jminus = A.Elements[x-nx]
+		n.j2minus = getSouthBoundary(k, i)
 	} else {
 		n.jminus = A.Elements[x-nx]
+		n.j2minus = A.Elements[x-2*nx]
 	}
 	if k == nz-1 {
 		n.kplus = getUpperBoundary(j, i)
+		n.k2plus = getUpperBoundary(j, i)
+	} else if k == nz-2 {
+		n.kplus = A.Elements[x+zStride]
+		n.k2plus = getUpperBoundary(j, i)
 	} else {
 		n.kplus = A.Elements[x+zStride]
+		n.k2plus = A.Elements[x+2*zStride]
 	}
 	if k == 0 {
 		n.kminus = getLowerBoundary(A, j, i)
+		n.k2minus = getLowerBoundary(A, j, i)
+	} else if k == 1 {
+		n.kminus = A.Elements[x-zStride]
+		n.k2minus = getLowerBoundary(A, j, i)
 	} else {
 		n.kminus = A.Elements[x-zStride]
+		n.k2minus = A.Elements[x-2*zStride]
 	}
 	n.Dz = Dz.Get(k, j, i)
 	n.Dzsquared = n.Dz * n.Dz
@@ -340,13 +370,59 @@ func (n *Neighborhood) belowThreshold(calcMin float64) bool {
 // indicies (i,j, and k, respectively) and x, y, and z grid
 // resolutions (dx,dy,dz; units of meters). Returns diffusive flux
 // (from Fick's first law)
-// in units of (Co units per second).
+// in units of (Co units).
 func (m *MetData) DiffusiveFlux(c, d *Neighborhood) (
 	zdiff float64) {
 
-	zdiff = d.kplus*(c.kplus-c.center)/c.Dzsquared +
-		d.center*(c.kminus-c.center)/c.Dzsquared
+	zdiff = (d.kplus*(c.kplus-c.center)/c.Dzsquared +
+		d.center*(c.kminus-c.center)/c.Dzsquared) * m.Dt
+	return
+}
 
+// The fourth-order flux-form spatial approximation for
+// δ(uq)/δx. Equation 4b from Wicker and Skamarock (2002).
+func f4(u, q, q1, qopposite1, q2 float64) float64 {
+	return u / 12. * (7*(q+q1) - (qopposite1 + q2))
+}
+
+// The third order Runge-Kutta advection scheme with
+// fourth-order spatial differencing. Equation 3
+// from Wicker and Skamarock (2002).
+// Fourth-order spatial differencing was chosen, even
+// though Wicker and Skamarock recommend 5th order spatial
+// differencing, because the equation is simpler and doesn't
+// involve any cells more than 2 removed from the calculation
+// cell.
+func rk3_4(uplus, uminus, q, qplus, qminus, q2plus, q2minus, Δt, Δx float64) (
+	Δqfinal float64) {
+	fplus := f4(uplus, q, qplus, qminus, q2plus)
+	fminus := f4(uminus, q, qminus, qplus, q2minus)
+	qˣ := q - Δt/3./Δx*(fplus-fminus)
+
+	fplus = f4(uplus, qˣ, qplus, qminus, q2plus)
+	fminus = f4(uminus, qˣ, qminus, qplus, q2minus)
+	qˣˣ := q - Δt/2./Δx*(fplus-fminus)
+
+	fplus = f4(uplus, qˣˣ, qplus, qminus, q2plus)
+	fminus = f4(uminus, qˣˣ, qminus, qplus, q2minus)
+	Δqfinal = -Δt / Δx * (fplus - fminus)
+	return
+}
+
+// Calculates advective flux given the concentrations of
+// the cell in question and its neighbors (c), as
+// well as the neighboring velocities on the Arakawa
+// C grid (U₋, U₊, V₋, V₊, W₋, W₊; units of m/s).
+// Returned fluxes are in the same units as c
+func (m *MetData) AdvectiveFluxRungeKutta(c *Neighborhood,
+	Uminus, Uplus, Vminus, Vplus, Wminus, Wplus float64) (
+	xadv, yadv, zadv float64) {
+	xadv = rk3_4(Uplus, Uminus, c.center, c.iplus, c.iminus,
+		c.i2plus, c.i2minus, m.Dt, m.Dx)
+	yadv = rk3_4(Vplus, Vminus, c.center, c.jplus, c.jminus,
+		c.j2plus, c.j2minus, m.Dt, m.Dy)
+	zadv = rk3_4(Wplus, Wminus, c.center, c.kplus, c.kminus,
+		c.k2plus, c.k2minus, m.Dt, c.Dz)
 	return
 }
 
@@ -354,42 +430,42 @@ func (m *MetData) DiffusiveFlux(c, d *Neighborhood) (
 // arbitrary units), x, y, and z wind speed (U, V, and W, respectively; units
 // of meters per second), x, y, and z array indicies (i,j, and k, respectively)
 // and x, y, and z grid resolutions (dx,dy,dz; units of meters).
-// Results are in units of (Co units per second).
-func (m *MetData) AdvectiveFlux(c *Neighborhood,
+// Results are in units of (Co units).
+func (m *MetData) AdvectiveFluxUpwind(c *Neighborhood,
 	U, Unext, V, Vnext, W, Wnext float64) (
 	xadv, yadv, zadv float64) {
 
 	if U > 0. {
-		xadv += U * c.iminus / m.Dx
+		xadv += U * c.iminus / m.Dx * m.Dt
 	} else {
-		xadv += U * c.center / m.Dx
+		xadv += U * c.center / m.Dx * m.Dt
 	}
 	if Unext > 0. {
-		xadv -= Unext * c.center / m.Dx
+		xadv -= Unext * c.center / m.Dx * m.Dt
 	} else {
-		xadv -= Unext * c.iplus / m.Dx
+		xadv -= Unext * c.iplus / m.Dx * m.Dt
 	}
 
 	if V > 0. {
-		yadv += V * c.jminus / m.Dy
+		yadv += V * c.jminus / m.Dy * m.Dt
 	} else {
-		yadv += V * c.center / m.Dy
+		yadv += V * c.center / m.Dy * m.Dt
 	}
 	if Vnext > 0. {
-		yadv -= Vnext * c.center / m.Dy
+		yadv -= Vnext * c.center / m.Dy * m.Dt
 	} else {
-		yadv -= Vnext * c.jplus / m.Dy
+		yadv -= Vnext * c.jplus / m.Dy * m.Dt
 	}
 
 	if W > 0. {
-		zadv += W * c.kminus / c.Dz
+		zadv += W * c.kminus / c.Dz * m.Dt
 	} else {
-		zadv += W * c.center / c.Dz
+		zadv += W * c.center / c.Dz * m.Dt
 	}
 	if Wnext > 0. {
-		zadv -= Wnext * c.center / c.Dz
+		zadv -= Wnext * c.center / c.Dz * m.Dt
 	} else {
-		zadv -= Wnext * c.kplus / c.Dz
+		zadv -= Wnext * c.kplus / c.Dz * m.Dt
 	}
 	return
 }

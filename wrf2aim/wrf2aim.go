@@ -306,6 +306,10 @@ func main() {
 	h.AddAttribute("Sclass", "description", "Stability parameter")
 	h.AddAttribute("Sclass", "units", "0=Unstable; 1=Stable")
 
+	h.AddVariable("alt", []string{"z", "y", "x"}, []float32{0})
+	h.AddAttribute("alt", "description", "Inverse density")
+	h.AddAttribute("alt", "units", "m3 kg-1")
+
 	h.Define()
 	ff, err := os.Create(outputFile)
 	if err != nil {
@@ -331,6 +335,7 @@ func main() {
 	writeNCF(f, "wdOtherGas", wdOtherGas)
 	writeNCF(f, "verticalDiffusivity", verticalDiffusivity)
 	writeNCF(f, "pblh", pblh)
+	writeNCF(f, "alt", alt)
 	writeNCF(f, "windSpeed", windSpeed)
 	writeNCF(f, "temperature", temperature)
 	writeNCF(f, "S1", S1)
