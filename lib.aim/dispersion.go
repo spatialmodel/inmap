@@ -40,7 +40,10 @@ type MetData struct {
 	vs                             float64            // Settling velocity, m/s
 	wg                             sync.WaitGroup
 	VOCoxidationRate               float64 // VOC oxidation rate constant
-	random                         float64 // random number set with newRand()
+	xRandom                        float64 // random number set with newRand()
+	yRandom                        float64 // random number set with newRand()
+	zRandom                        float64 // random number set with newRand()
+
 }
 
 func InitMetData(filename string, zFactor, yFactor, xFactor int) *MetData {
@@ -99,20 +102,34 @@ func InitMetData(filename string, zFactor, yFactor, xFactor int) *MetData {
 	return m
 }
 
+// set random numbers for weighted random walk.
 func (m *MetData) newRand() {
-	m.random = rand.Float64()
+	m.xRandom = rand.Float64()
+	m.yRandom = rand.Float64()
+	m.zRandom = rand.Float64()
 }
 
 // choose a bin using a weighted random method and return the bin value
-func (m *MetData) getBin(freqs, vals *sparse.DenseArray, k, j, i int) float64 {
+func (m *MetData) getBin(freqs, vals *sparse.DenseArray, k, j, i int,
+	r float64) float64 {
 	for b := 0; b < m.nbins; b++ {
-		if m.random <= freqs.Get(b, k, j, i) {
+		if r <= freqs.Get(b, k, j, i) {
 			return vals.Get(b, k, j, i)
 		}
 	}
 	panic(fmt.Sprintf("Could not choose a bin using seed %v "+
-		"(max cumulative frequency=%v).", m.random, vals.Get(m.nbins-1, k, j, i)))
+		"(max cumulative frequency=%v).", r, vals.Get(m.nbins-1, k, j, i)))
 	return 0.
+}
+
+func (m *MetData) getBinX(freqs, vals *sparse.DenseArray, k, j, i int) float64 {
+	return m.getBin(freqs, vals, k, j, i, m.xRandom)
+}
+func (m *MetData) getBinY(freqs, vals *sparse.DenseArray, k, j, i int) float64 {
+	return m.getBin(freqs, vals, k, j, i, m.yRandom)
+}
+func (m *MetData) getBinZ(freqs, vals *sparse.DenseArray, k, j, i int) float64 {
+	return m.getBin(freqs, vals, k, j, i, m.zRandom)
 }
 
 //  Set the time step using the Courant–Friedrichs–Lewy (CFL) condition.
@@ -232,8 +249,8 @@ func getWestBoundary(_, _ int) float64  { return 0. }
 
 type Neighborhood struct {
 	center, iplus, iminus, jplus, jminus, kplus, kminus float64
-	i2plus, j2plus, k2plus, i2minus, j2minus, k2minus   float64
-	Dz, Dzsquared                                       float64 // Dz varies by grid cell
+	//	i2plus, j2plus, k2plus, i2minus, j2minus, k2minus   float64
+	Dz, Dzsquared float64 // Dz varies by grid cell
 }
 
 // For a given array index, get the value at the index,
@@ -248,63 +265,63 @@ func FillNeighborhood(n *Neighborhood, A, Dz *sparse.DenseArray, k, j, i int) {
 	n.center = A.Elements[x]
 	if i == nx-1 {
 		n.iplus = getEastBoundary(k, j)
-		n.i2plus = getEastBoundary(k, j)
-	} else if i == nx-2 {
-		n.iplus = A.Elements[x+1]
-		n.i2plus = getEastBoundary(k, j)
+		//		n.i2plus = getEastBoundary(k, j)
+		//	} else if i == nx-2 {
+		//		n.iplus = A.Elements[x+1]
+		//		n.i2plus = getEastBoundary(k, j)
 	} else {
 		n.iplus = A.Elements[x+1]
-		n.i2plus = A.Elements[x+2]
+		//		n.i2plus = A.Elements[x+2]
 	}
 	if i == 0 {
 		n.iminus = getWestBoundary(k, j)
-		n.i2minus = getWestBoundary(k, j)
-	} else if i == 1 {
-		n.iminus = A.Elements[x-1]
-		n.i2minus = getWestBoundary(k, j)
+		//		n.i2minus = getWestBoundary(k, j)
+		//	} else if i == 1 {
+		//		n.iminus = A.Elements[x-1]
+		//		n.i2minus = getWestBoundary(k, j)
 	} else {
 		n.iminus = A.Elements[x-1]
-		n.i2minus = A.Elements[x-2]
+		//		n.i2minus = A.Elements[x-2]
 	}
 	if j == ny-1 {
 		n.jplus = getNorthBoundary(k, i)
-		n.j2plus = getNorthBoundary(k, i)
-	} else if j == ny-2 {
-		n.jplus = A.Elements[x+nx]
-		n.j2plus = getNorthBoundary(k, i)
+		//		n.j2plus = getNorthBoundary(k, i)
+		//	} else if j == ny-2 {
+		//		n.jplus = A.Elements[x+nx]
+		//		n.j2plus = getNorthBoundary(k, i)
 	} else {
 		n.jplus = A.Elements[x+nx]
-		n.j2plus = A.Elements[x+2*nx]
+		//		n.j2plus = A.Elements[x+2*nx]
 	}
 	if j == 0 {
 		n.jminus = getSouthBoundary(k, i)
-		n.j2minus = getSouthBoundary(k, i)
-	} else if j == 1 {
-		n.jminus = A.Elements[x-nx]
-		n.j2minus = getSouthBoundary(k, i)
+		//		n.j2minus = getSouthBoundary(k, i)
+		//	} else if j == 1 {
+		//		n.jminus = A.Elements[x-nx]
+		//		n.j2minus = getSouthBoundary(k, i)
 	} else {
 		n.jminus = A.Elements[x-nx]
-		n.j2minus = A.Elements[x-2*nx]
+		//		n.j2minus = A.Elements[x-2*nx]
 	}
 	if k == nz-1 {
 		n.kplus = getUpperBoundary(j, i)
-		n.k2plus = getUpperBoundary(j, i)
-	} else if k == nz-2 {
-		n.kplus = A.Elements[x+zStride]
-		n.k2plus = getUpperBoundary(j, i)
+		//		n.k2plus = getUpperBoundary(j, i)
+		//	} else if k == nz-2 {
+		//		n.kplus = A.Elements[x+zStride]
+		//		n.k2plus = getUpperBoundary(j, i)
 	} else {
 		n.kplus = A.Elements[x+zStride]
-		n.k2plus = A.Elements[x+2*zStride]
+		//		n.k2plus = A.Elements[x+2*zStride]
 	}
 	if k == 0 {
 		n.kminus = getLowerBoundary(A, j, i)
-		n.k2minus = getLowerBoundary(A, j, i)
-	} else if k == 1 {
-		n.kminus = A.Elements[x-zStride]
-		n.k2minus = getLowerBoundary(A, j, i)
+		//		n.k2minus = getLowerBoundary(A, j, i)
+		//	} else if k == 1 {
+		//		n.kminus = A.Elements[x-zStride]
+		//		n.k2minus = getLowerBoundary(A, j, i)
 	} else {
 		n.kminus = A.Elements[x-zStride]
-		n.k2minus = A.Elements[x-2*zStride]
+		//		n.k2minus = A.Elements[x-2*zStride]
 	}
 	n.Dz = Dz.Get(k, j, i)
 	n.Dzsquared = n.Dz * n.Dz
@@ -417,12 +434,12 @@ func rk3_4(uplus, uminus, q, qplus, qminus, q2plus, q2minus, Δt, Δx float64) (
 func (m *MetData) AdvectiveFluxRungeKutta(c *Neighborhood,
 	Uminus, Uplus, Vminus, Vplus, Wminus, Wplus float64) (
 	xadv, yadv, zadv float64) {
-	xadv = rk3_4(Uplus, Uminus, c.center, c.iplus, c.iminus,
-		c.i2plus, c.i2minus, m.Dt, m.Dx)
-	yadv = rk3_4(Vplus, Vminus, c.center, c.jplus, c.jminus,
-		c.j2plus, c.j2minus, m.Dt, m.Dy)
-	zadv = rk3_4(Wplus, Wminus, c.center, c.kplus, c.kminus,
-		c.k2plus, c.k2minus, m.Dt, c.Dz)
+	//	xadv = rk3_4(Uplus, Uminus, c.center, c.iplus, c.iminus,
+	//		c.i2plus, c.i2minus, m.Dt, m.Dx)
+	//	yadv = rk3_4(Vplus, Vminus, c.center, c.jplus, c.jminus,
+	//		c.j2plus, c.j2minus, m.Dt, m.Dy)
+	//	zadv = rk3_4(Wplus, Wminus, c.center, c.kplus, c.kminus,
+	//		c.k2plus, c.k2minus, m.Dt, c.Dz)
 	return
 }
 

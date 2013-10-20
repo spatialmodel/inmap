@@ -27,7 +27,7 @@ const (
 	NtoNH4 = mwNH4 / mwN
 )
 
-const nDaysCheckConvergence = 0.5
+const nDaysCheckConvergence = 1.
 //const nDaysCheckConvergence = 0.05
 const tolerance = 0.001
 const secondsPerDay = 1. / 3600. / 24.
@@ -98,12 +98,14 @@ func (m *MetData) Run(emissions map[string]*sparse.DenseArray) (
 	for {
 		iteration++
 		nIterationsSinceConvergenceCheck++
-		m.newRand()  // set new random number
+		m.newRand()  // set random numbers for weighted random walk
 		m.setTstep() // set timestep
 		nDaysRun += m.Dt * secondsPerDay
 		nDaysSinceConvergenceCheck += m.Dt * secondsPerDay
-		fmt.Printf("马上。。。Iteration %v\twalltime=%v\tΔwalltime=%.2g\ttimestep=%.0fs\tday=%.3g\n",
-			iteration, time.Since(startTime).String, time.Since(timeStepTime).Seconds(), m.Dt, nDaysRun)
+		fmt.Printf("马上。。。Iteration %v\twalltime=%.4gh\tΔwalltime=%.2gs\t"+
+			"timestep=%.0fs\tday=%.3g\n",
+			iteration, time.Since(startTime).Hours(),
+			time.Since(timeStepTime).Seconds(), m.Dt, nDaysRun)
 		timeStepTime = time.Now()
 
 		// Add in emissions
@@ -123,12 +125,12 @@ func (m *MetData) Run(emissions map[string]*sparse.DenseArray) (
 				tempconc := make([]float64, len(polNames)) // concentration holder
 				for j := 1; j < m.Ny-1; j += 1 {
 					for k := 0; k < m.Nz; k += 1 {
-						Uminus := m.getBin(m.Ufreq, m.Ubins, k, j, i)
-						Uplus := m.getBin(m.Ufreq, m.Ubins, k, j, i+1)
-						Vminus := m.getBin(m.Vfreq, m.Vbins, k, j, i)
-						Vplus := m.getBin(m.Vfreq, m.Vbins, k, j+1, i)
-						Wminus := m.getBin(m.Wfreq, m.Wbins, k, j, i)
-						Wplus := m.getBin(m.Wfreq, m.Wbins, k+1, j, i)
+						Uminus := m.getBinX(m.Ufreq, m.Ubins, k, j, i)
+						Uplus := m.getBinX(m.Ufreq, m.Ubins, k, j, i+1)
+						Vminus := m.getBinY(m.Vfreq, m.Vbins, k, j, i)
+						Vplus := m.getBinY(m.Vfreq, m.Vbins, k, j+1, i)
+						Wminus := m.getBinZ(m.Wfreq, m.Wbins, k, j, i)
+						Wplus := m.getBinZ(m.Wfreq, m.Wbins, k+1, j, i)
 						FillKneighborhood(d, m.verticalDiffusivity, k, j, i)
 						for q, Carr := range initialConc {
 							FillNeighborhood(c, Carr, m.Dz, k, j, i)
