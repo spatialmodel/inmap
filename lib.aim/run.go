@@ -27,8 +27,8 @@ const (
 	NtoNH4 = mwNH4 / mwN
 )
 
-const nDaysCheckConvergence = 1.
-//const nDaysCheckConvergence = 0.05
+//const nDaysCheckConvergence = 1.
+const nDaysCheckConvergence = 0.01
 const tolerance = 0.001
 const secondsPerDay = 1. / 3600. / 24.
 
@@ -80,15 +80,15 @@ func (m *MetData) Run(emissions map[string]*sparse.DenseArray) (
 
 	// Initialize arrays
 	// values at start of timestep
-	initialConc := make([]*sparse.DenseArray, len(polNames))
+	m.initialConc = make([]*sparse.DenseArray, len(polNames))
 	// values at end of timestep
-	finalConc := make([]*sparse.DenseArray, len(polNames))
+	m.finalConc = make([]*sparse.DenseArray, len(polNames))
 	// arrays for calculating convergence
 	oldFinalConcSum := make([]float64, len(polNames))
 	finalConcSum := make([]float64, len(polNames))
 	for i, _ := range polNames {
-		initialConc[i] = sparse.ZerosDense(m.Nz, m.Ny, m.Nx)
-		finalConc[i] = sparse.ZerosDense(m.Nz, m.Ny, m.Nx)
+		m.initialConc[i] = sparse.ZerosDense(m.Nz, m.Ny, m.Nx)
+		m.finalConc[i] = sparse.ZerosDense(m.Nz, m.Ny, m.Nx)
 	}
 
 	iteration := 0
@@ -109,11 +109,13 @@ func (m *MetData) Run(emissions map[string]*sparse.DenseArray) (
 		timeStepTime = time.Now()
 
 		// Add in emissions
+		m.arrayLock.Lock()
 		for i, pol := range polNames {
 			if arr, ok := emisFlux[pol]; ok {
-				initialConc[i].AddDense(arr.ScaleCopy(m.Dt))
+				m.initialConc[i].AddDense(arr.ScaleCopy(m.Dt))
 			}
 		}
+		m.arrayLock.Unlock()
 
 		type empty struct{}
 		sem := make(chan empty, m.Nz) // semaphore pattern
@@ -132,10 +134,11 @@ func (m *MetData) Run(emissions map[string]*sparse.DenseArray) (
 						Wminus := m.getBinZ(m.Wfreq, m.Wbins, k, j, i)
 						Wplus := m.getBinZ(m.Wfreq, m.Wbins, k+1, j, i)
 						FillKneighborhood(d, m.verticalDiffusivity, k, j, i)
-						for q, Carr := range initialConc {
+						for q, Carr := range m.initialConc {
 							FillNeighborhood(c, Carr, m.Dz, k, j, i)
 							zdiff = m.DiffusiveFlux(c, d)
 							//xadv, yadv, zadv = m.AdvectiveFluxRungeKutta(
+							//xadv, yadv, zadv = m.AdvectiveFluxRungeKuttaJacobson(
 							xadv, yadv, zadv = m.AdvectiveFluxUpwind(
 								c, Uminus, Uplus, Vminus, Vplus, Wminus, Wplus)
 
@@ -156,7 +159,7 @@ func (m *MetData) Run(emissions map[string]*sparse.DenseArray) (
 						m.ChemicalPartitioning(tempconc, k, j, i)
 
 						for q, val := range tempconc {
-							finalConc[q].Set(val, k, j, i)
+							m.finalConc[q].Set(val, k, j, i)
 						}
 					}
 				}
@@ -166,7 +169,7 @@ func (m *MetData) Run(emissions map[string]*sparse.DenseArray) (
 		for i := 1; i < m.Nx-1; i++ { // wait for routines to finish
 			<-sem
 		}
-		for i, arr := range finalConc {
+		for i, arr := range m.finalConc {
 			finalConcSum[i] += arr.Sum()
 		}
 		if nDaysSinceConvergenceCheck > nDaysCheckConvergence {
@@ -184,22 +187,24 @@ func (m *MetData) Run(emissions map[string]*sparse.DenseArray) (
 				break
 			}
 		}
-		for q, _ := range finalConc {
-			initialConc[q] = finalConc[q].Copy()
-			finalConc[q] = sparse.ZerosDense(m.Nz, m.Ny, m.Nx)
+		m.arrayLock.Lock()
+		for q, _ := range m.finalConc {
+			m.initialConc[q] = m.finalConc[q].Copy()
+			m.finalConc[q] = sparse.ZerosDense(m.Nz, m.Ny, m.Nx)
 		}
+		m.arrayLock.Unlock()
 	}
 	outputConc = make(map[string]*sparse.DenseArray)
-	outputConc["VOC"] = finalConc[igOrg]                       // gOrg
-	outputConc["SOA"] = finalConc[ipOrg]                       // pOrg
-	outputConc["PrimaryPM2_5"] = finalConc[iPM2_5]             // PM2_5
-	outputConc["NH3"] = finalConc[igNH].ScaleCopy(1. / NH3ToN) // gNH
-	outputConc["pNH4"] = finalConc[ipNH].ScaleCopy(NtoNH4)     // pNH
-	outputConc["SOx"] = finalConc[igS].ScaleCopy(1. / SOxToS)  // gS
-	outputConc["pSO4"] = finalConc[ipS].ScaleCopy(StoSO4)      // pS
-	outputConc["NOx"] = finalConc[igNO].ScaleCopy(1. / NOxToN) // gNO
-	outputConc["pNO3"] = finalConc[ipNO].ScaleCopy(NtoNO3)     // pNO
-	outputConc["TotalPM2_5"] = finalConc[iPM2_5].Copy()
+	outputConc["VOC"] = m.finalConc[igOrg]                       // gOrg
+	outputConc["SOA"] = m.finalConc[ipOrg]                       // pOrg
+	outputConc["PrimaryPM2_5"] = m.finalConc[iPM2_5]             // PM2_5
+	outputConc["NH3"] = m.finalConc[igNH].ScaleCopy(1. / NH3ToN) // gNH
+	outputConc["pNH4"] = m.finalConc[ipNH].ScaleCopy(NtoNH4)     // pNH
+	outputConc["SOx"] = m.finalConc[igS].ScaleCopy(1. / SOxToS)  // gS
+	outputConc["pSO4"] = m.finalConc[ipS].ScaleCopy(StoSO4)      // pS
+	outputConc["NOx"] = m.finalConc[igNO].ScaleCopy(1. / NOxToN) // gNO
+	outputConc["pNO3"] = m.finalConc[ipNO].ScaleCopy(NtoNO3)     // pNO
+	outputConc["TotalPM2_5"] = m.finalConc[iPM2_5].Copy()
 	outputConc["TotalPM2_5"].AddDense(outputConc["SOA"])
 	outputConc["TotalPM2_5"].AddDense(outputConc["pNH4"])
 	outputConc["TotalPM2_5"].AddDense(outputConc["pSO4"])

@@ -39,11 +39,13 @@ type MetData struct {
 	Dt                             float64            // seconds
 	vs                             float64            // Settling velocity, m/s
 	wg                             sync.WaitGroup
-	VOCoxidationRate               float64 // VOC oxidation rate constant
-	xRandom                        float64 // random number set with newRand()
-	yRandom                        float64 // random number set with newRand()
-	zRandom                        float64 // random number set with newRand()
-
+	VOCoxidationRate               float64              // VOC oxidation rate constant
+	xRandom                        float64              // random number set with newRand()
+	yRandom                        float64              // random number set with newRand()
+	zRandom                        float64              // random number set with newRand()
+	initialConc                    []*sparse.DenseArray // concentrations at beginning of time step
+	finalConc                      []*sparse.DenseArray // concentrations at end of time step
+	arrayLock                      sync.RWMutex         // Avoid concentration arrays being written by one subroutine and read by another at the same time.
 }
 
 func InitMetData(filename string, zFactor, yFactor, xFactor int) *MetData {
@@ -430,7 +432,8 @@ func rk3_4(uplus, uminus, q, qplus, qminus, q2plus, q2minus, Δt, Δx float64) (
 // the cell in question and its neighbors (c), as
 // well as the neighboring velocities on the Arakawa
 // C grid (U₋, U₊, V₋, V₊, W₋, W₊; units of m/s).
-// Returned fluxes are in the same units as c
+// From Wicker and Skamarock (2002).
+// Returned fluxes are in the same units as c.
 func (m *MetData) AdvectiveFluxRungeKutta(c *Neighborhood,
 	Uminus, Uplus, Vminus, Vplus, Wminus, Wplus float64) (
 	xadv, yadv, zadv float64) {
@@ -440,6 +443,44 @@ func (m *MetData) AdvectiveFluxRungeKutta(c *Neighborhood,
 	//		c.j2plus, c.j2minus, m.Dt, m.Dy)
 	//	zadv = rk3_4(Wplus, Wminus, c.center, c.kplus, c.kminus,
 	//		c.k2plus, c.k2minus, m.Dt, c.Dz)
+	return
+}
+
+// Fourth order Runge-Kutta scheme for calculating advection.
+// From Jacobson (2005) equations 6.53-6.55.
+func rkJacobson(uplus, uminus, q, qplus, qminus, Δt, Δx float64) (
+	Δqfinal float64) {
+
+	rk := func(uplus, uminus, qplus, qminus, Δx float64) float64 {
+		return -(uplus*qplus - uminus*qminus) / 2 / Δx
+	}
+	k1 := rk(uplus, uminus, qplus, qminus, Δx) * Δt
+	qEst1plus := qplus + k1/2
+	qEst1minus := qminus + k1/2
+	k2 := rk(uplus, uminus, qEst1plus, qEst1minus, Δx) * Δt
+	qEst2plus := qplus + k2/2
+	qEst2minus := qminus + k2/2
+	k3 := rk(uplus, uminus, qEst2plus, qEst2minus, Δx) * Δt
+	qEst3plus := qplus + k3/2
+	qEst3minus := qminus + k3/2
+	k4 := rk(uplus, uminus, qEst3plus, qEst3minus, Δx) * Δt
+	Δqfinal = k1/6. + k2/3. + k3/3. + k4/6.
+	return
+}
+
+// Calculates advective flux given the concentrations of
+// the cell in question and its neighbors (c), as
+// well as the neighboring velocities on the Arakawa
+// C grid (U₋, U₊, V₋, V₊, W₋, W₊; units of m/s).
+// From Jacobson (2005).
+// Returned fluxes are in the same units as c.
+func (m *MetData) AdvectiveFluxRungeKuttaJacobson(c *Neighborhood,
+	Uminus, Uplus, Vminus, Vplus, Wminus, Wplus float64) (
+	xadv, yadv, zadv float64) {
+	xadv = rkJacobson(Uplus, Uminus, c.center, c.iplus, c.iminus, m.Dt, m.Dx)
+	yadv = rkJacobson(Vplus, Vminus, c.center, c.jplus, c.jminus, m.Dt, m.Dy)
+	zadv = rkJacobson(Wplus, Wminus, c.center, c.kplus, c.kminus, m.Dt, c.Dz)
+
 	return
 }
 

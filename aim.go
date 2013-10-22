@@ -2,14 +2,11 @@ package main
 
 import (
 	"bitbucket.org/ctessum/aim/lib.aim"
-	"bitbucket.org/ctessum/gis"
 	"bitbucket.org/ctessum/sparse"
 	"bufio"
 	"code.google.com/p/lvd.go/cdf"
 	"flag"
 	"fmt"
-	"image"
-	"image/png"
 	"os"
 	"runtime"
 	"runtime/pprof"
@@ -46,10 +43,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	const basedir = "/home/marshall/tessumcm/src/bitbucket.org/ctessum/aim/"
-	//const basedir = "/home/chris/go/src/bitbucket.org/ctessum/aim/"
+	//const basedir = "/home/marshall/tessumcm/src/bitbucket.org/ctessum/aim/"
+	const basedir = "/home/chris/go/src/bitbucket.org/ctessum/aim/"
 	fmt.Println("Reading input data...")
 	m := aim.InitMetData(basedir+"wrf2aim/aimData.ncf", zFactor, yFactor, xFactor)
+	go m.WebServer()
 	//	createImage(m.Ubins.Subset([]int{0, 0, 0, 0},
 	//	[]int{0, 0, m.Ubins.Shape[2] - 1, m.Ubins.Shape[3] - 1}), "Ubins")
 
@@ -62,8 +60,8 @@ func main() {
 		velocity = 61.94 * 1097. / 3600.    // m/hr
 	)
 
-	var emisDir = "/home/marshall/tessumcm/GREET_spatial/output/FuelOptions_aim/" + *scenario + "/na12/"
-	//var emisDir = basedir
+	//var emisDir = "/home/marshall/tessumcm/GREET_spatial/output/FuelOptions_aim/" + *scenario + "/na12/"
+	var emisDir = basedir
 
 	//	emissions := getEmissions("gasoline_na12.csv",m)
 	emissions := getEmissionsNCF(emisDir+
@@ -90,12 +88,6 @@ func main() {
 	sparse.BoundsCheck = false // turn off error checking to run faster
 	finalConc := m.Run(emissions)
 
-	// create images
-	//for pol, Cf := range finalConc {
-	//	createImage(Cf.Subset([]int{0, 0, 0},
-	//		[]int{0, Cf.Shape[1] - 1, Cf.Shape[2] - 1}), pol)
-	//}
-
 	// write data out to netcdf
 	h := cdf.NewHeader(
 		[]string{"nx", "ny", "nz"},
@@ -117,37 +109,6 @@ func main() {
 		writeNCF(f, pol, arr)
 	}
 	ff.Close()
-}
-
-func createImage(Cf *sparse.DenseArray, pol string) {
-	fmt.Println(Cf.Max())
-	cmap := gis.NewColorMap("LinCutoff")
-	cmap.AddArray(Cf.Elements)
-	cmap.Set()
-	fmt.Println(Cf.Shape, len(Cf.Elements))
-	nx := Cf.Shape[1]
-	ny := Cf.Shape[0]
-	cmap.Legend(pol+"_legend.svg", "concentrations (μg/m3)")
-	i := image.NewRGBA(image.Rect(0, 0, nx, ny))
-	for x := 0; x < nx; x++ {
-		for y := 0; y < ny; y++ {
-			i.Set(x, y, cmap.GetColor(Cf.Get(ny-y-1, x)))
-		}
-	}
-	f, err := os.Create(pol + "_results.png")
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-	b := bufio.NewWriter(f)
-	err = png.Encode(b, i)
-	if err != nil {
-		panic(err)
-	}
-	err = b.Flush()
-	if err != nil {
-		panic(err)
-	}
 }
 
 func getEmissionsNCF(filename string, m *aim.MetData) (
