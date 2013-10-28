@@ -17,13 +17,16 @@ func (m *MetData) WebServer() {
 	http.HandleFunc("/css/bootstrap-responsive.min.css",
 		webframework.ServeCSSresponsive)
 	http.HandleFunc("/map/", m.mapHandler)
+	http.HandleFunc("/proc/", webframework.ProcessorProf)
+	http.HandleFunc("/heap/", webframework.HeapProf)
 	http.HandleFunc("/", reportHandler)
 	http.ListenAndServe(":8080", nil)
 }
 
 func reportHandler(w http.ResponseWriter, r *http.Request) {
 	webframework.RenderHeader(w, "AIM status", "")
-	webframework.RenderNav(w, "AIM", nil, nil, "", "")
+	webframework.RenderNav(w, "AIM", []string{"Home", "Processor", "Memory"},
+		[]string{"/", "/proc/", "/heap/"}, "Home", "")
 	const body1 = `
 	<div class="container">
 		<div class="row">

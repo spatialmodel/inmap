@@ -53,43 +53,34 @@ var OutputNames = []string{"VOC", "SOA", "PrimaryPM2_5", "NH3", "pNH4",
 
 // Run air quality model. Emissions are assumed to be in units
 // of μg/s, and must only include the pollutants listed in "EmisNames".
-func (m *MetData) Run(emissions map[string]*sparse.DenseArray) (
+func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 	outputConc map[string]*sparse.DenseArray) {
 
 	startTime := time.Now()
 	timeStepTime := time.Now()
 
 	// Emissions: all except PM2.5 go to gas phase
-	emisFlux := make(map[string]*sparse.DenseArray)
 	for pol, arr := range emissions {
 		switch pol {
 		case "VOC":
-			emisFlux["gOrg"] = m.calcEmisFlux(arr, 1.)
+			d.addEmisFlux(arr, 1., igOrg)
 		case "NOx":
-			emisFlux["gNO"] = m.calcEmisFlux(arr, NOxToN)
+			d.addEmisFlux(arr, NOxToN, igNO)
 		case "NH3":
-			emisFlux["gNH"] = m.calcEmisFlux(arr, NH3ToN)
+			d.addEmisFlux(arr, NH3ToN, igNH)
 		case "SOx":
-			emisFlux["gS"] = m.calcEmisFlux(arr, SOxToS)
+			d.addEmisFlux(arr, SOxToS, igS)
 		case "PM2_5":
-			emisFlux["PM2_5"] = m.calcEmisFlux(arr, 1.)
+			d.addEmisFlux(arr, 1., iPM2_5)
 		default:
 			panic(fmt.Sprintf("Unknown emissions pollutant %v.", pol))
 		}
 	}
 
 	// Initialize arrays
-	// values at start of timestep
-	m.initialConc = make([]*sparse.DenseArray, len(polNames))
-	// values at end of timestep
-	m.finalConc = make([]*sparse.DenseArray, len(polNames))
 	// arrays for calculating convergence
 	oldFinalConcSum := make([]float64, len(polNames))
 	finalConcSum := make([]float64, len(polNames))
-	for i, _ := range polNames {
-		m.initialConc[i] = sparse.ZerosDense(m.Nz, m.Ny, m.Nx)
-		m.finalConc[i] = sparse.ZerosDense(m.Nz, m.Ny, m.Nx)
-	}
 
 	iteration := 0
 	nDaysRun := 0.
@@ -98,75 +89,32 @@ func (m *MetData) Run(emissions map[string]*sparse.DenseArray) (
 	for {
 		iteration++
 		nIterationsSinceConvergenceCheck++
-		m.newRand()  // set random numbers for weighted random walk
-		m.setTstep() // set timestep
-		nDaysRun += m.Dt * secondsPerDay
-		nDaysSinceConvergenceCheck += m.Dt * secondsPerDay
+		d.SetupTimeStep() // prepare data for this time step
+		nDaysRun += d.Dt * secondsPerDay
+		nDaysSinceConvergenceCheck += d.Dt * secondsPerDay
 		fmt.Printf("马上。。。Iteration %v\twalltime=%.4gh\tΔwalltime=%.2gs\t"+
 			"timestep=%.0fs\tday=%.3g\n",
 			iteration, time.Since(startTime).Hours(),
-			time.Since(timeStepTime).Seconds(), m.Dt, nDaysRun)
+			time.Since(timeStepTime).Seconds(), d.Dt, nDaysRun)
 		timeStepTime = time.Now()
-
-		// Add in emissions
-		m.arrayLock.Lock()
-		for i, pol := range polNames {
-			if arr, ok := emisFlux[pol]; ok {
-				m.initialConc[i].AddDense(arr.ScaleCopy(m.Dt))
-			}
-		}
-		m.arrayLock.Unlock()
 
 		type empty struct{}
 		sem := make(chan empty, m.Nz) // semaphore pattern
-		for i := 1; i < m.Nx-1; i += 1 {
-			go func(i int) { // concurrent processing
-				var xadv, yadv, zadv, zdiff float64
-				c := new(Neighborhood)
-				d := new(Neighborhood)
-				tempconc := make([]float64, len(polNames)) // concentration holder
-				for j := 1; j < m.Ny-1; j += 1 {
-					for k := 0; k < m.Nz; k += 1 {
-						Uminus := m.getBinX(m.Ufreq, m.Ubins, k, j, i)
-						Uplus := m.getBinX(m.Ufreq, m.Ubins, k, j, i+1)
-						Vminus := m.getBinY(m.Vfreq, m.Vbins, k, j, i)
-						Vplus := m.getBinY(m.Vfreq, m.Vbins, k, j+1, i)
-						Wminus := m.getBinZ(m.Wfreq, m.Wbins, k, j, i)
-						Wplus := m.getBinZ(m.Wfreq, m.Wbins, k+1, j, i)
-						FillKneighborhood(d, m.verticalDiffusivity, k, j, i)
-						for q, Carr := range m.initialConc {
-							FillNeighborhood(c, Carr, m.Dz, k, j, i)
-							zdiff = m.DiffusiveFlux(c, d)
-							//xadv, yadv, zadv = m.AdvectiveFluxRungeKutta(
-							//xadv, yadv, zadv = m.AdvectiveFluxRungeKuttaJacobson(
-							xadv, yadv, zadv = m.AdvectiveFluxUpwind(
-								c, Uminus, Uplus, Vminus, Vplus, Wminus, Wplus)
+		for ii := 1; ii < len(d.Data); ii += 1 {
+			go func(ii int) { // concurrent processing
+				c := d.Data[ii]
+				//zdiff = m.DiffusiveFlux(c, d)
+				c.AdvectiveFluxUpwind(d.Dt)
+				c.GravitationalSettling(d)
+				c.VOCoxidationFlux(d)
+				c.WetDeposition(d.Dt)
+				c.ChemicalPartitioning(d.Dt)
+				d.Data[ii] = c
 
-							var gravSettling float64
-							var VOCoxidation float64
-							switch q {
-							case iPM2_5, ipOrg, ipNH, ipNO, ipS:
-								gravSettling = m.GravitationalSettling(c, k)
-							case igOrg:
-								VOCoxidation = m.VOCoxidationFlux(c)
-							}
-
-							tempconc[q] = Carr.Get(k, j, i) +
-								(xadv + yadv + zadv + gravSettling + VOCoxidation +
-									zdiff)
-						}
-						m.WetDeposition(tempconc, k, j, i)
-						m.ChemicalPartitioning(tempconc, k, j, i)
-
-						for q, val := range tempconc {
-							m.finalConc[q].Set(val, k, j, i)
-						}
-					}
-				}
 				sem <- empty{}
-			}(i)
+			}(ii)
 		}
-		for i := 1; i < m.Nx-1; i++ { // wait for routines to finish
+		for ii := 1; ii < len(d.Data); ii += 1 { // wait for routines to finish
 			<-sem
 		}
 		for i, arr := range m.finalConc {
@@ -187,12 +135,6 @@ func (m *MetData) Run(emissions map[string]*sparse.DenseArray) (
 				break
 			}
 		}
-		m.arrayLock.Lock()
-		for q, _ := range m.finalConc {
-			m.initialConc[q] = m.finalConc[q].Copy()
-			m.finalConc[q] = sparse.ZerosDense(m.Nz, m.Ny, m.Nx)
-		}
-		m.arrayLock.Unlock()
 	}
 	outputConc = make(map[string]*sparse.DenseArray)
 	outputConc["VOC"] = m.finalConc[igOrg]                       // gOrg
@@ -215,15 +157,15 @@ func (m *MetData) Run(emissions map[string]*sparse.DenseArray) (
 
 // Calculate emissions flux given emissions array in units of μg/s
 // and a scale for molecular mass conversion.
-func (m *MetData) calcEmisFlux(arr *sparse.DenseArray, scale float64) (
-	emisFlux *sparse.DenseArray) {
-	emisFlux = sparse.ZerosDense(m.Nz, m.Ny, m.Nx)
-	for k := 0; k < m.Nz; k++ {
-		for j := 0; j < m.Ny; j++ {
-			for i := 0; i < m.Nx; i++ {
-				fluxScale := 1. / m.Dx / m.Dy /
-					m.Dz.Get(k, j, i) // μg/s /m/m/m = μg/m3/s
-				emisFlux.Set(arr.Get(k, j, i)*scale*fluxScale, k, j, i)
+func (d *AIMdata) addEmisFlux(arr *sparse.DenseArray, scale float64, iPol int) {
+	ii := 0
+	for k := 0; k < d.Nz; k++ {
+		for j := 0; j < d.Ny; j++ {
+			for i := 0; i < d.Nx; i++ {
+				fluxScale := 1. / d.Data[ii].Dx / d.Data[ii].Dy /
+					d.Data[ii].Dz // μg/s /m/m/m = μg/m3/s
+				d.Data[ii].emisFlux[iPol] = arr.Get(k, j, i) * scale * fluxScale
+				ii++
 			}
 		}
 	}
