@@ -2,6 +2,10 @@ package aim
 
 import (
 	"bitbucket.org/ctessum/sparse"
+	"code.google.com/p/lvd.go/cdf"
+	"fmt"
+	"math"
+	"os"
 	"sync"
 )
 
@@ -30,18 +34,18 @@ func GetPlumeRiseInfo(filename string) *PlumeRiseInfo {
 	d.Nz = dims[0]
 	d.Ny = dims[1]
 	d.Nx = dims[2]
-	wg := sync.WaitGroup
+	var wg sync.WaitGroup
 	wg.Add(5)
-	d.layerHeights = sparse.ZerosDense(d.Nz, d.Ny, d.Nx)
+	d.layerHeights = sparse.ZerosDense(d.Nz+1, d.Ny, d.Nx)
 	go readNCF(filename, &wg, "layerHeights", d.layerHeights)
 	d.temperature = sparse.ZerosDense(d.Nz, d.Ny, d.Nx)
 	go readNCF(filename, &wg, "temperature", d.temperature)
 	d.windSpeed = sparse.ZerosDense(d.Nz, d.Ny, d.Nx)
 	go readNCF(filename, &wg, "windSpeed", d.windSpeed)
 	d.s1 = sparse.ZerosDense(d.Nz, d.Ny, d.Nx)
-	go readNCF(filename, &wg, "s1", d.s1)
+	go readNCF(filename, &wg, "S1", d.s1)
 	d.sClass = sparse.ZerosDense(d.Nz, d.Ny, d.Nx)
-	go readNCF(filename, &wg, "sClass", d.sClass)
+	go readNCF(filename, &wg, "Sclass", d.sClass)
 	wg.Wait()
 	return d
 }
@@ -115,4 +119,34 @@ func (m *PlumeRiseInfo) CalcPlumeRise(stackHeight, stackDiam, stackTemp,
 		}
 	}
 	return
+}
+
+// Read variable from NetCDF file.
+func readNCF(filename string, wg *sync.WaitGroup, Var string,
+	data *sparse.DenseArray) {
+	ff, err := os.Open(filename)
+	if err != nil {
+		panic(err)
+	}
+	f, err := cdf.Open(ff)
+	if err != nil {
+		panic(err)
+	}
+	dims := f.Header.Lengths(Var)
+	defer ff.Close()
+	defer wg.Done()
+	nread := 1
+	for _, dim := range dims {
+		nread *= dim
+	}
+	r := f.Reader(Var, nil, nil)
+	buf := r.Zero(nread)
+	_, err = r.Read(buf)
+	if err != nil {
+		panic(err)
+	}
+	dat := buf.([]float32)
+	for i, val := range dat {
+		data.Elements[i] = float64(val)
+	}
 }

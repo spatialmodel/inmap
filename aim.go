@@ -43,15 +43,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	runtime.GOMAXPROCS(8)
+
 	//const basedir = "/home/marshall/tessumcm/src/bitbucket.org/ctessum/aim/"
 	const basedir = "/home/chris/go/src/bitbucket.org/ctessum/aim/"
 	fmt.Println("Reading input data...")
-	m := aim.InitMetData(basedir+"wrf2aim/aimData.ncf", zFactor, yFactor, xFactor)
-	go m.WebServer()
+	d := aim.InitAIMdata(basedir + "wrf2aim/aimData.ncf")
+	fmt.Println("Reading plume rise information...")
+	p := aim.GetPlumeRiseInfo(basedir + "wrf2aim/aimData.ncf")
 	//	createImage(m.Ubins.Subset([]int{0, 0, 0, 0},
 	//	[]int{0, 0, m.Ubins.Shape[2] - 1, m.Ubins.Shape[3] - 1}), "Ubins")
-
-	runtime.GOMAXPROCS(16)
 
 	const (
 		height   = 75. * 0.3048             // m
@@ -65,15 +66,15 @@ func main() {
 
 	//	emissions := getEmissions("gasoline_na12.csv",m)
 	emissions := getEmissionsNCF(emisDir+
-		*scenario+"."+*vehicle+".groundlevel.ncf", m)
+		*scenario+"."+*vehicle+".groundlevel.ncf", d)
 	elevatedEmis := getEmissionsNCF(emisDir+
-		*scenario+"."+*vehicle+".elevated.ncf", m)
+		*scenario+"."+*vehicle+".elevated.ncf", d)
 
 	// apply plume rise
 	for pol, elev := range elevatedEmis {
 		for j := 0; j < elev.Shape[1]; j++ {
 			for i := 0; i < elev.Shape[2]; i++ {
-				k := m.CalcPlumeRise(height, diam, temp, velocity, j, i)
+				k := p.CalcPlumeRise(height, diam, temp, velocity, j, i)
 				emissions[pol].AddVal(elev.Get(0, j, i), k, j, i)
 			}
 		}
@@ -85,19 +86,18 @@ func main() {
 	//	}
 	//emissions["NH3"] = emissions["PM2_5"].Copy()
 
-	sparse.BoundsCheck = false // turn off error checking to run faster
-	finalConc := m.Run(emissions)
+	finalConc := d.Run(emissions)
 
 	// write data out to netcdf
 	h := cdf.NewHeader(
 		[]string{"nx", "ny", "nz"},
-		[]int{m.Nx, m.Ny, m.Nz})
+		[]int{d.Nx, d.Ny, d.Nz})
 	for pol, _ := range finalConc {
 		h.AddVariable(pol, []string{"nz", "ny", "nx"}, []float32{0})
 		h.AddAttribute(pol, "units", "ug m-3")
 	}
 	h.Define()
-	ff, err := os.Create(basedir+"output/" + *scenario + ".ncf")
+	ff, err := os.Create(basedir + *scenario + ".ncf")
 	if err != nil {
 		panic(err)
 	}
@@ -111,7 +111,7 @@ func main() {
 	ff.Close()
 }
 
-func getEmissionsNCF(filename string, m *aim.MetData) (
+func getEmissionsNCF(filename string, d *aim.AIMdata) (
 	emissions map[string]*sparse.DenseArray) {
 
 	const massConv = 907184740000.       // μg per short ton
@@ -132,7 +132,7 @@ func getEmissionsNCF(filename string, m *aim.MetData) (
 		if Var == "CO" || Var == "PM10" || Var == "CH4" {
 			continue
 		}
-		emissions[polTrans(Var)] = sparse.ZerosDense(m.Nz, m.Ny, m.Nx)
+		emissions[polTrans(Var)] = sparse.ZerosDense(d.Nz, d.Ny, d.Nx)
 		dims := f.Header.Lengths(Var)
 		nread := 1
 		for _, dim := range dims {
@@ -161,7 +161,7 @@ func polTrans(pol string) string {
 	}
 }
 
-func getEmissions(filename string, m *aim.MetData) (
+func getEmissions(filename string, d *aim.AIMdata) (
 	emissions map[string]*sparse.DenseArray) {
 
 	const massConv = 907184740000.       // μg per short ton
@@ -169,11 +169,11 @@ func getEmissions(filename string, m *aim.MetData) (
 	const emisConv = massConv / timeConv // convert tons/year to μg/s
 
 	emissions = make(map[string]*sparse.DenseArray)
-	emissions["VOC"] = sparse.ZerosDense(m.Nz, m.Ny, m.Nx)
-	emissions["PM2_5"] = sparse.ZerosDense(m.Nz, m.Ny, m.Nx)
-	emissions["NH3"] = sparse.ZerosDense(m.Nz, m.Ny, m.Nx)
-	emissions["SOx"] = sparse.ZerosDense(m.Nz, m.Ny, m.Nx)
-	emissions["NOx"] = sparse.ZerosDense(m.Nz, m.Ny, m.Nx)
+	emissions["VOC"] = sparse.ZerosDense(d.Nz, d.Ny, d.Nx)
+	emissions["PM2_5"] = sparse.ZerosDense(d.Nz, d.Ny, d.Nx)
+	emissions["NH3"] = sparse.ZerosDense(d.Nz, d.Ny, d.Nx)
+	emissions["SOx"] = sparse.ZerosDense(d.Nz, d.Ny, d.Nx)
+	emissions["NOx"] = sparse.ZerosDense(d.Nz, d.Ny, d.Nx)
 
 	f, err := os.Open(filename)
 	if err != nil {

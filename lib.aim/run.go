@@ -4,6 +4,7 @@ import (
 	"bitbucket.org/ctessum/sparse"
 	"fmt"
 	"math"
+	"runtime"
 	"time"
 )
 
@@ -28,8 +29,8 @@ const (
 )
 
 //const nDaysCheckConvergence = 1.
-const nDaysCheckConvergence = 0.01
-const tolerance = 0.001
+const nDaysCheckConvergence = 0.005
+const tolerance = 0.01
 const secondsPerDay = 1. / 3600. / 24.
 
 // These are the names of pollutants accepted as emissions (μg/s)
@@ -77,10 +78,9 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 		}
 	}
 
-	// Initialize arrays
-	// arrays for calculating convergence
-	oldFinalConcSum := make([]float64, len(polNames))
-	finalConcSum := make([]float64, len(polNames))
+	// sums for calculating convergence
+	oldFinalMassSum := 0.
+	finalMassSum := 0.
 
 	iteration := 0
 	nDaysRun := 0.
@@ -98,60 +98,62 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 			time.Since(timeStepTime).Seconds(), d.Dt, nDaysRun)
 		timeStepTime = time.Now()
 
-		type empty struct{}
-		sem := make(chan empty, m.Nz) // semaphore pattern
-		for ii := 1; ii < len(d.Data); ii += 1 {
-			go func(ii int) { // concurrent processing
-				c := d.Data[ii]
-				//zdiff = m.DiffusiveFlux(c, d)
-				c.AdvectiveFluxUpwind(d.Dt)
-				c.GravitationalSettling(d)
-				c.VOCoxidationFlux(d)
-				c.WetDeposition(d.Dt)
-				c.ChemicalPartitioning(d.Dt)
-				d.Data[ii] = c
+		iiChan := make(chan int)
+		sumChan := make(chan float64)
+		for i := 0; i < runtime.GOMAXPROCS(0); i++ {
+			go func() {
+				var c *AIMcell
+				sum := 0.
+				for ii := range iiChan {
+					c = d.Data[ii]
+					//zdiff = m.DiffusiveFlux(c, d)
+					c.AdvectiveFluxUpwind(d.Dt)
+					c.GravitationalSettling(d)
+					c.VOCoxidationFlux(d)
+					c.WetDeposition(d.Dt)
+					c.ChemicalPartitioning()
 
-				sem <- empty{}
-			}(ii)
+					for _, val := range c.finalConc {
+						sum += val
+					}
+				}
+				sumChan <- sum * c.Volume
+			}()
 		}
-		for ii := 1; ii < len(d.Data); ii += 1 { // wait for routines to finish
-			<-sem
+		for ii := 0; ii < len(d.Data); ii += 1 {
+			iiChan <- ii
 		}
-		for i, arr := range m.finalConc {
-			finalConcSum[i] += arr.Sum()
+		close(iiChan)
+		for i := 0; i < runtime.GOMAXPROCS(0); i++ {
+			finalMassSum += <-sumChan
 		}
 		if nDaysSinceConvergenceCheck > nDaysCheckConvergence {
 			timeToQuit := true
-			for q := 0; q < len(finalConcSum); q++ {
-				finalConcSum[q] /= float64(nIterationsSinceConvergenceCheck)
-				if !checkConvergence(finalConcSum[q], oldFinalConcSum[q], polNames[q]) {
-					timeToQuit = false
-				}
-				oldFinalConcSum[q] = finalConcSum[q]
+			finalMassSum /= float64(nIterationsSinceConvergenceCheck)
+			if !checkConvergence(finalMassSum, oldFinalMassSum) {
+				timeToQuit = false
 			}
+			oldFinalMassSum = finalMassSum
 			nDaysSinceConvergenceCheck = 0.
 			nIterationsSinceConvergenceCheck = 0
+			finalMassSum = 0.
 			if timeToQuit {
 				break
 			}
 		}
 	}
 	outputConc = make(map[string]*sparse.DenseArray)
-	outputConc["VOC"] = m.finalConc[igOrg]                       // gOrg
-	outputConc["SOA"] = m.finalConc[ipOrg]                       // pOrg
-	outputConc["PrimaryPM2_5"] = m.finalConc[iPM2_5]             // PM2_5
-	outputConc["NH3"] = m.finalConc[igNH].ScaleCopy(1. / NH3ToN) // gNH
-	outputConc["pNH4"] = m.finalConc[ipNH].ScaleCopy(NtoNH4)     // pNH
-	outputConc["SOx"] = m.finalConc[igS].ScaleCopy(1. / SOxToS)  // gS
-	outputConc["pSO4"] = m.finalConc[ipS].ScaleCopy(StoSO4)      // pS
-	outputConc["NOx"] = m.finalConc[igNO].ScaleCopy(1. / NOxToN) // gNO
-	outputConc["pNO3"] = m.finalConc[ipNO].ScaleCopy(NtoNO3)     // pNO
-	outputConc["TotalPM2_5"] = m.finalConc[iPM2_5].Copy()
-	outputConc["TotalPM2_5"].AddDense(outputConc["SOA"])
-	outputConc["TotalPM2_5"].AddDense(outputConc["pNH4"])
-	outputConc["TotalPM2_5"].AddDense(outputConc["pSO4"])
-	outputConc["TotalPM2_5"].AddDense(outputConc["pNO3"])
-
+	for _, pol := range OutputNames {
+		if pol == "TotalPM2_5" {
+			outputConc[pol] = sparse.ZerosDense(d.Nz, d.Ny, d.Nx)
+			for _, subspecies := range []string{"PrimaryPM2_5", "SOA",
+				"pNH4", "pSO4", "pNO3"} {
+				outputConc[pol].AddDense(outputConc[subspecies])
+			}
+		} else {
+			outputConc[pol] = d.ToArray(pol)
+		}
+	}
 	return
 }
 
@@ -172,6 +174,114 @@ func (d *AIMdata) addEmisFlux(arr *sparse.DenseArray, scale float64, iPol int) {
 	return
 }
 
+// Convert the concentration data into a regular array
+func (d *AIMdata) ToArray(pol string) *sparse.DenseArray {
+	o := sparse.ZerosDense(d.Nz, d.Ny, d.Nx)
+	d.arrayLock.RLock()
+	switch pol {
+	case "VOC":
+		for i, c := range d.Data {
+			o.Elements[i] = c.finalConc[igOrg]
+		}
+	case "SOA":
+		for i, c := range d.Data {
+			o.Elements[i] = c.finalConc[ipOrg]
+		}
+	case "PrimaryPM2_5":
+		for i, c := range d.Data {
+			o.Elements[i] = c.finalConc[iPM2_5]
+		}
+	case "NH3":
+		for i, c := range d.Data {
+			o.Elements[i] = c.finalConc[igNH] / NH3ToN
+		}
+	case "pNH4":
+		for i, c := range d.Data {
+			o.Elements[i] = c.finalConc[ipNH] * NtoNH4
+		}
+	case "SOx":
+		for i, c := range d.Data {
+			o.Elements[i] = c.finalConc[igS] / SOxToS
+		}
+	case "pSO4":
+		for i, c := range d.Data {
+			o.Elements[i] = c.finalConc[ipS] * StoSO4
+		}
+	case "NOx":
+		for i, c := range d.Data {
+			o.Elements[i] = c.finalConc[igNO] / NOxToN
+		}
+	case "pNO3":
+		for i, c := range d.Data {
+			o.Elements[i] = c.finalConc[ipNO] * NtoNO3
+		}
+	case "VOCemissions":
+		for i, c := range d.Data {
+			o.Elements[i] = c.emisFlux[igOrg]
+		}
+	case "NOxemissions":
+		for i, c := range d.Data {
+			o.Elements[i] = c.emisFlux[igNO]
+		}
+	case "NH3emissions":
+		for i, c := range d.Data {
+			o.Elements[i] = c.emisFlux[igNH]
+		}
+	case "SOxemissions":
+		for i, c := range d.Data {
+			o.Elements[i] = c.emisFlux[igS]
+		}
+	case "PM2_5emissions":
+		for i, c := range d.Data {
+			o.Elements[i] = c.emisFlux[iPM2_5]
+		}
+	case "U":
+		for i, c := range d.Data {
+			o.Elements[i] = c.Uwest
+		}
+	case "V":
+		for i, c := range d.Data {
+			o.Elements[i] = c.Vsouth
+		}
+	case "W":
+		for i, c := range d.Data {
+			o.Elements[i] = c.Wbelow
+		}
+	case "Organicpartitioning":
+		for i, c := range d.Data {
+			o.Elements[i] = c.orgPartitioning
+		}
+	case "Sulfurpartitioning":
+		for i, c := range d.Data {
+			o.Elements[i] = c.SPartitioning
+		}
+	case "Nitratepartitioning":
+		for i, c := range d.Data {
+			o.Elements[i] = c.NOPartitioning
+		}
+	case "Ammoniapartitioning":
+		for i, c := range d.Data {
+			o.Elements[i] = c.NHPartitioning
+		}
+	case "Particlewetdeposition":
+		for i, c := range d.Data {
+			o.Elements[i] = c.wdParticle
+		}
+	case "SO2wetdeposition":
+		for i, c := range d.Data {
+			o.Elements[i] = c.wdSO2
+		}
+	case "Non-SO2gaswetdeposition":
+		for i, c := range d.Data {
+			o.Elements[i] = c.wdOtherGas
+		}
+	default:
+		panic(fmt.Sprintf("Unknown variable %v.", pol))
+	}
+	d.arrayLock.RUnlock()
+	return o
+}
+
 func max(vals ...float64) float64 {
 	m := 0.
 	for _, v := range vals {
@@ -182,9 +292,9 @@ func max(vals ...float64) float64 {
 	return m
 }
 
-func checkConvergence(newSum, oldSum float64, name string) bool {
+func checkConvergence(newSum, oldSum float64) bool {
 	bias := (newSum - oldSum) / oldSum
-	fmt.Printf("%v: difference = %3.2g%%\n", name, bias*100)
+	fmt.Printf("Total mass difference = %3.2g%% from last check.\n", bias*100)
 	if math.Abs(bias) > tolerance || math.IsInf(bias, 0) {
 		return false
 	} else {
