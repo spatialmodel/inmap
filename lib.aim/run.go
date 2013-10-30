@@ -28,8 +28,7 @@ const (
 	NtoNH4 = mwNH4 / mwN
 )
 
-//const nDaysCheckConvergence = 1.
-const nDaysCheckConvergence = 0.005
+const nDaysCheckConvergence = 1.
 const tolerance = 0.01
 const secondsPerDay = 1. / 3600. / 24.
 
@@ -93,8 +92,8 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 		d.SetupTimeStep() // prepare data for this time step
 		nDaysRun += d.Dt * secondsPerDay
 		nDaysSinceConvergenceCheck += d.Dt * secondsPerDay
-		fmt.Printf("马上。。。Iteration %v\twalltime=%.4gh\tΔwalltime=%.2gs\t"+
-			"timestep=%.0fs\tday=%.3g\n",
+		fmt.Printf("马上。。。Iteration %-4d  walltime=%5.2gh  Δwalltime=%3.2gs  "+
+			"timestep=%2.0fs  day=%.3g\n",
 			iteration, time.Since(startTime).Hours(),
 			time.Since(timeStepTime).Seconds(), d.Dt, nDaysRun)
 		timeStepTime = time.Now()
@@ -106,7 +105,7 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 		for i := 0; i < nprocs; i++ {
 			finalMassSum += <-sumChan
 		}
-		if nDaysSinceConvergenceCheck > nDaysCheckConvergence {
+		if nDaysSinceConvergenceCheck >= nDaysCheckConvergence {
 			timeToQuit := true
 			finalMassSum /= float64(nIterationsSinceConvergenceCheck)
 			if !checkConvergence(finalMassSum, oldFinalMassSum) {

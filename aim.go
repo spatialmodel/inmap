@@ -5,54 +5,49 @@ import (
 	"bitbucket.org/ctessum/sparse"
 	"bufio"
 	"code.google.com/p/lvd.go/cdf"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"runtime"
-	"runtime/pprof"
 	"strconv"
 	"strings"
 )
 
-const (
-	xFactor = 1 // x, y, and z factors to increase grid resolution by
-	yFactor = 1
-	zFactor = 1
-)
+var configFile *string = flag.String("config", "none", "Path to configuration file")
 
-var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
-var scenario = flag.String("scenario", "", "name of scenario to run")
-var vehicle = flag.String("vehicle", "", "vehicle name")
+type configData struct {
+	AIMdata              string // Path to location of baseline meteorology and pollutant data. Can include environment variables.
+	NumProcessors        int    // Number of processors to use for calculations
+	GroundLevelEmissions string // Path to ground level emissions file. Can include environment variables.
+	ElevatedEmissions    string // Path to elevated emissions file. Can include environment variables.
+	Output               string // Path to desired output file location. Can include environment variables.
+}
 
 func main() {
 	flag.Parse()
-	if *cpuprofile != "" {
-		f, err := os.Create(*cpuprofile)
-		if err != nil {
-			panic(err)
-		}
-		pprof.StartCPUProfile(f)
-		defer pprof.StopCPUProfile()
-	}
-	if *scenario == "" {
-		fmt.Println("Need to specify scenario")
+	if *configFile == "" {
+		fmt.Println("Need to specify configuration file as in " +
+			"`aim -config=configFile.json`")
 		os.Exit(1)
 	}
-	if *vehicle == "" {
-		fmt.Println("Need to specify vehicle")
-		os.Exit(1)
-	}
+	config := ReadConfigFile(*configFile)
 
-	runtime.GOMAXPROCS(8)
+	fmt.Println("\n",
+		"-------------------------------------\n",
+		"             Welcome!\n",
+		"  (A)irshed (I)ntervention (M)odel\n",
+		"   Copyright 2013 Chris Tessum\n",
+		"-------------------------------------\n")
 
-	//const basedir = "/home/marshall/tessumcm/src/bitbucket.org/ctessum/aim/"
-	const basedir = "/home/chris/go/src/bitbucket.org/ctessum/aim/"
+	runtime.GOMAXPROCS(config.NumProcessors)
+
 	fmt.Println("Reading input data...")
-	d := aim.InitAIMdata(basedir + "wrf2aim/aimData.ncf")
+	d := aim.InitAIMdata(config.AIMdata)
 	fmt.Println("Reading plume rise information...")
-	p := aim.GetPlumeRiseInfo(basedir + "wrf2aim/aimData.ncf")
-	//	createImage(m.Ubins.Subset([]int{0, 0, 0, 0},
-	//	[]int{0, 0, m.Ubins.Shape[2] - 1, m.Ubins.Shape[3] - 1}), "Ubins")
+	p := aim.GetPlumeRiseInfo(config.AIMdata)
 
 	const (
 		height   = 75. * 0.3048             // m
@@ -61,14 +56,8 @@ func main() {
 		velocity = 61.94 * 1097. / 3600.    // m/hr
 	)
 
-	//var emisDir = "/home/marshall/tessumcm/GREET_spatial/output/FuelOptions_aim/" + *scenario + "/na12/"
-	var emisDir = basedir
-
-	//	emissions := getEmissions("gasoline_na12.csv",m)
-	emissions := getEmissionsNCF(emisDir+
-		*scenario+"."+*vehicle+".groundlevel.ncf", d)
-	elevatedEmis := getEmissionsNCF(emisDir+
-		*scenario+"."+*vehicle+".elevated.ncf", d)
+	emissions := getEmissionsNCF(config.GroundLevelEmissions, d)
+	elevatedEmis := getEmissionsNCF(config.ElevatedEmissions, d)
 
 	// apply plume rise
 	for pol, elev := range elevatedEmis {
@@ -79,38 +68,19 @@ func main() {
 			}
 		}
 	}
-	// create images
-	//	for pol, Cf := range emissions {
-	//		createImage(Cf.Subset([]int{0, 0, 0},
-	//		[]int{0, Cf.Shape[1] - 1, Cf.Shape[2] - 1}), pol)
-	//	}
-	//emissions["NH3"] = emissions["PM2_5"].Copy()
 
+	// Run model
 	finalConc := d.Run(emissions)
 
-	// write data out to netcdf
-	h := cdf.NewHeader(
-		[]string{"nx", "ny", "nz"},
-		[]int{d.Nx, d.Ny, d.Nz})
-	for pol, _ := range finalConc {
-		h.AddVariable(pol, []string{"nz", "ny", "nx"}, []float32{0})
-		h.AddAttribute(pol, "units", "ug m-3")
-	}
-	h.Define()
-	ff, err := os.Create(basedir + *scenario + ".ncf")
-	if err != nil {
-		panic(err)
-	}
-	f, err := cdf.Create(ff, h) // writes the header to ff
-	if err != nil {
-		panic(err)
-	}
-	for pol, arr := range finalConc {
-		writeNCF(f, pol, arr)
-	}
-	ff.Close()
+	writeOutput(finalConc, d, config.Output)
+
+	fmt.Println("\n",
+		"------------------------------------\n",
+		"           AIM Completed!\n",
+		"------------------------------------\n")
 }
 
+// Get the emissions from a NetCDF file
 func getEmissionsNCF(filename string, d *aim.AIMdata) (
 	emissions map[string]*sparse.DenseArray) {
 
@@ -159,6 +129,30 @@ func polTrans(pol string) string {
 	default:
 		return pol
 	}
+}
+
+// write data out to netcdf
+func writeOutput(finalConc map[string]*sparse.DenseArray, d *aim.AIMdata, outfile string) {
+	h := cdf.NewHeader(
+		[]string{"nx", "ny", "nz"},
+		[]int{d.Nx, d.Ny, d.Nz})
+	for pol, _ := range finalConc {
+		h.AddVariable(pol, []string{"nz", "ny", "nx"}, []float32{0})
+		h.AddAttribute(pol, "units", "ug m-3")
+	}
+	h.Define()
+	ff, err := os.Create(outfile)
+	if err != nil {
+		panic(err)
+	}
+	f, err := cdf.Create(ff, h) // writes the header to ff
+	if err != nil {
+		panic(err)
+	}
+	for pol, arr := range finalConc {
+		writeNCF(f, pol, arr)
+	}
+	ff.Close()
 }
 
 func getEmissions(filename string, d *aim.AIMdata) (
@@ -237,4 +231,51 @@ func writeNCF(f *cdf.File, Var string, data *sparse.DenseArray) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+// Reads and parse a json configuration file.
+// See below for the required variables.
+func ReadConfigFile(filename string) (config *configData) {
+	// Open the configuration file
+	var (
+		file  *os.File
+		bytes []byte
+		err   error
+	)
+	file, err = os.Open(filename)
+	if err != nil {
+		fmt.Printf("The configuration file you have specified, %v, does not "+
+			"appear to exist. Please check the file name and location and "+
+			"try again.\n", filename)
+		os.Exit(1)
+	}
+	reader := bufio.NewReader(file)
+	bytes, err = ioutil.ReadAll(reader)
+	if err != nil {
+		panic(err)
+	}
+
+	config = new(configData)
+	err = json.Unmarshal(bytes, config)
+	if err != nil {
+		fmt.Printf(
+			"There has been an error parsing the configuration file.\n"+
+				"Please ensure that the file is in valid JSON format\n"+
+				"(you can check for errors at http://jsonlint.com/)\n"+
+				"and try again!\n\n%v\n\n", err.Error())
+		os.Exit(1)
+	}
+
+	config.AIMdata = os.ExpandEnv(config.AIMdata)
+	config.GroundLevelEmissions = os.ExpandEnv(config.GroundLevelEmissions)
+	config.ElevatedEmissions = os.ExpandEnv(config.ElevatedEmissions)
+
+	outdir := filepath.Dir(config.Output)
+	err = os.MkdirAll(outdir, os.ModePerm)
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+
+	return
 }
