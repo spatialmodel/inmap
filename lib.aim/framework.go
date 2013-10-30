@@ -2,28 +2,28 @@ package aim
 
 import (
 	"bitbucket.org/ctessum/sparse"
-	"runtime"
-	"time"
 	"code.google.com/p/lvd.go/cdf"
 	"fmt"
 	"math"
 	"math/rand"
 	"os"
+	"runtime"
 	"sync"
+	"time"
 )
 
 type AIMdata struct {
-	Data                            []*AIMcell    // One data holder for each grid cell
-	nbins, Nx, Ny, Nz               int           // number of meteorology bins
-	arrayLock                       sync.RWMutex  // Avoid concentration arrays being written by one subroutine and read by another at the same time.
-	Dt                              float64       // seconds
-	vs                              float64       // Settling velocity, m/s
-	VOCoxidationRate                float64       // VOC oxidation rate constant
-	UbinsEastEdge, UfreqEastEdge    [][][]float32 // Edge of the Arakawa C-grid
-	VbinsNorthEdge, VfreqNorthEdge  [][][]float32 // Edge of the Arakawa C-grid
-	WbinsTopEdge, WfreqTopEdge      [][][]float32 // Edge of the Arakawa C-grid
-	UeastEdge, VnorthEdge, WtopEdge [][]float64   // Edge of the Arakawa C-grid
-	xRandom, yRandom, zRandom       float32
+	Data              []*AIMcell   // One data holder for each grid cell
+	nbins, Nx, Ny, Nz int          // number of meteorology bins
+	arrayLock         sync.RWMutex // Avoid concentration arrays being written by one subroutine and read by another at the same time.
+	Dt                float64      // seconds
+	vs                float64      // Settling velocity, m/s
+	VOCoxidationRate  float64      // VOC oxidation rate constant
+	westBoundary      []*AIMcell   // boundary cells
+	eastBoundary      []*AIMcell   // boundary cells
+	northBoundary     []*AIMcell   // boundary cells
+	southBoundary     []*AIMcell   // boundary cells
+	topBoundary       []*AIMcell   // boundary cells; assume bottom boundary is the same as lowest layer
 }
 
 // Data for a single grid cell
@@ -32,26 +32,24 @@ type AIMcell struct {
 	VbinsSouth, VfreqSouth         []float32 // m/s
 	WbinsBelow, WfreqBelow         []float32 // m/s
 	Uwest, Vsouth, Wbelow          float64
-	orgPartitioning, SPartitioning float64           // gaseous fraction
-	NOPartitioning, NHPartitioning float64           // gaseous fraction
-	wdParticle, wdSO2, wdOtherGas  float64           // wet deposition rate, 1/s
-	verticalDiffusivity            float64           // vertical diffusivity, m2/s
-	Dx, Dy, Dz                     float64           // meters
-	Volume                         float64           // cubic meters
-	k, j, i                        int               // cell indicies
-	ii                             int               // master index
-	initialConc                    []float64         // concentrations at beginning of time step
-	finalConc                      []float64         // concentrations at end of time step
-	emisFlux                       []float64         //  emissions (μg/m3/s)
-	getWestNeighbor                func(int) float64 // takes pollutant index and returns concentration at neighbor
-	getEastNeighbor                func(int) float64 // takes pollutant index and returns concentration at neighbor
-	getSouthNeighbor               func(int) float64 // takes pollutant index and returns concentration at neighbor
-	getNorthNeighbor               func(int) float64 // takes pollutant index and returns concentration at neighbor
-	getBelowNeighbor               func(int) float64 // takes pollutant index and returns concentration at neighbor
-	getAboveNeighbor               func(int) float64 // takes pollutant index and returns concentration at neighbor
-	getUeast                       func() float64    // gets U velocity at East edge
-	getVnorth                      func() float64    // gets U velocity at North edge
-	getWabove                      func() float64    // gets U velocity at Top edge
+	orgPartitioning, SPartitioning float64   // gaseous fraction
+	NOPartitioning, NHPartitioning float64   // gaseous fraction
+	wdParticle, wdSO2, wdOtherGas  float64   // wet deposition rate, 1/s
+	verticalDiffusivity            float64   // vertical diffusivity, m2/s
+	Dx, Dy, Dz                     float64   // meters
+	Volume                         float64   // cubic meters
+	k, j, i                        int       // cell indicies
+	ii                             int       // master index
+	initialConc                    []float64 // concentrations at beginning of time step
+	finalConc                      []float64 // concentrations at end of time step
+	emisFlux                       []float64 //  emissions (μg/m3/s)
+	WestNeighbor                   *AIMcell
+	EastNeighbor                   *AIMcell
+	SouthNeighbor                  *AIMcell
+	NorthNeighbor                  *AIMcell
+	BelowNeighbor                  *AIMcell
+	AboveNeighbor                  *AIMcell
+	GroundLevelNeighbor            *AIMcell
 }
 
 func newAIMcell(nbins int, dx, dy, dz float64) *AIMcell {
@@ -87,6 +85,7 @@ func InitAIMdata(filename string) *AIMdata {
 	d.Nz = dims[0]
 	d.Ny = dims[1]
 	d.Nx = dims[2]
+	dx, dy := 12000., 12000. // need to make these adjustable
 	d.VOCoxidationRate = f.Header.GetAttribute("", "VOCoxidationRate").([]float64)[0]
 	var wg sync.WaitGroup
 	wg.Add(14)
@@ -100,7 +99,7 @@ func InitAIMdata(filename string) *AIMdata {
 			for i := 0; i < d.Nx; i++ {
 				// calculate Dz (varies by layer)
 				dz := layerHeights.Get(k+1, j, i) - layerHeights.Get(k, j, i)
-				d.Data[ii] = newAIMcell(d.nbins, 12000., 12000., dz)
+				d.Data[ii] = newAIMcell(d.nbins, dx, dy, dz)
 				d.Data[ii].k = k
 				d.Data[ii].j = j
 				d.Data[ii].i = i
@@ -109,6 +108,73 @@ func InitAIMdata(filename string) *AIMdata {
 			}
 		}
 	}
+	// set up boundary data holders
+	d.westBoundary = make([]*AIMcell, d.Nz*d.Ny)
+	ii = 0
+	i := 0
+	for k := 0; k < d.Nz; k++ {
+		for j := 0; j < d.Ny; j++ {
+			d.westBoundary[ii] = newAIMcell(0, dx, dy, 0.)
+			d.westBoundary[ii].k = k
+			d.westBoundary[ii].j = j
+			d.westBoundary[ii].i = i
+			d.westBoundary[ii].ii = ii
+			ii++
+		}
+	}
+	d.eastBoundary = make([]*AIMcell, d.Nz*d.Ny)
+	ii = 0
+	i = d.Nx
+	for k := 0; k < d.Nz; k++ {
+		for j := 0; j < d.Ny; j++ {
+			d.eastBoundary[ii] = newAIMcell(d.nbins, dx, dy, 0.)
+			d.eastBoundary[ii].k = k
+			d.eastBoundary[ii].j = j
+			d.eastBoundary[ii].i = i
+			d.eastBoundary[ii].ii = ii
+			ii++
+		}
+	}
+	d.southBoundary = make([]*AIMcell, d.Nz*d.Nx)
+	ii = 0
+	j := 0
+	for k := 0; k < d.Nz; k++ {
+		for i := 0; i < d.Nx; i++ {
+			d.southBoundary[ii] = newAIMcell(0, dx, dy, 0.) // Don't allocate any bins for cells that don't need to have wind speeds
+			d.southBoundary[ii].k = k
+			d.southBoundary[ii].j = j
+			d.southBoundary[ii].i = i
+			d.southBoundary[ii].ii = ii
+			ii++
+		}
+	}
+	d.northBoundary = make([]*AIMcell, d.Nz*d.Nx)
+	ii = 0
+	j = d.Ny
+	for k := 0; k < d.Nz; k++ {
+		for i := 0; i < d.Nx; i++ {
+			d.northBoundary[ii] = newAIMcell(d.nbins, dx, dy, 0.)
+			d.northBoundary[ii].k = k
+			d.northBoundary[ii].j = j
+			d.northBoundary[ii].i = i
+			d.northBoundary[ii].ii = ii
+			ii++
+		}
+	}
+	d.topBoundary = make([]*AIMcell, d.Ny*d.Nx)
+	ii = 0
+	k := d.Nz
+	for j := 0; j < d.Ny; j++ {
+		for i := 0; i < d.Nx; i++ {
+			d.topBoundary[ii] = newAIMcell(d.nbins, dx, dy, 0.)
+			d.topBoundary[ii].k = k
+			d.topBoundary[ii].j = j
+			d.topBoundary[ii].i = i
+			d.topBoundary[ii].ii = ii
+			ii++
+		}
+	}
+
 	d.arrayLock.Lock()
 	go d.readNCFbins(filename, &wg, "Ubins")
 	go d.readNCFbins(filename, &wg, "Vbins")
@@ -126,20 +192,57 @@ func InitAIMdata(filename string) *AIMdata {
 	wg.Wait()
 	d.arrayLock.Unlock()
 
-	// Set up functions for getting neighboring values
+	// Set up links to neighbors
 	ii = 0
+	var jj int
 	for k := 0; k < d.Nz; k++ {
 		for j := 0; j < d.Ny; j++ {
 			for i := 0; i < d.Nx; i++ {
-				d.Data[ii].getUeast = d.getUeastFunc(k, j, i)
-				d.Data[ii].getVnorth = d.getVnorthFunc(k, j, i)
-				d.Data[ii].getWabove = d.getWaboveFunc(k, j, i)
-				d.Data[ii].getWestNeighbor = d.getWestNeighborFunc(k, j, i)
-				d.Data[ii].getEastNeighbor = d.getEastNeighborFunc(k, j, i)
-				d.Data[ii].getSouthNeighbor = d.getSouthNeighborFunc(k, j, i)
-				d.Data[ii].getNorthNeighbor = d.getNorthNeighborFunc(k, j, i)
-				d.Data[ii].getBelowNeighbor = d.getBelowNeighborFunc(k, j, i)
-				d.Data[ii].getAboveNeighbor = d.getAboveNeighborFunc(k, j, i)
+				if i == 0 {
+					d.Data[ii].WestNeighbor = d.westBoundary[k*d.Ny+j]
+				} else {
+					jj = d.getIndex(k, j, i-1)
+					d.Data[jj].checkIndicies(k, j, i-1)
+					d.Data[ii].WestNeighbor = d.Data[jj]
+				}
+				if i == d.Nx-1 {
+					d.Data[ii].EastNeighbor = d.eastBoundary[k*d.Ny+j]
+				} else {
+					jj = d.getIndex(k, j, i+1)
+					d.Data[jj].checkIndicies(k, j, i+1)
+					d.Data[ii].EastNeighbor = d.Data[jj]
+				}
+				if j == 0 {
+					d.Data[ii].SouthNeighbor = d.southBoundary[k*d.Nx+i]
+				} else {
+					jj = d.getIndex(k, j-1, i)
+					d.Data[jj].checkIndicies(k, j-1, i)
+					d.Data[ii].SouthNeighbor = d.Data[jj]
+				}
+				if j == d.Ny-1 {
+					d.Data[ii].NorthNeighbor = d.northBoundary[k*d.Nx+i]
+				} else {
+					jj = d.getIndex(k, j+1, i)
+					d.Data[jj].checkIndicies(k, j+1, i)
+					d.Data[ii].NorthNeighbor = d.Data[jj]
+				}
+				if k == 0 {
+					d.Data[ii].BelowNeighbor = d.Data[ii] // assume bottom boundary is the same as lowest layer.
+				} else {
+					jj = d.getIndex(k-1, j, i)
+					d.Data[jj].checkIndicies(k-1, j, i)
+					d.Data[ii].BelowNeighbor = d.Data[jj]
+				}
+				if k == d.Nz-1 {
+					d.Data[ii].AboveNeighbor = d.topBoundary[j*d.Nx+i]
+				} else {
+					jj = d.getIndex(k+1, j, i)
+					d.Data[jj].checkIndicies(k+1, j, i)
+					d.Data[ii].AboveNeighbor = d.Data[jj]
+				}
+				jj = d.getIndex(0, j, i)
+				d.Data[jj].checkIndicies(0, j, i)
+				d.Data[ii].GroundLevelNeighbor = d.Data[jj]
 				ii++
 			}
 		}
@@ -159,139 +262,48 @@ func (c *AIMcell) checkIndicies(k, j, i int) {
 	}
 }
 
-// Create functions to get velocities at the East, North, and Top edges of
-// the grid cells. These are the same as the West, South, and Bottom edges
-// of adjacent cells.
-func (d *AIMdata) getUeastFunc(k, j, i int) func() float64 {
-	if i == d.Nx-1 {
-		return func() float64 {
-			return d.UeastEdge[k][j]
+func setVelocities(cells []*AIMcell, nprocs, procNum int, wg *sync.WaitGroup) {
+	defer wg.Done()
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	var random float32
+	var c *AIMcell
+	for ii := procNum; ii < len(cells); ii += nprocs {
+		c = cells[ii]
+		// choose bins using a weighted random method
+		random = r.Float32()
+		for b, bin := range c.UbinsWest {
+			if random <= c.UfreqWest[b] {
+				c.Uwest = float64(bin)
+				break
+			}
 		}
-	} else {
-		ii := d.getIndex(k, j, i+1)
-		d.Data[ii].checkIndicies(k, j, i+1)
-		return func() float64 {
-			return d.Data[ii].Uwest
+		random = r.Float32()
+		for b, bin := range c.VbinsSouth {
+			if random <= c.VfreqSouth[b] {
+				c.Vsouth = float64(bin)
+				break
+			}
 		}
-	}
-}
-func (d *AIMdata) getVnorthFunc(k, j, i int) func() float64 {
-	if j == d.Ny-1 {
-		return func() float64 {
-			return d.VnorthEdge[k][i]
-		}
-	} else {
-		ii := d.getIndex(k, j+1, i)
-		d.Data[ii].checkIndicies(k, j+1, i)
-		return func() float64 {
-			return d.Data[ii].Vsouth
-		}
-	}
-}
-func (d *AIMdata) getWaboveFunc(k, j, i int) func() float64 {
-	if k == d.Nz-1 {
-		return func() float64 {
-			return d.WtopEdge[j][i]
-		}
-	} else {
-		ii := d.getIndex(k+1, j, i)
-		d.Data[ii].checkIndicies(k+1, j, i)
-		return func() float64 {
-			return d.Data[ii].Wbelow
+		random = r.Float32()
+		for b, bin := range c.WbinsBelow {
+			if random <= c.WfreqBelow[b] {
+				c.Wbelow = float64(bin)
+				break
+			}
 		}
 	}
 }
 
-// Lower boundary is same as lowest grid cell value.
-// All other boundaries = 0.
-func getUpperBoundary(_ int) float64 { return 0. }
-func getNorthBoundary(_ int) float64 { return 0. }
-func getSouthBoundary(_ int) float64 { return 0. }
-func getEastBoundary(_ int) float64  { return 0. }
-func getWestBoundary(_ int) float64  { return 0. }
-
-// Create functions to get concentrations at neighboring cells.
-func (d *AIMdata) getWestNeighborFunc(k, j, i int) func(int) float64 {
-	if i == 0 {
-		return getWestBoundary
-	} else {
-		ii := d.getIndex(k, j, i-1)
-		d.Data[ii].checkIndicies(k, j, i-1)
-		return func(iPol int) float64 {
-			return d.Data[ii].initialConc[iPol]
+// Add in emissions flux to each cell at every time step
+func (d *AIMdata) addEmissionsFlux(nprocs, procNum int) {
+	var c *AIMcell
+	for ii := procNum; ii < len(d.Data); ii += nprocs {
+		c = d.Data[ii]
+		for i, _ := range c.initialConc {
+			c.finalConc[i] += c.emisFlux[i] * d.Dt
+			c.initialConc[i] = c.finalConc[i]
 		}
 	}
-}
-func (d *AIMdata) getEastNeighborFunc(k, j, i int) func(int) float64 {
-	if i == d.Nx-1 {
-		return getEastBoundary
-	} else {
-		ii := d.getIndex(k, j, i+1)
-		d.Data[ii].checkIndicies(k, j, i+1)
-		return func(iPol int) float64 {
-			return d.Data[ii].initialConc[iPol]
-		}
-	}
-}
-func (d *AIMdata) getSouthNeighborFunc(k, j, i int) func(int) float64 {
-	if j == 0 {
-		return getSouthBoundary
-	} else {
-		ii := d.getIndex(k, j-1, i)
-		d.Data[ii].checkIndicies(k, j-1, i)
-		return func(iPol int) float64 {
-			return d.Data[ii].initialConc[iPol]
-		}
-	}
-}
-func (d *AIMdata) getNorthNeighborFunc(k, j, i int) func(int) float64 {
-	if j == d.Ny-1 {
-		return getNorthBoundary
-	} else {
-		ii := d.getIndex(k, j+1, i)
-		d.Data[ii].checkIndicies(k, j+1, i)
-		return func(iPol int) float64 {
-			return d.Data[ii].initialConc[iPol]
-		}
-	}
-}
-func (d *AIMdata) getBelowNeighborFunc(k, j, i int) func(int) float64 {
-	if k == 0 {
-		// Lower boundary is same as lowest grid cell value.
-		return func(iPol int) float64 {
-			return d.Data[d.getIndex(k, j, i)].initialConc[iPol]
-		}
-	} else {
-		ii := d.getIndex(k-1, j, i)
-		d.Data[ii].checkIndicies(k-1, j, i)
-		return func(iPol int) float64 {
-			return d.Data[ii].initialConc[iPol]
-		}
-	}
-}
-func (d *AIMdata) getAboveNeighborFunc(k, j, i int) func(int) float64 {
-	if k == d.Nz-1 {
-		return getUpperBoundary
-	} else {
-		ii := d.getIndex(k+1, j, i)
-		d.Data[ii].checkIndicies(k+1, j, i)
-		return func(iPol int) float64 {
-			return d.Data[ii].initialConc[iPol]
-		}
-	}
-}
-
-// choose a bin using a weighted random method
-func getbin(bins, freq []float32, random float32) float64 {
-	for b := 0; b < len(bins); b++ {
-		if random <= freq[b] {
-			return float64(bins[b])
-		}
-	}
-	panic(fmt.Sprintf("Could not choose a bin using seed %v "+
-		"(max cumulative frequency=%v).", random,
-		freq[len(freq)-1]))
-	return 0.
 }
 
 // Add in emissions, set wind velocities using the weighted
@@ -299,73 +311,61 @@ func getbin(bins, freq []float32, random float32) float64 {
 // and set time step (dt).
 func (d *AIMdata) SetupTimeStep() {
 	d.arrayLock.Lock()
-	iiChan := make(chan int)
 	var wg sync.WaitGroup
-	wg.Add(runtime.GOMAXPROCS(0))
-	for i := 0; i < runtime.GOMAXPROCS(0); i++ {
-		go func() {
-			defer wg.Done()
-			var c *AIMcell
-			r := rand.New(rand.NewSource(time.Now().UnixNano()))
-			for ii := range iiChan {
-				c = d.Data[ii]
-				c.Uwest = getbin(c.UbinsWest, c.UfreqWest, r.Float32())
-				c.Vsouth = getbin(c.VbinsSouth, c.VfreqSouth, r.Float32())
-				c.Wbelow = getbin(c.WbinsBelow, c.WfreqBelow, r.Float32())
-			}
-		}()
+	nprocs := runtime.GOMAXPROCS(0) // number of processors
+	wg.Add(nprocs * 4)
+	// Set cell velocities.
+	for procNum := 0; procNum < nprocs; procNum++ {
+		go setVelocities(d.Data, nprocs, procNum, &wg)
 	}
-	for ii := 0; ii < len(d.Data); ii += 1 {
-		iiChan <- ii
+	// Set east, north, and top boundary velocities.
+	for procNum := 0; procNum < nprocs; procNum++ {
+		go setVelocities(d.eastBoundary, nprocs, procNum, &wg)
 	}
-	close(iiChan)
+	for procNum := 0; procNum < nprocs; procNum++ {
+		go setVelocities(d.northBoundary, nprocs, procNum, &wg)
+	}
+	for procNum := 0; procNum < nprocs; procNum++ {
+		go setVelocities(d.topBoundary, nprocs, procNum, &wg)
+	}
 	wg.Wait()
 
-			r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	for k := 0; k < d.Nz; k++ {
-		for j := 0; j < d.Ny; j++ {
-			d.UeastEdge[k][j] = getbin(d.UbinsEastEdge[k][j],
-				d.UfreqEastEdge[k][j], r.Float32())
-		}
-	}
-	for k := 0; k < d.Nz; k++ {
-		for i := 0; i < d.Nx; i++ {
-			d.VnorthEdge[k][i] = getbin(d.VbinsNorthEdge[k][i],
-				d.VfreqNorthEdge[k][i], r.Float32())
-		}
-	}
-	for j := 0; j < d.Ny; j++ {
-		for i := 0; i < d.Nx; i++ {
-			d.WtopEdge[j][i] = getbin(d.WbinsTopEdge[j][i],
-				d.WfreqTopEdge[j][i], r.Float32())
-		}
-	}
-	d.setTstep()
+	d.setTstep(nprocs)
 	// Add in emissions after we know dt.
-	var c *AIMcell
-	for _, c = range d.Data {
-		for i, _ := range c.initialConc {
-			c.finalConc[i] += c.emisFlux[i] * d.Dt
-			c.initialConc[i] = c.finalConc[i]
-		}
+	for procNum := 0; procNum < nprocs; procNum++ {
+		go d.addEmissionsFlux(nprocs, procNum)
 	}
 	d.arrayLock.Unlock()
 }
 
 //  Set the time step using the Courant–Friedrichs–Lewy (CFL) condition.
-func (d *AIMdata) setTstep() {
+func (d *AIMdata) setTstep(nprocs int) {
 	const Cmax = 1
+	valChan := make(chan float64)
+	calcCFL := func(procNum int) {
+		// don't worry about the edges of the staggered grids.
+		var uval, vval, wval, thisval, val float64
+		var c *AIMcell
+		for ii := procNum; ii < len(d.Data); ii += nprocs {
+			c = d.Data[ii]
+			uval = math.Abs(c.Uwest) / c.Dx
+			vval = math.Abs(c.Vsouth) / c.Dy
+			wval = math.Abs(c.Wbelow) / c.Dz
+			thisval = max(uval, vval, wval)
+			if thisval > val {
+				val = thisval
+			}
+		}
+		valChan <- val
+	}
+	for procNum := 0; procNum < nprocs; procNum++ {
+		go calcCFL(procNum)
+	}
 	val := 0.
-	// don't worry about the edges of the staggered grids.
-	var uval, vval, wval, thisval float64
-	var c *AIMcell
-	for _, c = range d.Data {
-		uval = math.Abs(c.Uwest) / c.Dx
-		vval = math.Abs(c.Vsouth) / c.Dy
-		wval = math.Abs(c.Wbelow) / c.Dz
-		thisval = max(uval, vval, wval)
-		if thisval > val {
-			val = thisval
+	for i := 0; i < nprocs; i++ { // get max value from each processor
+		procval := <-valChan
+		if procval > val {
+			val = procval
 		}
 	}
 	d.Dt = Cmax / math.Pow(3., 0.5) / val // seconds
@@ -393,11 +393,12 @@ func (d *AIMdata) readNCFbins(filename string, wg *sync.WaitGroup, Var string) {
 		panic("Unexpected error!")
 	}
 	ii := 0
+	var index int
 	for k := 0; k < d.Nz; k++ {
 		for j := 0; j < d.Ny; j++ {
 			for i := 0; i < d.Nx; i++ {
 				for b := 0; b < d.nbins; b++ {
-					index := b*bstride + k*kstride + j*jstride + i
+					index = b*bstride + k*kstride + j*jstride + i
 					switch Var {
 					case "Ubins":
 						d.Data[ii].UbinsWest[b] = dat[index]
@@ -420,89 +421,72 @@ func (d *AIMdata) readNCFbins(filename string, wg *sync.WaitGroup, Var string) {
 		}
 	}
 	// Set North, East, and Top edge velocity bins for Arakawa C-grid.
+	ii = 0
 	switch Var {
 	case "Ubins":
-		d.UbinsEastEdge = make([][][]float32, d.Nz)
-		d.UeastEdge = make([][]float64, d.Nz)
-		i := d.Nx - 1
+		i := d.Nx
 		for k := 0; k < d.Nz; k++ {
-			d.UbinsEastEdge[k] = make([][]float32, d.Ny)
-			d.UeastEdge[k] = make([]float64, d.Ny)
 			for j := 0; j < d.Ny; j++ {
-				d.UbinsEastEdge[k][j] = make([]float32, d.nbins)
 				for b := 0; b < d.nbins; b++ {
-					index := b*bstride + k*kstride + j*jstride + i
-					d.UbinsEastEdge[k][j][b] = dat[index]
+					index = b*bstride + k*kstride + j*jstride + i
+					d.eastBoundary[ii].UbinsWest[b] = dat[index]
 				}
+				ii++
 			}
 		}
 	case "Ufreq":
-		d.UfreqEastEdge = make([][][]float32, d.Nz)
 		i := d.Nx
 		for k := 0; k < d.Nz; k++ {
-			d.UfreqEastEdge[k] = make([][]float32, d.Ny)
 			for j := 0; j < d.Ny; j++ {
-				d.UfreqEastEdge[k][j] = make([]float32, d.nbins)
 				for b := 0; b < d.nbins; b++ {
-					index := b*bstride + k*kstride + j*jstride + i
-					d.UfreqEastEdge[k][j][b] = dat[index]
+					index = b*bstride + k*kstride + j*jstride + i
+					d.eastBoundary[ii].UfreqWest[b] = dat[index]
 				}
+				ii++
 			}
 		}
 	case "Vbins":
-		d.VbinsNorthEdge = make([][][]float32, d.Nz)
-		d.VnorthEdge = make([][]float64, d.Nz)
 		j := d.Ny
 		for k := 0; k < d.Nz; k++ {
-			d.VbinsNorthEdge[k] = make([][]float32, d.Nx)
-			d.VnorthEdge[k] = make([]float64, d.Nx)
 			for i := 0; i < d.Nx; i++ {
-				d.VbinsNorthEdge[k][i] = make([]float32, d.nbins)
 				for b := 0; b < d.nbins; b++ {
-					index := b*bstride + k*kstride + j*jstride + i
-					d.VbinsNorthEdge[k][i][b] = dat[index]
+					index = b*bstride + k*kstride + j*jstride + i
+					d.northBoundary[ii].VbinsSouth[b] = dat[index]
 				}
+				ii++
 			}
 		}
 	case "Vfreq":
-		d.VfreqNorthEdge = make([][][]float32, d.Nz)
 		j := d.Ny
 		for k := 0; k < d.Nz; k++ {
-			d.VfreqNorthEdge[k] = make([][]float32, d.Nx)
 			for i := 0; i < d.Nx; i++ {
-				d.VfreqNorthEdge[k][i] = make([]float32, d.nbins)
 				for b := 0; b < d.nbins; b++ {
-					index := b*bstride + k*kstride + j*jstride + i
-					d.VfreqNorthEdge[k][i][b] = dat[index]
+					index = b*bstride + k*kstride + j*jstride + i
+					d.northBoundary[ii].VfreqSouth[b] = dat[index]
 				}
+				ii++
 			}
 		}
 	case "Wbins":
-		d.WbinsTopEdge = make([][][]float32, d.Ny)
-		d.WtopEdge = make([][]float64, d.Ny)
 		k := d.Nz
 		for j := 0; j < d.Ny; j++ {
-			d.WbinsTopEdge[j] = make([][]float32, d.Nx)
-			d.WtopEdge[j] = make([]float64, d.Nx)
 			for i := 0; i < d.Nx; i++ {
-				d.WbinsTopEdge[j][i] = make([]float32, d.nbins)
 				for b := 0; b < d.nbins; b++ {
-					index := b*bstride + k*kstride + j*jstride + i
-					d.WbinsTopEdge[j][i][b] = dat[index]
+					index = b*bstride + k*kstride + j*jstride + i
+					d.topBoundary[ii].WbinsBelow[b] = dat[index]
 				}
+				ii++
 			}
 		}
 	case "Wfreq":
-		d.WfreqTopEdge = make([][][]float32, d.Ny)
 		k := d.Nz
 		for j := 0; j < d.Ny; j++ {
-			d.WfreqTopEdge[j] = make([][]float32, d.Nx)
 			for i := 0; i < d.Nx; i++ {
-				d.WfreqTopEdge[j][i] = make([]float32, d.nbins)
 				for b := 0; b < d.nbins; b++ {
-					index := b*bstride + k*kstride + j*jstride + i
-					d.WfreqTopEdge[j][i][b] = dat[index]
+					index = b*bstride + k*kstride + j*jstride + i
+					d.topBoundary[ii].WfreqBelow[b] = dat[index]
 				}
+				ii++
 			}
 		}
 	default:

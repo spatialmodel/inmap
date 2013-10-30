@@ -86,6 +86,7 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 	nDaysRun := 0.
 	nDaysSinceConvergenceCheck := 0.
 	nIterationsSinceConvergenceCheck := 0
+	nprocs := runtime.GOMAXPROCS(0) // number of processors
 	for {
 		iteration++
 		nIterationsSinceConvergenceCheck++
@@ -98,33 +99,11 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 			time.Since(timeStepTime).Seconds(), d.Dt, nDaysRun)
 		timeStepTime = time.Now()
 
-		iiChan := make(chan int)
 		sumChan := make(chan float64)
-		for i := 0; i < runtime.GOMAXPROCS(0); i++ {
-			go func() {
-				var c *AIMcell
-				sum := 0.
-				for ii := range iiChan {
-					c = d.Data[ii]
-					//zdiff = m.DiffusiveFlux(c, d)
-					c.AdvectiveFluxUpwind(d.Dt)
-					c.GravitationalSettling(d)
-					c.VOCoxidationFlux(d)
-					c.WetDeposition(d.Dt)
-					c.ChemicalPartitioning()
-
-					for _, val := range c.finalConc {
-						sum += val
-					}
-				}
-				sumChan <- sum * c.Volume
-			}()
+		for procNum := 0; procNum < nprocs; procNum++ {
+			go d.doScience(nprocs, procNum, sumChan)
 		}
-		for ii := 0; ii < len(d.Data); ii += 1 {
-			iiChan <- ii
-		}
-		close(iiChan)
-		for i := 0; i < runtime.GOMAXPROCS(0); i++ {
+		for i := 0; i < nprocs; i++ {
 			finalMassSum += <-sumChan
 		}
 		if nDaysSinceConvergenceCheck > nDaysCheckConvergence {
@@ -155,6 +134,26 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 		}
 	}
 	return
+}
+
+// Carry out the atmospheric chemistry and physics calculations
+func (d *AIMdata) doScience(nprocs, procNum int, sumChan chan float64) {
+	sum := 0.
+	var c *AIMcell
+	for ii := procNum; ii < len(d.Data); ii += nprocs {
+		c = d.Data[ii]
+		//zdiff = m.DiffusiveFlux(c, d)
+		c.AdvectiveFluxUpwind(d.Dt)
+		c.GravitationalSettling(d)
+		c.VOCoxidationFlux(d)
+		c.WetDeposition(d.Dt)
+		c.ChemicalPartitioning()
+
+		for _, val := range c.finalConc {
+			sum += val * c.Volume
+		}
+	}
+	sumChan <- sum
 }
 
 // Calculate emissions flux given emissions array in units of μg/s

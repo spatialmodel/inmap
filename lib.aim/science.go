@@ -136,36 +136,46 @@ func (c *AIMcell) AdvectiveFluxUpwind(Δt float64) {
 
 	for ii, _ := range c.finalConc {
 		if c.Uwest > 0. {
-			c.finalConc[ii] += c.Uwest * c.getWestNeighbor(ii) / c.Dx * Δt
+			c.finalConc[ii] += c.Uwest * c.WestNeighbor.initialConc[ii] /
+				c.Dx * Δt
 		} else {
-			c.finalConc[ii] += c.Uwest * c.initialConc[ii] / c.Dx * Δt
+			c.finalConc[ii] += c.Uwest * c.initialConc[ii] /
+				c.Dx * Δt
 		}
-		if c.getUeast() > 0. {
-			c.finalConc[ii] -= c.getUeast() * c.initialConc[ii] / c.Dx * Δt
+		if c.EastNeighbor.Uwest > 0. {
+			c.finalConc[ii] -= c.EastNeighbor.Uwest * c.initialConc[ii] /
+				c.Dx * Δt
 		} else {
-			c.finalConc[ii] -= c.getUeast() * c.getEastNeighbor(ii) / c.Dx * Δt
+			c.finalConc[ii] -= c.EastNeighbor.Uwest *
+				c.EastNeighbor.initialConc[ii] / c.Dx * Δt
 		}
 
 		if c.Vsouth > 0. {
-			c.finalConc[ii] += c.Vsouth * c.getSouthNeighbor(ii) / c.Dy * Δt
+			c.finalConc[ii] += c.Vsouth * c.SouthNeighbor.initialConc[ii] /
+				c.Dy * Δt
 		} else {
 			c.finalConc[ii] += c.Vsouth * c.initialConc[ii] / c.Dy * Δt
 		}
-		if c.getVnorth() > 0. {
-			c.finalConc[ii] -= c.getVnorth() * c.initialConc[ii] / c.Dy * Δt
+		if c.NorthNeighbor.Vsouth > 0. {
+			c.finalConc[ii] -= c.NorthNeighbor.Vsouth * c.initialConc[ii] /
+				c.Dy * Δt
 		} else {
-			c.finalConc[ii] -= c.getVnorth() * c.getNorthNeighbor(ii) / c.Dy * Δt
+			c.finalConc[ii] -= c.NorthNeighbor.Vsouth *
+				c.NorthNeighbor.initialConc[ii] / c.Dy * Δt
 		}
 
 		if c.Wbelow > 0. {
-			c.finalConc[ii] += c.Wbelow * c.getBelowNeighbor(ii) / c.Dz * Δt
+			c.finalConc[ii] += c.Wbelow * c.BelowNeighbor.initialConc[ii] /
+				c.Dz * Δt
 		} else {
 			c.finalConc[ii] += c.Wbelow * c.initialConc[ii] / c.Dz * Δt
 		}
-		if c.getWabove() > 0. {
-			c.finalConc[ii] -= c.getWabove() * c.initialConc[ii] / c.Dz * Δt
+		if c.AboveNeighbor.Wbelow > 0. {
+			c.finalConc[ii] -= c.AboveNeighbor.Wbelow * c.initialConc[ii] /
+				c.Dz * Δt
 		} else {
-			c.finalConc[ii] -= c.getWabove() * c.getAboveNeighbor(ii) / c.Dz * Δt
+			c.finalConc[ii] -= c.AboveNeighbor.Wbelow *
+				c.AboveNeighbor.initialConc[ii] / c.Dz * Δt
 		}
 	}
 }
@@ -224,7 +234,7 @@ func (c *AIMcell) GravitationalSettling(d *AIMdata) {
 			c.finalConc[iPol] -= d.vs * c.initialConc[iPol] / c.Dz * d.Dt
 		} else {
 			c.finalConc[iPol] -= d.vs * (c.initialConc[iPol] -
-				c.getAboveNeighbor(iPol)) / c.Dz * d.Dt
+				c.AboveNeighbor.initialConc[iPol]) / c.Dz * d.Dt
 		}
 	}
 }
