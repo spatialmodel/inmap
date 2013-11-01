@@ -141,14 +141,14 @@ func (d *AIMdata) doScience(nprocs, procNum int, sumChan chan float64) {
 	var c *AIMcell
 	for ii := procNum; ii < len(d.Data); ii += nprocs {
 		c = d.Data[ii]
-		//zdiff = m.DiffusiveFlux(c, d)
 		c.AdvectiveFluxUpwind(d.Dt)
+		c.VerticalMixing(d.Dt)
 		c.GravitationalSettling(d)
 		c.VOCoxidationFlux(d)
 		c.WetDeposition(d.Dt)
 		c.ChemicalPartitioning()
 
-		for _, val := range c.finalConc {
+		for _, val := range c.Cf {
 			sum += val * c.Volume
 		}
 	}
@@ -179,39 +179,39 @@ func (d *AIMdata) ToArray(pol string) *sparse.DenseArray {
 	switch pol {
 	case "VOC":
 		for i, c := range d.Data {
-			o.Elements[i] = c.finalConc[igOrg]
+			o.Elements[i] = c.Cf[igOrg]
 		}
 	case "SOA":
 		for i, c := range d.Data {
-			o.Elements[i] = c.finalConc[ipOrg]
+			o.Elements[i] = c.Cf[ipOrg]
 		}
 	case "PrimaryPM2_5":
 		for i, c := range d.Data {
-			o.Elements[i] = c.finalConc[iPM2_5]
+			o.Elements[i] = c.Cf[iPM2_5]
 		}
 	case "NH3":
 		for i, c := range d.Data {
-			o.Elements[i] = c.finalConc[igNH] / NH3ToN
+			o.Elements[i] = c.Cf[igNH] / NH3ToN
 		}
 	case "pNH4":
 		for i, c := range d.Data {
-			o.Elements[i] = c.finalConc[ipNH] * NtoNH4
+			o.Elements[i] = c.Cf[ipNH] * NtoNH4
 		}
 	case "SOx":
 		for i, c := range d.Data {
-			o.Elements[i] = c.finalConc[igS] / SOxToS
+			o.Elements[i] = c.Cf[igS] / SOxToS
 		}
 	case "pSO4":
 		for i, c := range d.Data {
-			o.Elements[i] = c.finalConc[ipS] * StoSO4
+			o.Elements[i] = c.Cf[ipS] * StoSO4
 		}
 	case "NOx":
 		for i, c := range d.Data {
-			o.Elements[i] = c.finalConc[igNO] / NOxToN
+			o.Elements[i] = c.Cf[igNO] / NOxToN
 		}
 	case "pNO3":
 		for i, c := range d.Data {
-			o.Elements[i] = c.finalConc[ipNO] * NtoNO3
+			o.Elements[i] = c.Cf[ipNO] * NtoNO3
 		}
 	case "VOCemissions":
 		for i, c := range d.Data {
@@ -272,6 +272,22 @@ func (d *AIMdata) ToArray(pol string) *sparse.DenseArray {
 	case "Non-SO2gaswetdeposition":
 		for i, c := range d.Data {
 			o.Elements[i] = c.wdOtherGas
+		}
+	case "Kz":
+		for i, c := range d.Data {
+			o.Elements[i] = c.Kz
+		}
+	case "M2u":
+		for i, c := range d.Data {
+			o.Elements[i] = c.M2u
+		}
+	case "M2d":
+		for i, c := range d.Data {
+			o.Elements[i] = c.M2d
+		}
+	case "kPblTop":
+		for i, c := range d.Data {
+			o.Elements[i] = c.kPblTop
 		}
 	default:
 		panic(fmt.Sprintf("Unknown variable %v.", pol))

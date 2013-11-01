@@ -35,13 +35,16 @@ type AIMcell struct {
 	orgPartitioning, SPartitioning float64   // gaseous fraction
 	NOPartitioning, NHPartitioning float64   // gaseous fraction
 	wdParticle, wdSO2, wdOtherGas  float64   // wet deposition rate, 1/s
-	verticalDiffusivity            float64   // vertical diffusivity, m2/s
+	Kz                             float64   // vertical diffusivity, m2/s
+	M2u                            float64   // ACM2 upward mixing (Pleim 2007), 1/s
+	M2d                            float64   // ACM2 downward mixing (Pleim 2007), 1/s
+	kPblTop                        float64   // k index of boundary layer top
 	Dx, Dy, Dz                     float64   // meters
 	Volume                         float64   // cubic meters
 	k, j, i                        int       // cell indicies
 	ii                             int       // master index
-	initialConc                    []float64 // concentrations at beginning of time step
-	finalConc                      []float64 // concentrations at end of time step
+	Ci                             []float64 // concentrations at beginning of time step
+	Cf                             []float64 // concentrations at end of time step
 	emisFlux                       []float64 //  emissions (μg/m3/s)
 	WestNeighbor                   *AIMcell
 	EastNeighbor                   *AIMcell
@@ -50,6 +53,8 @@ type AIMcell struct {
 	BelowNeighbor                  *AIMcell
 	AboveNeighbor                  *AIMcell
 	GroundLevelNeighbor            *AIMcell
+	dzplushalf                     float64 // Distance between centers of cell and AboveNeighbor
+	dzminushalf                    float64 // Distance between centers of cell and BelowNeighbor
 }
 
 func newAIMcell(nbins int, dx, dy, dz float64) *AIMcell {
@@ -62,8 +67,8 @@ func newAIMcell(nbins int, dx, dy, dz float64) *AIMcell {
 	c.UfreqWest = make([]float32, nbins)
 	c.VfreqSouth = make([]float32, nbins)
 	c.WfreqBelow = make([]float32, nbins)
-	c.initialConc = make([]float64, len(polNames))
-	c.finalConc = make([]float64, len(polNames))
+	c.Ci = make([]float64, len(polNames))
+	c.Cf = make([]float64, len(polNames))
 	c.emisFlux = make([]float64, len(polNames))
 	return c
 }
@@ -88,7 +93,7 @@ func InitAIMdata(filename string) *AIMdata {
 	dx, dy := 12000., 12000. // need to make these adjustable
 	d.VOCoxidationRate = f.Header.GetAttribute("", "VOCoxidationRate").([]float64)[0]
 	var wg sync.WaitGroup
-	wg.Add(14)
+	wg.Add(18)
 	layerHeights := sparse.ZerosDense(d.Nz+1, d.Ny, d.Nx)
 	readNCF(filename, &wg, "layerHeights", layerHeights)
 	// set up data holders
@@ -189,6 +194,10 @@ func InitAIMdata(filename string) *AIMdata {
 	go d.readNCF(filename, &wg, "wdParticle")
 	go d.readNCF(filename, &wg, "wdSO2")
 	go d.readNCF(filename, &wg, "wdOtherGas")
+	go d.readNCF(filename, &wg, "Kz")
+	go d.readNCF(filename, &wg, "M2u")
+	go d.readNCF(filename, &wg, "M2d")
+	go d.readNCF(filename, &wg, "pblTopLayer")
 	wg.Wait()
 	d.arrayLock.Unlock()
 
@@ -243,6 +252,11 @@ func InitAIMdata(filename string) *AIMdata {
 				jj = d.getIndex(0, j, i)
 				d.Data[jj].checkIndicies(0, j, i)
 				d.Data[ii].GroundLevelNeighbor = d.Data[jj]
+
+				d.Data[ii].dzplushalf = (d.Data[ii].Dz +
+					d.Data[ii].AboveNeighbor.Dz) / 2.
+				d.Data[ii].dzminushalf = (d.Data[ii].Dz +
+					d.Data[ii].BelowNeighbor.Dz) / 2.
 				ii++
 			}
 		}
@@ -299,9 +313,9 @@ func (d *AIMdata) addEmissionsFlux(nprocs, procNum int) {
 	var c *AIMcell
 	for ii := procNum; ii < len(d.Data); ii += nprocs {
 		c = d.Data[ii]
-		for i, _ := range c.initialConc {
-			c.finalConc[i] += c.emisFlux[i] * d.Dt
-			c.initialConc[i] = c.finalConc[i]
+		for i, _ := range c.Ci {
+			c.Cf[i] += c.emisFlux[i] * d.Dt
+			c.Ci[i] = c.Cf[i]
 		}
 	}
 }
@@ -520,6 +534,15 @@ func (d *AIMdata) readNCF(filename string, wg *sync.WaitGroup, Var string) {
 					d.Data[ii].wdSO2 = float64(dat[index])
 				case "wdOtherGas":
 					d.Data[ii].wdOtherGas = float64(dat[index])
+				case "Kz":
+					d.Data[ii].Kz = float64(dat[index])
+				case "M2u":
+					d.Data[ii].M2u = float64(dat[index])
+				case "M2d":
+					d.Data[ii].M2d = float64(dat[index])
+				case "pblTopLayer": // 2d variable
+					index = j*jstride + i
+					d.Data[ii].kPblTop = float64(dat[index])
 				default:
 					panic(fmt.Sprintf("Variable %v unknown.\n", Var))
 				}

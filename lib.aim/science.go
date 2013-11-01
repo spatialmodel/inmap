@@ -41,6 +41,26 @@ func (d *AIMdata) SettlingVelocity() {
 //	return
 //}
 
+// Calculate vertical mixing based on Pleim (2007) for
+// boundary layer and Wilson (2004) for above the boundary layer.
+func (c *AIMcell) VerticalMixing(Δt float64) {
+	a := c.AboveNeighbor
+	b := c.BelowNeighbor
+	g := c.GroundLevelNeighbor
+	for ii, _ := range c.Cf {
+		// Pleim (2007) Equation 10.
+		if c.k == 0 {
+			c.Cf[ii] += (-c.M2u*g.Ci[ii]*c.kPblTop + a.M2d*a.Ci[ii]*a.Dz/c.Dz +
+				1./c.Dz*(a.Kz*(a.Ci[ii]-c.Ci[ii])/c.dzplushalf)) * Δt
+		} else { // If above boundary layer, M2u and M2d = 0.
+			c.Cf[ii] += (c.M2u*g.Ci[ii] -
+				c.M2d*c.Ci[ii] + a.M2d*a.Ci[ii]*a.Dz/c.Dz +
+				1./c.Dz*(a.Kz*(a.Ci[ii]-c.Ci[ii])/c.dzplushalf+
+					b.Kz*(c.Ci[ii]-b.Ci[ii])/c.dzminushalf)) * Δt
+		}
+	}
+}
+
 // The fourth-order flux-form spatial approximation for
 // δ(uq)/δx. Equation 4b from Wicker and Skamarock (2002).
 func f4(u, q, q1, qopposite1, q2 float64) float64 {
@@ -134,48 +154,48 @@ func rkJacobson(uplus, uminus, q, qplus, qminus, Δt, Δx float64) (
 // Results are in units of (Co units).
 func (c *AIMcell) AdvectiveFluxUpwind(Δt float64) {
 
-	for ii, _ := range c.finalConc {
+	for ii, _ := range c.Cf {
 		if c.Uwest > 0. {
-			c.finalConc[ii] += c.Uwest * c.WestNeighbor.initialConc[ii] /
+			c.Cf[ii] += c.Uwest * c.WestNeighbor.Ci[ii] /
 				c.Dx * Δt
 		} else {
-			c.finalConc[ii] += c.Uwest * c.initialConc[ii] /
+			c.Cf[ii] += c.Uwest * c.Ci[ii] /
 				c.Dx * Δt
 		}
 		if c.EastNeighbor.Uwest > 0. {
-			c.finalConc[ii] -= c.EastNeighbor.Uwest * c.initialConc[ii] /
+			c.Cf[ii] -= c.EastNeighbor.Uwest * c.Ci[ii] /
 				c.Dx * Δt
 		} else {
-			c.finalConc[ii] -= c.EastNeighbor.Uwest *
-				c.EastNeighbor.initialConc[ii] / c.Dx * Δt
+			c.Cf[ii] -= c.EastNeighbor.Uwest *
+				c.EastNeighbor.Ci[ii] / c.Dx * Δt
 		}
 
 		if c.Vsouth > 0. {
-			c.finalConc[ii] += c.Vsouth * c.SouthNeighbor.initialConc[ii] /
+			c.Cf[ii] += c.Vsouth * c.SouthNeighbor.Ci[ii] /
 				c.Dy * Δt
 		} else {
-			c.finalConc[ii] += c.Vsouth * c.initialConc[ii] / c.Dy * Δt
+			c.Cf[ii] += c.Vsouth * c.Ci[ii] / c.Dy * Δt
 		}
 		if c.NorthNeighbor.Vsouth > 0. {
-			c.finalConc[ii] -= c.NorthNeighbor.Vsouth * c.initialConc[ii] /
+			c.Cf[ii] -= c.NorthNeighbor.Vsouth * c.Ci[ii] /
 				c.Dy * Δt
 		} else {
-			c.finalConc[ii] -= c.NorthNeighbor.Vsouth *
-				c.NorthNeighbor.initialConc[ii] / c.Dy * Δt
+			c.Cf[ii] -= c.NorthNeighbor.Vsouth *
+				c.NorthNeighbor.Ci[ii] / c.Dy * Δt
 		}
 
 		if c.Wbelow > 0. {
-			c.finalConc[ii] += c.Wbelow * c.BelowNeighbor.initialConc[ii] /
+			c.Cf[ii] += c.Wbelow * c.BelowNeighbor.Ci[ii] /
 				c.Dz * Δt
 		} else {
-			c.finalConc[ii] += c.Wbelow * c.initialConc[ii] / c.Dz * Δt
+			c.Cf[ii] += c.Wbelow * c.Ci[ii] / c.Dz * Δt
 		}
 		if c.AboveNeighbor.Wbelow > 0. {
-			c.finalConc[ii] -= c.AboveNeighbor.Wbelow * c.initialConc[ii] /
+			c.Cf[ii] -= c.AboveNeighbor.Wbelow * c.Ci[ii] /
 				c.Dz * Δt
 		} else {
-			c.finalConc[ii] -= c.AboveNeighbor.Wbelow *
-				c.AboveNeighbor.initialConc[ii] / c.Dz * Δt
+			c.Cf[ii] -= c.AboveNeighbor.Wbelow *
+				c.AboveNeighbor.Ci[ii] / c.Dz * Δt
 		}
 	}
 }
@@ -184,15 +204,15 @@ func (c *AIMcell) WetDeposition(Δt float64) {
 	particleFrac := 1. - c.wdParticle*Δt
 	SO2Frac := 1. - c.wdSO2*Δt
 	otherGasFrac := 1 - c.wdOtherGas*Δt
-	c.finalConc[igOrg] *= otherGasFrac  // gOrg
-	c.finalConc[ipOrg] *= particleFrac  // pOrg
-	c.finalConc[iPM2_5] *= particleFrac // PM2_5
-	c.finalConc[igNH] *= otherGasFrac   // gNH
-	c.finalConc[ipNH] *= particleFrac   // pNH
-	c.finalConc[igS] *= SO2Frac         // gS
-	c.finalConc[ipS] *= particleFrac    // pS
-	c.finalConc[igNO] *= otherGasFrac   // gNO
-	c.finalConc[ipNO] *= particleFrac   // pNO
+	c.Cf[igOrg] *= otherGasFrac  // gOrg
+	c.Cf[ipOrg] *= particleFrac  // pOrg
+	c.Cf[iPM2_5] *= particleFrac // PM2_5
+	c.Cf[igNH] *= otherGasFrac   // gNH
+	c.Cf[ipNH] *= particleFrac   // pNH
+	c.Cf[igS] *= SO2Frac         // gS
+	c.Cf[ipS] *= particleFrac    // pS
+	c.Cf[igNO] *= otherGasFrac   // gNO
+	c.Cf[ipNO] *= particleFrac   // pNO
 }
 
 // Reactive flux partitions organic matter ("gOrg" and "pOrg"), the
@@ -204,26 +224,26 @@ func (c *AIMcell) WetDeposition(Δt float64) {
 func (c *AIMcell) ChemicalPartitioning() {
 
 	// Gas/particle partitioning
-	totalOrg := c.finalConc[igOrg] + c.finalConc[ipOrg]
-	c.finalConc[igOrg] = totalOrg * c.orgPartitioning
-	c.finalConc[ipOrg] = totalOrg * (1 - c.orgPartitioning)
+	totalOrg := c.Cf[igOrg] + c.Cf[ipOrg]
+	c.Cf[igOrg] = totalOrg * c.orgPartitioning
+	c.Cf[ipOrg] = totalOrg * (1 - c.orgPartitioning)
 
-	totalS := c.finalConc[igS] + c.finalConc[ipS]
-	c.finalConc[igS] = totalS * c.SPartitioning
-	c.finalConc[ipS] = totalS * (1 - c.SPartitioning)
+	totalS := c.Cf[igS] + c.Cf[ipS]
+	c.Cf[igS] = totalS * c.SPartitioning
+	c.Cf[ipS] = totalS * (1 - c.SPartitioning)
 
-	totalNO := c.finalConc[igNO] + c.finalConc[ipNO]
-	c.finalConc[igNO] = totalNO * c.NOPartitioning
-	c.finalConc[ipNO] = totalNO * (1 - c.NOPartitioning)
+	totalNO := c.Cf[igNO] + c.Cf[ipNO]
+	c.Cf[igNO] = totalNO * c.NOPartitioning
+	c.Cf[ipNO] = totalNO * (1 - c.NOPartitioning)
 
-	totalNH := c.finalConc[igNH] + c.finalConc[ipNH]
-	c.finalConc[igNH] = totalNH * c.NHPartitioning
-	c.finalConc[ipNH] = totalNH * (1 - c.NHPartitioning)
+	totalNH := c.Cf[igNH] + c.Cf[ipNH]
+	c.Cf[igNH] = totalNH * c.NHPartitioning
+	c.Cf[ipNH] = totalNH * (1 - c.NHPartitioning)
 }
 
 // VOC oxidation flux
 func (c *AIMcell) VOCoxidationFlux(d *AIMdata) {
-	c.finalConc[igOrg] -= c.initialConc[igOrg] * d.VOCoxidationRate * d.Dt
+	c.Cf[igOrg] -= c.Ci[igOrg] * d.VOCoxidationRate * d.Dt
 }
 
 var gravSettlingPols = []int{iPM2_5, ipOrg, ipNH, ipNO, ipS}
@@ -231,10 +251,10 @@ var gravSettlingPols = []int{iPM2_5, ipOrg, ipNH, ipNO, ipS}
 func (c *AIMcell) GravitationalSettling(d *AIMdata) {
 	for _, iPol := range gravSettlingPols {
 		if c.k == 0 {
-			c.finalConc[iPol] -= d.vs * c.initialConc[iPol] / c.Dz * d.Dt
+			c.Cf[iPol] -= d.vs * c.Ci[iPol] / c.Dz * d.Dt
 		} else {
-			c.finalConc[iPol] -= d.vs * (c.initialConc[iPol] -
-				c.AboveNeighbor.initialConc[iPol]) / c.Dz * d.Dt
+			c.Cf[iPol] -= d.vs * (c.Ci[iPol] -
+				c.AboveNeighbor.Ci[iPol]) / c.Dz * d.Dt
 		}
 	}
 }
