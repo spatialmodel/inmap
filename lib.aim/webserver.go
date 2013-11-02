@@ -19,6 +19,7 @@ func (d *AIMdata) WebServer() {
 	http.HandleFunc("/css/bootstrap-responsive.min.css",
 		webframework.ServeCSSresponsive)
 	http.HandleFunc("/map/", d.mapHandler)
+	http.HandleFunc("/legend/", d.legendHandler)
 	http.HandleFunc("/proc/", webframework.ProcessorProf)
 	http.HandleFunc("/heap/", webframework.HeapProf)
 	http.HandleFunc("/", reportHandler)
@@ -77,6 +78,9 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 				<div class="row">
 					<img id=mapdiv src="map/PrimaryPM2_5/0" class="img-rounded">
 				</div>
+				<div class="row">
+					<embed id=legenddiv src="/legend/PrimaryPM2_5/0" type="image/svg+xml">
+				</div>
 			</div>
 		</div>
 	</div>`
@@ -88,26 +92,36 @@ function updateImage() {
 	var layer=document.getElementById("layer").value;
 	document.getElementById("mapdiv").src = "map/"+mapvar+"/"+layer;
 	document.getElementById("maptitle").innerHTML = mapvar+" layer "+layer+" status";
+	var elem = document.getElementsByTagName("embed")[0],
+	copy = elem.cloneNode();
+	copy.src = "legend/"+mapvar+"/"+layer;
+	elem.parentNode.replaceChild(copy, elem);
 }
 </script>`
 
 	webframework.RenderFooter(w, mapJS)
 }
 
+func parseMapRequest(base string, r *http.Request) (name string, layer int, err error) {
+	var layer64 int64
+	request := strings.Split(r.URL.Path[len(base):], "/")
+	name = request[0]
+	layer64, err = strconv.ParseInt(request[1], 10, 64)
+	layer = int(layer64)
+	return
+}
+
 func (d *AIMdata) mapHandler(w http.ResponseWriter, r *http.Request) {
-	request := strings.Split(r.URL.Path[len("/map/"):], "/")
-	name := request[0]
-	layer, err := strconv.ParseInt(request[1], 10, 64)
+	name, layer, err := parseMapRequest("/map/", r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	c := d.ToArray(name)
-	pol := "PM2.5"
 	b := bufio.NewWriter(w)
-	groundlevel := c.Subset([]int{int(layer), 0, 0},
+	layerSubset := c.Subset([]int{int(layer), 0, 0},
 		[]int{int(layer), c.Shape[1] - 1, c.Shape[2] - 1})
-	err = CreateImage(b, groundlevel, pol)
+	err = CreateImage(b, layerSubset)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -120,13 +134,12 @@ func (d *AIMdata) mapHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // Creates a png image from an array
-func CreateImage(w *bufio.Writer, c *sparse.DenseArray, pol string) error {
+func CreateImage(w *bufio.Writer, c *sparse.DenseArray) error {
 	cmap := gis.NewColorMap("LinCutoff")
 	cmap.AddArray(c.Elements)
 	cmap.Set()
 	nx := c.Shape[1]
 	ny := c.Shape[0]
-	//	cmap.Legend(pol+"_legend.svg", "concentrations (μg/m3)")
 	i := image.NewRGBA(image.Rect(0, 0, nx, ny))
 	for x := 0; x < nx; x++ {
 		for y := 0; y < ny; y++ {
@@ -134,4 +147,28 @@ func CreateImage(w *bufio.Writer, c *sparse.DenseArray, pol string) error {
 		}
 	}
 	return png.Encode(w, i)
+}
+
+// Creates a legend and serves it.
+func (d *AIMdata) legendHandler(w http.ResponseWriter, r *http.Request) {
+	name, layer, err := parseMapRequest("/legend/", r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	c := d.ToArray(name)
+	cmap := gis.NewColorMap("LinCutoff")
+	layerSubset := c.Subset([]int{int(layer), 0, 0},
+		[]int{int(layer), c.Shape[1] - 1, c.Shape[2] - 1})
+	cmap.AddArray(layerSubset.Elements)
+	cmap.Set()
+	cmap.LegendWidth = 1.48
+	cmap.LegendHeight = 0.2
+	cmap.LineWidth = 0.2
+	cmap.FontSize = 4
+	err = cmap.Legend(w, "concentrations (μg/m3)")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
