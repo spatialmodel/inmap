@@ -536,7 +536,8 @@ func (d *AIMdata) readNCF(filename string, wg *sync.WaitGroup, Var string) {
 					d.Data[ii].wdOtherGas = float64(dat[index])
 				case "Kz":
 					d.Data[ii].Kz = float64(dat[index])
-				case "M2u":
+				case "M2u":// 2d variable
+					index = j*jstride + i
 					d.Data[ii].M2u = float64(dat[index])
 				case "M2d":
 					d.Data[ii].M2d = float64(dat[index])

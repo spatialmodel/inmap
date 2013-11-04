@@ -50,19 +50,17 @@ func (c *AIMcell) VerticalMixing(Δt float64) {
 	for ii, _ := range c.Cf {
 		// Pleim (2007) Equation 10.
 		if c.k == 0 {
-			cc := c
-			M2uSum := 0. // Get the sum of all the upward convection rates.
-			for kk := 0; kk <= int(c.kPblTop); kk++ {
-				M2uSum += cc.M2u
-				cc = cc.AboveNeighbor
-			}
-			c.Cf[ii] += (-M2uSum*c.Ci[ii] + a.M2d*a.Ci[ii]*a.Dz/c.Dz +
+			c.Cf[ii] += (-c.M2u*c.Ci[ii]*c.kPblTop + a.M2d*a.Ci[ii]*a.Dz/c.Dz +
 				1./c.Dz*(a.Kz*(a.Ci[ii]-c.Ci[ii])/c.dzplushalf)) * Δt
-		} else { // If above boundary layer, M2u and M2d = 0.
-			c.Cf[ii] += (c.M2u*g.Ci[ii] - c.M2d*c.Ci[ii] +
+		} else if float64(c.k) < c.kPblTop {
+			c.Cf[ii] += (g.M2u*g.Ci[ii] - c.M2d*c.Ci[ii] +
 				a.M2d*a.Ci[ii]*a.Dz/c.Dz +
 				1./c.Dz*(a.Kz*(a.Ci[ii]-c.Ci[ii])/c.dzplushalf+
-					b.Kz*(b.Ci[ii]-c.Ci[ii])/c.dzminushalf)) * Δt
+					c.Kz*(b.Ci[ii]-c.Ci[ii])/c.dzminushalf)) * Δt
+		} else {
+			c.Cf[ii] += (1. / c.Dz * (a.Kz*(a.Ci[ii]-c.Ci[ii])/c.dzplushalf +
+				c.Kz*(b.Ci[ii]-c.Ci[ii])/c.dzminushalf)) * Δt
+
 		}
 	}
 }

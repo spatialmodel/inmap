@@ -37,6 +37,7 @@ const (
 	mwSO4 = 96.0632
 	mwNO3 = 62.00501
 	g     = 9.80665 // m/s2
+	κ     = 0.41    // Von Kármán constant
 )
 
 var (
@@ -115,8 +116,6 @@ func main() {
 	go calcWindBins(windBinsChanW)
 	ustarChan := make(chan *sparse.DenseArray)
 	go average(ustarChan)
-	surfaceHeatFluxChan := make(chan *sparse.DenseArray)
-	go average(surfaceHeatFluxChan)
 	pblhChan := make(chan *sparse.DenseArray)
 	go average(pblhChan)
 	phChan := make(chan *sparse.DenseArray)
@@ -137,7 +136,6 @@ func main() {
 		readSingleVar("V", windBinsChanV, vAvgChan),
 		readSingleVar("W", windBinsChanW, wAvgChan),
 		readSingleVar("UST", ustarChan),
-		readSingleVar("HFX", surfaceHeatFluxChan),
 		readSingleVar("PBLH", pblhChan),
 		readSingleVar("PH", phChan), readSingleVar("PHB", phbChan),
 		readSingleVar("QRAIN", qrainChan), readSingleVar("ALT", altChan))
@@ -145,7 +143,6 @@ func main() {
 	windBinsChanV <- nil
 	windBinsChanW <- nil
 	ustarChan <- nil
-	surfaceHeatFluxChan <- nil
 	pblhChan <- nil
 	phChan <- nil
 	phbChan <- nil
@@ -158,7 +155,6 @@ func main() {
 	windBinsV := <-windBinsChanV
 	windBinsW := <-windBinsChanW
 	ustar := <-ustarChan
-	surfaceHeatFlux := <-surfaceHeatFluxChan
 	pblh := <-pblhChan
 	ph := <-phChan
 	phb := <-phbChan
@@ -191,11 +187,13 @@ func main() {
 	pNHchan := make(chan *sparse.DenseArray)
 	go calcPartitioning(NH3chan, pNHchan)
 
-	// Calculate stability for plume rise
+	// Calculate stability for plume rise and vertical mixing
 	Tchan := make(chan *sparse.DenseArray)
 	PBchan := make(chan *sparse.DenseArray)
 	Pchan := make(chan *sparse.DenseArray)
-	go Stability(layerHeights, Tchan, PBchan, Pchan)
+	surfaceHeatFluxChan := make(chan *sparse.DenseArray)
+	go StabilityAndMixing(layerHeights, ustar, pblh, alt,
+		Tchan, PBchan, Pchan, surfaceHeatFluxChan)
 
 	iterateTimeSteps("Reading data for concentrations and bin frequencies: ",
 		readSingleVar("U", windStatsChanU), readSingleVar("V", windStatsChanV),
@@ -204,6 +202,7 @@ func main() {
 		readGasGroup(NOx, NOxchan), readParticleGroup(pNO, pNOchan),
 		readGasGroup(SOx, SOxchan), readParticleGroup(pS, pSchan),
 		readGasGroup(NH3, NH3chan), readParticleGroup(pNH, pNHchan),
+		readSingleVar("HFX", surfaceHeatFluxChan),
 		readSingleVar("T", Tchan), readSingleVar("PB", PBchan),
 		readSingleVar("P", Pchan))
 
@@ -224,13 +223,14 @@ func main() {
 	Tchan <- nil
 	PBchan <- nil
 	Pchan <- nil
+	surfaceHeatFluxChan <- nil
 	temperature := <-Tchan
-	θ := <-Tchan
 	S1 := <-Tchan
 	Sclass := <-Tchan
-
-	Kz, M2u, M2d, pblTopLayer := calcMixing(ustar, layerHeights, pblh,
-		θ, surfaceHeatFlux, alt)
+	Kz := <-Tchan
+	M2u := <-Tchan
+	M2d := <-Tchan
+	pblTopLayer := <-Tchan
 
 	// write out data to file
 	fmt.Printf("Writing out data to %v...\n", outputFile)
@@ -295,11 +295,11 @@ func main() {
 	h.AddAttribute("Kz", "description", "Vertical turbulent diffusivity")
 	h.AddAttribute("Kz", "units", "m2 s-1")
 
-	h.AddVariable("M2u", []string{"zStagger", "y", "x"}, []float32{0})
+	h.AddVariable("M2u", []string{"y", "x"}, []float32{0})
 	h.AddAttribute("M2u", "description", "ACM2 nonlocal upward mixing (Pleim 2007)")
 	h.AddAttribute("M2u", "units", "s-1")
 
-	h.AddVariable("M2d", []string{"zStagger", "y", "x"}, []float32{0})
+	h.AddVariable("M2d", []string{"z", "y", "x"}, []float32{0})
 	h.AddAttribute("M2d", "description", "ACM2 nonlocal downward mixing (Pleim 2007)")
 	h.AddAttribute("M2d", "units", "s-1")
 
@@ -757,87 +757,6 @@ func calcWetDeposition(qrain, alt *sparse.DenseArray) (
 	return
 }
 
-// calcMixing calculates vertical turbulent diffusivity using a middling value (1 m2/s)
-// from R. Wilson: Turbulent diffusivity from MST radar measurements: a review,
-// Annales Geophysicae (2004) 22: 3869–3887 for grid cells above the planetary boundary layer
-// and Pleim, 2007 for grid cells within the planetary
-// boundary layer.
-// Inputs are friction velocity (ustar, m/s), layer heights (m),
-// planetary boundary layer height (pblh, m), potential temperature (θ,K),
-// surface heat flux (W/m2), and inverse density (m3/kg).
-func calcMixing(ustar, layerHeights, pblh, θ,
-	surfaceHeatFlux, alt *sparse.DenseArray) (
-	Kz, M2u, M2d, pblTopLayer *sparse.DenseArray) {
-	const (
-		κ  = 0.41  // Von Kármán constant
-		Cp = 1006. // m2/s2-K; specific heat of air
-	)
-	// Boundary layer average temperature (K)
-	To := sparse.ZerosDense(pblh.Shape...)
-	// Index for top layer of the PBL
-	pblTopLayer = sparse.ZerosDense(pblh.Shape...)
-	for j := 0; j < layerHeights.Shape[1]; j++ {
-		for i := 0; i < layerHeights.Shape[2]; i++ {
-			to := 0.
-			for k := 0; k < layerHeights.Shape[0]; k++ {
-				to += θ.Get(k, j, i)
-				if layerHeights.Get(k, j, i) >= pblh.Get(j, i) {
-					To.Set(to/float64(k), j, i)
-					pblTopLayer.Set(float64(k), j, i)
-					break
-				}
-			}
-		}
-	}
-
-	Kz = sparse.ZerosDense(layerHeights.Shape...)  // units = m2/s
-	M2u = sparse.ZerosDense(layerHeights.Shape...) // units = 1/s
-	M2d = sparse.ZerosDense(layerHeights.Shape...) // units = 1/s
-	var u, h, θf, L, z, zs, ϕ_h, ϕ_m, kh, km, Mu, Δz, fconv float64
-	var zminus, Δzminus float64
-	for j := 0; j < layerHeights.Shape[1]; j++ {
-		for i := 0; i < layerHeights.Shape[2]; i++ {
-			u = ustar.Get(j, i)
-			h = pblh.Get(j, i)
-			// Potential temperature flux = surfaceHeatFlux / Cp /  ρ
-			// θf (K m / s) = hfx (W / m2) / Cp (J / kg-K) * alt (m3 / kg)
-			θf = surfaceHeatFlux.Get(j, i) / Cp * alt.Get(0, j, i)
-			// L=Monin-Obukhov length, Pleim et al., 2007 equation 14.
-			L = To.Get(j, i) * math.Pow(u, 3) / g / κ / θf
-			for k := 1; k < layerHeights.Shape[0]; k++ {
-				z = layerHeights.Get(k, j, i)
-				Δz = z - layerHeights.Get(k-1, j, i)
-				if z > h { // free atmosphere
-					Kz.Set(1., k, j, i)
-				} else { // boundary layer
-					if L < 0. { // Unstable conditions
-						zs = min(z, 0.1*h)                // Pleim 2007, equation 12.5
-						ϕ_h = math.Pow(1.-16.*zs/L, -0.5) // Pleim Eq. 13
-						ϕ_m = math.Pow(1.-16.*zs/L, -0.25)
-					} else { // Stable conditions
-						zs = z
-						ϕ_h = 1. + 5.*zs/L // Dyer, 1974 (Concluding Remarks)
-						ϕ_m = 1. + 5.*zs/L
-					}
-					fconv = max(0., 1/(1+math.Pow(κ, -2./3.)/.72*
-						math.Pow(-h/L, -1./3.))) // Pleim 2007, Eq. 19
-					kh = κ * u / ϕ_h * z * math.Pow(1-z/h, 2) // Pleim Eq. 12
-					km = κ * u / ϕ_m * z * math.Pow(1-z/h, 2) // units = m2/s
-					Mu = kh / Δz / (h - z)                    // Pleim 2007, Eq. 9
-					if k != 1 {
-						zminus = layerHeights.Get(k-1, j, i)
-						Δzminus = layerHeights.Get(k-1, j, i) - layerHeights.Get(k-2, j, i)
-						M2d.Set(fconv*Mu*(h-zminus)/Δzminus, k, j, i) // Pleim 2007, Eq. 4
-					}
-					M2u.Set(fconv*Mu, k, j, i)    // Pleim 2007, Eq 11a
-					Kz.Set(km*(1-fconv), k, j, i) // Pleim 2007, Eq. 11b
-				}
-			}
-		}
-	}
-	return
-}
-
 // Calculate RMS wind speed
 func windSpeed(uChan, vChan, wChan chan *sparse.DenseArray) {
 	var speed *sparse.DenseArray
@@ -884,19 +803,38 @@ func windSpeed(uChan, vChan, wChan chan *sparse.DenseArray) {
 	return
 }
 
-func Stability(LayerHeights *sparse.DenseArray,
-	Tchan, PBchan, Pchan chan *sparse.DenseArray) {
-	const po = 101300.   // Pa, reference pressure
-	const kappa = 0.2854 // related to von karman's constant
+// Calculates:
+// 1) Stability parameters for use in plume rise calculation (ASME, 1973,
+// as described in Seinfeld and Pandis, 2006).
+// 2) Vertical turbulent diffusivity using a middling value (1 m2/s)
+// from Wilson (2004) for grid cells above the planetary boundary layer
+// and Pleim (2007) for grid cells within the planetary
+// boundary layer.
+// Inputs are layer heights (m), friction velocity (ustar, m/s),
+// planetary boundary layer height (pblh, m), inverse density (m3/kg),
+// perturbation potential temperature (Temp,K), Pressure (Pb and P, Pa),
+// and surface heat flux (W/m2).
+func StabilityAndMixing(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
+	Tchan, PBchan, Pchan, surfaceHeatFluxChan chan *sparse.DenseArray) {
+	const (
+		po    = 101300. // Pa, reference pressure
+		kappa = 0.2854  // related to von karman's constant
+		Cp    = 1006.   // m2/s2-K; specific heat of air
+	)
+
 	var Temp *sparse.DenseArray
-	var θ *sparse.DenseArray
 	var S1 *sparse.DenseArray
 	var Sclass *sparse.DenseArray
+	var Kz *sparse.DenseArray
+	var M2d *sparse.DenseArray
+	var M2u *sparse.DenseArray
+	var pblTopLayer *sparse.DenseArray
 	firstData := true
 	for {
-		T := <-Tchan   // K
-		PB := <-PBchan // Pa
-		P := <-Pchan   // Pa
+		T := <-Tchan                 // K
+		PB := <-PBchan               // Pa
+		P := <-Pchan                 // Pa
+		hfx := <-surfaceHeatFluxChan // W/m2
 		if T == nil {
 			for i, val := range Temp.Elements {
 				Temp.Elements[i] = val / numTsteps
@@ -907,25 +845,73 @@ func Stability(LayerHeights *sparse.DenseArray,
 			for i, val := range Sclass.Elements {
 				Sclass.Elements[i] = val / numTsteps
 			}
+			for i, val := range Kz.Elements {
+				Kz.Elements[i] = val / numTsteps
+			}
+			for i, val := range M2u.Elements {
+				M2u.Elements[i] = val / numTsteps
+			}
+			for i, val := range M2d.Elements {
+				M2d.Elements[i] = val / numTsteps
+			}
+			for i, val := range pblTopLayer.Elements {
+				pblTopLayer.Elements[i] = val / numTsteps
+			}
 			Tchan <- Temp
-			Tchan <- θ
 			Tchan <- S1
 			Tchan <- Sclass
+			Tchan <- Kz
+			Tchan <- M2u
+			Tchan <- M2d
+			Tchan <- pblTopLayer
 			return
 		}
 		if firstData {
-			Temp = sparse.ZerosDense(T.Shape...)
-			θ = sparse.ZerosDense(T.Shape...)
+			Temp = sparse.ZerosDense(T.Shape...) // units = K
 			S1 = sparse.ZerosDense(T.Shape...)
 			Sclass = sparse.ZerosDense(T.Shape...)
+			Kz = sparse.ZerosDense(LayerHeights.Shape...)  // units = m2/s
+			M2u = sparse.ZerosDense(pblh.Shape...)         // units = 1/s
+			M2d = sparse.ZerosDense(T.Shape...)            // units = 1/s
+			pblTopLayer = sparse.ZerosDense(pblh.Shape...) // index of PBL top
 			firstData = false
 		}
 		type empty struct{}
-		sem := make(chan empty, T.Shape[0]) // semaphore pattern
-		for k := 0; k < T.Shape[0]; k++ {
-			go func(k int) { // concurrent processing
-				for j := 0; j < T.Shape[1]; j++ {
-					for i := 0; i < T.Shape[2]; i++ {
+		sem := make(chan empty, T.Shape[1]) // semaphore pattern
+		for j := 0; j < T.Shape[1]; j++ {
+			go func(j int) { // concurrent processing
+				for i := 0; i < T.Shape[2]; i++ {
+					// Calculate boundary layer average temperature (K)
+					// and index for top layer of the PBL
+					To := 0.
+					for k := 0; k < LayerHeights.Shape[0]; k++ {
+						if LayerHeights.Get(k, j, i) >= pblh.Get(j, i) {
+							To /= float64(k)
+							pblTopLayer.AddVal(float64(k-1), j, i)
+							break
+						}
+						To += T.Get(k, j, i) + 300.
+					}
+					u := ustar.Get(j, i)
+					h := pblh.Get(j, i)
+					// Potential temperature flux = surfaceHeatFlux / Cp /  ρ
+					// θf (K m / s) = hfx (W / m2) / Cp (J / kg-K) * alt (m3 / kg)
+					θf := hfx.Get(j, i) / Cp * alt.Get(0, j, i)
+					// L=Monin-Obukhov length, Pleim et al., 2007 equation 14.
+					L := To * math.Pow(u, 3) / g / κ / θf
+
+					fconv := max(0., 1/(1+math.Pow(κ, -2./3.)/.72*
+						math.Pow(-h/L, -1./3.))) // Pleim 2007, Eq. 19
+
+					z1plushalf := LayerHeights.Get(1, j, i)
+					Δz1plushalf := LayerHeights.Get(2, j, i) / 2.
+					kh := calculateKh(z1plushalf, h, L, u)
+					// Pleim 2007, Eq. 9
+					m2u := fconv * kh / Δz1plushalf / max(0, h-z1plushalf)
+					// Pleim 2007, Eq 11a
+					M2u.AddVal(m2u, j, i)
+
+					for k := 0; k < T.Shape[0]; k++ {
 						Tval := T.Get(k, j, i)
 						var dtheta_dz = 0. // potential temperature gradient
 						if k > 0 {
@@ -937,9 +923,10 @@ func Stability(LayerHeights *sparse.DenseArray,
 						pressureCorrection := math.Pow(
 							(P.Get(k, j, i)+PB.Get(k, j, i))/po, kappa)
 
-						// Ambient temperature
-						t := (Tval + 300.) * pressureCorrection // K
-						θ.AddVal(Tval+300., k, j, i)
+						// potential temperature, K
+						θ := Tval + 300.
+						// Ambient temperature, K
+						t := θ * pressureCorrection
 						Temp.AddVal(t, k, j, i)
 
 						// Stability parameter
@@ -952,15 +939,68 @@ func Stability(LayerHeights *sparse.DenseArray,
 						} else {
 							Sclass.AddVal(1., k, j, i)
 						}
+
+						// Mixing
+						z := LayerHeights.Get(k, j, i)
+						zabove := LayerHeights.Get(k+1, j, i)
+						Δz := zabove - z
+						km := calculateKm(z, h, L, u)
+						if zabove > h { // free atmosphere (unstaggered grid)
+							Kz.AddVal(1., k, j, i)
+							if k == T.Shape[0]-1 { // Top Layer
+								Kz.AddVal(1., k+1, j, i)
+							}
+						} else { // Bounday layer (unstaggered grid)
+							// Pleim 2007, Eq. 11b
+							Kz.AddVal(km*(1-fconv), k, j, i)
+							// Pleim 2007, Eq. 4
+							M2d.AddVal(m2u*max(0, h-z)/Δz, k, j, i)
+						}
 					}
 				}
 				sem <- empty{}
-			}(k)
+			}(j)
 		}
-		for k := 0; k < T.Shape[0]; k++ { // wait for routines to finish
+		for j := 0; j < T.Shape[1]; j++ { // wait for routines to finish
 			<-sem
 		}
 	}
+	return
+}
+
+// Calculate heat diffusivity
+func calculateKh(z, h, L, ustar float64) (kh float64) {
+	var zs, ϕ_h float64
+	if L < 0. { // Unstable conditions
+		// Pleim 2007, equation 12.5
+		zs = min(z, 0.1*h)
+		// Pleim Eq. 13
+		ϕ_h = math.Pow(1.-16.*zs/L, -0.5)
+	} else { // Stable conditions
+		zs = z
+		// Dyer, 1974 (Concluding Remarks)
+		ϕ_h = 1. + 5.*zs/L
+	}
+	// Pleim Eq. 12; units = m2/s
+	kh = κ * ustar / ϕ_h * z * math.Pow(1-z/h, 2)
+	return
+}
+
+// Calculate mass diffusivity
+func calculateKm(z, h, L, ustar float64) (km float64) {
+	var zs, ϕ_m float64
+	if L < 0. { // Unstable conditions
+		// Pleim 2007, equation 12.5
+		zs = min(z, 0.1*h)
+		// Pleim Eq. 13
+		ϕ_m = math.Pow(1.-16.*zs/L, -0.25)
+	} else { // Stable conditions
+		zs = z
+		// Dyer, 1974 (Concluding Remarks)
+		ϕ_m = 1. + 5.*zs/L
+	}
+	// Pleim Eq. 12; units = m2/s
+	km = κ * ustar / ϕ_m * z * math.Pow(1-z/h, 2)
 	return
 }
 

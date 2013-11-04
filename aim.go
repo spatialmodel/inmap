@@ -269,6 +269,7 @@ func ReadConfigFile(filename string) (config *configData) {
 	config.AIMdata = os.ExpandEnv(config.AIMdata)
 	config.GroundLevelEmissions = os.ExpandEnv(config.GroundLevelEmissions)
 	config.ElevatedEmissions = os.ExpandEnv(config.ElevatedEmissions)
+	config.Output = os.ExpandEnv(config.Output)
 
 	outdir := filepath.Dir(config.Output)
 	err = os.MkdirAll(outdir, os.ModePerm)
