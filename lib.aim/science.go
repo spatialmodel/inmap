@@ -49,10 +49,7 @@ func (c *AIMcell) VerticalMixing(Δt float64) {
 	g := c.GroundLevelNeighbor
 	for ii, _ := range c.Cf {
 		// Pleim (2007) Equation 10.
-		if c.k == 0 {
-			c.Cf[ii] += (-c.M2u*c.Ci[ii]*c.kPblTop + a.M2d*a.Ci[ii]*a.Dz/c.Dz +
-				1./c.Dz*(a.Kz*(a.Ci[ii]-c.Ci[ii])/c.dzplushalf)) * Δt
-		} else if float64(c.k) < c.kPblTop {
+		if float64(c.k) < c.kPblTop {
 			c.Cf[ii] += (g.M2u*g.Ci[ii] - c.M2d*c.Ci[ii] +
 				a.M2d*a.Ci[ii]*a.Dz/c.Dz +
 				1./c.Dz*(a.Kz*(a.Ci[ii]-c.Ci[ii])/c.dzplushalf+

@@ -92,7 +92,7 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 		d.SetupTimeStep() // prepare data for this time step
 		nDaysRun += d.Dt * secondsPerDay
 		nDaysSinceConvergenceCheck += d.Dt * secondsPerDay
-		fmt.Printf("马上。。。Iteration %-4d  walltime=%5.2gh  Δwalltime=%3.2gs  "+
+		fmt.Printf("马上。。。Iteration %-4d  walltime=%6.3gh  Δwalltime=%3.2gs  "+
 			"timestep=%2.0fs  day=%.3g\n",
 			iteration, time.Since(startTime).Hours(),
 			time.Since(timeStepTime).Seconds(), d.Dt, nDaysRun)
