@@ -10,12 +10,15 @@ var d *AIMdata
 
 const (
 	j, i          = 219, 252 // Minneapolis!
-	testTolerance = 1e-10
+	testTolerance = 1e-8
+	Δt            = 72.  // seconds
+	E             = 0.01 // emissions
 )
 
 func init() {
 	runtime.GOMAXPROCS(8)
 	d = InitAIMdata("../wrf2aim/aimData.ncf")
+	d.Dt = Δt
 }
 
 // Tests whether the cells correctly reference each other
@@ -46,11 +49,8 @@ func TestCellAlignment(t *testing.T) {
 
 // Test whether vertical mixing mechanisms is properly conserving mass
 func TestVerticalMixing(t *testing.T) {
-	j, i := 118, 222 // center of domain
-	Δt := 72.        // seconds
 	nsteps := 100
-	E := 0.01 // emissions
-	for x := 0; x < nsteps; x++ {
+	for tt := 0; tt < nsteps; tt++ {
 		for k := 0; k < d.Nz; k++ {
 			ii := d.getIndex(k, j, i)
 			c := d.Data[ii]
@@ -75,10 +75,47 @@ func TestVerticalMixing(t *testing.T) {
 		sum += d.Data[ii].Cf[0] * d.Data[ii].Dz
 		t.Logf("level %v=%.3v\n", k, d.Data[ii].Cf[0]*d.Data[ii].Dz)
 	}
-	t.Logf("sum=%.8g (it should equal %v)\n", sum, E*float64(nsteps))
+	t.Logf("sum=%.12g (it should equal %v)\n", sum, E*float64(nsteps))
 	if different(sum, E*float64(nsteps)) {
 		t.FailNow()
 	}
+}
+
+// Test whether mass is conserved during advection.
+func TestAdvection(t *testing.T) {
+	for _, c := range d.Data {
+		c.Ci[0] = 0
+		c.Cf[0] = 0
+	}
+	nsteps := 5
+	for tt := 0; tt < nsteps; tt++ {
+		ii := d.getIndex(0, j, i)
+		c := d.Data[ii]
+		c.Ci[0] += E / c.Dz / c.Dy / c.Dx // ground level emissions
+		c.Cf[0] += E / c.Dz / c.Dy / c.Dx // ground level emissions
+		for _, c := range d.Data {
+			c.RK3advectionPass1(d)
+		}
+		for _, c := range d.Data {
+			c.RK3advectionPass2(d)
+		}
+		for _, c := range d.Data {
+			c.RK3advectionPass3(d)
+		}
+		for _, c := range d.Data {
+			c.Ci[0] = c.Cf[0]
+		}
+	}
+	sum := 0.
+	for _, c := range d.Data {
+		val := c.Cf[0] * c.Dy * c.Dx * c.Dz
+		sum += val
+	}
+	t.Logf("sum=%.12g (it should equal %v)\n", sum, E*float64(nsteps))
+	if different(sum, E*float64(nsteps)) {
+		t.FailNow()
+	}
+
 }
 
 func different(a, b float64) bool {

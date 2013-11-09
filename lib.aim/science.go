@@ -106,7 +106,7 @@ func (c *AIMcell) RK3advectionPass1(d *AIMdata) {
 		// i direction
 		fluxMinus = upwindFlux(c.West.Ci[ii], c.Ci[ii], c.Uwest)
 		fluxPlus = upwindFlux(c.Ci[ii], c.East.Ci[ii], c.East.Uwest)
-		c.Cˣ[ii] = c.Cf[ii] - d.Dt/3./c.Dx*(fluxPlus-fluxMinus)
+		c.Cˣ[ii] = c.Ci[ii] - d.Dt/3./c.Dx*(fluxPlus-fluxMinus)
 		// j direction
 		fluxMinus = upwindFlux(c.South.Ci[ii], c.Ci[ii], c.Vsouth)
 		fluxPlus = upwindFlux(c.Ci[ii], c.North.Ci[ii], c.North.Vsouth)

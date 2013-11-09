@@ -117,7 +117,7 @@ func (d *AIMdata) mapHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	c := d.ToArray(name)
+	c := d.ToArray(name, "instantaneous")
 	b := bufio.NewWriter(w)
 	layerSubset := c.Subset([]int{int(layer), 0, 0},
 		[]int{int(layer), c.Shape[1] - 1, c.Shape[2] - 1})
@@ -156,7 +156,7 @@ func (d *AIMdata) legendHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	c := d.ToArray(name)
+	c := d.ToArray(name, "instantaneous")
 	cmap := gis.NewColorMap("LinCutoff")
 	layerSubset := c.Subset([]int{int(layer), 0, 0},
 		[]int{int(layer), c.Shape[1] - 1, c.Shape[2] - 1})

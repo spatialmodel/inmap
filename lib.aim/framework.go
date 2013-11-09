@@ -7,7 +7,7 @@ import (
 	//	"math"
 	"math/rand"
 	"os"
-	"runtime"
+	//	"runtime"
 	"sync"
 	"time"
 )
@@ -46,6 +46,7 @@ type AIMcell struct {
 	Ci                             []float64 // concentrations at beginning of time step
 	Cˣ, Cˣˣ                        []float64 // concentrations after first and second Runge-Kutta passes
 	Cf                             []float64 // concentrations at end of time step
+	Csum                           []float64 // sum of concentrations over time for later averaging
 	emisFlux                       []float64 //  emissions (μg/m3/s)
 	West                           *AIMcell  // Neighbor to the East
 	East                           *AIMcell  // Neighbor to the West
@@ -72,12 +73,14 @@ func newAIMcell(nbins int, dx, dy, dz float64) *AIMcell {
 	c.Cf = make([]float64, len(polNames))
 	c.Cˣ = make([]float64, len(polNames))
 	c.Cˣˣ = make([]float64, len(polNames))
+	c.Csum = make([]float64, len(polNames))
 	c.emisFlux = make([]float64, len(polNames))
 	return c
 }
 
 func InitAIMdata(filename string) *AIMdata {
 	d := new(AIMdata)
+	d.arrayLock.Lock()
 	go d.WebServer()
 	ff, err := os.Open(filename)
 	if err != nil {
@@ -116,6 +119,7 @@ func InitAIMdata(filename string) *AIMdata {
 			}
 		}
 	}
+	d.arrayLock.Unlock()
 	// set up boundary data holders
 	d.westBoundary = make([]*AIMcell, d.Nz*d.Ny)
 	ii = 0
@@ -279,81 +283,87 @@ func (c *AIMcell) checkIndicies(k, j, i int) {
 	}
 }
 
-func setVelocities(cells []*AIMcell, nprocs, procNum int, wg *sync.WaitGroup) {
-	defer wg.Done()
+func setVelocities(nprocs, procNum int, cellsChan chan []*AIMcell,
+	wg *sync.WaitGroup) {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	var random float32
 	var c *AIMcell
-	for ii := procNum; ii < len(cells); ii += nprocs {
-		c = cells[ii]
-		// choose bins using a weighted random method
-		random = r.Float32()
-		for b, bin := range c.UbinsWest {
-			if random <= c.UfreqWest[b] {
-				c.Uwest = float64(bin)
-				break
+	for cells := range cellsChan {
+		for ii := procNum; ii < len(cells); ii += nprocs {
+			c = cells[ii]
+			// choose bins using a weighted random method
+			random = r.Float32()
+			for b, bin := range c.UbinsWest {
+				if random <= c.UfreqWest[b] {
+					c.Uwest = float64(bin)
+					break
+				}
+			}
+			random = r.Float32()
+			for b, bin := range c.VbinsSouth {
+				if random <= c.VfreqSouth[b] {
+					c.Vsouth = float64(bin)
+					break
+				}
+			}
+			random = r.Float32()
+			for b, bin := range c.WbinsBelow {
+				if random <= c.WfreqBelow[b] {
+					c.Wbelow = float64(bin)
+					break
+				}
 			}
 		}
-		random = r.Float32()
-		for b, bin := range c.VbinsSouth {
-			if random <= c.VfreqSouth[b] {
-				c.Vsouth = float64(bin)
-				break
-			}
-		}
-		random = r.Float32()
-		for b, bin := range c.WbinsBelow {
-			if random <= c.WfreqBelow[b] {
-				c.Wbelow = float64(bin)
-				break
-			}
-		}
+		wg.Done()
 	}
 }
 
 // Add in emissions flux to each cell at every time step
-func (d *AIMdata) addEmissionsFlux(nprocs, procNum int) {
-	var c *AIMcell
-	for ii := procNum; ii < len(d.Data); ii += nprocs {
-		c = d.Data[ii]
-		for i, _ := range c.Ci {
-			c.Cf[i] += c.emisFlux[i] * d.Dt
-			c.Ci[i] = c.Cf[i]
-		}
+func (c *AIMcell) addEmissionsFlux(d *AIMdata) {
+	for i, _ := range polNames {
+		c.Cf[i] += c.emisFlux[i] * d.Dt
+		c.Ci[i] = c.Cf[i]
 	}
+}
+
+var addemissionsflux = func(c *AIMcell, d *AIMdata) {
+	c.addEmissionsFlux(d)
+}
+
+// Add current concentration to sum for later averaging
+func (c *AIMcell) addToSum(d *AIMdata) {
+	for i, _ := range polNames {
+		c.Csum[i] += c.Cf[i]
+	}
+}
+
+var addtosum = func(c *AIMcell, d *AIMdata) {
+	c.addToSum(d)
 }
 
 // Add in emissions, set wind velocities using the weighted
 // random walk method, copy initial concentrations to final concentrations,
 // and set time step (dt).
-func (d *AIMdata) SetupTimeStep() {
-	d.arrayLock.Lock()
-	var wg sync.WaitGroup
-	nprocs := runtime.GOMAXPROCS(0) // number of processors
-	wg.Add(nprocs * 4)
-	// Set cell velocities.
-	for procNum := 0; procNum < nprocs; procNum++ {
-		go setVelocities(d.Data, nprocs, procNum, &wg)
-	}
-	// Set east, north, and top boundary velocities.
-	for procNum := 0; procNum < nprocs; procNum++ {
-		go setVelocities(d.eastBoundary, nprocs, procNum, &wg)
-	}
-	for procNum := 0; procNum < nprocs; procNum++ {
-		go setVelocities(d.northBoundary, nprocs, procNum, &wg)
-	}
-	for procNum := 0; procNum < nprocs; procNum++ {
-		go setVelocities(d.topBoundary, nprocs, procNum, &wg)
-	}
-	wg.Wait()
-
-	d.setTstep(nprocs)
-	// Add in emissions after we know dt.
-	for procNum := 0; procNum < nprocs; procNum++ {
-		go d.addEmissionsFlux(nprocs, procNum)
-	}
-	d.arrayLock.Unlock()
-}
+//func (d *AIMdata) SetVelocities() {
+//	var wg sync.WaitGroup
+//	nprocs := runtime.GOMAXPROCS(0) // number of processors
+//	wg.Add(nprocs * 4)
+//	// Set cell velocities.
+//	for procNum := 0; procNum < nprocs; procNum++ {
+//		go setVelocities(d.Data, nprocs, procNum, &wg)
+//	}
+//	// Set east, north, and top boundary velocities.
+//	for procNum := 0; procNum < nprocs; procNum++ {
+//		go setVelocities(d.eastBoundary, nprocs, procNum, &wg)
+//	}
+//	for procNum := 0; procNum < nprocs; procNum++ {
+//		go setVelocities(d.northBoundary, nprocs, procNum, &wg)
+//	}
+//	for procNum := 0; procNum < nprocs; procNum++ {
+//		go setVelocities(d.topBoundary, nprocs, procNum, &wg)
+//	}
+//	wg.Wait()
+//}
 
 //  Set the time step using the Courant–Friedrichs–Lewy (CFL) condition.
 func (d *AIMdata) setTstep(nprocs int) {
