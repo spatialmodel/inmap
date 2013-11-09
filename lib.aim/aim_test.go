@@ -48,15 +48,15 @@ func TestCellAlignment(t *testing.T) {
 func TestVerticalMixing(t *testing.T) {
 	j, i := 118, 222 // center of domain
 	Δt := 72.        // seconds
-	nsteps := 1
+	nsteps := 100
 	E := 0.01 // emissions
 	for x := 0; x < nsteps; x++ {
 		for k := 0; k < d.Nz; k++ {
 			ii := d.getIndex(k, j, i)
 			c := d.Data[ii]
 			if k == 0 {
-				c.Ci[0] += E // ground level emissions
-				c.Cf[0] += E // ground level emissions
+				c.Ci[0] += E / c.Dz // ground level emissions
+				c.Cf[0] += E / c.Dz // ground level emissions
 			}
 		}
 		for k := 0; k < d.Nz; k++ {
@@ -72,8 +72,8 @@ func TestVerticalMixing(t *testing.T) {
 	sum := 0.
 	for k := 0; k < d.Nz; k++ {
 		ii := d.getIndex(k, j, i)
-		sum += d.Data[ii].Cf[0]
-		t.Logf("level %v=%.3v\n", k, d.Data[ii].Cf[0])
+		sum += d.Data[ii].Cf[0] * d.Data[ii].Dz
+		t.Logf("level %v=%.3v\n", k, d.Data[ii].Cf[0]*d.Data[ii].Dz)
 	}
 	t.Logf("sum=%.8g (it should equal %v)\n", sum, E*float64(nsteps))
 	if different(sum, E*float64(nsteps)) {

@@ -54,8 +54,8 @@ type AIMcell struct {
 	Below                          *AIMcell  // Neighbor below
 	Above                          *AIMcell  // Neighbor above
 	GroundLevel                    *AIMcell  // Neighbor at ground level
-	dzPlusHalfSquared              float64   // Square of distance between centers of cell and Above
-	dzMinusHalfSquared             float64   // Square of distance between centers of cell and Below
+	dzPlusHalf                     float64   // Distance between centers of cell and Above
+	dzMinusHalf                    float64   // Distance between centers of cell and Below
 }
 
 func newAIMcell(nbins int, dx, dy, dz float64) *AIMcell {
@@ -256,12 +256,10 @@ func InitAIMdata(filename string) *AIMdata {
 				d.Data[jj].checkIndicies(0, j, i)
 				d.Data[ii].GroundLevel = d.Data[jj]
 
-				d.Data[ii].dzPlusHalfSquared = (d.Data[ii].Dz +
+				d.Data[ii].dzPlusHalf = (d.Data[ii].Dz +
 					d.Data[ii].Above.Dz) / 2.
-				d.Data[ii].dzPlusHalfSquared *= d.Data[ii].dzPlusHalfSquared
-				d.Data[ii].dzMinusHalfSquared = (d.Data[ii].Dz +
+				d.Data[ii].dzMinusHalf = (d.Data[ii].Dz +
 					d.Data[ii].Below.Dz) / 2.
-				d.Data[ii].dzMinusHalfSquared *= d.Data[ii].dzMinusHalfSquared
 				ii++
 			}
 		}

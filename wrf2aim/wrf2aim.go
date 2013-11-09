@@ -19,8 +19,8 @@ const (
 	wrfout     = "/home/marshall/tessumcm/WRFchem_output/WRF.2005_nei.na12.chem.3.4/output/wrfout_d01_[DATE]"
 	outputFile = "aimData.ncf"
 	startDate  = "20050101"
-	endDate    = "20051231"
-	//endDate   = "20050101"
+	//endDate    = "20051231"
+	endDate   = "20050101"
 	nWindBins = 20 // number of bins for wind speed
 	nProcs    = 16 // number of processors to use
 
@@ -829,12 +829,13 @@ func StabilityAndMixing(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
 	var M2d *sparse.DenseArray
 	var M2u *sparse.DenseArray
 	// Get Layer index of PBL top (staggered)
-	pblTopLayer := sparse.ZerosDense(pblh.Shape)
+	pblTopLayer := sparse.ZerosDense(pblh.Shape...)
 	for j := 0; j < LayerHeights.Shape[1]; j++ {
 		for i := 0; i < LayerHeights.Shape[2]; i++ {
 			for k := 0; k < LayerHeights.Shape[0]; k++ {
 				if LayerHeights.Get(k, j, i) >= pblh.Get(j, i) {
 					pblTopLayer.Set(float64(k), j, i)
+					break
 				}
 			}
 		}
@@ -951,7 +952,7 @@ func StabilityAndMixing(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
 						zabove := LayerHeights.Get(k+1, j, i)
 						Δz := zabove - z
 						km := calculateKm(z, h, L, u)
-						if zabove > h { // free atmosphere (unstaggered grid)
+						if k >= kPblTop-1 { // free atmosphere (unstaggered grid)
 							Kz.AddVal(1., k, j, i)
 							if k == T.Shape[0]-1 { // Top Layer
 								Kz.AddVal(1., k+1, j, i)
@@ -960,7 +961,7 @@ func StabilityAndMixing(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
 							// Pleim 2007, Eq. 11b
 							Kz.AddVal(km*(1-fconv), k, j, i)
 							// Pleim 2007, Eq. 4
-							M2d.AddVal(m2u*max(0, h-z)/Δz, k, j, i)
+							M2d.AddVal(m2u*(h-z)/Δz, k, j, i)
 						}
 					}
 				}
@@ -1039,7 +1040,7 @@ func max(vals ...float64) float64 {
 	return maxval
 }
 
-// convert float to in (rounding)
+// convert float to int (rounding)
 func f2i(f float64) int {
 	return int(f + 0.5)
 }

@@ -50,14 +50,14 @@ func (c *AIMcell) VerticalMixing(Δt float64) {
 	g := c.GroundLevel
 	for ii, _ := range c.Cf {
 		// Pleim (2007) Equation 10.
-		if float64(c.k) < c.kPblTop {
+		if c.k < f2i(c.kPblTop) {
 			c.Cf[ii] += (g.M2u*g.Ci[ii] - c.M2d*c.Ci[ii] +
-				a.M2d*a.Ci[ii]*a.Dz/c.Dz )* Δt//+
-		//		(a.Kz*(a.Ci[ii]-c.Ci[ii])/c.dzPlusHalfSquared +
-		//			c.Kz*(b.Ci[ii]-c.Ci[ii])/c.dzMinusHalfSquared)) * Δt
+				a.M2d*a.Ci[ii]*a.Dz/c.Dz +
+				1./c.Dz*(a.Kz*(a.Ci[ii]-c.Ci[ii])/c.dzPlusHalf+
+					c.Kz*(b.Ci[ii]-c.Ci[ii])/c.dzMinusHalf)) * Δt
 		} else {
-			c.Cf[ii] += (a.Kz*(a.Ci[ii]-c.Ci[ii])/c.dzPlusHalfSquared +
-				c.Kz*(b.Ci[ii]-c.Ci[ii])/c.dzMinusHalfSquared) * Δt
+			c.Cf[ii] += 1. / c.Dz * (a.Kz*(a.Ci[ii]-c.Ci[ii])/c.dzPlusHalf +
+				c.Kz*(b.Ci[ii]-c.Ci[ii])/c.dzMinusHalf) * Δt
 		}
 	}
 }
@@ -342,4 +342,9 @@ func (c *AIMcell) GravitationalSettling(d *AIMdata) {
 
 var gravitationalSettling = func(c *AIMcell, d *AIMdata) {
 	c.GravitationalSettling(d)
+}
+
+// convert float to int (rounding)
+func f2i(f float64) int {
+	return int(f + 0.5)
 }
