@@ -73,13 +73,13 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 					</select>
 				</form>
 			</div>
-			<div class="span6">
+			<div class="span6 pagination-centered">
 				<h4 id="maptitle">PrimaryPM2_5 layer 0 status</h4>
 				<div class="row">
 					<img id=mapdiv src="map/PrimaryPM2_5/0" class="img-rounded">
 				</div>
 				<div class="row">
-					<embed id=legenddiv src="/legend/PrimaryPM2_5/0" type="image/svg+xml">
+					<embed id=legenddiv src="/legend/PrimaryPM2_5/0" type="image/svg+xml" />
 				</div>
 			</div>
 		</div>
@@ -162,10 +162,10 @@ func (d *AIMdata) legendHandler(w http.ResponseWriter, r *http.Request) {
 		[]int{int(layer), c.Shape[1] - 1, c.Shape[2] - 1})
 	cmap.AddArray(layerSubset.Elements)
 	cmap.Set()
-	cmap.LegendWidth = 1.48
+	cmap.LegendWidth = 2.1
 	cmap.LegendHeight = 0.2
 	cmap.LineWidth = 0.2
-	cmap.FontSize = 4
+	cmap.FontSize = 3.5
 	err = cmap.Legend(w, "concentrations (μg/m3)")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

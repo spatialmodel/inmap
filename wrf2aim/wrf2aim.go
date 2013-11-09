@@ -828,7 +828,17 @@ func StabilityAndMixing(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
 	var Kz *sparse.DenseArray
 	var M2d *sparse.DenseArray
 	var M2u *sparse.DenseArray
-	var pblTopLayer *sparse.DenseArray
+	// Get Layer index of PBL top (staggered)
+	pblTopLayer := sparse.ZerosDense(pblh.Shape)
+	for j := 0; j < LayerHeights.Shape[1]; j++ {
+		for i := 0; i < LayerHeights.Shape[2]; i++ {
+			for k := 0; k < LayerHeights.Shape[0]; k++ {
+				if LayerHeights.Get(k, j, i) >= pblh.Get(j, i) {
+					pblTopLayer.Set(float64(k), j, i)
+				}
+			}
+		}
+	}
 	firstData := true
 	for {
 		T := <-Tchan                 // K
@@ -854,9 +864,6 @@ func StabilityAndMixing(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
 			for i, val := range M2d.Elements {
 				M2d.Elements[i] = val / numTsteps
 			}
-			for i, val := range pblTopLayer.Elements {
-				pblTopLayer.Elements[i] = val / numTsteps
-			}
 			Tchan <- Temp
 			Tchan <- S1
 			Tchan <- Sclass
@@ -870,10 +877,9 @@ func StabilityAndMixing(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
 			Temp = sparse.ZerosDense(T.Shape...) // units = K
 			S1 = sparse.ZerosDense(T.Shape...)
 			Sclass = sparse.ZerosDense(T.Shape...)
-			Kz = sparse.ZerosDense(LayerHeights.Shape...)  // units = m2/s
-			M2u = sparse.ZerosDense(pblh.Shape...)         // units = 1/s
-			M2d = sparse.ZerosDense(T.Shape...)            // units = 1/s
-			pblTopLayer = sparse.ZerosDense(pblh.Shape...) // index of PBL top
+			Kz = sparse.ZerosDense(LayerHeights.Shape...) // units = m2/s
+			M2u = sparse.ZerosDense(pblh.Shape...)        // units = 1/s
+			M2d = sparse.ZerosDense(T.Shape...)           // units = 1/s
 			firstData = false
 		}
 		type empty struct{}
@@ -883,17 +889,17 @@ func StabilityAndMixing(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
 				for i := 0; i < T.Shape[2]; i++ {
 					// Calculate boundary layer average temperature (K)
 					// and index for top layer of the PBL
+					kPblTop := f2i(pblTopLayer.Get(j, i))
 					To := 0.
 					for k := 0; k < LayerHeights.Shape[0]; k++ {
-						if LayerHeights.Get(k, j, i) >= pblh.Get(j, i) {
+						if k == kPblTop {
 							To /= float64(k)
-							pblTopLayer.AddVal(float64(k-1), j, i)
 							break
 						}
 						To += T.Get(k, j, i) + 300.
 					}
 					u := ustar.Get(j, i)
-					h := pblh.Get(j, i)
+					h := LayerHeights.Get(kPblTop, j, i)
 					// Potential temperature flux = surfaceHeatFlux / Cp /  ρ
 					// θf (K m / s) = hfx (W / m2) / Cp (J / kg-K) * alt (m3 / kg)
 					θf := hfx.Get(j, i) / Cp * alt.Get(0, j, i)
@@ -907,7 +913,7 @@ func StabilityAndMixing(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
 					Δz1plushalf := LayerHeights.Get(2, j, i) / 2.
 					kh := calculateKh(z1plushalf, h, L, u)
 					// Pleim 2007, Eq. 9
-					m2u := fconv * kh / Δz1plushalf / max(0, h-z1plushalf)
+					m2u := fconv * kh / Δz1plushalf / (h - z1plushalf)
 					// Pleim 2007, Eq 11a
 					M2u.AddVal(m2u, j, i)
 
@@ -1031,4 +1037,9 @@ func max(vals ...float64) float64 {
 		}
 	}
 	return maxval
+}
+
+// convert float to in (rounding)
+func f2i(f float64) int {
+	return int(f + 0.5)
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"runtime"
+	"sync"
 	"time"
 )
 
@@ -86,24 +87,43 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 	nDaysSinceConvergenceCheck := 0.
 	nIterationsSinceConvergenceCheck := 0
 	nprocs := runtime.GOMAXPROCS(0) // number of processors
+	funcChan := make(chan func(*AIMcell, *AIMdata))
+	var wg sync.WaitGroup
+	for procNum := 0; procNum < nprocs; procNum++ {
+		// Start thread for concurrent computations
+		go d.doScience(nprocs, procNum, funcChan, &wg)
+	}
 	for {
 		iteration++
 		nIterationsSinceConvergenceCheck++
 		d.SetupTimeStep() // prepare data for this time step
 		nDaysRun += d.Dt * secondsPerDay
 		nDaysSinceConvergenceCheck += d.Dt * secondsPerDay
-		fmt.Printf("马上。。。Iteration %-4d  walltime=%6.3gh  Δwalltime=%3.2gs  "+
+		fmt.Printf("马上。。。Iteration %-4d  walltime=%6.4gh  Δwalltime=%3.2gs  "+
 			"timestep=%2.0fs  day=%.3g\n",
 			iteration, time.Since(startTime).Hours(),
 			time.Since(timeStepTime).Seconds(), d.Dt, nDaysRun)
 		timeStepTime = time.Now()
 
-		sumChan := make(chan float64)
-		for procNum := 0; procNum < nprocs; procNum++ {
-			go d.doScience(nprocs, procNum, sumChan)
-		}
-		for i := 0; i < nprocs; i++ {
-			finalMassSum += <-sumChan
+		// Send all of the science functions to the concurrent
+		// processors for calculating
+		wg.Add(1)
+		//funcChan <- advectiveFluxUpwind
+		//funcChan <- rk3AdvectionStep1
+		//funcChan <- rk3AdvectionStep2
+		//funcChan <- rk3AdvectionStep3
+		//funcChan <- verticalMixing
+		//funcChan <- gravitationalSettling
+		funcChan <- vOCoxidationFlux
+		//funcChan <- wetDeposition
+		//funcChan <- chemicalPartitioning
+		wg.Wait()
+
+		// calculate mass sum
+		for _, cell := range d.Data {
+			for _, val := range cell.Cf {
+				finalMassSum += val * cell.Volume
+			}
 		}
 		if nDaysSinceConvergenceCheck >= nDaysCheckConvergence {
 			timeToQuit := true
@@ -136,23 +156,16 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 }
 
 // Carry out the atmospheric chemistry and physics calculations
-func (d *AIMdata) doScience(nprocs, procNum int, sumChan chan float64) {
-	sum := 0.
+func (d *AIMdata) doScience(nprocs, procNum int,
+	funcChan chan func(*AIMcell, *AIMdata), wg *sync.WaitGroup) {
 	var c *AIMcell
-	for ii := procNum; ii < len(d.Data); ii += nprocs {
-		c = d.Data[ii]
-		c.AdvectiveFluxUpwind(d.Dt)
-		c.VerticalMixing(d.Dt)
-		c.GravitationalSettling(d)
-		c.VOCoxidationFlux(d)
-		c.WetDeposition(d.Dt)
-		c.ChemicalPartitioning()
-
-		for _, val := range c.Cf {
-			sum += val * c.Volume
+	for f := range funcChan {
+		for ii := procNum; ii < len(d.Data); ii += nprocs {
+			c = d.Data[ii]
+			f(c, d) // run function
 		}
+		wg.Done()
 	}
-	sumChan <- sum
 }
 
 // Calculate emissions flux given emissions array in units of μg/s

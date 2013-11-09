@@ -4,7 +4,7 @@ import (
 	"bitbucket.org/ctessum/sparse"
 	"code.google.com/p/lvd.go/cdf"
 	"fmt"
-	"math"
+	//	"math"
 	"math/rand"
 	"os"
 	"runtime"
@@ -44,17 +44,18 @@ type AIMcell struct {
 	k, j, i                        int       // cell indicies
 	ii                             int       // master index
 	Ci                             []float64 // concentrations at beginning of time step
+	Cˣ, Cˣˣ                        []float64 // concentrations after first and second Runge-Kutta passes
 	Cf                             []float64 // concentrations at end of time step
 	emisFlux                       []float64 //  emissions (μg/m3/s)
-	WestNeighbor                   *AIMcell
-	EastNeighbor                   *AIMcell
-	SouthNeighbor                  *AIMcell
-	NorthNeighbor                  *AIMcell
-	BelowNeighbor                  *AIMcell
-	AboveNeighbor                  *AIMcell
-	GroundLevelNeighbor            *AIMcell
-	dzplushalf                     float64 // Distance between centers of cell and AboveNeighbor
-	dzminushalf                    float64 // Distance between centers of cell and BelowNeighbor
+	West                           *AIMcell  // Neighbor to the East
+	East                           *AIMcell  // Neighbor to the West
+	South                          *AIMcell  // Neighbor to the South
+	North                          *AIMcell  // Neighbor to the North
+	Below                          *AIMcell  // Neighbor below
+	Above                          *AIMcell  // Neighbor above
+	GroundLevel                    *AIMcell  // Neighbor at ground level
+	dzPlusHalfSquared              float64   // Square of distance between centers of cell and Above
+	dzMinusHalfSquared             float64   // Square of distance between centers of cell and Below
 }
 
 func newAIMcell(nbins int, dx, dy, dz float64) *AIMcell {
@@ -69,6 +70,8 @@ func newAIMcell(nbins int, dx, dy, dz float64) *AIMcell {
 	c.WfreqBelow = make([]float32, nbins)
 	c.Ci = make([]float64, len(polNames))
 	c.Cf = make([]float64, len(polNames))
+	c.Cˣ = make([]float64, len(polNames))
+	c.Cˣˣ = make([]float64, len(polNames))
 	c.emisFlux = make([]float64, len(polNames))
 	return c
 }
@@ -208,55 +211,57 @@ func InitAIMdata(filename string) *AIMdata {
 		for j := 0; j < d.Ny; j++ {
 			for i := 0; i < d.Nx; i++ {
 				if i == 0 {
-					d.Data[ii].WestNeighbor = d.westBoundary[k*d.Ny+j]
+					d.Data[ii].West = d.westBoundary[k*d.Ny+j]
 				} else {
 					jj = d.getIndex(k, j, i-1)
 					d.Data[jj].checkIndicies(k, j, i-1)
-					d.Data[ii].WestNeighbor = d.Data[jj]
+					d.Data[ii].West = d.Data[jj]
 				}
 				if i == d.Nx-1 {
-					d.Data[ii].EastNeighbor = d.eastBoundary[k*d.Ny+j]
+					d.Data[ii].East = d.eastBoundary[k*d.Ny+j]
 				} else {
 					jj = d.getIndex(k, j, i+1)
 					d.Data[jj].checkIndicies(k, j, i+1)
-					d.Data[ii].EastNeighbor = d.Data[jj]
+					d.Data[ii].East = d.Data[jj]
 				}
 				if j == 0 {
-					d.Data[ii].SouthNeighbor = d.southBoundary[k*d.Nx+i]
+					d.Data[ii].South = d.southBoundary[k*d.Nx+i]
 				} else {
 					jj = d.getIndex(k, j-1, i)
 					d.Data[jj].checkIndicies(k, j-1, i)
-					d.Data[ii].SouthNeighbor = d.Data[jj]
+					d.Data[ii].South = d.Data[jj]
 				}
 				if j == d.Ny-1 {
-					d.Data[ii].NorthNeighbor = d.northBoundary[k*d.Nx+i]
+					d.Data[ii].North = d.northBoundary[k*d.Nx+i]
 				} else {
 					jj = d.getIndex(k, j+1, i)
 					d.Data[jj].checkIndicies(k, j+1, i)
-					d.Data[ii].NorthNeighbor = d.Data[jj]
+					d.Data[ii].North = d.Data[jj]
 				}
 				if k == 0 {
-					d.Data[ii].BelowNeighbor = d.Data[ii] // assume bottom boundary is the same as lowest layer.
+					d.Data[ii].Below = d.Data[ii] // assume bottom boundary is the same as lowest layer.
 				} else {
 					jj = d.getIndex(k-1, j, i)
 					d.Data[jj].checkIndicies(k-1, j, i)
-					d.Data[ii].BelowNeighbor = d.Data[jj]
+					d.Data[ii].Below = d.Data[jj]
 				}
 				if k == d.Nz-1 {
-					d.Data[ii].AboveNeighbor = d.topBoundary[j*d.Nx+i]
+					d.Data[ii].Above = d.topBoundary[j*d.Nx+i]
 				} else {
 					jj = d.getIndex(k+1, j, i)
 					d.Data[jj].checkIndicies(k+1, j, i)
-					d.Data[ii].AboveNeighbor = d.Data[jj]
+					d.Data[ii].Above = d.Data[jj]
 				}
 				jj = d.getIndex(0, j, i)
 				d.Data[jj].checkIndicies(0, j, i)
-				d.Data[ii].GroundLevelNeighbor = d.Data[jj]
+				d.Data[ii].GroundLevel = d.Data[jj]
 
-				d.Data[ii].dzplushalf = (d.Data[ii].Dz +
-					d.Data[ii].AboveNeighbor.Dz) / 2.
-				d.Data[ii].dzminushalf = (d.Data[ii].Dz +
-					d.Data[ii].BelowNeighbor.Dz) / 2.
+				d.Data[ii].dzPlusHalfSquared = (d.Data[ii].Dz +
+					d.Data[ii].Above.Dz) / 2.
+				d.Data[ii].dzPlusHalfSquared *= d.Data[ii].dzPlusHalfSquared
+				d.Data[ii].dzMinusHalfSquared = (d.Data[ii].Dz +
+					d.Data[ii].Below.Dz) / 2.
+				d.Data[ii].dzMinusHalfSquared *= d.Data[ii].dzMinusHalfSquared
 				ii++
 			}
 		}
@@ -354,35 +359,36 @@ func (d *AIMdata) SetupTimeStep() {
 
 //  Set the time step using the Courant–Friedrichs–Lewy (CFL) condition.
 func (d *AIMdata) setTstep(nprocs int) {
-	const Cmax = 1
-	valChan := make(chan float64)
-	calcCFL := func(procNum int) {
-		// don't worry about the edges of the staggered grids.
-		var uval, vval, wval, thisval, val float64
-		var c *AIMcell
-		for ii := procNum; ii < len(d.Data); ii += nprocs {
-			c = d.Data[ii]
-			uval = math.Abs(c.Uwest) / c.Dx
-			vval = math.Abs(c.Vsouth) / c.Dy
-			wval = math.Abs(c.Wbelow) / c.Dz
-			thisval = max(uval, vval, wval)
-			if thisval > val {
-				val = thisval
-			}
-		}
-		valChan <- val
-	}
-	for procNum := 0; procNum < nprocs; procNum++ {
-		go calcCFL(procNum)
-	}
-	val := 0.
-	for i := 0; i < nprocs; i++ { // get max value from each processor
-		procval := <-valChan
-		if procval > val {
-			val = procval
-		}
-	}
-	d.Dt = Cmax / math.Pow(3., 0.5) / val // seconds
+	//	const Cmax = 1
+	//	valChan := make(chan float64)
+	//	calcCFL := func(procNum int) {
+	//		// don't worry about the edges of the staggered grids.
+	//		var uval, vval, wval, thisval, val float64
+	//		var c *AIMcell
+	//		for ii := procNum; ii < len(d.Data); ii += nprocs {
+	//			c = d.Data[ii]
+	//			uval = math.Abs(c.Uwest) / c.Dx
+	//			vval = math.Abs(c.Vsouth) / c.Dy
+	//			wval = math.Abs(c.Wbelow) / c.Dz
+	//			thisval = max(uval, vval, wval)
+	//			if thisval > val {
+	//				val = thisval
+	//			}
+	//		}
+	//		valChan <- val
+	//	}
+	//	for procNum := 0; procNum < nprocs; procNum++ {
+	//		go calcCFL(procNum)
+	//	}
+	//	val := 0.
+	//	for i := 0; i < nprocs; i++ { // get max value from each processor
+	//		procval := <-valChan
+	//		if procval > val {
+	//			val = procval
+	//		}
+	//	}
+	//	d.Dt = Cmax / math.Pow(3., 0.5) / val // seconds
+	d.Dt = d.Data[0].Dx / 1000. * 6
 }
 
 // Read variable which includes random walk bins from NetCDF file.
@@ -536,7 +542,7 @@ func (d *AIMdata) readNCF(filename string, wg *sync.WaitGroup, Var string) {
 					d.Data[ii].wdOtherGas = float64(dat[index])
 				case "Kz":
 					d.Data[ii].Kz = float64(dat[index])
-				case "M2u":// 2d variable
+				case "M2u": // 2d variable
 					index = j*jstride + i
 					d.Data[ii].M2u = float64(dat[index])
 				case "M2d":
