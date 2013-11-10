@@ -270,9 +270,9 @@ func advectiveFluxUpwind(c *AIMcell, d *AIMdata) {
 }
 
 func (c *AIMcell) WetDeposition(Δt float64) {
-	particleFrac := 1. - c.wdParticle*Δt
-	SO2Frac := 1. - c.wdSO2*Δt
-	otherGasFrac := 1 - c.wdOtherGas*Δt
+	particleFrac := 1. - c.wdParticle*Δt*10.
+	SO2Frac := 1. - c.wdSO2*Δt*10.
+	otherGasFrac := 1 - c.wdOtherGas*Δt*10.
 	c.Cf[igOrg] *= otherGasFrac  // gOrg
 	c.Cf[ipOrg] *= particleFrac  // pOrg
 	c.Cf[iPM2_5] *= particleFrac // PM2_5
