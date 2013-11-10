@@ -291,26 +291,28 @@ func setVelocities(nprocs, procNum int, cellsChan chan []*AIMcell,
 	for cells := range cellsChan {
 		for ii := procNum; ii < len(cells); ii += nprocs {
 			c = cells[ii]
-			// choose bins using a weighted random method
-			random = r.Float32()
-			for b, bin := range c.UbinsWest {
-				if random <= c.UfreqWest[b] {
-					c.Uwest = float64(bin)
-					break
+			if c.k <= topLayerToCalc+1 {
+				// choose bins using a weighted random method
+				random = r.Float32()
+				for b, bin := range c.UbinsWest {
+					if random <= c.UfreqWest[b] {
+						c.Uwest = float64(bin)
+						break
+					}
 				}
-			}
-			random = r.Float32()
-			for b, bin := range c.VbinsSouth {
-				if random <= c.VfreqSouth[b] {
-					c.Vsouth = float64(bin)
-					break
+				random = r.Float32()
+				for b, bin := range c.VbinsSouth {
+					if random <= c.VfreqSouth[b] {
+						c.Vsouth = float64(bin)
+						break
+					}
 				}
-			}
-			random = r.Float32()
-			for b, bin := range c.WbinsBelow {
-				if random <= c.WfreqBelow[b] {
-					c.Wbelow = float64(bin)
-					break
+				random = r.Float32()
+				for b, bin := range c.WbinsBelow {
+					if random <= c.WfreqBelow[b] {
+						c.Wbelow = float64(bin)
+						break
+					}
 				}
 			}
 		}

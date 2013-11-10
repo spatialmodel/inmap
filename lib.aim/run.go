@@ -32,6 +32,7 @@ const (
 const nDaysCheckConvergence = 1.
 const tolerance = 0.01
 const secondsPerDay = 1. / 3600. / 24.
+const topLayerToCalc = 12
 
 // These are the names of pollutants accepted as emissions (μg/s)
 var EmisNames = []string{"VOC", "NOx", "NH3", "SOx", "PM2_5"}
@@ -196,7 +197,9 @@ func (d *AIMdata) doScience(nprocs, procNum int,
 	for f := range funcChan {
 		for ii := procNum; ii < len(d.Data); ii += nprocs {
 			c = d.Data[ii]
-			f(c, d) // run function
+			if c.k <= topLayerToCalc {
+				f(c, d) // run function
+			}
 		}
 		wg.Done()
 	}
