@@ -108,6 +108,10 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 			time.Since(timeStepTime).Seconds(), d.Dt, nDaysRun)
 		timeStepTime = time.Now()
 
+		if nDaysRun > 7. { // Kludge to get the model to stop running before we all die of boredom.
+			break
+		}
+
 		d.arrayLock.Lock()
 		// prepare random velocities for this time step, and add emissions
 		wg.Add(5 * nprocs)
