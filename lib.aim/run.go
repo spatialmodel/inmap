@@ -109,7 +109,13 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 		timeStepTime = time.Now()
 
 		if nDaysRun > 7. { // Kludge to get the model to stop running before we all die of boredom.
-			break
+			for _, c := range d.Data {
+				for i, _ := range polNames {
+					// calculate average concentrations
+					c.Csum[i] /= float64(nIterationsSinceConvergenceCheck)
+				}
+			}
+			break // leave calculation loop because we're finished
 		}
 
 		d.arrayLock.Lock()

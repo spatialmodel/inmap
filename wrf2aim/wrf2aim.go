@@ -19,8 +19,8 @@ const (
 	wrfout     = "/home/marshall/tessumcm/WRFchem_output/WRF.2005_nei.na12.chem.3.4/output/wrfout_d01_[DATE]"
 	outputFile = "aimData.ncf"
 	startDate  = "20050101"
-	//endDate    = "20051231"
-	endDate   = "20050101"
+	endDate    = "20051231"
+	//endDate   = "20050101"
 	nWindBins = 20 // number of bins for wind speed
 	nProcs    = 16 // number of processors to use
 
