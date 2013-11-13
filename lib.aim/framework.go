@@ -31,7 +31,7 @@ type AIMcell struct {
 	UbinsWest, UfreqWest           []float32 // m/s
 	VbinsSouth, VfreqSouth         []float32 // m/s
 	WbinsBelow, WfreqBelow         []float32 // m/s
-	Uwest, Vsouth, Wbelow          float64
+	Uwest, Vsouth, Wbelow          float64   // velocities for the current timestep (m/s at west, south, and below grid edges)
 	orgPartitioning, SPartitioning float64   // gaseous fraction
 	NOPartitioning, NHPartitioning float64   // gaseous fraction
 	wdParticle, wdSO2, wdOtherGas  float64   // wet deposition rate, 1/s
@@ -39,14 +39,15 @@ type AIMcell struct {
 	M2u                            float64   // ACM2 upward mixing (Pleim 2007), 1/s
 	M2d                            float64   // ACM2 downward mixing (Pleim 2007), 1/s
 	kPblTop                        float64   // k index of boundary layer top
-	Dx, Dy, Dz                     float64   // meters
+	Dx, Dy, Dz                     float64   // grid size (meters)
 	Volume                         float64   // cubic meters
 	k, j, i                        int       // cell indicies
-	ii                             int       // master index
-	Ci                             []float64 // concentrations at beginning of time step
-	Cˣ, Cˣˣ                        []float64 // concentrations after first and second Runge-Kutta passes
-	Cf                             []float64 // concentrations at end of time step
-	Csum                           []float64 // sum of concentrations over time for later averaging
+	ii                             int       // master cell index
+	Ci                             []float64 // concentrations at beginning of time step (μg/m3)
+	Cˣ, Cˣˣ                        []float64 // concentrations after first and second Runge-Kutta passes (μg/m3)
+	Cf                             []float64 // concentrations at end of time step (μg/m3)
+	Csum                           []float64 // sum of concentrations over time for later averaging (μg/m3)
+	Cbackground                    []float64 // background pollutant concentrations (not associated with the current simulation) (μg/m3)
 	emisFlux                       []float64 //  emissions (μg/m3/s)
 	West                           *AIMcell  // Neighbor to the East
 	East                           *AIMcell  // Neighbor to the West
@@ -55,8 +56,8 @@ type AIMcell struct {
 	Below                          *AIMcell  // Neighbor below
 	Above                          *AIMcell  // Neighbor above
 	GroundLevel                    *AIMcell  // Neighbor at ground level
-	dzPlusHalf                     float64   // Distance between centers of cell and Above
-	dzMinusHalf                    float64   // Distance between centers of cell and Below
+	dzPlusHalf                     float64   // Distance between centers of cell and Above (m)
+	dzMinusHalf                    float64   // Distance between centers of cell and Below (m)
 }
 
 func newAIMcell(nbins int, dx, dy, dz float64) *AIMcell {
@@ -74,6 +75,7 @@ func newAIMcell(nbins int, dx, dy, dz float64) *AIMcell {
 	c.Cˣ = make([]float64, len(polNames))
 	c.Cˣˣ = make([]float64, len(polNames))
 	c.Csum = make([]float64, len(polNames))
+	c.Cbackground = make([]float64, len(polNames))
 	c.emisFlux = make([]float64, len(polNames))
 	return c
 }
@@ -99,7 +101,7 @@ func InitAIMdata(filename string) *AIMdata {
 	dx, dy := 12000., 12000. // need to make these adjustable
 	d.VOCoxidationRate = f.Header.GetAttribute("", "VOCoxidationRate").([]float64)[0]
 	var wg sync.WaitGroup
-	wg.Add(18)
+	wg.Add(26)
 	layerHeights := sparse.ZerosDense(d.Nz+1, d.Ny, d.Nx)
 	readNCF(filename, &wg, "layerHeights", layerHeights)
 	// set up data holders
@@ -195,9 +197,17 @@ func InitAIMdata(filename string) *AIMdata {
 	go d.readNCFbins(filename, &wg, "Vfreq")
 	go d.readNCFbins(filename, &wg, "Wfreq")
 	go d.readNCF(filename, &wg, "orgPartitioning")
+	go d.readNCF(filename, &wg, "VOC")
+	go d.readNCF(filename, &wg, "SOA")
 	go d.readNCF(filename, &wg, "SPartitioning")
+	go d.readNCF(filename, &wg, "gS")
+	go d.readNCF(filename, &wg, "pS")
 	go d.readNCF(filename, &wg, "NOPartitioning")
+	go d.readNCF(filename, &wg, "gNO")
+	go d.readNCF(filename, &wg, "pNO")
 	go d.readNCF(filename, &wg, "NHPartitioning")
+	go d.readNCF(filename, &wg, "gNH")
+	go d.readNCF(filename, &wg, "pNH")
 	go d.readNCF(filename, &wg, "wdParticle")
 	go d.readNCF(filename, &wg, "wdSO2")
 	go d.readNCF(filename, &wg, "wdOtherGas")
@@ -544,6 +554,22 @@ func (d *AIMdata) readNCF(filename string, wg *sync.WaitGroup, Var string) {
 					d.Data[ii].NOPartitioning = float64(dat[index])
 				case "NHPartitioning":
 					d.Data[ii].NHPartitioning = float64(dat[index])
+				case "VOC":
+					d.Data[ii].Cbackground[igOrg] = float64(dat[index])
+				case "SOA":
+					d.Data[ii].Cbackground[ipOrg] = float64(dat[index])
+				case "gNO":
+					d.Data[ii].Cbackground[igNO] = float64(dat[index])
+				case "pNO":
+					d.Data[ii].Cbackground[ipNO] = float64(dat[index])
+				case "gNH":
+					d.Data[ii].Cbackground[igNH] = float64(dat[index])
+				case "pNH":
+					d.Data[ii].Cbackground[ipNH] = float64(dat[index])
+				case "gS":
+					d.Data[ii].Cbackground[igS] = float64(dat[index])
+				case "pS":
+					d.Data[ii].Cbackground[ipS] = float64(dat[index])
 				case "wdParticle":
 					d.Data[ii].wdParticle = float64(dat[index])
 				case "wdSO2":

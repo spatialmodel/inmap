@@ -271,7 +271,7 @@ func advectiveFluxUpwind(c *AIMcell, d *AIMdata) {
 
 func (c *AIMcell) WetDeposition(Δt float64) {
 	particleFrac := 1. - c.wdParticle*Δt*10. // Multiplied by 10 ///////////////////////////////////////////////////////////////////////////////////
-	SO2Frac := 1. - c.wdSO2*Δt*10.
+	SO2Frac := 1. - c.wdSO2*Δt
 	otherGasFrac := 1 - c.wdOtherGas*Δt*10.
 	c.Cf[igOrg] *= otherGasFrac  // gOrg
 	c.Cf[ipOrg] *= particleFrac  // pOrg
@@ -288,12 +288,10 @@ var wetDeposition = func(c *AIMcell, d *AIMdata) {
 	c.WetDeposition(d.Dt)
 }
 
-// Reactive flux partitions organic matter ("gOrg" and "pOrg"), the
+// Partitions organic matter ("gOrg" and "pOrg"), the
 // nitrogen in nitrate ("gNO and pNO"), the nitrogen in ammonia ("gNH" and
 // "pNH) and sulfur ("gS" and "pS") between gaseous and particulate phase
 // based on the spatially explicit partioning present in the baseline data.
-// Inputs are an array of initial concentrations ("conc") and grid index
-// ("k", "j", and "i").
 func (c *AIMcell) ChemicalPartitioning() {
 
 	// Gas/particle partitioning
@@ -316,6 +314,62 @@ func (c *AIMcell) ChemicalPartitioning() {
 
 var chemicalPartitioning = func(c *AIMcell, d *AIMdata) {
 	c.ChemicalPartitioning()
+}
+
+// Calculates the secondary formation of PM2.5 based on the
+// chemical mechanisms from the COBRA model (COBRA user manual
+// appendix A). Some artistic liberties have been taken.
+// VOC/SOA partitioning is performed using the method above.
+func (c *AIMcell) COBRAchemistry() {
+	totalS := c.Cf[igS] + c.Cf[ipS]
+	totalNO := c.Cf[igNO] + c.Cf[ipNO]
+	totalNH := c.Cf[igNH] + c.Cf[ipNH]
+	SplusBackground := totalS + c.Cbackground[igS] +
+		c.Cbackground[ipS]
+	NOplusBackground := totalNO + c.Cbackground[igNO] +
+		c.Cbackground[ipNO]
+	NHplusBackground := totalNH + c.Cbackground[igNH] +
+		c.Cbackground[ipNH]
+
+	if SplusBackground > 0. && NHplusBackground <= 0. {
+		// Step 1: Calcuate mole ratio of NH4 to SO4.
+		R := NHplusBackground / SplusBackground
+		if R < 1. { // 1a. A portion of gS converts to pS, all gNH converts to pNH
+			sTransfer := min(c.Cf[igNH], c.Cf[igS])
+			c.Cf[ipS] += sTransfer
+			c.Cf[igS] -= sTransfer
+			c.Cf[ipNH] += c.Cf[igNH]
+			c.Cf[igNH] = 0.
+		} else if R < 2. { // 1b. All gS converts to pS, all gNH converts to pNH.
+			c.Cf[ipNH] += c.Cf[igNH]
+			c.Cf[igNH] = 0.
+			c.Cf[ipS] += c.Cf[igS]
+			c.Cf[igS] = 0.
+		} else { // 1c. All gS converts to pS, some  gNH converts to pNH.
+			c.Cf[ipS] += c.Cf[igS]
+			c.Cf[igS] = 0.
+			nhTransfer := min(c.Cf[igNH], 2.*c.Cf[igS])
+			c.Cf[ipNH] += nhTransfer
+			c.Cf[igNH] -= nhTransfer
+		}
+		// Step 2. NH4NO3 formation
+		if NOplusBackground > 0. && c.Cf[igNH] > 0. && c.Cf[ipNO] < 0.25*c.Cf[igNO] {
+			transfer := min(c.Cf[igNH], 0.25*c.Cf[igNO])
+			c.Cf[igNH] -= transfer
+			c.Cf[ipNH] += transfer
+			c.Cf[igNO] -= transfer
+			c.Cf[ipNO] += transfer
+		}
+	}
+
+	// VOC/SOA partitioning
+	totalOrg := c.Cf[igOrg] + c.Cf[ipOrg]
+	c.Cf[igOrg] = totalOrg * c.orgPartitioning
+	c.Cf[ipOrg] = totalOrg * (1 - c.orgPartitioning)
+}
+
+var cobraChemistry = func(c *AIMcell, d *AIMdata) {
+	c.COBRAchemistry()
 }
 
 // VOC oxidation flux

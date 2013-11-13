@@ -143,7 +143,8 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 			funcChan[pp] <- gravitationalSettling
 			funcChan[pp] <- vOCoxidationFlux
 			funcChan[pp] <- wetDeposition
-			funcChan[pp] <- chemicalPartitioning
+			//funcChan[pp] <- chemicalPartitioning
+			funcChan[pp] <- cobraChemistry
 		}
 		wg.Wait()
 

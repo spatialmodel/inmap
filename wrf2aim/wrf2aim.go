@@ -217,9 +217,17 @@ func main() {
 	SOxchan <- nil
 	NH3chan <- nil
 	orgPartitioning := <-VOCchan
+	VOC := <-VOCchan
+	SOA := <-VOCchan
 	NOPartitioning := <-NOxchan
+	gNO := <-NOxchan
+	pNO := <-NOxchan
 	SPartitioning := <-SOxchan
+	gS := <-SOxchan
+	pS := <-SOxchan
 	NHPartitioning := <-NH3chan
+	gNH := <-NH3chan
+	pNH := <-NH3chan
 	Tchan <- nil
 	PBchan <- nil
 	Pchan <- nil
@@ -267,15 +275,42 @@ func main() {
 	h.AddVariable("orgPartitioning", []string{"z", "y", "x"}, []float32{0})
 	h.AddAttribute("orgPartitioning", "description", "Mass fraction of organic matter in gas (vs. particle) phase")
 	h.AddAttribute("orgPartitioning", "units", "fraction")
+	h.AddVariable("VOC", []string{"z", "y", "x"}, []float32{0})
+	h.AddAttribute("VOC", "description", "Average VOC concentration")
+	h.AddAttribute("VOC", "units", "ug m-3")
+	h.AddVariable("SOA", []string{"z", "y", "x"}, []float32{0})
+	h.AddAttribute("SOA", "description", "Average secondary organic aerosol concentration")
+	h.AddAttribute("SOA", "units", "ug m-3")
+
 	h.AddVariable("NOPartitioning", []string{"z", "y", "x"}, []float32{0})
 	h.AddAttribute("NOPartitioning", "description", "Mass fraction of N from NOx in gas (vs. particle) phase")
 	h.AddAttribute("NOPartitioning", "units", "fraction")
+	h.AddVariable("gNO", []string{"z", "y", "x"}, []float32{0})
+	h.AddAttribute("gNO", "description", "Average concentration of nitrogen fraction of gaseous NOx")
+	h.AddAttribute("gNO", "units", "ug m-3")
+	h.AddVariable("pNO", []string{"z", "y", "x"}, []float32{0})
+	h.AddAttribute("pNO", "description", "Average concentration of nitrogen fraction of particulate NO3")
+	h.AddAttribute("pNO", "units", "ug m-3")
+
 	h.AddVariable("SPartitioning", []string{"z", "y", "x"}, []float32{0})
 	h.AddAttribute("SPartitioning", "description", "Mass fraction of S from SOx in gas (vs. particle) phase")
 	h.AddAttribute("SPartitioning", "units", "fraction")
+	h.AddVariable("gS", []string{"z", "y", "x"}, []float32{0})
+	h.AddAttribute("gS", "description", "Average concentration of sulfur fraction of gaseous SOx")
+	h.AddAttribute("gS", "units", "ug m-3")
+	h.AddVariable("pS", []string{"z", "y", "x"}, []float32{0})
+	h.AddAttribute("pS", "description", "Average concentration of sulfur fraction of particulate sulfate")
+	h.AddAttribute("pS", "units", "ug m-3")
+
 	h.AddVariable("NHPartitioning", []string{"z", "y", "x"}, []float32{0})
 	h.AddAttribute("NHPartitioning", "description", "Mass fraction of N from NH3 in gas (vs. particle) phase")
 	h.AddAttribute("NHPartitioning", "units", "fraction")
+	h.AddVariable("gNH", []string{"z", "y", "x"}, []float32{0})
+	h.AddAttribute("gNH", "description", "Average concentration of nitrogen fraction of gaseous ammonia")
+	h.AddAttribute("gNH", "units", "ug m-3")
+	h.AddVariable("pNH", []string{"z", "y", "x"}, []float32{0})
+	h.AddAttribute("pNH", "description", "Average concentration of nitrogen fraction of particulate ammonium")
+	h.AddAttribute("pNH", "units", "ug m-3")
 
 	h.AddVariable("layerHeights", []string{"zStagger", "y", "x"}, []float32{0})
 	h.AddAttribute("layerHeights", "description", "Height at edge of layer")
@@ -348,9 +383,17 @@ func main() {
 	writeNCF(f, "Vfreq", statsCumulative(windStatsV))
 	writeNCF(f, "Wfreq", statsCumulative(windStatsW))
 	writeNCF(f, "orgPartitioning", orgPartitioning)
+	writeNCF(f, "VOC", VOC)
+	writeNCF(f, "SOA", SOA)
 	writeNCF(f, "NOPartitioning", NOPartitioning)
+	writeNCF(f, "gNO", gNO)
+	writeNCF(f, "pNO", pNO)
 	writeNCF(f, "SPartitioning", SPartitioning)
+	writeNCF(f, "gS", gS)
+	writeNCF(f, "pS", pS)
 	writeNCF(f, "NHPartitioning", NHPartitioning)
+	writeNCF(f, "gNH", gNH)
+	writeNCF(f, "pNH", pNH)
 	writeNCF(f, "layerHeights", layerHeights)
 	writeNCF(f, "wdParticle", wdParticle)
 	writeNCF(f, "wdSO2", wdSO2)
@@ -634,12 +677,17 @@ func calcPartitioning(gaschan, particlechan chan *sparse.DenseArray) {
 	for {
 		gasdata := <-gaschan
 		if gasdata == nil {
+			partitioning := sparse.ZerosDense(gas.Shape...)
 			fmt.Println("Calculating partitioning...")
 			for i, gasval := range gas.Elements {
 				particleval := particle.Elements[i]
-				gas.Elements[i] = gasval / (gasval + particleval)
+				partitioning.Elements[i] = gasval / (gasval + particleval)
+				gas.Elements[i] /= numTsteps
+				gas.Elements[i] /= numTsteps
 			}
+			gaschan <- partitioning
 			gaschan <- gas
+			gaschan <- particle
 			return
 		}
 		particledata := <-particlechan

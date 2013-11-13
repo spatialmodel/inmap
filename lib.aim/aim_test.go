@@ -2,6 +2,7 @@ package aim
 
 import (
 	"math"
+	"math/rand"
 	"runtime"
 	"testing"
 )
@@ -78,6 +79,42 @@ func TestVerticalMixing(t *testing.T) {
 	t.Logf("sum=%.12g (it should equal %v)\n", sum, E*float64(nsteps))
 	if different(sum, E*float64(nsteps)) {
 		t.FailNow()
+	}
+}
+
+// Test whether mass is conserved during chemical reactions.
+func TestChemistry(t *testing.T) {
+	c := d.Data[d.getIndex(0, j, i)]
+	nsteps := 10
+	vals := make([]float64, len(polNames))
+	for tt := 0; tt < nsteps; tt++ {
+		sum := 0.
+		for i := 0; i < len(vals); i++ {
+			vals[i] = rand.Float64() * 10.
+			sum += vals[i]
+		}
+		for i, v := range vals {
+			c.Cf[i] = v
+		}
+		c.COBRAchemistry()
+		finalSum := 0.
+		for _, val := range c.Cf {
+			finalSum += val
+			if val < 0 {
+				chemPrint(t, vals, c)
+				t.FailNow()
+			}
+		}
+		if different(finalSum, sum) {
+			t.FailNow()
+		}
+		chemPrint(t, vals, c)
+	}
+}
+
+func chemPrint(t *testing.T, vals []float64, c *AIMcell) {
+	for i, val2 := range c.Cf {
+		t.Logf("%v: initial=%.3g, final=%.3g\n", polNames[i], vals[i], val2)
 	}
 }
 
