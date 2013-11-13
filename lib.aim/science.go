@@ -28,20 +28,6 @@ func (d *AIMdata) SettlingVelocity() {
 	fmt.Printf("Settling velocity: %v s\n", d.vs)
 }
 
-// DiffusiveFlux calculates diffusive fluxes given diffusivity (D; m2/s) and
-// initial concentration (Co; arbitrary units) arrays, x, y, and z array
-// indicies (i,j, and k, respectively) and x, y, and z grid
-// resolutions (dx,dy,dz; units of meters). Returns diffusive flux
-// (from Fick's first law)
-// in units of (Co units).
-//func (m *MetData) DiffusiveFlux(c, d *Neighborhood) (
-//	zdiff float64) {
-//
-//	zdiff = (d.kplus*(c.kplus-c.center)/c.Dzsquared +
-//		d.center*(c.kminus-c.center)/c.Dzsquared) * m.Dt
-//	return
-//}
-
 // Calculate vertical mixing based on Pleim (2007) for
 // boundary layer and Wilson (2004) for above the boundary layer.
 func (c *AIMcell) VerticalMixing(Δt float64) {
@@ -56,8 +42,8 @@ func (c *AIMcell) VerticalMixing(Δt float64) {
 				1./c.Dz*(a.Kz*(a.Ci[ii]-c.Ci[ii])/c.dzPlusHalf+
 					c.Kz*(b.Ci[ii]-c.Ci[ii])/c.dzMinusHalf)) * Δt
 		} else {
-			c.Cf[ii] += 1. / c.Dz * (a.Kz*(a.Ci[ii]-c.Ci[ii])/c.dzPlusHalf +
-				c.Kz*(b.Ci[ii]-c.Ci[ii])/c.dzMinusHalf) * Δt
+			c.Cf[ii] += 1. / c.Dz * (a.Kz*10.*(a.Ci[ii]-c.Ci[ii])/c.dzPlusHalf +
+				c.Kz*10.*(b.Ci[ii]-c.Ci[ii])/c.dzMinusHalf) * Δt // Multiplied by 10 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		}
 	}
 }
@@ -175,100 +161,6 @@ var rk3AdvectionStep3 = func(c *AIMcell, d *AIMdata) {
 	c.RK3advectionPass3(d)
 }
 
-// Fourth order Runge-Kutta scheme for calculating advection.
-// From Jacobson (2005) equations 6.53-6.55.
-func rkJacobson(uplus, uminus, q, qplus, qminus, Δt, Δx float64) (
-	Δqfinal float64) {
-
-	rk := func(uplus, uminus, qplus, qminus, Δx float64) float64 {
-		return -(uplus*qplus - uminus*qminus) / 2 / Δx
-	}
-	k1 := rk(uplus, uminus, qplus, qminus, Δx) * Δt
-	qEst1plus := qplus + k1/2
-	qEst1minus := qminus + k1/2
-	k2 := rk(uplus, uminus, qEst1plus, qEst1minus, Δx) * Δt
-	qEst2plus := qplus + k2/2
-	qEst2minus := qminus + k2/2
-	k3 := rk(uplus, uminus, qEst2plus, qEst2minus, Δx) * Δt
-	qEst3plus := qplus + k3/2
-	qEst3minus := qminus + k3/2
-	k4 := rk(uplus, uminus, qEst3plus, qEst3minus, Δx) * Δt
-	Δqfinal = k1/6. + k2/3. + k3/3. + k4/6.
-	return
-}
-
-// Calculates advective flux given the concentrations of
-// the cell in question and its neighbors (c), as
-// well as the neighboring velocities on the Arakawa
-// C grid (U₋, U₊, V₋, V₊, W₋, W₊; units of m/s).
-// From Jacobson (2005).
-// Returned fluxes are in the same units as c.
-//func (m *MetData) AdvectiveFluxRungeKuttaJacobson(c *Neighborhood,
-//	Uminus, Uplus, Vminus, Vplus, Wminus, Wplus float64) (
-//	xadv, yadv, zadv float64) {
-//	xadv = rkJacobson(Uplus, Uminus, c.center, c.iplus, c.iminus, m.Dt, m.Dx)
-//	yadv = rkJacobson(Vplus, Vminus, c.center, c.jplus, c.jminus, m.Dt, m.Dy)
-//	zadv = rkJacobson(Wplus, Wminus, c.center, c.kplus, c.kminus, m.Dt, c.Dz)
-//
-//	return
-//}
-
-// Advective flux is calcuated based on an initial concentration array (Co,
-// arbitrary units), x, y, and z wind speed (U, V, and W, respectively; units
-// of meters per second), x, y, and z array indicies (i,j, and k, respectively)
-// and x, y, and z grid resolutions (dx,dy,dz; units of meters).
-// Results are in units of (Co units).
-func (c *AIMcell) AdvectiveFluxUpwind(Δt float64) {
-
-	for ii, _ := range c.Cf {
-		if c.Uwest > 0. {
-			c.Cf[ii] += c.Uwest * c.West.Ci[ii] /
-				c.Dx * Δt
-		} else {
-			c.Cf[ii] += c.Uwest * c.Ci[ii] /
-				c.Dx * Δt
-		}
-		if c.East.Uwest > 0. {
-			c.Cf[ii] -= c.East.Uwest * c.Ci[ii] /
-				c.Dx * Δt
-		} else {
-			c.Cf[ii] -= c.East.Uwest *
-				c.East.Ci[ii] / c.Dx * Δt
-		}
-
-		if c.Vsouth > 0. {
-			c.Cf[ii] += c.Vsouth * c.South.Ci[ii] /
-				c.Dy * Δt
-		} else {
-			c.Cf[ii] += c.Vsouth * c.Ci[ii] / c.Dy * Δt
-		}
-		if c.North.Vsouth > 0. {
-			c.Cf[ii] -= c.North.Vsouth * c.Ci[ii] /
-				c.Dy * Δt
-		} else {
-			c.Cf[ii] -= c.North.Vsouth *
-				c.North.Ci[ii] / c.Dy * Δt
-		}
-
-		if c.Wbelow > 0. {
-			c.Cf[ii] += c.Wbelow * c.Below.Ci[ii] /
-				c.Dz * Δt
-		} else {
-			c.Cf[ii] += c.Wbelow * c.Ci[ii] / c.Dz * Δt
-		}
-		if c.Above.Wbelow > 0. {
-			c.Cf[ii] -= c.Above.Wbelow * c.Ci[ii] /
-				c.Dz * Δt
-		} else {
-			c.Cf[ii] -= c.Above.Wbelow *
-				c.Above.Ci[ii] / c.Dz * Δt
-		}
-	}
-}
-func advectiveFluxUpwind(c *AIMcell, d *AIMdata) {
-	c.AdvectiveFluxUpwind(d.Dt)
-}
-
 func (c *AIMcell) WetDeposition(Δt float64) {
 	particleFrac := 1. - c.wdParticle*Δt*10. // Multiplied by 10 ///////////////////////////////////////////////////////////////////////////////////
 	SO2Frac := 1. - c.wdSO2*Δt
@@ -331,7 +223,7 @@ func (c *AIMcell) COBRAchemistry() {
 	NHplusBackground := totalNH + c.Cbackground[igNH] +
 		c.Cbackground[ipNH]
 
-	if SplusBackground > 0. && NHplusBackground <= 0. {
+	if SplusBackground > 0. && NHplusBackground > 0. {
 		// Step 1: Calcuate mole ratio of NH4 to SO4.
 		R := NHplusBackground / SplusBackground
 		if R < 1. { // 1a. A portion of gS converts to pS, all gNH converts to pNH

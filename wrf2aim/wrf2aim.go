@@ -683,7 +683,7 @@ func calcPartitioning(gaschan, particlechan chan *sparse.DenseArray) {
 				particleval := particle.Elements[i]
 				partitioning.Elements[i] = gasval / (gasval + particleval)
 				gas.Elements[i] /= numTsteps
-				gas.Elements[i] /= numTsteps
+				particle.Elements[i] /= numTsteps
 			}
 			gaschan <- partitioning
 			gaschan <- gas

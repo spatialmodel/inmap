@@ -135,7 +135,6 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 		// processors for calculating
 		wg.Add(8 * nprocs)
 		for pp := 0; pp < nprocs; pp++ {
-			//funcChan[pp] <- advectiveFluxUpwind
 			funcChan[pp] <- rk3AdvectionStep1
 			funcChan[pp] <- rk3AdvectionStep2
 			funcChan[pp] <- rk3AdvectionStep3
