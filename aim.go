@@ -24,6 +24,8 @@ type configData struct {
 	GroundLevelEmissions string // Path to ground level emissions file. Can include environment variables.
 	ElevatedEmissions    string // Path to elevated emissions file. Can include environment variables.
 	Output               string // Path to desired output file location. Can include environment variables.
+	HTTPport             string // Port for hosting web page.
+	// If HTTPport is `8080`, then the GUI would be viewed by visiting `localhost:8080` in a web browser.
 }
 
 func main() {
@@ -45,7 +47,7 @@ func main() {
 	runtime.GOMAXPROCS(config.NumProcessors)
 
 	fmt.Println("Reading input data...")
-	d := aim.InitAIMdata(config.AIMdata)
+	d := aim.InitAIMdata(config.AIMdata, config.HTTPport)
 	fmt.Println("Reading plume rise information...")
 	p := aim.GetPlumeRiseInfo(config.AIMdata)
 
@@ -56,15 +58,23 @@ func main() {
 		velocity = 61.94 * 1097. / 3600.    // m/hr
 	)
 
-	emissions := getEmissionsNCF(config.GroundLevelEmissions, d)
-	elevatedEmis := getEmissionsNCF(config.ElevatedEmissions, d)
+	emissions := make(map[string]*sparse.DenseArray)
+	if config.GroundLevelEmissions != "" {
+		emissions = getEmissionsNCF(config.GroundLevelEmissions, d)
+	}
 
-	// apply plume rise
-	for pol, elev := range elevatedEmis {
-		for j := 0; j < elev.Shape[1]; j++ {
-			for i := 0; i < elev.Shape[2]; i++ {
-				k := p.CalcPlumeRise(height, diam, temp, velocity, j, i)
-				emissions[pol].AddVal(elev.Get(0, j, i), k, j, i)
+	if config.ElevatedEmissions != "" {
+		elevatedEmis := getEmissionsNCF(config.ElevatedEmissions, d)
+		// apply plume rise
+		for pol, elev := range elevatedEmis {
+			if _, ok := emissions[pol]; !ok {
+				emissions[pol] = sparse.ZerosDense(d.Nz, d.Ny, d.Nx)
+			}
+			for j := 0; j < elev.Shape[1]; j++ {
+				for i := 0; i < elev.Shape[2]; i++ {
+					k := p.CalcPlumeRise(height, diam, temp, velocity, j, i)
+					emissions[pol].AddVal(elev.Get(0, j, i), k, j, i)
+				}
 			}
 		}
 	}

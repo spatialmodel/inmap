@@ -213,21 +213,15 @@ var chemicalPartitioning = func(c *AIMcell, d *AIMdata) {
 // appendix A). Some artistic liberties have been taken.
 // VOC/SOA partitioning is performed using the method above.
 func (c *AIMcell) COBRAchemistry() {
-	totalS := c.Cf[igS] + c.Cf[ipS]
-	totalNO := c.Cf[igNO] + c.Cf[ipNO]
-	totalNH := c.Cf[igNH] + c.Cf[ipNH]
-	SplusBackground := totalS + c.Cbackground[igS] +
-		c.Cbackground[ipS]
-	NOplusBackground := totalNO + c.Cbackground[igNO] +
-		c.Cbackground[ipNO]
-	NHplusBackground := totalNH + c.Cbackground[igNH] +
-		c.Cbackground[ipNH]
+	totalSgas := c.Cf[igS] + c.Cbackground[igS]
+	totalNOgas := c.Cf[igNO] + c.Cbackground[igNO]
+	totalNHgas := c.Cf[igNH] + c.Cbackground[igNH]
 
-	if SplusBackground > 0. && NHplusBackground > 0. {
+	if totalSgas > 0. && totalNHgas > 0. {
 		// Step 1: Calcuate mole ratio of NH4 to SO4.
-		R := NHplusBackground / SplusBackground
+		R := (totalNHgas / mwN) / (totalSgas / mwS)
 		if R < 1. { // 1a. A portion of gS converts to pS, all gNH converts to pNH
-			sTransfer := min(c.Cf[igNH], c.Cf[igS])
+			sTransfer := min(totalNHgas/mwN*mwS, c.Cf[igS]) // μg Sulfur
 			c.Cf[ipS] += sTransfer
 			c.Cf[igS] -= sTransfer
 			c.Cf[ipNH] += c.Cf[igNH]
@@ -240,13 +234,13 @@ func (c *AIMcell) COBRAchemistry() {
 		} else { // 1c. All gS converts to pS, some  gNH converts to pNH.
 			c.Cf[ipS] += c.Cf[igS]
 			c.Cf[igS] = 0.
-			nhTransfer := min(c.Cf[igNH], 2.*c.Cf[igS])
+			nhTransfer := min(c.Cf[igNH], 2.*totalSgas/mwS*mwN) // μg Nitrogen
 			c.Cf[ipNH] += nhTransfer
 			c.Cf[igNH] -= nhTransfer
 		}
 		// Step 2. NH4NO3 formation
-		if NOplusBackground > 0. && c.Cf[igNH] > 0. && c.Cf[ipNO] < 0.25*c.Cf[igNO] {
-			transfer := min(c.Cf[igNH], 0.25*c.Cf[igNO])
+		if totalNOgas > 0. && c.Cf[ipNO] < 0.25*c.Cf[igNO] {
+			transfer := min(totalNHgas, 0.25*c.Cf[igNO])
 			c.Cf[igNH] -= transfer
 			c.Cf[ipNH] += transfer
 			c.Cf[igNO] -= transfer

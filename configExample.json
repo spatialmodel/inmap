@@ -3,5 +3,6 @@
 	"NumProcessors":4,
 	"GroundLevelEmissions":"/path/to/groundLevelEmissions.ncf",
 	"ElevatedEmissions":"/path/to/elevatedEmissions.ncf",
-	"Output":"output.ncf"
+	"Output":"output.ncf",
+	"HTTPport":"8080"
 }

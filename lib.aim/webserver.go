@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-func (d *AIMdata) WebServer() {
+func (d *AIMdata) WebServer(httpPort string) {
 	http.HandleFunc("/js/bootstrap.min.js", webframework.ServeJSmin)
 	http.HandleFunc("/css/bootstrap.min.css", webframework.ServeCSS)
 	http.HandleFunc("/css/bootstrap-responsive.min.css",
@@ -23,7 +23,7 @@ func (d *AIMdata) WebServer() {
 	http.HandleFunc("/proc/", webframework.ProcessorProf)
 	http.HandleFunc("/heap/", webframework.HeapProf)
 	http.HandleFunc("/", reportHandler)
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":"+httpPort, nil)
 }
 
 var mapOptions = []string{"PrimaryPM2_5", "VOC", "SOA", "NH3", "pNH4", "SOx",

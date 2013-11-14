@@ -80,10 +80,13 @@ func newAIMcell(nbins int, dx, dy, dz float64) *AIMcell {
 	return c
 }
 
-func InitAIMdata(filename string) *AIMdata {
+// Initialize the model, where `filename` is the path to
+// the NetCDF file with meteorology and background concentration data,
+// and `httpPort` is the port number for hosting the html GUI.
+func InitAIMdata(filename string, httpPort string) *AIMdata {
 	d := new(AIMdata)
 	d.arrayLock.Lock()
-	go d.WebServer()
+	go d.WebServer(httpPort)
 	ff, err := os.Open(filename)
 	if err != nil {
 		panic(err)
