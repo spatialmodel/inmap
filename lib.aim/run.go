@@ -108,15 +108,15 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 			time.Since(timeStepTime).Seconds(), d.Dt, nDaysRun)
 		timeStepTime = time.Now()
 
-		if nDaysRun > 7. { // Kludge to get the model to stop running before we all die of boredom.
-			for _, c := range d.Data {
-				for i, _ := range polNames {
-					// calculate average concentrations
-					c.Csum[i] /= float64(nIterationsSinceConvergenceCheck)
-				}
-			}
-			break // leave calculation loop because we're finished
-		}
+		//		if nDaysRun > 7. { // Kludge to get the model to stop running before we all die of boredom.
+		//			for _, c := range d.Data {
+		//				for i, _ := range polNames {
+		//					// calculate average concentrations
+		//					c.Csum[i] /= float64(nIterationsSinceConvergenceCheck)
+		//				}
+		//			}
+		//			break // leave calculation loop because we're finished
+		//		}
 
 		d.arrayLock.Lock()
 		// prepare random velocities for this time step, and add emissions
@@ -157,8 +157,10 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 			timeToQuit := true
 			finalMassSum := 0.
 			for _, c := range d.Data {
-				for i, _ := range polNames {
-					finalMassSum += c.Csum[i] * c.Volume
+				if c.k == 0 { // only test bottom layer for convergence
+					for i, _ := range polNames {
+						finalMassSum += c.Csum[i] * c.Volume
+					}
 				}
 			}
 			finalMassSum /= float64(nIterationsSinceConvergenceCheck)
