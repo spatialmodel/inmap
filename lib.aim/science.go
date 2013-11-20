@@ -42,8 +42,8 @@ func (c *AIMcell) VerticalMixing(Δt float64) {
 				1./c.Dz*(a.Kz*(a.Ci[ii]-c.Ci[ii])/c.dzPlusHalf+
 					c.Kz*(b.Ci[ii]-c.Ci[ii])/c.dzMinusHalf)) * Δt
 		} else {
-			c.Cf[ii] += 1. / c.Dz * (a.Kz*10.*(a.Ci[ii]-c.Ci[ii])/c.dzPlusHalf +
-				c.Kz*10.*(b.Ci[ii]-c.Ci[ii])/c.dzMinusHalf) * Δt // Multiplied by 10 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			c.Cf[ii] += 1. / c.Dz * (a.Kz*(a.Ci[ii]-c.Ci[ii])/c.dzPlusHalf +
+				c.Kz*(b.Ci[ii]-c.Ci[ii])/c.dzMinusHalf) * Δt
 		}
 	}
 }
@@ -55,7 +55,7 @@ var verticalMixing = func(c *AIMcell, d *AIMdata) {
 // The second through sixth-order flux-form spatial approximations for
 // δ(uq)/δx. From equation 4 from Wicker and Skamarock (2002),
 // except for second order flux which is from WRF subroutine
-// "ADVECT SCALAR".
+// "advect_scalar".
 func rkFlux2(q_im1, q_i, ua float64) float64 {
 	return 0.5 * ua * (q_i + q_im1)
 }
@@ -83,6 +83,69 @@ func upwindFlux(q_im1, q_i, ua float64) float64 {
 	}
 }
 
+// Get advective flux in West and East directions
+func (c *AIMcell) westEastFlux(ii int) (fluxWest, fluxEast float64) {
+	//	if c.nextToEdge { // Use second order flux for cells by boundary
+	fluxWest = upwindFlux(c.West.Ci[ii], c.Ci[ii], c.Uwest)
+	fluxEast = upwindFlux(c.Ci[ii], c.East.Ci[ii], c.East.Uwest)
+	//	} else if c.twoFromEdge {  // Use third order flux for cells 2 from boundary
+	//		fluxWest = rkFlux3(c.West.West.Ci[ii], c.West.Ci[ii], c.Ci[ii],
+	//			c.East.Ci[ii], c.Uwest)
+	//		fluxEast = rkFlux3(c.West.Ci[ii], c.Ci[ii], c.East.Ci[ii],
+	//			c.East.East.Ci[ii], c.East.Uwest)
+	//	} else { // Use fifth order flux everywhere else
+	//		fluxWest = rkFlux5(c.West.West.West.Ci[ii], c.West.West.Ci[ii],
+	//			c.West.Ci[ii], c.Ci[ii], c.East.Ci[ii], c.East.East.Ci[ii],
+	//			c.Uwest)
+	//		fluxEast = rkFlux5(c.West.West.Ci[ii], c.West.Ci[ii], c.Ci[ii],
+	//			c.East.Ci[ii], c.East.East.Ci[ii], c.East.East.East.Ci[ii],
+	//			c.East.Uwest)
+	//	}
+	return
+}
+
+// Get advective flux in South and North directions
+func (c *AIMcell) southNorthFlux(ii int) (fluxSouth, fluxNorth float64) {
+	//	if c.nextToEdge {// Use second order flux for cells by boundary
+	fluxSouth = upwindFlux(c.South.Ci[ii], c.Ci[ii], c.Vsouth)
+	fluxNorth = upwindFlux(c.Ci[ii], c.North.Ci[ii], c.North.Vsouth)
+	//	} else if c.twoFromEdge { // Use third order flux for cells 2 from boundary
+	//		fluxSouth = rkFlux3(c.South.South.Ci[ii], c.South.Ci[ii], c.Ci[ii],
+	//			c.North.Ci[ii], c.Vsouth)
+	//		fluxNorth = rkFlux3(c.South.Ci[ii], c.Ci[ii], c.North.Ci[ii],
+	//			c.North.North.Ci[ii], c.North.Vsouth)
+	//	} else { // Use fifth order flux everywhere else
+	//		fluxSouth = rkFlux5(c.South.South.South.Ci[ii], c.South.South.Ci[ii],
+	//			c.South.Ci[ii], c.Ci[ii], c.North.Ci[ii], c.North.North.Ci[ii],
+	//			c.Vsouth)
+	//		fluxNorth = rkFlux5(c.South.South.Ci[ii], c.South.Ci[ii], c.Ci[ii],
+	//			c.North.Ci[ii], c.North.North.Ci[ii], c.North.North.North.Ci[ii],
+	//			c.North.Vsouth)
+	//	}
+	return
+}
+
+// Get advective flux in Below and Above directions
+func (c *AIMcell) belowAboveFlux(ii int) (fluxBelow, fluxAbove float64) {
+	//	if c.nextToEdge { // Use second order flux for cells by boundary
+	fluxBelow = upwindFlux(c.Below.Ci[ii], c.Ci[ii], c.Wbelow)
+	fluxAbove = upwindFlux(c.Ci[ii], c.Above.Ci[ii], c.Above.Wbelow)
+	//	} else if c.twoFromEdge { // Use third order flux for cells 2 from boundary
+	//		fluxBelow = rkFlux3(c.Below.Below.Ci[ii], c.Below.Ci[ii], c.Ci[ii],
+	//			c.Above.Ci[ii], c.Wbelow)
+	//		fluxAbove = rkFlux3(c.Below.Ci[ii], c.Ci[ii], c.Above.Ci[ii],
+	//			c.Above.Above.Ci[ii], c.Above.Wbelow)
+	//	} else { // Use fifth order flux everywhere else
+	//		fluxBelow = rkFlux5(c.Below.Below.Below.Ci[ii], c.Below.Below.Ci[ii],
+	//			c.Below.Ci[ii], c.Ci[ii], c.Above.Ci[ii], c.Above.Above.Ci[ii],
+	//			c.Wbelow)
+	//		fluxAbove = rkFlux5(c.Below.Below.Ci[ii], c.Below.Ci[ii], c.Ci[ii],
+	//			c.Above.Ci[ii], c.Above.Above.Ci[ii], c.Above.Above.Above.Ci[ii],
+	//			c.Above.Wbelow)
+	//	}
+	return
+}
+
 // Calculates advective flux in the cell based
 // on a third order Runge-Kutta scheme
 // from Wicker and Skamarock (2002) Equation 3a.
@@ -90,16 +153,13 @@ func (c *AIMcell) RK3advectionPass1(d *AIMdata) {
 	var fluxMinus, fluxPlus float64
 	for ii, _ := range c.Cf {
 		// i direction
-		fluxMinus = upwindFlux(c.West.Ci[ii], c.Ci[ii], c.Uwest)
-		fluxPlus = upwindFlux(c.Ci[ii], c.East.Ci[ii], c.East.Uwest)
+		fluxMinus, fluxPlus = c.westEastFlux(ii)
 		c.Cˣ[ii] = c.Ci[ii] - d.Dt/3./c.Dx*(fluxPlus-fluxMinus)
 		// j direction
-		fluxMinus = upwindFlux(c.South.Ci[ii], c.Ci[ii], c.Vsouth)
-		fluxPlus = upwindFlux(c.Ci[ii], c.North.Ci[ii], c.North.Vsouth)
+		fluxMinus, fluxPlus = c.southNorthFlux(ii)
 		c.Cˣ[ii] -= d.Dt / 3. / c.Dy * (fluxPlus - fluxMinus)
 		// k direction
-		fluxMinus = upwindFlux(c.Below.Ci[ii], c.Ci[ii], c.Wbelow)
-		fluxPlus = upwindFlux(c.Ci[ii], c.Above.Ci[ii], c.Above.Wbelow)
+		fluxMinus, fluxPlus = c.belowAboveFlux(ii)
 		c.Cˣ[ii] -= d.Dt / 3. / c.Dz * (fluxPlus - fluxMinus)
 	}
 	return
@@ -112,16 +172,13 @@ func (c *AIMcell) RK3advectionPass2(d *AIMdata) {
 	var fluxMinus, fluxPlus float64
 	for ii, _ := range c.Cf {
 		// i direction
-		fluxMinus = upwindFlux(c.West.Cˣ[ii], c.Cˣ[ii], c.Uwest)
-		fluxPlus = upwindFlux(c.Cˣ[ii], c.East.Cˣ[ii], c.East.Uwest)
+		fluxMinus, fluxPlus = c.westEastFlux(ii)
 		c.Cˣˣ[ii] = c.Cf[ii] - d.Dt/2./c.Dx*(fluxPlus-fluxMinus)
 		// j direction
-		fluxMinus = upwindFlux(c.South.Cˣ[ii], c.Cˣ[ii], c.Vsouth)
-		fluxPlus = upwindFlux(c.Cˣ[ii], c.North.Cˣ[ii], c.North.Vsouth)
+		fluxMinus, fluxPlus = c.southNorthFlux(ii)
 		c.Cˣˣ[ii] -= d.Dt / 2. / c.Dy * (fluxPlus - fluxMinus)
 		// k direction
-		fluxMinus = upwindFlux(c.Below.Cˣ[ii], c.Cˣ[ii], c.Wbelow)
-		fluxPlus = upwindFlux(c.Cˣ[ii], c.Above.Cˣ[ii], c.Above.Wbelow)
+		fluxMinus, fluxPlus = c.belowAboveFlux(ii)
 		c.Cˣˣ[ii] -= d.Dt / 2. / c.Dz * (fluxPlus - fluxMinus)
 	}
 	return
@@ -134,16 +191,13 @@ func (c *AIMcell) RK3advectionPass3(d *AIMdata) {
 	var fluxMinus, fluxPlus float64
 	for ii, _ := range c.Cf {
 		// i direction
-		fluxMinus = upwindFlux(c.West.Cˣˣ[ii], c.Cˣˣ[ii], c.Uwest)
-		fluxPlus = upwindFlux(c.Cˣˣ[ii], c.East.Cˣˣ[ii], c.East.Uwest)
+		fluxMinus, fluxPlus = c.westEastFlux(ii)
 		c.Cf[ii] -= d.Dt / c.Dx * (fluxPlus - fluxMinus)
 		// j direction
-		fluxMinus = upwindFlux(c.South.Cˣˣ[ii], c.Cˣˣ[ii], c.Vsouth)
-		fluxPlus = upwindFlux(c.Cˣˣ[ii], c.North.Cˣˣ[ii], c.North.Vsouth)
+		fluxMinus, fluxPlus = c.southNorthFlux(ii)
 		c.Cf[ii] -= d.Dt / c.Dy * (fluxPlus - fluxMinus)
 		// k direction
-		fluxMinus = upwindFlux(c.Below.Cˣˣ[ii], c.Cˣˣ[ii], c.Wbelow)
-		fluxPlus = upwindFlux(c.Cˣˣ[ii], c.Above.Cˣˣ[ii], c.Above.Wbelow)
+		fluxMinus, fluxPlus = c.belowAboveFlux(ii)
 		c.Cf[ii] -= d.Dt / c.Dz * (fluxPlus - fluxMinus)
 	}
 	return
@@ -162,9 +216,9 @@ var rk3AdvectionStep3 = func(c *AIMcell, d *AIMdata) {
 }
 
 func (c *AIMcell) WetDeposition(Δt float64) {
-	particleFrac := 1. - c.wdParticle*Δt*10. // Multiplied by 10 ///////////////////////////////////////////////////////////////////////////////////
+	particleFrac := 1. - c.wdParticle*Δt
 	SO2Frac := 1. - c.wdSO2*Δt
-	otherGasFrac := 1 - c.wdOtherGas*Δt*10.
+	otherGasFrac := 1 - c.wdOtherGas*Δt
 	c.Cf[igOrg] *= otherGasFrac  // gOrg
 	c.Cf[ipOrg] *= particleFrac  // pOrg
 	c.Cf[iPM2_5] *= particleFrac // PM2_5
@@ -209,42 +263,49 @@ var chemicalPartitioning = func(c *AIMcell, d *AIMdata) {
 }
 
 // Calculates the secondary formation of PM2.5 based on the
-// chemical mechanisms from the COBRA model (COBRA user manual
-// appendix A). Some artistic liberties have been taken.
+// chemical mechanisms from the COBRA model and APEEP models
+// (COBRA user manual appendix A; Muller and Mendelsohn 2006).
+// Changes have been made to adapt the equations from gaussian
+// plume model form to gridded model form.
 // VOC/SOA partitioning is performed using the method above.
 func (c *AIMcell) COBRAchemistry() {
-	totalSgas := c.Cf[igS] + c.Cbackground[igS]
-	totalNOgas := c.Cf[igNO] + c.Cbackground[igNO]
-	totalNHgas := c.Cf[igNH] + c.Cbackground[igNH]
+	totalSparticle := (c.Cf[ipS] + c.Cbackground[ipS]) / mwS    // moles S
+	totalNHgas := (c.Cf[igNH] + c.Cbackground[igNH])            // μg N
+	totalNHparticle := (c.Cf[ipNH] + c.Cbackground[ipNH]) / mwN // moles N
 
-	if totalSgas > 0. && totalNHgas > 0. {
-		// Step 1: Calcuate mole ratio of NH4 to SO4.
-		R := (totalNHgas / mwN) / (totalSgas / mwS)
-		if R < 1. { // 1a. A portion of gS converts to pS, all gNH converts to pNH
-			sTransfer := min(totalNHgas/mwN*mwS, c.Cf[igS]) // μg Sulfur
-			c.Cf[ipS] += sTransfer
-			c.Cf[igS] -= sTransfer
+	// Rate of SO2 conversion to SO4 (1/s); Muller Table 2
+	//const kS = 0.000002083
+	const kS = 0.000002083 * 10.
+	// Rate of NOx conversion to NO3 (1/s); Muller Table 2, multiplied by COBRA
+	// seasonal coefficient of 0.25 for NH4NO3 formation.
+	const kNO = 0.000005556 * 0.25
+
+	// All SO4 forms particles, so sulfur particle formation is limited by the
+	// SO2 -> SO4 reaction.
+	ΔS := kS * c.Cf[igS]
+	c.Cf[igS] -= ΔS
+	c.Cf[ipS] += ΔS
+
+	if totalSparticle > 0. && totalNHparticle > 0. {
+		// COBRA step 1: Calcuate mole ratio of NH4 to SO4.
+		R := totalNHparticle / totalSparticle
+		if R < 2. { // 1a and 1b: all gNH converts to pNH
 			c.Cf[ipNH] += c.Cf[igNH]
 			c.Cf[igNH] = 0.
-		} else if R < 2. { // 1b. All gS converts to pS, all gNH converts to pNH.
-			c.Cf[ipNH] += c.Cf[igNH]
-			c.Cf[igNH] = 0.
-			c.Cf[ipS] += c.Cf[igS]
-			c.Cf[igS] = 0.
-		} else { // 1c. All gS converts to pS, some  gNH converts to pNH.
-			c.Cf[ipS] += c.Cf[igS]
-			c.Cf[igS] = 0.
-			nhTransfer := min(c.Cf[igNH], 2.*totalSgas/mwS*mwN) // μg Nitrogen
+		} else { // 1c. Some  gNH converts to pNH.
+			nhTransfer := min(c.Cf[igNH], 2.*totalSparticle*mwN) // μg Nitrogen
 			c.Cf[ipNH] += nhTransfer
 			c.Cf[igNH] -= nhTransfer
 		}
 		// Step 2. NH4NO3 formation
-		if totalNOgas > 0. && c.Cf[ipNO] < 0.25*c.Cf[igNO] {
-			transfer := min(totalNHgas, 0.25*c.Cf[igNO])
-			c.Cf[igNH] -= transfer
-			c.Cf[ipNH] += transfer
-			c.Cf[igNO] -= transfer
-			c.Cf[ipNO] += transfer
+		if totalNHgas > 0. {
+			ΔN := kNO * c.Cf[igNO]
+			ΔNO := min(totalNHgas, ΔN)
+			ΔNH := min(c.Cf[igNH], ΔNO)
+			c.Cf[igNH] -= ΔNH
+			c.Cf[ipNH] += ΔNH
+			c.Cf[igNO] -= ΔNO
+			c.Cf[ipNO] += ΔNO
 		}
 	}
 
@@ -267,21 +328,38 @@ var vOCoxidationFlux = func(c *AIMcell, d *AIMdata) {
 	c.VOCoxidationFlux(d)
 }
 
-var gravSettlingPols = []int{iPM2_5, ipOrg, ipNH, ipNO, ipS}
-
-func (c *AIMcell) GravitationalSettling(d *AIMdata) {
-	for _, iPol := range gravSettlingPols {
-		if c.k == 0 {
-			c.Cf[iPol] -= d.vs * c.Ci[iPol] / c.Dz * d.Dt
-		} else {
-			c.Cf[iPol] -= d.vs * (c.Ci[iPol] -
-				c.Above.Ci[iPol]) / c.Dz * d.Dt
-		}
+// Caluclates Dry deposition using deposition velocities from Muller and
+// Mendelsohn (2006), Hauglustain et al. (1994), Phillips et al. (2004),
+// and Seinfeld and Pandis (2006).
+func (c *AIMcell) DryDeposition(d *AIMdata) {
+	const (
+		vNO2  = 0.01  // m/s; Muller and Mendelsohn Table 2
+		vSO2  = 0.005 // m/s; Muller and Mendelsohn Table 2
+		vVOC  = 0.001 // m/s; Hauglustaine Table 2
+		vNH3  = 0.01  // m/s; Phillips abstract
+		vPM25 = 0.001 // m/s; Seinfeld and Pandis Fig 19.2, adjusted from water to land
+	)
+	if c.k == 0 {
+		fac := 1. / c.Dz * d.Dt
+		no2fac := 1 - vNO2*fac
+		so2fac := 1 - vSO2*fac
+		vocfac := 1 - vVOC*fac
+		nh3fac := 1 - vNH3*fac
+		pm25fac := 1 - vPM25*fac
+		c.Cf[igOrg] *= vocfac
+		c.Cf[ipOrg] *= pm25fac
+		c.Cf[iPM2_5] *= pm25fac
+		c.Cf[igNH] *= nh3fac
+		c.Cf[ipNH] *= pm25fac
+		c.Cf[igS] *= so2fac
+		c.Cf[ipS] *= pm25fac
+		c.Cf[igNO] *= no2fac
+		c.Cf[ipNO] *= pm25fac
 	}
 }
 
-var gravitationalSettling = func(c *AIMcell, d *AIMdata) {
-	c.GravitationalSettling(d)
+var dryDeposition = func(c *AIMcell, d *AIMdata) {
+	c.DryDeposition(d)
 }
 
 // convert float to int (rounding)

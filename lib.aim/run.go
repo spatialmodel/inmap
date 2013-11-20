@@ -139,7 +139,7 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 			funcChan[pp] <- rk3AdvectionStep2
 			funcChan[pp] <- rk3AdvectionStep3
 			funcChan[pp] <- verticalMixing
-			funcChan[pp] <- gravitationalSettling
+			funcChan[pp] <- dryDeposition
 			funcChan[pp] <- vOCoxidationFlux
 			funcChan[pp] <- wetDeposition
 			//funcChan[pp] <- chemicalPartitioning

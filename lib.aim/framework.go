@@ -32,6 +32,7 @@ type AIMcell struct {
 	VbinsSouth, VfreqSouth         []float32 // m/s
 	WbinsBelow, WfreqBelow         []float32 // m/s
 	Uwest, Vsouth, Wbelow          float64   // velocities for the current timestep (m/s at west, south, and below grid edges)
+	Uold, Vold, Wold               float64   // velocities for the previous timestep (m/s at west, south, and below grid edges)
 	orgPartitioning, SPartitioning float64   // gaseous fraction
 	NOPartitioning, NHPartitioning float64   // gaseous fraction
 	wdParticle, wdSO2, wdOtherGas  float64   // wet deposition rate, 1/s
@@ -58,6 +59,8 @@ type AIMcell struct {
 	GroundLevel                    *AIMcell  // Neighbor at ground level
 	dzPlusHalf                     float64   // Distance between centers of cell and Above (m)
 	dzMinusHalf                    float64   // Distance between centers of cell and Below (m)
+	nextToEdge                     bool      // Is the grid cell next to the edge?
+	twoFromEdge                    bool      // Is the grid cell 2 cells from the edge?
 }
 
 func newAIMcell(nbins int, dx, dy, dz float64) *AIMcell {
@@ -136,6 +139,7 @@ func InitAIMdata(filename string, httpPort string) *AIMdata {
 			d.westBoundary[ii].j = j
 			d.westBoundary[ii].i = i
 			d.westBoundary[ii].ii = ii
+			d.westBoundary[ii].nextToEdge = true
 			ii++
 		}
 	}
@@ -149,6 +153,7 @@ func InitAIMdata(filename string, httpPort string) *AIMdata {
 			d.eastBoundary[ii].j = j
 			d.eastBoundary[ii].i = i
 			d.eastBoundary[ii].ii = ii
+			d.eastBoundary[ii].nextToEdge = true
 			ii++
 		}
 	}
@@ -162,6 +167,7 @@ func InitAIMdata(filename string, httpPort string) *AIMdata {
 			d.southBoundary[ii].j = j
 			d.southBoundary[ii].i = i
 			d.southBoundary[ii].ii = ii
+			d.southBoundary[ii].nextToEdge = true
 			ii++
 		}
 	}
@@ -175,6 +181,7 @@ func InitAIMdata(filename string, httpPort string) *AIMdata {
 			d.northBoundary[ii].j = j
 			d.northBoundary[ii].i = i
 			d.northBoundary[ii].ii = ii
+			d.northBoundary[ii].nextToEdge = true
 			ii++
 		}
 	}
@@ -188,6 +195,7 @@ func InitAIMdata(filename string, httpPort string) *AIMdata {
 			d.topBoundary[ii].j = j
 			d.topBoundary[ii].i = i
 			d.topBoundary[ii].ii = ii
+			d.topBoundary[ii].nextToEdge = true
 			ii++
 		}
 	}
@@ -269,6 +277,14 @@ func InitAIMdata(filename string, httpPort string) *AIMdata {
 					d.Data[jj].checkIndicies(k+1, j, i)
 					d.Data[ii].Above = d.Data[jj]
 				}
+				if k == 0 || k == d.Nz-1 || j == 0 || j == d.Ny-1 ||
+					i == 0 || i == d.Nx-1 {
+					d.Data[ii].nextToEdge = true
+				}
+				if k == 1 || k == d.Nz-2 || j == 1 || j == d.Ny-2 ||
+					i == 1 || i == d.Nx-2 {
+					d.Data[ii].twoFromEdge = true
+				}
 				jj = d.getIndex(0, j, i)
 				d.Data[jj].checkIndicies(0, j, i)
 				d.Data[ii].GroundLevel = d.Data[jj]
@@ -333,12 +349,18 @@ func setVelocities(nprocs, procNum int, cellsChan chan []*AIMcell,
 	}
 }
 
-// Add in emissions flux to each cell at every time step
+// Add in emissions flux to each cell at every time step, also
+// set initial concentrations to final concentrations from previous
+// time step, and set old velocities to velocities from previous time
+// step.
 func (c *AIMcell) addEmissionsFlux(d *AIMdata) {
 	for i, _ := range polNames {
 		c.Cf[i] += c.emisFlux[i] * d.Dt
 		c.Ci[i] = c.Cf[i]
 	}
+	c.Uold = c.Uwest
+	c.Vold = c.Vsouth
+	c.Wold = c.Wbelow
 }
 
 var addemissionsflux = func(c *AIMcell, d *AIMdata) {
