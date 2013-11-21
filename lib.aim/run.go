@@ -167,10 +167,6 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 			if !checkConvergence(finalMassSum, oldFinalMassSum) {
 				timeToQuit = false
 			}
-			oldFinalMassSum = finalMassSum
-			nDaysSinceConvergenceCheck = 0.
-			nIterationsSinceConvergenceCheck = 0
-			finalMassSum = 0.
 			if timeToQuit {
 				for _, c := range d.Data {
 					for i, _ := range polNames {
@@ -180,6 +176,10 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 				}
 				break // leave calculation loop because we're finished
 			}
+			oldFinalMassSum = finalMassSum
+			nDaysSinceConvergenceCheck = 0.
+			nIterationsSinceConvergenceCheck = 0
+			finalMassSum = 0.
 			for _, c := range d.Data {
 				for i, _ := range polNames {
 					c.Csum[i] = 0.
