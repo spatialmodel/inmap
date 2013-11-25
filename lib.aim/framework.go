@@ -4,7 +4,7 @@ import (
 	"bitbucket.org/ctessum/sparse"
 	"code.google.com/p/lvd.go/cdf"
 	"fmt"
-	//	"math"
+	"math"
 	"math/rand"
 	"os"
 	//	"runtime"
@@ -321,7 +321,7 @@ func interpolate(random float32, freqs, bins []float32, b int) (val float64) {
 	if x == 0. {
 		val = float64(bins[b])
 	} else {
-		frac := (random-freqs[b])/(x) - 0.5 // y is for bin center
+		frac := (random - freqs[b]) / (x)
 		val = float64(bins[b] + (bins[b+1]-bins[b])*frac)
 	}
 	return
@@ -422,36 +422,36 @@ var addtosum = func(c *AIMcell, d *AIMdata) {
 
 //  Set the time step using the Courant–Friedrichs–Lewy (CFL) condition.
 func (d *AIMdata) setTstep(nprocs int) {
-	//	const Cmax = 1
-	//	valChan := make(chan float64)
-	//	calcCFL := func(procNum int) {
-	//		// don't worry about the edges of the staggered grids.
-	//		var uval, vval, wval, thisval, val float64
-	//		var c *AIMcell
-	//		for ii := procNum; ii < len(d.Data); ii += nprocs {
-	//			c = d.Data[ii]
-	//			uval = math.Abs(c.Uwest) / c.Dx
-	//			vval = math.Abs(c.Vsouth) / c.Dy
-	//			wval = math.Abs(c.Wbelow) / c.Dz
-	//			thisval = max(uval, vval, wval)
-	//			if thisval > val {
-	//				val = thisval
-	//			}
-	//		}
-	//		valChan <- val
-	//	}
-	//	for procNum := 0; procNum < nprocs; procNum++ {
-	//		go calcCFL(procNum)
-	//	}
-	//	val := 0.
-	//	for i := 0; i < nprocs; i++ { // get max value from each processor
-	//		procval := <-valChan
-	//		if procval > val {
-	//			val = procval
-	//		}
-	//	}
-	//	d.Dt = Cmax / math.Pow(3., 0.5) / val // seconds
-	d.Dt = d.Data[0].Dx / 1000. * 6
+	const Cmax = 1
+	valChan := make(chan float64)
+	calcCFL := func(procNum int) {
+		// don't worry about the edges of the staggered grids.
+		var uval, vval, wval, thisval, val float64
+		var c *AIMcell
+		for ii := procNum; ii < len(d.Data); ii += nprocs {
+			c = d.Data[ii]
+			uval = math.Abs(c.Uwest) / c.Dx
+			vval = math.Abs(c.Vsouth) / c.Dy
+			wval = math.Abs(c.Wbelow) / c.Dz
+			thisval = max(uval, vval, wval)
+			if thisval > val {
+				val = thisval
+			}
+		}
+		valChan <- val
+	}
+	for procNum := 0; procNum < nprocs; procNum++ {
+		go calcCFL(procNum)
+	}
+	val := 0.
+	for i := 0; i < nprocs; i++ { // get max value from each processor
+		procval := <-valChan
+		if procval > val {
+			val = procval
+		}
+	}
+	d.Dt = Cmax / math.Pow(3., 0.5) / val // seconds
+	//d.Dt = d.Data[0].Dx / 1000. * 6
 }
 
 // Read variable which includes random walk bins from NetCDF file.
