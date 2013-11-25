@@ -316,9 +316,14 @@ func (c *AIMcell) checkIndicies(k, j, i int) {
 	}
 }
 
-func interpolate(random float32, bins, freqs []float32, b int) (val float64) {
-	frac := (random-freqs[b])/(freqs[b+1]-freqs[b]) - 0.5 // y is for bin center
-	val = float64(bins[b] + (bins[b+1]-bins[b])*frac)
+func interpolate(random float32, freqs, bins []float32, b int) (val float64) {
+	x := freqs[b+1] - freqs[b]
+	if x == 0. {
+		val = float64(bins[b])
+	} else {
+		frac := (random-freqs[b])/(x) - 0.5 // y is for bin center
+		val = float64(bins[b] + (bins[b+1]-bins[b])*frac)
+	}
 	return
 }
 
@@ -333,7 +338,7 @@ func setVelocities(nprocs, procNum int, cellsChan chan []*AIMcell,
 			if c.k <= topLayerToCalc+1 {
 				// choose bins using a weighted random method
 				random = r.Float32()
-				for b, _ := range c.UbinsWest {
+				for b := 0; b < len(c.UbinsWest)-1; b++ {
 					if random <= c.UfreqWest[b+1] {
 						c.Uwest = interpolate(random, c.UfreqWest,
 							c.UbinsWest, b)
@@ -341,7 +346,7 @@ func setVelocities(nprocs, procNum int, cellsChan chan []*AIMcell,
 					}
 				}
 				random = r.Float32()
-				for b, _ := range c.VbinsSouth {
+				for b := 0; b < len(c.VbinsSouth)-1; b++ {
 					if random <= c.VfreqSouth[b+1] {
 						c.Vsouth = interpolate(random, c.VfreqSouth,
 							c.VbinsSouth, b)
@@ -349,7 +354,7 @@ func setVelocities(nprocs, procNum int, cellsChan chan []*AIMcell,
 					}
 				}
 				random = r.Float32()
-				for b, _ := range c.WbinsBelow {
+				for b := 0; b < len(c.WbinsBelow)-1; b++ {
 					if random <= c.WfreqBelow[b+1] {
 						c.Wbelow = interpolate(random, c.WfreqBelow,
 							c.WbinsBelow, b)
