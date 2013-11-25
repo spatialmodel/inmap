@@ -268,55 +268,61 @@ var chemicalPartitioning = func(c *AIMcell, d *AIMdata) {
 // Changes have been made to adapt the equations from gaussian
 // plume model form to gridded model form.
 // VOC/SOA partitioning is performed using the method above.
-func (c *AIMcell) COBRAchemistry() {
-	totalSparticle := (c.Cf[ipS] + c.Cbackground[ipS]) / mwS    // moles S
-	totalNHgas := (c.Cf[igNH] + c.Cbackground[igNH])            // μg N
-	totalNHparticle := (c.Cf[ipNH] + c.Cbackground[ipNH]) / mwN // moles N
+func (c *AIMcell) COBRAchemistry(d *AIMdata) {
+	//totalSparticle := (c.Cf[ipS] + c.Cbackground[ipS]) / mwS    // moles S
+	totalNHgas := (c.Cf[igNH] + c.Cbackground[igNH]) // μg N
+	//totalNHparticle := (c.Cf[ipNH] + c.Cbackground[ipNH]) / mwN // moles N
 
 	// Rate of SO2 conversion to SO4 (1/s); Muller Table 2
-	//const kS = 0.000002083
-	const kS = 0.000002083 * 10.
+	//const kS = 0.000002083 * 1000.
 	// Rate of NOx conversion to NO3 (1/s); Muller Table 2, multiplied by COBRA
 	// seasonal coefficient of 0.25 for NH4NO3 formation.
 	const kNO = 0.000005556 * 0.25
 
 	// All SO4 forms particles, so sulfur particle formation is limited by the
 	// SO2 -> SO4 reaction.
-	ΔS := kS * c.Cf[igS]
+	ΔS := c.SO2oxidation * c.Cf[igS] * d.Dt
 	c.Cf[igS] -= ΔS
 	c.Cf[ipS] += ΔS
 
-	if totalSparticle > 0. && totalNHparticle > 0. {
-		// COBRA step 1: Calcuate mole ratio of NH4 to SO4.
-		R := totalNHparticle / totalSparticle
-		if R < 2. { // 1a and 1b: all gNH converts to pNH
-			c.Cf[ipNH] += c.Cf[igNH]
-			c.Cf[igNH] = 0.
-		} else { // 1c. Some  gNH converts to pNH.
-			nhTransfer := min(c.Cf[igNH], 2.*totalSparticle*mwN) // μg Nitrogen
-			c.Cf[ipNH] += nhTransfer
-			c.Cf[igNH] -= nhTransfer
-		}
-		// Step 2. NH4NO3 formation
-		if totalNHgas > 0. {
-			ΔN := kNO * c.Cf[igNO]
-			ΔNO := min(totalNHgas, ΔN)
-			ΔNH := min(c.Cf[igNH], ΔNO)
-			c.Cf[igNH] -= ΔNH
-			c.Cf[ipNH] += ΔNH
-			c.Cf[igNO] -= ΔNO
-			c.Cf[ipNO] += ΔNO
-		}
-	}
+	//if totalSparticle > 0. && totalNHparticle > 0. {
+	// COBRA step 1: Calcuate mole ratio of NH4 to SO4.
+	//	R := totalNHparticle / totalSparticle
+	//	if R < 2. { // 1a and 1b: all gNH converts to pNH
+	//		c.Cf[ipNH] += c.Cf[igNH]
+	//		c.Cf[igNH] = 0.
+	//	} else { // 1c. Some  gNH converts to pNH.
+	//		nhTransfer := min(c.Cf[igNH], 2.*totalSparticle*mwN) // μg Nitrogen
+	//		c.Cf[ipNH] += nhTransfer
+	//		c.Cf[igNH] -= nhTransfer
+	//	}
 
 	// VOC/SOA partitioning
 	totalOrg := c.Cf[igOrg] + c.Cf[ipOrg]
 	c.Cf[igOrg] = totalOrg * c.orgPartitioning
 	c.Cf[ipOrg] = totalOrg * (1 - c.orgPartitioning)
+
+	// NH3 / NH4 partitioning
+	totalNH := c.Cf[igNH] + c.Cf[ipNH]
+	c.Cf[igNH] = totalNH * c.NHPartitioning
+	c.Cf[ipNH] = totalNH * (1 - c.NHPartitioning)
+
+	// Step 2. NH4NO3 formation
+	if totalNHgas > 0. {
+		ΔN := kNO * c.Cf[igNO] * d.Dt
+		ΔNO := min(totalNHgas, ΔN)
+		ΔNH := min(c.Cf[igNH], ΔNO)
+		c.Cf[igNH] -= ΔNH
+		c.Cf[ipNH] += ΔNH
+		c.Cf[igNO] -= ΔNO
+		c.Cf[ipNO] += ΔNO
+	}
+	//}
+
 }
 
 var cobraChemistry = func(c *AIMcell, d *AIMdata) {
-	c.COBRAchemistry()
+	c.COBRAchemistry(d)
 }
 
 // VOC oxidation flux
@@ -330,14 +336,14 @@ var vOCoxidationFlux = func(c *AIMcell, d *AIMdata) {
 
 // Caluclates Dry deposition using deposition velocities from Muller and
 // Mendelsohn (2006), Hauglustain et al. (1994), Phillips et al. (2004),
-// and Seinfeld and Pandis (2006).
+// and and the GOCART aerosol module in WRF/Chem.
 func (c *AIMcell) DryDeposition(d *AIMdata) {
 	const (
-		vNO2  = 0.01  // m/s; Muller and Mendelsohn Table 2
-		vSO2  = 0.005 // m/s; Muller and Mendelsohn Table 2
-		vVOC  = 0.001 // m/s; Hauglustaine Table 2
-		vNH3  = 0.01  // m/s; Phillips abstract
-		vPM25 = 0.001 // m/s; Seinfeld and Pandis Fig 19.2, adjusted from water to land
+		vNO2 = 0.01  // m/s; Muller and Mendelsohn Table 2
+		vSO2 = 0.005 // m/s; Muller and Mendelsohn Table 2
+		vVOC = 0.001 // m/s; Hauglustaine Table 2
+		vNH3 = 0.01  // m/s; Phillips abstract
+		//		vPM25 = 0.001 // m/s; Seinfeld and Pandis Fig 19.2, adjusted from water to land
 	)
 	if c.k == 0 {
 		fac := 1. / c.Dz * d.Dt
@@ -345,7 +351,7 @@ func (c *AIMcell) DryDeposition(d *AIMdata) {
 		so2fac := 1 - vSO2*fac
 		vocfac := 1 - vVOC*fac
 		nh3fac := 1 - vNH3*fac
-		pm25fac := 1 - vPM25*fac
+		pm25fac := 1 - c.particleDryDep*fac
 		c.Cf[igOrg] *= vocfac
 		c.Cf[ipOrg] *= pm25fac
 		c.Cf[iPM2_5] *= pm25fac

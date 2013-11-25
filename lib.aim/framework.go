@@ -36,6 +36,8 @@ type AIMcell struct {
 	orgPartitioning, SPartitioning float64   // gaseous fraction
 	NOPartitioning, NHPartitioning float64   // gaseous fraction
 	wdParticle, wdSO2, wdOtherGas  float64   // wet deposition rate, 1/s
+	particleDryDep                 float64   // aerosol dry deposition velocity, m/s
+	SO2oxidation                   float64   // SO2 oxidation to SO4 by HO; 1/s
 	Kz                             float64   // vertical diffusivity, m2/s
 	M2u                            float64   // ACM2 upward mixing (Pleim 2007), 1/s
 	M2d                            float64   // ACM2 downward mixing (Pleim 2007), 1/s
@@ -107,7 +109,7 @@ func InitAIMdata(filename string, httpPort string) *AIMdata {
 	dx, dy := 12000., 12000. // need to make these adjustable
 	d.VOCoxidationRate = f.Header.GetAttribute("", "VOCoxidationRate").([]float64)[0]
 	var wg sync.WaitGroup
-	wg.Add(26)
+	wg.Add(28) // Number of readNCF functions to run simultaneously
 	layerHeights := sparse.ZerosDense(d.Nz+1, d.Ny, d.Nx)
 	readNCF(filename, &wg, "layerHeights", layerHeights)
 	// set up data holders
@@ -226,6 +228,8 @@ func InitAIMdata(filename string, httpPort string) *AIMdata {
 	go d.readNCF(filename, &wg, "M2u")
 	go d.readNCF(filename, &wg, "M2d")
 	go d.readNCF(filename, &wg, "pblTopLayer")
+	go d.readNCF(filename, &wg, "SO2oxidation")
+	go d.readNCF(filename, &wg, "particleDryDep")
 	wg.Wait()
 	d.arrayLock.Unlock()
 
@@ -312,6 +316,12 @@ func (c *AIMcell) checkIndicies(k, j, i int) {
 	}
 }
 
+func interpolate(random float32, bins, freqs []float32, b int) (val float64) {
+	frac := (random-freqs[b])/(freqs[b+1]-freqs[b]) - 0.5 // y is for bin center
+	val = float64(bins[b] + (bins[b+1]-bins[b])*frac)
+	return
+}
+
 func setVelocities(nprocs, procNum int, cellsChan chan []*AIMcell,
 	wg *sync.WaitGroup) {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -323,23 +333,26 @@ func setVelocities(nprocs, procNum int, cellsChan chan []*AIMcell,
 			if c.k <= topLayerToCalc+1 {
 				// choose bins using a weighted random method
 				random = r.Float32()
-				for b, bin := range c.UbinsWest {
-					if random <= c.UfreqWest[b] {
-						c.Uwest = float64(bin)
+				for b, _ := range c.UbinsWest {
+					if random <= c.UfreqWest[b+1] {
+						c.Uwest = interpolate(random, c.UfreqWest,
+							c.UbinsWest, b)
 						break
 					}
 				}
 				random = r.Float32()
-				for b, bin := range c.VbinsSouth {
-					if random <= c.VfreqSouth[b] {
-						c.Vsouth = float64(bin)
+				for b, _ := range c.VbinsSouth {
+					if random <= c.VfreqSouth[b+1] {
+						c.Vsouth = interpolate(random, c.VfreqSouth,
+							c.VbinsSouth, b)
 						break
 					}
 				}
 				random = r.Float32()
-				for b, bin := range c.WbinsBelow {
-					if random <= c.WfreqBelow[b] {
-						c.Wbelow = float64(bin)
+				for b, _ := range c.WbinsBelow {
+					if random <= c.WfreqBelow[b+1] {
+						c.Wbelow = interpolate(random, c.WfreqBelow,
+							c.WbinsBelow, b)
 						break
 					}
 				}
@@ -611,6 +624,11 @@ func (d *AIMdata) readNCF(filename string, wg *sync.WaitGroup, Var string) {
 				case "pblTopLayer": // 2d variable
 					index = j*jstride + i
 					d.Data[ii].kPblTop = float64(dat[index])
+				case "SO2oxidation":
+					d.Data[ii].SO2oxidation = float64(dat[index])
+				case "particleDryDep": // 2d variable
+					index = j*jstride + i
+					d.Data[ii].particleDryDep = float64(dat[index])
 				default:
 					panic(fmt.Sprintf("Variable %v unknown.\n", Var))
 				}

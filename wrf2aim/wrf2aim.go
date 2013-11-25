@@ -2,6 +2,7 @@ package main
 
 import (
 	"bitbucket.org/ctessum/sparse"
+	"bitbucket.org/ctessum/atmos/gocart"
 	"code.google.com/p/lvd.go/cdf"
 	"flag"
 	"fmt"
@@ -187,13 +188,16 @@ func main() {
 	pNHchan := make(chan *sparse.DenseArray)
 	go calcPartitioning(NH3chan, pNHchan)
 
-	// Calculate stability for plume rise and vertical mixing
+	// Calculate stability for plume rise, vertical mixing,
+	// and chemical reaction rates
 	Tchan := make(chan *sparse.DenseArray)
 	PBchan := make(chan *sparse.DenseArray)
 	Pchan := make(chan *sparse.DenseArray)
 	surfaceHeatFluxChan := make(chan *sparse.DenseArray)
-	go StabilityAndMixing(layerHeights, ustar, pblh, alt,
-		Tchan, PBchan, Pchan, surfaceHeatFluxChan)
+	hoChan := make(chan *sparse.DenseArray)
+	luIndexChan := make(chan *sparse.DenseArray) // surface skin temp
+	go StabilityMixingChemistry(layerHeights, ustar, pblh, alt,
+		Tchan, PBchan, Pchan, surfaceHeatFluxChan, hoChan, luIndexChan)
 
 	iterateTimeSteps("Reading data for concentrations and bin frequencies: ",
 		readSingleVar("U", windStatsChanU), readSingleVar("V", windStatsChanV),
@@ -204,7 +208,8 @@ func main() {
 		readGasGroup(NH3, NH3chan), readParticleGroup(pNH, pNHchan),
 		readSingleVar("HFX", surfaceHeatFluxChan),
 		readSingleVar("T", Tchan), readSingleVar("PB", PBchan),
-		readSingleVar("P", Pchan))
+		readSingleVar("P", Pchan), readSingleVar("ho", hoChan),
+		readSingleVar("LU_INDEX", luIndexChan))
 
 	windStatsChanU <- nil
 	windStatsChanV <- nil
@@ -232,6 +237,8 @@ func main() {
 	PBchan <- nil
 	Pchan <- nil
 	surfaceHeatFluxChan <- nil
+	hoChan <- nil
+	luIndexChan <- nil
 	temperature := <-Tchan
 	S1 := <-Tchan
 	Sclass := <-Tchan
@@ -239,6 +246,8 @@ func main() {
 	M2u := <-Tchan
 	M2d := <-Tchan
 	pblTopLayer := <-Tchan
+	SO2oxidation := <-Tchan
+	particleDryDep := <-Tchan
 
 	// write out data to file
 	fmt.Printf("Writing out data to %v...\n", outputFile)
@@ -311,6 +320,14 @@ func main() {
 	h.AddVariable("pNH", []string{"z", "y", "x"}, []float32{0})
 	h.AddAttribute("pNH", "description", "Average concentration of nitrogen fraction of particulate ammonium")
 	h.AddAttribute("pNH", "units", "ug m-3")
+
+	h.AddVariable("SO2oxidation", []string{"z", "y", "x"}, []float32{0})
+	h.AddAttribute("SO2oxidation", "description", "Rate of SO2 oxidation to SO4 by hydroxyl radical")
+	h.AddAttribute("SO2oxidation", "units", "s-1")
+
+	h.AddVariable("particleDryDep", []string{"y", "x"}, []float32{0})
+	h.AddAttribute("particleDryDep", "description", "Dry deposition velocity for particles")
+	h.AddAttribute("particleDryDep", "units", "m s-1")
 
 	h.AddVariable("layerHeights", []string{"zStagger", "y", "x"}, []float32{0})
 	h.AddAttribute("layerHeights", "description", "Height at edge of layer")
@@ -408,6 +425,8 @@ func main() {
 	writeNCF(f, "temperature", temperature)
 	writeNCF(f, "S1", S1)
 	writeNCF(f, "Sclass", Sclass)
+	writeNCF(f, "SO2oxidation", SO2oxidation)
+	writeNCF(f, "particleDryDep", particleDryDep)
 	ff.Close()
 }
 
@@ -851,6 +870,12 @@ func windSpeed(uChan, vChan, wChan chan *sparse.DenseArray) {
 	return
 }
 
+// Roughness lengths for USGS land classes ([m]), from WRF file
+// VEGPARM.TBL.
+var USGSz0 = []float64{.50, .1, .06, .1, 0.095, .20, .11,
+	.03, .035, .15, .50, .50, .50, .50, .35, 0.0001, .20, .40,
+	.01, .10, .30, .15, .075, 0.001, .01, .15, .01}
+
 // Calculates:
 // 1) Stability parameters for use in plume rise calculation (ASME, 1973,
 // as described in Seinfeld and Pandis, 2006).
@@ -858,12 +883,16 @@ func windSpeed(uChan, vChan, wChan chan *sparse.DenseArray) {
 // from Wilson (2004) for grid cells above the planetary boundary layer
 // and Pleim (2007) for grid cells within the planetary
 // boundary layer.
+// 3) SO2 oxidation to SO4 by HO (Stockwell 1997).
+// 4) Dry deposition velocity (gocart).
 // Inputs are layer heights (m), friction velocity (ustar, m/s),
 // planetary boundary layer height (pblh, m), inverse density (m3/kg),
 // perturbation potential temperature (Temp,K), Pressure (Pb and P, Pa),
-// and surface heat flux (W/m2).
-func StabilityAndMixing(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
-	Tchan, PBchan, Pchan, surfaceHeatFluxChan chan *sparse.DenseArray) {
+// surface heat flux (W/m2), HO mixing ratio (ppmv), and USGS land use index
+// (luIndex).
+func StabilityMixingChemistry(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
+	Tchan, PBchan, Pchan, surfaceHeatFluxChan, hoChan,
+	luIndexChan chan *sparse.DenseArray) {
 	const (
 		po    = 101300. // Pa, reference pressure
 		kappa = 0.2854  // related to von karman's constant
@@ -876,6 +905,8 @@ func StabilityAndMixing(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
 	var Kz *sparse.DenseArray
 	var M2d *sparse.DenseArray
 	var M2u *sparse.DenseArray
+	var SO2oxidation *sparse.DenseArray
+	var particleDryDep *sparse.DenseArray
 	// Get Layer index of PBL top (staggered)
 	pblTopLayer := sparse.ZerosDense(pblh.Shape...)
 	for j := 0; j < LayerHeights.Shape[1]; j++ {
@@ -894,6 +925,8 @@ func StabilityAndMixing(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
 		PB := <-PBchan               // Pa
 		P := <-Pchan                 // Pa
 		hfx := <-surfaceHeatFluxChan // W/m2
+		ho := <-hoChan               // ppmv
+		luIndex := <-luIndexChan
 		if T == nil {
 			for i, val := range Temp.Elements {
 				Temp.Elements[i] = val / numTsteps
@@ -913,6 +946,12 @@ func StabilityAndMixing(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
 			for i, val := range M2d.Elements {
 				M2d.Elements[i] = val / numTsteps
 			}
+			for i, val := range SO2oxidation.Elements {
+				SO2oxidation.Elements[i] = val / numTsteps
+			}
+			for i, val := range particleDryDep.Elements {
+				particleDryDep.Elements[i] = val / numTsteps
+			}
 			Tchan <- Temp
 			Tchan <- S1
 			Tchan <- Sclass
@@ -920,15 +959,19 @@ func StabilityAndMixing(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
 			Tchan <- M2u
 			Tchan <- M2d
 			Tchan <- pblTopLayer
+			Tchan <- SO2oxidation
+			Tchan <- particleDryDep
 			return
 		}
 		if firstData {
 			Temp = sparse.ZerosDense(T.Shape...) // units = K
 			S1 = sparse.ZerosDense(T.Shape...)
 			Sclass = sparse.ZerosDense(T.Shape...)
-			Kz = sparse.ZerosDense(LayerHeights.Shape...) // units = m2/s
-			M2u = sparse.ZerosDense(pblh.Shape...)        // units = 1/s
-			M2d = sparse.ZerosDense(T.Shape...)           // units = 1/s
+			Kz = sparse.ZerosDense(LayerHeights.Shape...)     // units = m2/s
+			M2u = sparse.ZerosDense(pblh.Shape...)            // units = 1/s
+			M2d = sparse.ZerosDense(T.Shape...)               // units = 1/s
+			SO2oxidation = sparse.ZerosDense(T.Shape...)      // units = 1/s
+			particleDryDep = sparse.ZerosDense(pblh.Shape...) // units = m/s
 			firstData = false
 		}
 		type empty struct{}
@@ -965,6 +1008,10 @@ func StabilityAndMixing(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
 					m2u := fconv * kh / Δz1plushalf / (h - z1plushalf)
 					// Pleim 2007, Eq 11a
 					M2u.AddVal(m2u, j, i)
+
+					vd := gocart.DryDeposition(hfx.Get(j, i), 1./alt.Get(0, j, i),
+						ustar.Get(j, i), To, h, USGSz0[f2i(luIndex.Get(j, i))])
+					particleDryDep.AddVal(vd, j, i)
 
 					for k := 0; k < T.Shape[0]; k++ {
 						Tval := T.Get(k, j, i)
@@ -1005,12 +1052,26 @@ func StabilityAndMixing(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
 							if k == T.Shape[0]-1 { // Top Layer
 								Kz.AddVal(1., k+1, j, i)
 							}
-						} else { // Bounday layer (unstaggered grid)
+						} else { // Boundary layer (unstaggered grid)
 							// Pleim 2007, Eq. 11b
 							Kz.AddVal(km*(1-fconv), k, j, i)
 							// Pleim 2007, Eq. 4
 							M2d.AddVal(m2u*(h-z)/Δz, k, j, i)
 						}
+
+						// Chemistry
+						const Na = 6.02214129e23 // molec./mol (Avogadro's constant)
+						const cm3perm3 = 100. * 100. * 100.
+						const molarMassAir = 28.97 / 1000.             // kg/mol
+						const airFactor = molarMassAir / Na * cm3perm3 // kg/molec.* cm3/m3
+						M := 1. / (alt.Get(k, j, i) * airFactor)       // molec. air / cm3
+						hoConc := ho.Get(k, j, i) * 1.e-6 * M          // molec. HO / cm3
+						// SO2 oxidation rate (Stockwell 1997, Table 2d)
+						const kinf = 1.5e-12
+						ko := 3.e-31 * math.Pow(t/300., -3.3)
+						kSO2 := (ko * M / (1 + ko*M/kinf)) * math.Pow(0.6,
+							1./(1+math.Pow(math.Log10(ko*M/kinf), 2.))) // cm3/molec/s
+						SO2oxidation.AddVal(kSO2*hoConc, k, j, i) // 1/s
 					}
 				}
 				sem <- empty{}
@@ -1092,3 +1153,5 @@ func max(vals ...float64) float64 {
 func f2i(f float64) int {
 	return int(f + 0.5)
 }
+
+
