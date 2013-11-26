@@ -1,8 +1,8 @@
 package main
 
 import (
-	"bitbucket.org/ctessum/sparse"
 	"bitbucket.org/ctessum/atmos/gocart"
+	"bitbucket.org/ctessum/sparse"
 	"code.google.com/p/lvd.go/cdf"
 	"flag"
 	"fmt"
@@ -256,7 +256,7 @@ func main() {
 			"x", "xStagger",
 			"y", "yStagger",
 			"z", "zStagger"},
-		[]int{nWindBins,
+		[]int{nWindBins + 1,
 			windStatsV.Shape[3], windStatsU.Shape[3],
 			windStatsU.Shape[2], windStatsV.Shape[2],
 			windStatsU.Shape[1], windStatsW.Shape[1]})
@@ -393,9 +393,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	writeNCF(f, "Ubins", binEdgeToCenter(windBinsU))
-	writeNCF(f, "Vbins", binEdgeToCenter(windBinsV))
-	writeNCF(f, "Wbins", binEdgeToCenter(windBinsW))
+	writeNCF(f, "Ubins", windBinsU)
+	writeNCF(f, "Vbins", windBinsV)
+	writeNCF(f, "Wbins", windBinsW)
 	writeNCF(f, "Ufreq", statsCumulative(windStatsU))
 	writeNCF(f, "Vfreq", statsCumulative(windStatsV))
 	writeNCF(f, "Wfreq", statsCumulative(windStatsW))
@@ -596,9 +596,9 @@ func calcWindBins(datachan chan *sparse.DenseArray) {
 			for i := 0; i < bins.Shape[1]; i++ {
 				for j := 0; j < bins.Shape[2]; j++ {
 					for k := 0; k < bins.Shape[3]; k++ {
+						maxval := max.Get(i, j, k)
+						minval := min.Get(i, j, k)
 						for b := 0; b <= nWindBins; b++ {
-							maxval := max.Get(i, j, k)
-							minval := min.Get(i, j, k)
 							edge := minval + float64(b)/float64(nWindBins)*
 								(maxval-minval)
 							bins.Set(edge, b, i, j, k)
@@ -638,7 +638,7 @@ func calcWindStats(bins *sparse.DenseArray, datachan chan *sparse.DenseArray) {
 				for j := 0; j < bins.Shape[2]; j++ {
 					for k := 0; k < bins.Shape[3]; k++ {
 						total := 0.
-						for b := 0; b < nWindBins; b++ {
+						for b := 0; b < bins.Shape[0]; b++ {
 							total += stats.Get(b, i, j, k)
 						}
 						if total-1 > tolerance || total-1 < -1.*tolerance {
@@ -653,7 +653,7 @@ func calcWindStats(bins *sparse.DenseArray, datachan chan *sparse.DenseArray) {
 			return
 		}
 		if firstData {
-			stats = initBins(data, nWindBins)
+			stats = initBins(data, nWindBins+1)
 			firstData = false
 		}
 		type empty struct{}
@@ -673,8 +673,8 @@ func calcWindStats(bins *sparse.DenseArray, datachan chan *sparse.DenseArray) {
 								"Value %v is more than maximum bin %v.\n",
 								val, bins.Get(nWindBins, i, j, k)))
 						}
-						for b := 0; b < nWindBins; b++ {
-							if val <= bins.Get(b+1, i, j, k) {
+						for b := 0; b < bins.Shape[0]; b++ {
+							if val <= bins.Get(b, i, j, k) {
 								stats.AddVal(1./numTsteps, b, i, j, k)
 								break
 							}
@@ -1005,7 +1005,7 @@ func StabilityMixingChemistry(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
 					Δz1plushalf := LayerHeights.Get(2, j, i) / 2.
 					kh := calculateKh(z1plushalf, h, L, u)
 					// Pleim 2007, Eq. 9
-					m2u := fconv * kh / Δz1plushalf / (h - z1plushalf)
+					m2u := fconv * kh / Δz1plushalf / max(1., h-z1plushalf)
 					// Pleim 2007, Eq 11a
 					M2u.AddVal(m2u, j, i)
 
@@ -1153,5 +1153,3 @@ func max(vals ...float64) float64 {
 func f2i(f float64) int {
 	return int(f + 0.5)
 }
-
-
