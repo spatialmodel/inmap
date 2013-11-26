@@ -7,7 +7,6 @@ import (
 	"math"
 	"math/rand"
 	"os"
-	//	"runtime"
 	"sync"
 	"time"
 )
@@ -386,42 +385,14 @@ var addemissionsflux = func(c *AIMcell, d *AIMdata) {
 }
 
 // Add current concentration to sum for later averaging
-func (c *AIMcell) addToSum(d *AIMdata) {
+var addtosum = func(c *AIMcell, d *AIMdata) {
 	for i, _ := range polNames {
 		c.Csum[i] += c.Cf[i]
 	}
 }
 
-var addtosum = func(c *AIMcell, d *AIMdata) {
-	c.addToSum(d)
-}
-
-// Add in emissions, set wind velocities using the weighted
-// random walk method, copy initial concentrations to final concentrations,
-// and set time step (dt).
-//func (d *AIMdata) SetVelocities() {
-//	var wg sync.WaitGroup
-//	nprocs := runtime.GOMAXPROCS(0) // number of processors
-//	wg.Add(nprocs * 4)
-//	// Set cell velocities.
-//	for procNum := 0; procNum < nprocs; procNum++ {
-//		go setVelocities(d.Data, nprocs, procNum, &wg)
-//	}
-//	// Set east, north, and top boundary velocities.
-//	for procNum := 0; procNum < nprocs; procNum++ {
-//		go setVelocities(d.eastBoundary, nprocs, procNum, &wg)
-//	}
-//	for procNum := 0; procNum < nprocs; procNum++ {
-//		go setVelocities(d.northBoundary, nprocs, procNum, &wg)
-//	}
-//	for procNum := 0; procNum < nprocs; procNum++ {
-//		go setVelocities(d.topBoundary, nprocs, procNum, &wg)
-//	}
-//	wg.Wait()
-//}
-
 //  Set the time step using the Courant–Friedrichs–Lewy (CFL) condition.
-func (d *AIMdata) setTstep(nprocs int) {
+func (d *AIMdata) setTstepCFL(nprocs int) {
 	const Cmax = 1
 	valChan := make(chan float64)
 	calcCFL := func(procNum int) {
@@ -451,7 +422,11 @@ func (d *AIMdata) setTstep(nprocs int) {
 		}
 	}
 	d.Dt = Cmax / math.Pow(3., 0.5) / val // seconds
-	//d.Dt = d.Data[0].Dx / 1000. * 6
+}
+
+//  Set the time step using the WRF rule of thumb.
+func (d *AIMdata) setTstepRuleOfThumb() {
+	d.Dt = d.Data[0].Dx / 1000. * 6
 }
 
 // Read variable which includes random walk bins from NetCDF file.

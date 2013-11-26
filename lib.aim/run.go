@@ -97,27 +97,6 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 		go setVelocities(nprocs, procNum, cellsChan[procNum], &wg)
 	}
 	for {
-		iteration++
-		nIterationsSinceConvergenceCheck++
-		d.setTstep(nprocs) // Set time step
-		nDaysRun += d.Dt * secondsPerDay
-		nDaysSinceConvergenceCheck += d.Dt * secondsPerDay
-		fmt.Printf("马上。。。Iteration %-4d  walltime=%6.3gh  Δwalltime=%4.2gs  "+
-			"timestep=%2.0fs  day=%.3g\n",
-			iteration, time.Since(startTime).Hours(),
-			time.Since(timeStepTime).Seconds(), d.Dt, nDaysRun)
-		timeStepTime = time.Now()
-
-		//		if nDaysRun > 7. { // Kludge to get the model to stop running before we all die of boredom.
-		//			for _, c := range d.Data {
-		//				for i, _ := range polNames {
-		//					// calculate average concentrations
-		//					c.Csum[i] /= float64(nIterationsSinceConvergenceCheck)
-		//				}
-		//			}
-		//			break // leave calculation loop because we're finished
-		//		}
-
 		d.arrayLock.Lock()
 		// prepare random velocities for this time step, and add emissions
 		wg.Add(5 * nprocs)
@@ -131,9 +110,22 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 		wg.Wait()
 		d.arrayLock.Unlock()
 
+		iteration++
+		nIterationsSinceConvergenceCheck++
+		//d.setTstepCFL(nprocs) // Set time step
+		d.setTstepRuleOfThumb() // Set time step
+		nDaysRun += d.Dt * secondsPerDay
+		nDaysSinceConvergenceCheck += d.Dt * secondsPerDay
+		fmt.Printf("马上。。。Iteration %-4d  walltime=%6.3gh  Δwalltime=%4.2gs  "+
+			"timestep=%2.0fs  day=%.3g\n",
+			iteration, time.Since(startTime).Hours(),
+			time.Since(timeStepTime).Seconds(), d.Dt, nDaysRun)
+		timeStepTime = time.Now()
+
 		// Send all of the science functions to the concurrent
 		// processors for calculating
-		wg.Add(8 * nprocs)
+		const nSciencFuncs = 8 // This is the number of science functions to wait for
+		wg.Add(nSciencFuncs * nprocs)
 		for pp := 0; pp < nprocs; pp++ {
 			funcChan[pp] <- rk3AdvectionStep1
 			funcChan[pp] <- rk3AdvectionStep2
@@ -153,6 +145,7 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 		}
 		wg.Wait()
 
+		// Check to see if the model has converged.
 		if nDaysSinceConvergenceCheck >= nDaysCheckConvergence {
 			timeToQuit := true
 			finalMassSum := 0.

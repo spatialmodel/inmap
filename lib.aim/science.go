@@ -199,6 +199,10 @@ func (c *AIMcell) RK3advectionPass3(d *AIMdata) {
 		// k direction
 		fluxMinus, fluxPlus = c.belowAboveFlux(ii)
 		c.Cf[ii] -= d.Dt / c.Dz * (fluxPlus - fluxMinus)
+		if math.IsNaN(c.Cf[ii]) {
+			fmt.Println(c.Uwest, c.Vsouth, c.Wbelow)
+			panic("x")
+		}
 	}
 	return
 }
