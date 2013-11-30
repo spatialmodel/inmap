@@ -36,12 +36,19 @@ func (c *AIMcell) VerticalMixing(Δt float64) {
 	g := c.GroundLevel
 	for ii, _ := range c.Cf {
 		// Pleim (2007) Equation 10.
-		if c.k < f2i(c.kPblTop) {
+		if c.k < f2i(c.kPblTop) { // Within boundary layer
 			c.Cf[ii] += (g.M2u*g.Ci[ii] - c.M2d*c.Ci[ii] +
 				a.M2d*a.Ci[ii]*a.Dz/c.Dz +
 				1./c.Dz*(a.Kz*(a.Ci[ii]-c.Ci[ii])/c.dzPlusHalf+
 					c.Kz*(b.Ci[ii]-c.Ci[ii])/c.dzMinusHalf)) * Δt
-		} else {
+			// Horizontal mixing
+			const Kyy = 500000. // m2/s /////////////////////////////////////////////////////////////////////////////////////////////////
+			c.Cf[ii] += 1. / c.Dx * (Kyy*(c.East.Ci[ii]-c.Ci[ii])/c.Dx +
+				Kyy*(c.West.Ci[ii]-c.Ci[ii])/c.Dx) * Δt
+			c.Cf[ii] += 1. / c.Dy * (Kyy*(c.North.Ci[ii]-c.Ci[ii])/c.Dy +
+				Kyy*(c.South.Ci[ii]-c.Ci[ii])/c.Dy) * Δt
+
+		} else { // Above boundary layer: no convective or horizontal mixing
 			c.Cf[ii] += 1. / c.Dz * (a.Kz*(a.Ci[ii]-c.Ci[ii])/c.dzPlusHalf +
 				c.Kz*(b.Ci[ii]-c.Ci[ii])/c.dzMinusHalf) * Δt
 		}
@@ -85,64 +92,22 @@ func upwindFlux(q_im1, q_i, ua float64) float64 {
 
 // Get advective flux in West and East directions
 func (c *AIMcell) westEastFlux(ii int) (fluxWest, fluxEast float64) {
-	//	if c.nextToEdge { // Use second order flux for cells by boundary
 	fluxWest = upwindFlux(c.West.Ci[ii], c.Ci[ii], c.Uwest)
 	fluxEast = upwindFlux(c.Ci[ii], c.East.Ci[ii], c.East.Uwest)
-	//	} else if c.twoFromEdge {  // Use third order flux for cells 2 from boundary
-	//		fluxWest = rkFlux3(c.West.West.Ci[ii], c.West.Ci[ii], c.Ci[ii],
-	//			c.East.Ci[ii], c.Uwest)
-	//		fluxEast = rkFlux3(c.West.Ci[ii], c.Ci[ii], c.East.Ci[ii],
-	//			c.East.East.Ci[ii], c.East.Uwest)
-	//	} else { // Use fifth order flux everywhere else
-	//		fluxWest = rkFlux5(c.West.West.West.Ci[ii], c.West.West.Ci[ii],
-	//			c.West.Ci[ii], c.Ci[ii], c.East.Ci[ii], c.East.East.Ci[ii],
-	//			c.Uwest)
-	//		fluxEast = rkFlux5(c.West.West.Ci[ii], c.West.Ci[ii], c.Ci[ii],
-	//			c.East.Ci[ii], c.East.East.Ci[ii], c.East.East.East.Ci[ii],
-	//			c.East.Uwest)
-	//	}
 	return
 }
 
 // Get advective flux in South and North directions
 func (c *AIMcell) southNorthFlux(ii int) (fluxSouth, fluxNorth float64) {
-	//	if c.nextToEdge {// Use second order flux for cells by boundary
 	fluxSouth = upwindFlux(c.South.Ci[ii], c.Ci[ii], c.Vsouth)
 	fluxNorth = upwindFlux(c.Ci[ii], c.North.Ci[ii], c.North.Vsouth)
-	//	} else if c.twoFromEdge { // Use third order flux for cells 2 from boundary
-	//		fluxSouth = rkFlux3(c.South.South.Ci[ii], c.South.Ci[ii], c.Ci[ii],
-	//			c.North.Ci[ii], c.Vsouth)
-	//		fluxNorth = rkFlux3(c.South.Ci[ii], c.Ci[ii], c.North.Ci[ii],
-	//			c.North.North.Ci[ii], c.North.Vsouth)
-	//	} else { // Use fifth order flux everywhere else
-	//		fluxSouth = rkFlux5(c.South.South.South.Ci[ii], c.South.South.Ci[ii],
-	//			c.South.Ci[ii], c.Ci[ii], c.North.Ci[ii], c.North.North.Ci[ii],
-	//			c.Vsouth)
-	//		fluxNorth = rkFlux5(c.South.South.Ci[ii], c.South.Ci[ii], c.Ci[ii],
-	//			c.North.Ci[ii], c.North.North.Ci[ii], c.North.North.North.Ci[ii],
-	//			c.North.Vsouth)
-	//	}
 	return
 }
 
 // Get advective flux in Below and Above directions
 func (c *AIMcell) belowAboveFlux(ii int) (fluxBelow, fluxAbove float64) {
-	//	if c.nextToEdge { // Use second order flux for cells by boundary
 	fluxBelow = upwindFlux(c.Below.Ci[ii], c.Ci[ii], c.Wbelow)
 	fluxAbove = upwindFlux(c.Ci[ii], c.Above.Ci[ii], c.Above.Wbelow)
-	//	} else if c.twoFromEdge { // Use third order flux for cells 2 from boundary
-	//		fluxBelow = rkFlux3(c.Below.Below.Ci[ii], c.Below.Ci[ii], c.Ci[ii],
-	//			c.Above.Ci[ii], c.Wbelow)
-	//		fluxAbove = rkFlux3(c.Below.Ci[ii], c.Ci[ii], c.Above.Ci[ii],
-	//			c.Above.Above.Ci[ii], c.Above.Wbelow)
-	//	} else { // Use fifth order flux everywhere else
-	//		fluxBelow = rkFlux5(c.Below.Below.Below.Ci[ii], c.Below.Below.Ci[ii],
-	//			c.Below.Ci[ii], c.Ci[ii], c.Above.Ci[ii], c.Above.Above.Ci[ii],
-	//			c.Wbelow)
-	//		fluxAbove = rkFlux5(c.Below.Below.Ci[ii], c.Below.Ci[ii], c.Ci[ii],
-	//			c.Above.Ci[ii], c.Above.Above.Ci[ii], c.Above.Above.Above.Ci[ii],
-	//			c.Above.Wbelow)
-	//	}
 	return
 }
 
@@ -201,7 +166,7 @@ func (c *AIMcell) RK3advectionPass3(d *AIMdata) {
 		c.Cf[ii] -= d.Dt / c.Dz * (fluxPlus - fluxMinus)
 		if math.IsNaN(c.Cf[ii]) {
 			fmt.Println(c.Uwest, c.Vsouth, c.Wbelow)
-			panic("x")
+			panic("Found a NaN value.")
 		}
 	}
 	return
@@ -278,14 +243,15 @@ func (c *AIMcell) COBRAchemistry(d *AIMdata) {
 	//totalNHparticle := (c.Cf[ipNH] + c.Cbackground[ipNH]) / mwN // moles N
 
 	// Rate of SO2 conversion to SO4 (1/s); Muller Table 2
-	//const kS = 0.000002083 * 1000.
+	//const kS = 0.000002083
 	// Rate of NOx conversion to NO3 (1/s); Muller Table 2, multiplied by COBRA
 	// seasonal coefficient of 0.25 for NH4NO3 formation.
-	const kNO = 0.000005556 * 0.25
+	const kNO = 0.000005556 * 0.5 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 	// All SO4 forms particles, so sulfur particle formation is limited by the
 	// SO2 -> SO4 reaction.
-	ΔS := c.SO2oxidation * c.Cf[igS] * d.Dt
+	ΔS := c.SO2oxidation * c.Cf[igS] * d.Dt * 5000. //////////////////////////////////////////////////////////////////////////////////////////////////
+	//ΔS := kS * c.Cf[igS] * d.Dt
 	c.Cf[igS] -= ΔS
 	c.Cf[ipS] += ΔS
 
@@ -344,18 +310,18 @@ var vOCoxidationFlux = func(c *AIMcell, d *AIMdata) {
 func (c *AIMcell) DryDeposition(d *AIMdata) {
 	const (
 		vNO2 = 0.01  // m/s; Muller and Mendelsohn Table 2
-		vSO2 = 0.005 // m/s; Muller and Mendelsohn Table 2
+		//vSO2 = 0.005 // m/s; Muller and Mendelsohn Table 2
 		vVOC = 0.001 // m/s; Hauglustaine Table 2
 		vNH3 = 0.01  // m/s; Phillips abstract
-		//		vPM25 = 0.001 // m/s; Seinfeld and Pandis Fig 19.2, adjusted from water to land
 	)
 	if c.k == 0 {
 		fac := 1. / c.Dz * d.Dt
 		no2fac := 1 - vNO2*fac
-		so2fac := 1 - vSO2*fac
+		//so2fac := 1 - vSO2*fac
 		vocfac := 1 - vVOC*fac
 		nh3fac := 1 - vNH3*fac
 		pm25fac := 1 - c.particleDryDep*fac
+		so2fac := 1 - c.particleDryDep*fac * 0.2 ////////////////////////////////////////////////////////////////////////////////////////
 		c.Cf[igOrg] *= vocfac
 		c.Cf[ipOrg] *= pm25fac
 		c.Cf[iPM2_5] *= pm25fac
