@@ -151,7 +151,8 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 			finalMassSum := 0.
 			for _, c := range d.Data {
 				if c.k == 0 { // only test bottom layer of particle species for convergence
-					for i, _ := range []int{ipOrg, iPM2_5, ipNH, ipS, ipNO} {
+					//for i, _ := range []int{ipOrg, iPM2_5, ipNH, ipS, ipNO} {
+					for i, _ := range []int{ipS} {
 						finalMassSum += c.Csum[i] * c.Volume
 					}
 				}
