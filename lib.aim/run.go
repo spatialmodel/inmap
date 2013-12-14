@@ -32,7 +32,7 @@ const (
 const nDaysCheckConvergence = 1.
 const tolerance = 0.01
 const secondsPerDay = 1. / 3600. / 24.
-const topLayerToCalc = 12
+const topLayerToCalc = 28
 
 // These are the names of pollutants accepted as emissions (μg/s)
 var EmisNames = []string{"VOC", "NOx", "NH3", "SOx", "PM2_5"}
@@ -150,11 +150,9 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 			timeToQuit := true
 			finalMassSum := 0.
 			for _, c := range d.Data {
-				if c.k == 0 { // only test bottom layer of particle species for convergence
-					//for i, _ := range []int{ipOrg, iPM2_5, ipNH, ipS, ipNO} {
-					for i, _ := range []int{ipS} {
-						finalMassSum += c.Csum[i] * c.Volume
-					}
+				//for i, _ := range []int{ipOrg, iPM2_5, ipNH, ipS, ipNO} {
+				for i, _ := range []int{ipS} {
+					finalMassSum += c.Csum[i] * c.Volume
 				}
 			}
 			finalMassSum /= float64(nIterationsSinceConvergenceCheck)

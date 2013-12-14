@@ -49,8 +49,8 @@ func (c *AIMcell) VerticalMixing(Δt float64) {
 				Kyy*(c.South.Ci[ii]-c.Ci[ii])/c.Dy) * Δt
 
 		} else { // Above boundary layer: no convective or horizontal mixing
-			c.Cf[ii] += 1. / c.Dz * (a.Kz*(a.Ci[ii]-c.Ci[ii])/c.dzPlusHalf +
-				c.Kz*(b.Ci[ii]-c.Ci[ii])/c.dzMinusHalf) * Δt
+			c.Cf[ii] += 1. / c.Dz * (a.Kz*10.*(a.Ci[ii]-c.Ci[ii])/c.dzPlusHalf +
+				c.Kz*10.*(b.Ci[ii]-c.Ci[ii])/c.dzMinusHalf) * Δt ////// * 10 ///////////////////////////////////////////////////////////////////////////////////////
 		}
 	}
 }
