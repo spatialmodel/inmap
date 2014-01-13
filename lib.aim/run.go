@@ -3,7 +3,7 @@ package aim
 import (
 	"bitbucket.org/ctessum/sparse"
 	"fmt"
-	"math"
+	"math/rand"
 	"runtime"
 	"sync"
 	"time"
@@ -29,8 +29,9 @@ const (
 	NtoNH4 = mwNH4 / mwN
 )
 
-const nDaysCheckConvergence = 1.
-const tolerance = 0.01
+const startupPeriod = 6.       // days
+const calculationPeriod = 6.   // days
+const windChangePeriod = 3600. // seconds, average period for wind velocity changes.
 const secondsPerDay = 1. / 3600. / 24.
 const topLayerToCalc = 28
 
@@ -79,48 +80,59 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 		}
 	}
 
-	oldFinalMassSum := 0. // mass sum for calculating convergence
 	iteration := 0
 	nDaysRun := 0.
-	nDaysSinceConvergenceCheck := 0.
-	nIterationsSinceConvergenceCheck := 0
+	nIterationsAveraged := 0
 	nprocs := runtime.GOMAXPROCS(0) // number of processors
 	funcChan := make([]chan func(*AIMcell, *AIMdata), nprocs)
 	cellsChan := make([]chan []*AIMcell, nprocs)
 	var wg sync.WaitGroup
+	// All random number generators must have the same seed
+	seed := time.Now().UnixNano()
+	r := rand.New(rand.NewSource(seed))
 	for procNum := 0; procNum < nprocs; procNum++ {
 		funcChan[procNum] = make(chan func(*AIMcell, *AIMdata), nprocs*10)
 		cellsChan[procNum] = make(chan []*AIMcell, nprocs*10)
 		// Start thread for concurrent computations
 		go d.doScience(nprocs, procNum, funcChan[procNum], &wg)
 		// Start thread for random velocity selection
-		go setVelocities(nprocs, procNum, cellsChan[procNum], &wg)
+		go setVelocities(nprocs, procNum, cellsChan[procNum], &wg, seed)
 	}
 	for {
 		d.arrayLock.Lock()
-		// prepare random velocities for this time step, and add emissions
-		wg.Add(5 * nprocs)
+		// only change the velocities occasionally
+		if r.Float64() < d.Dt/windChangePeriod {
+			fmt.Println("Changing velocities...")
+			// prepare random velocities for this time step
+			wg.Add(4 * nprocs)
+			for pp := 0; pp < nprocs; pp++ {
+				cellsChan[pp] <- d.Data          // set cell velocities
+				cellsChan[pp] <- d.eastBoundary  // set east boundary velocities
+				cellsChan[pp] <- d.northBoundary // set north boundary velocities
+				cellsChan[pp] <- d.topBoundary   // set top boundary velocities
+			}
+			wg.Wait() // wait for velocity setters
+		}
+
+		// Add emissions
+		wg.Add(nprocs)
 		for pp := 0; pp < nprocs; pp++ {
-			cellsChan[pp] <- d.Data          // set cell velocities
-			cellsChan[pp] <- d.eastBoundary  // set east boundary velocities
-			cellsChan[pp] <- d.northBoundary // set north boundary velocities
-			cellsChan[pp] <- d.topBoundary   // set top boundary velocities
 			funcChan[pp] <- addemissionsflux // add in emissions
 		}
-		wg.Wait()
-		d.arrayLock.Unlock()
 
+		// do some things while emissions are being added.
 		iteration++
-		nIterationsSinceConvergenceCheck++
 		//d.setTstepCFL(nprocs) // Set time step
 		d.setTstepRuleOfThumb() // Set time step
 		nDaysRun += d.Dt * secondsPerDay
-		nDaysSinceConvergenceCheck += d.Dt * secondsPerDay
 		fmt.Printf("马上。。。Iteration %-4d  walltime=%6.3gh  Δwalltime=%4.2gs  "+
 			"timestep=%2.0fs  day=%.3g\n",
 			iteration, time.Since(startTime).Hours(),
 			time.Since(timeStepTime).Seconds(), d.Dt, nDaysRun)
 		timeStepTime = time.Now()
+
+		wg.Wait() // wait for emissions to be added
+		d.arrayLock.Unlock()
 
 		// Send all of the science functions to the concurrent
 		// processors for calculating
@@ -139,44 +151,22 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 		}
 		wg.Wait()
 
-		wg.Add(1 * nprocs)
-		for pp := 0; pp < nprocs; pp++ {
-			funcChan[pp] <- addtosum // add concentrations to sum for later averaging
+		if nDaysRun > startupPeriod {
+			wg.Add(1 * nprocs)
+			for pp := 0; pp < nprocs; pp++ {
+				funcChan[pp] <- addtosum // add concentrations to sum for later averaging
+			}
+			nIterationsAveraged++
+			wg.Wait()
 		}
-		wg.Wait()
-
-		// Check to see if the model has converged.
-		if nDaysSinceConvergenceCheck >= nDaysCheckConvergence {
-			timeToQuit := true
-			finalMassSum := 0.
-			for _, c := range d.Data {
-				//for i, _ := range []int{ipOrg, iPM2_5, ipNH, ipS, ipNO} {
-				for i, _ := range []int{ipS} {
-					finalMassSum += c.Csum[i] * c.Volume
-				}
-			}
-			finalMassSum /= float64(nIterationsSinceConvergenceCheck)
-			if !checkConvergence(finalMassSum, oldFinalMassSum) {
-				timeToQuit = false
-			}
-			if timeToQuit {
-				for _, c := range d.Data {
-					for i, _ := range polNames {
-						// calculate average concentrations
-						c.Csum[i] /= float64(nIterationsSinceConvergenceCheck)
-					}
-				}
-				break // leave calculation loop because we're finished
-			}
-			oldFinalMassSum = finalMassSum
-			nDaysSinceConvergenceCheck = 0.
-			nIterationsSinceConvergenceCheck = 0
-			finalMassSum = 0.
+		if nDaysRun > startupPeriod+calculationPeriod {
 			for _, c := range d.Data {
 				for i, _ := range polNames {
-					c.Csum[i] = 0.
+					// calculate average concentrations
+					c.Csum[i] /= float64(nIterationsAveraged)
 				}
 			}
+			break // leave calculation loop because we're finished
 		}
 	}
 	outputConc = make(map[string]*sparse.DenseArray)
@@ -406,14 +396,4 @@ func max(vals ...float64) float64 {
 		}
 	}
 	return m
-}
-
-func checkConvergence(newSum, oldSum float64) bool {
-	bias := (newSum - oldSum) / oldSum
-	fmt.Printf("Total mass difference = %3.2g%% from last check.\n", bias*100)
-	if math.Abs(bias) > tolerance || math.IsInf(bias, 0) {
-		return false
-	} else {
-		return true
-	}
 }

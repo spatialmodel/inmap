@@ -42,15 +42,15 @@ func (c *AIMcell) VerticalMixing(Δt float64) {
 				1./c.Dz*(a.Kz*(a.Ci[ii]-c.Ci[ii])/c.dzPlusHalf+
 					c.Kz*(b.Ci[ii]-c.Ci[ii])/c.dzMinusHalf)) * Δt
 			// Horizontal mixing
-			const Kyy = 100000. // m2/s /////////////////////////////////////////////////////////////////////////////////////////////////
-			c.Cf[ii] += 1. / c.Dx * (Kyy*(c.East.Ci[ii]-c.Ci[ii])/c.Dx +
-				Kyy*(c.West.Ci[ii]-c.Ci[ii])/c.Dx) * Δt
-			c.Cf[ii] += 1. / c.Dy * (Kyy*(c.North.Ci[ii]-c.Ci[ii])/c.Dy +
-				Kyy*(c.South.Ci[ii]-c.Ci[ii])/c.Dy) * Δt
+			//const Kyy = 100000. // m2/s /////////////////////////////////////////////////////////////////////////////////////////////////
+			//c.Cf[ii] += 1. / c.Dx * (Kyy*(c.East.Ci[ii]-c.Ci[ii])/c.Dx +
+			//	Kyy*(c.West.Ci[ii]-c.Ci[ii])/c.Dx) * Δt
+			//c.Cf[ii] += 1. / c.Dy * (Kyy*(c.North.Ci[ii]-c.Ci[ii])/c.Dy +
+			//	Kyy*(c.South.Ci[ii]-c.Ci[ii])/c.Dy) * Δt
 
 		} else { // Above boundary layer: no convective or horizontal mixing
-			c.Cf[ii] += 1. / c.Dz * (a.Kz*10.*(a.Ci[ii]-c.Ci[ii])/c.dzPlusHalf +
-				c.Kz*10.*(b.Ci[ii]-c.Ci[ii])/c.dzMinusHalf) * Δt ////// * 10 ///////////////////////////////////////////////////////////////////////////////////////
+			c.Cf[ii] += 1. / c.Dz * (a.Kz*(a.Ci[ii]-c.Ci[ii])/c.dzPlusHalf +
+				c.Kz*(b.Ci[ii]-c.Ci[ii])/c.dzMinusHalf) * Δt
 		}
 	}
 }
@@ -250,7 +250,7 @@ func (c *AIMcell) COBRAchemistry(d *AIMdata) {
 
 	// All SO4 forms particles, so sulfur particle formation is limited by the
 	// SO2 -> SO4 reaction.
-	ΔS := c.SO2oxidation * c.Cf[igS] * d.Dt * 1000. //////////////////////////////////////////////////////////////////////////////////////
+	ΔS := c.SO2oxidation * c.Cf[igS] * d.Dt
 	//ΔS := kS * c.Cf[igS] * d.Dt
 	c.Cf[igS] -= ΔS
 	c.Cf[ipS] += ΔS
@@ -309,19 +309,18 @@ var vOCoxidationFlux = func(c *AIMcell, d *AIMdata) {
 // and and the GOCART aerosol module in WRF/Chem.
 func (c *AIMcell) DryDeposition(d *AIMdata) {
 	const (
-		vNO2 = 0.01 // m/s; Muller and Mendelsohn Table 2
-		//vSO2 = 0.005 // m/s; Muller and Mendelsohn Table 2
+		vNO2 = 0.01  // m/s; Muller and Mendelsohn Table 2
+		vSO2 = 0.005 // m/s; Muller and Mendelsohn Table 2
 		vVOC = 0.001 // m/s; Hauglustaine Table 2
 		vNH3 = 0.01  // m/s; Phillips abstract
 	)
 	if c.k == 0 {
 		fac := 1. / c.Dz * d.Dt
 		no2fac := 1 - vNO2*fac
-		//so2fac := 1 - vSO2*fac
+		so2fac := 1 - vSO2*fac
 		vocfac := 1 - vVOC*fac
 		nh3fac := 1 - vNH3*fac
 		pm25fac := 1 - c.particleDryDep*fac
-		so2fac := 1 - c.particleDryDep*fac*0.2 ////////////////////////////////////////////////////////////////////////////////////////
 		c.Cf[igOrg] *= vocfac
 		c.Cf[ipOrg] *= pm25fac
 		c.Cf[iPM2_5] *= pm25fac

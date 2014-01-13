@@ -8,7 +8,6 @@ import (
 	"math/rand"
 	"os"
 	"sync"
-	"time"
 )
 
 type AIMdata struct {
@@ -327,35 +326,34 @@ func interpolate(random float32, freqs, bins []float32, b int) (val float64) {
 }
 
 func setVelocities(nprocs, procNum int, cellsChan chan []*AIMcell,
-	wg *sync.WaitGroup) {
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	var random float32
+	wg *sync.WaitGroup, seed int64) {
+	r := rand.New(rand.NewSource(seed))
 	var c *AIMcell
 	for cells := range cellsChan {
+		ewrandom := r.Float32()
+		nsrandom := r.Float32()
+		tbrandom := r.Float32()
 		for ii := procNum; ii < len(cells); ii += nprocs {
 			c = cells[ii]
 			if c.k <= topLayerToCalc+1 {
 				// choose bins using a weighted random method
-				random = r.Float32()
 				for b := 0; b < len(c.UbinsWest)-1; b++ {
-					if random <= c.UfreqWest[b+1] {
-						c.Uwest = interpolate(random, c.UfreqWest,
+					if ewrandom <= c.UfreqWest[b+1] {
+						c.Uwest = interpolate(ewrandom, c.UfreqWest,
 							c.UbinsWest, b)
 						break
 					}
 				}
-				random = r.Float32()
 				for b := 0; b < len(c.VbinsSouth)-1; b++ {
-					if random <= c.VfreqSouth[b+1] {
-						c.Vsouth = interpolate(random, c.VfreqSouth,
+					if nsrandom <= c.VfreqSouth[b+1] {
+						c.Vsouth = interpolate(nsrandom, c.VfreqSouth,
 							c.VbinsSouth, b)
 						break
 					}
 				}
-				random = r.Float32()
 				for b := 0; b < len(c.WbinsBelow)-1; b++ {
-					if random <= c.WfreqBelow[b+1] {
-						c.Wbelow = interpolate(random, c.WfreqBelow,
+					if tbrandom <= c.WfreqBelow[b+1] {
+						c.Wbelow = interpolate(tbrandom, c.WfreqBelow,
 							c.WbinsBelow, b)
 						break
 					}
