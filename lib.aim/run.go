@@ -110,6 +110,9 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 				cellsChan[pp] <- d.eastBoundary  // set east boundary velocities
 				cellsChan[pp] <- d.northBoundary // set north boundary velocities
 				cellsChan[pp] <- d.topBoundary   // set top boundary velocities
+				///	funcChan[pp] <- SmoothVelocities // smooth velocities to conserve mass
+				//	funcChan[pp] <- SmoothVelocities // smooth velocities to conserve mass
+				//	funcChan[pp] <- SmoothVelocities // smooth velocities to conserve mass
 			}
 			wg.Wait() // wait for velocity setters
 		}
@@ -380,6 +383,11 @@ func (d *AIMdata) ToArray(pol string, Type string) *sparse.DenseArray {
 	case "kPblTop":
 		for i, c := range d.Data {
 			o.Elements[i] = c.kPblTop
+		}
+	case "velocityImbalance":
+		for i, c := range d.Data {
+			o.Elements[i] = c.Uwest - c.East.Uwest +
+				c.Vsouth - c.North.Vsouth
 		}
 	default:
 		panic(fmt.Sprintf("Unknown variable %v.", pol))

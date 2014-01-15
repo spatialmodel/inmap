@@ -364,6 +364,13 @@ func setVelocities(nprocs, procNum int, cellsChan chan []*AIMcell,
 	}
 }
 
+var SmoothVelocities = func(c *AIMcell, d *AIMdata) {
+	velocityImbalance := (c.Uwest - c.East.Uwest +
+		c.Vsouth - c.North.Vsouth) / 4.
+	c.Uwest += velocityImbalance
+	c.Vsouth += velocityImbalance
+}
+
 // Add in emissions flux to each cell at every time step, also
 // set initial concentrations to final concentrations from previous
 // time step, and set old velocities to velocities from previous time

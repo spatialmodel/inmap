@@ -168,6 +168,9 @@ func (c *AIMcell) RK3advectionPass3(d *AIMdata) {
 			panic(fmt.Sprintf("Found a NaN value. Pol: %v, k=%v, j=%v, i=%v",
 				polNames[ii], c.k, c.j, c.i))
 		}
+		if math.Abs(c.Cf[ii]-c.Ci[ii]) > 1. {
+			c.Cf[ii] = c.Ci[ii]
+		}
 	}
 	return
 }

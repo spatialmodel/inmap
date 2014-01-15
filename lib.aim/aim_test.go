@@ -96,7 +96,7 @@ func TestChemistry(t *testing.T) {
 		for i, v := range vals {
 			c.Cf[i] = v
 		}
-		c.COBRAchemistry()
+		c.COBRAchemistry(d)
 		finalSum := 0.
 		for _, val := range c.Cf {
 			finalSum += val
