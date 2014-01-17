@@ -187,25 +187,6 @@ var rk3AdvectionStep3 = func(c *AIMcell, d *AIMdata) {
 	c.RK3advectionPass3(d)
 }
 
-func (c *AIMcell) WetDeposition(Δt float64) {
-	particleFrac := 1. - c.wdParticle*Δt
-	SO2Frac := 1. - c.wdSO2*Δt
-	otherGasFrac := 1 - c.wdOtherGas*Δt
-	c.Cf[igOrg] *= otherGasFrac  // gOrg
-	c.Cf[ipOrg] *= particleFrac  // pOrg
-	c.Cf[iPM2_5] *= particleFrac // PM2_5
-	c.Cf[igNH] *= otherGasFrac   // gNH
-	c.Cf[ipNH] *= particleFrac   // pNH
-	c.Cf[igS] *= SO2Frac         // gS
-	c.Cf[ipS] *= particleFrac    // pS
-	c.Cf[igNO] *= otherGasFrac   // gNO
-	c.Cf[ipNO] *= particleFrac   // pNO
-}
-
-var wetDeposition = func(c *AIMcell, d *AIMdata) {
-	c.WetDeposition(d.Dt)
-}
-
 // Partitions organic matter ("gOrg" and "pOrg"), the
 // nitrogen in nitrate ("gNO and pNO"), the nitrogen in ammonia ("gNH" and
 // "pNH) and sulfur ("gS" and "pS") between gaseous and particulate phase
@@ -253,7 +234,7 @@ func (c *AIMcell) COBRAchemistry(d *AIMdata) {
 
 	// All SO4 forms particles, so sulfur particle formation is limited by the
 	// SO2 -> SO4 reaction.
-	ΔS := c.SO2oxidation * c.Cf[igS] * d.Dt
+	ΔS := c.SO2oxidation * c.Cf[igS] * d.Dt * 10 ////////////////////////////////////////////////////////////
 	//ΔS := kS * c.Cf[igS] * d.Dt
 	c.Cf[igS] -= ΔS
 	c.Cf[ipS] += ΔS
@@ -338,6 +319,25 @@ func (c *AIMcell) DryDeposition(d *AIMdata) {
 
 var dryDeposition = func(c *AIMcell, d *AIMdata) {
 	c.DryDeposition(d)
+}
+
+func (c *AIMcell) WetDeposition(Δt float64) {
+	particleFrac := 1. - c.wdParticle*Δt
+	SO2Frac := 1. - c.wdSO2*Δt
+	otherGasFrac := 1 - c.wdOtherGas*Δt
+	c.Cf[igOrg] *= otherGasFrac  // gOrg
+	c.Cf[ipOrg] *= particleFrac  // pOrg
+	c.Cf[iPM2_5] *= particleFrac // PM2_5
+	c.Cf[igNH] *= otherGasFrac   // gNH
+	c.Cf[ipNH] *= particleFrac   // pNH
+	c.Cf[igS] *= SO2Frac         // gS
+	c.Cf[ipS] *= particleFrac    // pS
+	c.Cf[igNO] *= otherGasFrac   // gNO
+	c.Cf[ipNO] *= particleFrac   // pNO
+}
+
+var wetDeposition = func(c *AIMcell, d *AIMdata) {
+	c.WetDeposition(d.Dt)
 }
 
 // convert float to int (rounding)
