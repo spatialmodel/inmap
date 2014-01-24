@@ -40,7 +40,7 @@ func (c *AIMcell) VerticalMixing(Δt float64) {
 			c.Cf[ii] += (g.M2u*g.Ci[ii] - c.M2d*c.Ci[ii] +
 				a.M2d*a.Ci[ii]*a.Dz/c.Dz +
 				1./c.Dz*(a.Kz*(a.Ci[ii]-c.Ci[ii])/c.dzPlusHalf+
-					c.Kz*(b.Ci[ii]-c.Ci[ii])/c.dzMinusHalf)) * Δt
+					c.Kz*(b.Ci[ii]-c.Ci[ii])/c.dzMinusHalf)) * Δt //* 0.1 //////////////////////////////////////////////////////////////////////////////////////////
 			// Horizontal mixing
 			//const Kyy = 100000. // m2/s /////////////////////////////////////////////////////////////////////////////////////////////////
 			//c.Cf[ii] += 1. / c.Dx * (Kyy*(c.East.Ci[ii]-c.Ci[ii])/c.Dx +
@@ -50,7 +50,7 @@ func (c *AIMcell) VerticalMixing(Δt float64) {
 
 		} else { // Above boundary layer: no convective or horizontal mixing
 			c.Cf[ii] += 1. / c.Dz * (a.Kz*(a.Ci[ii]-c.Ci[ii])/c.dzPlusHalf +
-				c.Kz*(b.Ci[ii]-c.Ci[ii])/c.dzMinusHalf) * Δt
+				c.Kz*(b.Ci[ii]-c.Ci[ii])/c.dzMinusHalf) * Δt * 10. //////////////////////////////////////////////////////////////////////////////////
 		}
 	}
 }
@@ -234,7 +234,7 @@ func (c *AIMcell) COBRAchemistry(d *AIMdata) {
 
 	// All SO4 forms particles, so sulfur particle formation is limited by the
 	// SO2 -> SO4 reaction.
-	ΔS := c.SO2oxidation * c.Cf[igS] * d.Dt * 10 ////////////////////////////////////////////////////////////
+	ΔS := c.SO2oxidation * c.Cf[igS] * d.Dt //* 100. ////////////////////////////////////////////////////////////
 	//ΔS := kS * c.Cf[igS] * d.Dt
 	c.Cf[igS] -= ΔS
 	c.Cf[ipS] += ΔS
@@ -305,6 +305,7 @@ func (c *AIMcell) DryDeposition(d *AIMdata) {
 		vocfac := 1 - vVOC*fac
 		nh3fac := 1 - vNH3*fac
 		pm25fac := 1 - c.particleDryDep*fac
+		//pSfac := 1 - c.particleDryDep*fac * 0.01 ///////////////////////////////////////////////////////////////////////////////////
 		c.Cf[igOrg] *= vocfac
 		c.Cf[ipOrg] *= pm25fac
 		c.Cf[iPM2_5] *= pm25fac
@@ -312,6 +313,7 @@ func (c *AIMcell) DryDeposition(d *AIMdata) {
 		c.Cf[ipNH] *= pm25fac
 		c.Cf[igS] *= so2fac
 		c.Cf[ipS] *= pm25fac
+		//c.Cf[ipS] *= pSfac
 		c.Cf[igNO] *= no2fac
 		c.Cf[ipNO] *= pm25fac
 	}

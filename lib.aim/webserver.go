@@ -156,6 +156,7 @@ func (d *AIMdata) legendHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	w.Header().Set("Content-Type", "image/svg+xml")
 	c := d.ToArray(name, "instantaneous")
 	cmap := gis.NewColorMap("LinCutoff")
 	layerSubset := c.Subset([]int{int(layer), 0, 0},
