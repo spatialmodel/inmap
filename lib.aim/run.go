@@ -3,7 +3,7 @@ package aim
 import (
 	"bitbucket.org/ctessum/sparse"
 	"fmt"
-	"math/rand"
+	"math"
 	"runtime"
 	"sync"
 	"time"
@@ -29,6 +29,8 @@ const (
 	NtoNH4 = mwNH4 / mwN
 )
 
+const tolerance = 0.001       // tolerance for convergence
+const checkPeriod = 3600.      // seconds, how often to check for convergence
 const startupPeriod = 6.       // days
 const calculationPeriod = 6.   // days
 const windChangePeriod = 3600. // seconds, average period for wind velocity changes.
@@ -80,42 +82,43 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 		}
 	}
 
+	oldSum := make([]float64, len(polNames))
 	iteration := 0
 	nDaysRun := 0.
-	nIterationsAveraged := 0
+	timeSinceLastCheck := 0.
 	nprocs := runtime.GOMAXPROCS(0) // number of processors
 	funcChan := make([]chan func(*AIMcell, *AIMdata), nprocs)
 	cellsChan := make([]chan []*AIMcell, nprocs)
 	var wg sync.WaitGroup
 	// All random number generators must have the same seed
-	seed := time.Now().UnixNano()
-	r := rand.New(rand.NewSource(seed))
+	//seed := time.Now().UnixNano()
+	//r := rand.New(rand.NewSource(seed))
 	for procNum := 0; procNum < nprocs; procNum++ {
 		funcChan[procNum] = make(chan func(*AIMcell, *AIMdata), nprocs*10)
 		cellsChan[procNum] = make(chan []*AIMcell, nprocs*10)
 		// Start thread for concurrent computations
 		go d.doScience(nprocs, procNum, funcChan[procNum], &wg)
 		// Start thread for random velocity selection
-		go setVelocities(nprocs, procNum, cellsChan[procNum], &wg, seed)
+		//		go setVelocities(nprocs, procNum, cellsChan[procNum], &wg, seed)
 	}
 	for {
 		d.arrayLock.Lock()
 		// only change the velocities occasionally
-		if r.Float64() < d.Dt/windChangePeriod {
-			fmt.Println("Changing velocities...")
-			// prepare random velocities for this time step
-			wg.Add(4 * nprocs)
-			for pp := 0; pp < nprocs; pp++ {
-				cellsChan[pp] <- d.Data          // set cell velocities
-				cellsChan[pp] <- d.eastBoundary  // set east boundary velocities
-				cellsChan[pp] <- d.northBoundary // set north boundary velocities
-				cellsChan[pp] <- d.topBoundary   // set top boundary velocities
-				///	funcChan[pp] <- SmoothVelocities // smooth velocities to conserve mass
-				//	funcChan[pp] <- SmoothVelocities // smooth velocities to conserve mass
-				//	funcChan[pp] <- SmoothVelocities // smooth velocities to conserve mass
-			}
-			wg.Wait() // wait for velocity setters
-		}
+		//		if r.Float64() < d.Dt/windChangePeriod {
+		//			fmt.Println("Changing velocities...")
+		//			// prepare random velocities for this time step
+		//			wg.Add(4 * nprocs)
+		//			for pp := 0; pp < nprocs; pp++ {
+		//				cellsChan[pp] <- d.Data          // set cell velocities
+		//				cellsChan[pp] <- d.eastBoundary  // set east boundary velocities
+		//				cellsChan[pp] <- d.northBoundary // set north boundary velocities
+		//				cellsChan[pp] <- d.topBoundary   // set top boundary velocities
+		///	funcChan[pp] <- SmoothVelocities // smooth velocities to conserve mass
+		//	funcChan[pp] <- SmoothVelocities // smooth velocities to conserve mass
+		//	funcChan[pp] <- SmoothVelocities // smooth velocities to conserve mass
+		//			}
+		//			wg.Wait() // wait for velocity setters
+		//		}
 
 		// Add emissions
 		wg.Add(nprocs)
@@ -133,6 +136,7 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 			iteration, time.Since(startTime).Hours(),
 			time.Since(timeStepTime).Seconds(), d.Dt, nDaysRun)
 		timeStepTime = time.Now()
+		timeSinceLastCheck += d.Dt
 
 		wg.Wait() // wait for emissions to be added
 		d.arrayLock.Unlock()
@@ -154,22 +158,22 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 		}
 		wg.Wait()
 
-		if nDaysRun > startupPeriod {
-			wg.Add(1 * nprocs)
-			for pp := 0; pp < nprocs; pp++ {
-				funcChan[pp] <- addtosum // add concentrations to sum for later averaging
-			}
-			nIterationsAveraged++
-			wg.Wait()
-		}
-		if nDaysRun > startupPeriod+calculationPeriod {
-			for _, c := range d.Data {
-				for i, _ := range polNames {
-					// calculate average concentrations
-					c.Csum[i] /= float64(nIterationsAveraged)
+		timeToQuit := true
+		if timeSinceLastCheck >= checkPeriod {
+			timeSinceLastCheck = 0.
+			for ii, pol := range polNames {
+				var sum float64
+				for _, c := range d.Data {
+					sum += c.Cf[ii]
 				}
+				if !checkConvergence(sum, oldSum[ii], pol) {
+					timeToQuit = false
+				}
+				oldSum[ii] = sum
 			}
-			break // leave calculation loop because we're finished
+			if timeToQuit {
+				break // leave calculation loop because we're finished
+			}
 		}
 	}
 	outputConc = make(map[string]*sparse.DenseArray)
@@ -181,7 +185,7 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 				outputConc[pol].AddDense(outputConc[subspecies])
 			}
 		} else {
-			outputConc[pol] = d.ToArray(pol, "average")
+			outputConc[pol] = d.ToArray(pol, "instantaneous")
 		}
 	}
 	return
@@ -328,18 +332,18 @@ func (d *AIMdata) ToArray(pol string, Type string) *sparse.DenseArray {
 		for i, c := range d.Data {
 			o.Elements[i] = c.emisFlux[iPM2_5]
 		}
-	case "U":
-		for i, c := range d.Data {
-			o.Elements[i] = c.Uwest
-		}
-	case "V":
-		for i, c := range d.Data {
-			o.Elements[i] = c.Vsouth
-		}
-	case "W":
-		for i, c := range d.Data {
-			o.Elements[i] = c.Wbelow
-		}
+		//	case "U":
+		//		for i, c := range d.Data {
+		//			o.Elements[i] = c.Uwest
+		//		}
+		//	case "V":
+		//		for i, c := range d.Data {
+		//			o.Elements[i] = c.Vsouth
+		//		}
+		//	case "W":
+		//		for i, c := range d.Data {
+		//			o.Elements[i] = c.Wbelow
+		//		}
 	case "Organicpartitioning":
 		for i, c := range d.Data {
 			o.Elements[i] = c.orgPartitioning
@@ -384,11 +388,11 @@ func (d *AIMdata) ToArray(pol string, Type string) *sparse.DenseArray {
 		for i, c := range d.Data {
 			o.Elements[i] = c.kPblTop
 		}
-	case "velocityImbalance":
-		for i, c := range d.Data {
-			o.Elements[i] = c.Uwest - c.East.Uwest +
-				c.Vsouth - c.North.Vsouth
-		}
+		//	case "velocityImbalance":
+		//		for i, c := range d.Data {
+		//			o.Elements[i] = c.Uwest - c.East.Uwest +
+		//				c.Vsouth - c.North.Vsouth
+		//		}
 	default:
 		panic(fmt.Sprintf("Unknown variable %v.", pol))
 	}
@@ -404,4 +408,15 @@ func max(vals ...float64) float64 {
 		}
 	}
 	return m
+}
+
+func checkConvergence(newSum, oldSum float64, Var string) bool {
+	bias := (newSum - oldSum) / oldSum
+	fmt.Printf("%v: total mass difference = %3.2g%% from last check.\n",
+		Var, bias*100)
+	if math.Abs(bias) > tolerance || math.IsInf(bias, 0) {
+		return false
+	} else {
+		return true
+	}
 }

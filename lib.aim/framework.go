@@ -4,33 +4,30 @@ import (
 	"bitbucket.org/ctessum/sparse"
 	"code.google.com/p/lvd.go/cdf"
 	"fmt"
-	"math"
-	"math/rand"
+//	"math"
 	"os"
 	"sync"
 )
 
 type AIMdata struct {
-	Data              []*AIMcell   // One data holder for each grid cell
-	nbins, Nx, Ny, Nz int          // number of meteorology bins
-	arrayLock         sync.RWMutex // Avoid concentration arrays being written by one subroutine and read by another at the same time.
-	Dt                float64      // seconds
-	vs                float64      // Settling velocity, m/s
-	VOCoxidationRate  float64      // VOC oxidation rate constant
-	westBoundary      []*AIMcell   // boundary cells
-	eastBoundary      []*AIMcell   // boundary cells
-	northBoundary     []*AIMcell   // boundary cells
-	southBoundary     []*AIMcell   // boundary cells
-	topBoundary       []*AIMcell   // boundary cells; assume bottom boundary is the same as lowest layer
+	Data             []*AIMcell   // One data holder for each grid cell
+	Nx, Ny, Nz       int          // number of meteorology bins
+	arrayLock        sync.RWMutex // Avoid concentration arrays being written by one subroutine and read by another at the same time.
+	Dt               float64      // seconds
+	vs               float64      // Settling velocity, m/s
+	VOCoxidationRate float64      // VOC oxidation rate constant
+	westBoundary     []*AIMcell   // boundary cells
+	eastBoundary     []*AIMcell   // boundary cells
+	northBoundary    []*AIMcell   // boundary cells
+	southBoundary    []*AIMcell   // boundary cells
+	topBoundary      []*AIMcell   // boundary cells; assume bottom boundary is the same as lowest layer
 }
 
 // Data for a single grid cell
 type AIMcell struct {
-	UbinsWest, UfreqWest           []float32 // m/s
-	VbinsSouth, VfreqSouth         []float32 // m/s
-	WbinsBelow, WfreqBelow         []float32 // m/s
-	Uwest, Vsouth, Wbelow          float64   // velocities for the current timestep (m/s at west, south, and below grid edges)
-	Uold, Vold, Wold               float64   // velocities for the previous timestep (m/s at west, south, and below grid edges)
+	uPlusSpeed, uMinusSpeed        float64   // m/s
+	vPlusSpeed, vMinusSpeed        float64   // m/s
+	wPlusSpeed, wMinusSpeed        float64   // m/s
 	orgPartitioning, SPartitioning float64   // gaseous fraction
 	NOPartitioning, NHPartitioning float64   // gaseous fraction
 	wdParticle, wdSO2, wdOtherGas  float64   // wet deposition rate, 1/s
@@ -63,16 +60,10 @@ type AIMcell struct {
 	twoFromEdge                    bool      // Is the grid cell 2 cells from the edge?
 }
 
-func newAIMcell(nbins int, dx, dy, dz float64) *AIMcell {
+func newAIMcell(dx, dy, dz float64) *AIMcell {
 	c := new(AIMcell)
 	c.Dx, c.Dy, c.Dz = dx, dy, dz
 	c.Volume = dx * dy * dz
-	c.UbinsWest = make([]float32, nbins)
-	c.VbinsSouth = make([]float32, nbins)
-	c.WbinsBelow = make([]float32, nbins)
-	c.UfreqWest = make([]float32, nbins)
-	c.VfreqSouth = make([]float32, nbins)
-	c.WfreqBelow = make([]float32, nbins)
 	c.Ci = make([]float64, len(polNames))
 	c.Cf = make([]float64, len(polNames))
 	c.Cˣ = make([]float64, len(polNames))
@@ -99,7 +90,6 @@ func InitAIMdata(filename string, httpPort string) *AIMdata {
 	if err != nil {
 		panic(err)
 	}
-	d.nbins = f.Header.Lengths("Ubins")[0]
 	dims := f.Header.Lengths("orgPartitioning")
 	d.Nz = dims[0]
 	d.Ny = dims[1]
@@ -118,7 +108,7 @@ func InitAIMdata(filename string, httpPort string) *AIMdata {
 			for i := 0; i < d.Nx; i++ {
 				// calculate Dz (varies by layer)
 				dz := layerHeights.Get(k+1, j, i) - layerHeights.Get(k, j, i)
-				d.Data[ii] = newAIMcell(d.nbins, dx, dy, dz)
+				d.Data[ii] = newAIMcell(dx, dy, dz)
 				d.Data[ii].k = k
 				d.Data[ii].j = j
 				d.Data[ii].i = i
@@ -134,7 +124,7 @@ func InitAIMdata(filename string, httpPort string) *AIMdata {
 	i := 0
 	for k := 0; k < d.Nz; k++ {
 		for j := 0; j < d.Ny; j++ {
-			d.westBoundary[ii] = newAIMcell(0, dx, dy, 0.)
+			d.westBoundary[ii] = newAIMcell(dx, dy, 0.)
 			d.westBoundary[ii].k = k
 			d.westBoundary[ii].j = j
 			d.westBoundary[ii].i = i
@@ -148,7 +138,7 @@ func InitAIMdata(filename string, httpPort string) *AIMdata {
 	i = d.Nx
 	for k := 0; k < d.Nz; k++ {
 		for j := 0; j < d.Ny; j++ {
-			d.eastBoundary[ii] = newAIMcell(d.nbins, dx, dy, 0.)
+			d.eastBoundary[ii] = newAIMcell(dx, dy, 0.)
 			d.eastBoundary[ii].k = k
 			d.eastBoundary[ii].j = j
 			d.eastBoundary[ii].i = i
@@ -162,7 +152,7 @@ func InitAIMdata(filename string, httpPort string) *AIMdata {
 	j := 0
 	for k := 0; k < d.Nz; k++ {
 		for i := 0; i < d.Nx; i++ {
-			d.southBoundary[ii] = newAIMcell(0, dx, dy, 0.) // Don't allocate any bins for cells that don't need to have wind speeds
+			d.southBoundary[ii] = newAIMcell(dx, dy, 0.)
 			d.southBoundary[ii].k = k
 			d.southBoundary[ii].j = j
 			d.southBoundary[ii].i = i
@@ -176,7 +166,7 @@ func InitAIMdata(filename string, httpPort string) *AIMdata {
 	j = d.Ny
 	for k := 0; k < d.Nz; k++ {
 		for i := 0; i < d.Nx; i++ {
-			d.northBoundary[ii] = newAIMcell(d.nbins, dx, dy, 0.)
+			d.northBoundary[ii] = newAIMcell(dx, dy, 0.)
 			d.northBoundary[ii].k = k
 			d.northBoundary[ii].j = j
 			d.northBoundary[ii].i = i
@@ -190,7 +180,7 @@ func InitAIMdata(filename string, httpPort string) *AIMdata {
 	k := d.Nz
 	for j := 0; j < d.Ny; j++ {
 		for i := 0; i < d.Nx; i++ {
-			d.topBoundary[ii] = newAIMcell(d.nbins, dx, dy, 0.)
+			d.topBoundary[ii] = newAIMcell(dx, dy, 0.)
 			d.topBoundary[ii].k = k
 			d.topBoundary[ii].j = j
 			d.topBoundary[ii].i = i
@@ -201,12 +191,12 @@ func InitAIMdata(filename string, httpPort string) *AIMdata {
 	}
 
 	d.arrayLock.Lock()
-	go d.readNCFbins(filename, &wg, "Ubins")
-	go d.readNCFbins(filename, &wg, "Vbins")
-	go d.readNCFbins(filename, &wg, "Wbins")
-	go d.readNCFbins(filename, &wg, "Ufreq")
-	go d.readNCFbins(filename, &wg, "Vfreq")
-	go d.readNCFbins(filename, &wg, "Wfreq")
+	go d.readNCF(filename, &wg, "uPlusSpeed")
+	go d.readNCF(filename, &wg, "uMinusSpeed")
+	go d.readNCF(filename, &wg, "vPlusSpeed")
+	go d.readNCF(filename, &wg, "vMinusSpeed")
+	go d.readNCF(filename, &wg, "wPlusSpeed")
+	go d.readNCF(filename, &wg, "wMinusSpeed")
 	go d.readNCF(filename, &wg, "orgPartitioning")
 	go d.readNCF(filename, &wg, "VOC")
 	go d.readNCF(filename, &wg, "SOA")
@@ -325,51 +315,51 @@ func interpolate(random float32, freqs, bins []float32, b int) (val float64) {
 	return
 }
 
-func setVelocities(nprocs, procNum int, cellsChan chan []*AIMcell,
-	wg *sync.WaitGroup, seed int64) {
-	r := rand.New(rand.NewSource(seed))
-	var c *AIMcell
-	for cells := range cellsChan {
-		ewrandom := r.Float32()
-		nsrandom := r.Float32()
-		tbrandom := r.Float32()
-		for ii := procNum; ii < len(cells); ii += nprocs {
-			c = cells[ii]
-			if c.k <= topLayerToCalc+1 {
-				// choose bins using a weighted random method
-				for b := 0; b < len(c.UbinsWest)-1; b++ {
-					if ewrandom <= c.UfreqWest[b+1] {
-						c.Uwest = interpolate(ewrandom, c.UfreqWest,
-							c.UbinsWest, b)
-						break
-					}
-				}
-				for b := 0; b < len(c.VbinsSouth)-1; b++ {
-					if nsrandom <= c.VfreqSouth[b+1] {
-						c.Vsouth = interpolate(nsrandom, c.VfreqSouth,
-							c.VbinsSouth, b)
-						break
-					}
-				}
-				for b := 0; b < len(c.WbinsBelow)-1; b++ {
-					if tbrandom <= c.WfreqBelow[b+1] {
-						c.Wbelow = interpolate(tbrandom, c.WfreqBelow,
-							c.WbinsBelow, b)
-						break
-					}
-				}
-			}
-		}
-		wg.Done()
-	}
-}
-
-var SmoothVelocities = func(c *AIMcell, d *AIMdata) {
-	velocityImbalance := (c.Uwest - c.East.Uwest +
-		c.Vsouth - c.North.Vsouth) / 4.
-	c.Uwest += velocityImbalance
-	c.Vsouth += velocityImbalance
-}
+//func setVelocities(nprocs, procNum int, cellsChan chan []*AIMcell,
+//	wg *sync.WaitGroup, seed int64) {
+//	r := rand.New(rand.NewSource(seed))
+//	var c *AIMcell
+//	for cells := range cellsChan {
+//		ewrandom := r.Float32()
+//		nsrandom := r.Float32()
+//		tbrandom := r.Float32()
+//		for ii := procNum; ii < len(cells); ii += nprocs {
+//			c = cells[ii]
+//			if c.k <= topLayerToCalc+1 {
+//				// choose bins using a weighted random method
+//				for b := 0; b < len(c.UbinsWest)-1; b++ {
+//					if ewrandom <= c.UfreqWest[b+1] {
+//						c.Uwest = interpolate(ewrandom, c.UfreqWest,
+//							c.UbinsWest, b)
+//						break
+//					}
+//				}
+//				for b := 0; b < len(c.VbinsSouth)-1; b++ {
+//					if nsrandom <= c.VfreqSouth[b+1] {
+//						c.Vsouth = interpolate(nsrandom, c.VfreqSouth,
+//							c.VbinsSouth, b)
+//						break
+//					}
+//				}
+//				for b := 0; b < len(c.WbinsBelow)-1; b++ {
+//					if tbrandom <= c.WfreqBelow[b+1] {
+//						c.Wbelow = interpolate(tbrandom, c.WfreqBelow,
+//							c.WbinsBelow, b)
+//						break
+//					}
+//				}
+//			}
+//		}
+//		wg.Done()
+//	}
+//}
+//
+//var SmoothVelocities = func(c *AIMcell, d *AIMdata) {
+//	velocityImbalance := (c.Uwest - c.East.Uwest +
+//		c.Vsouth - c.North.Vsouth) / 4.
+//	c.Uwest += velocityImbalance
+//	c.Vsouth += velocityImbalance
+//}
 
 // Add in emissions flux to each cell at every time step, also
 // set initial concentrations to final concentrations from previous
@@ -380,9 +370,9 @@ func (c *AIMcell) addEmissionsFlux(d *AIMdata) {
 		c.Cf[i] += c.emisFlux[i] * d.Dt
 		c.Ci[i] = c.Cf[i]
 	}
-	c.Uold = c.Uwest
-	c.Vold = c.Vsouth
-	c.Wold = c.Wbelow
+	//c.Uold = c.Uwest
+	//c.Vold = c.Vsouth
+	//c.Wold = c.Wbelow
 }
 
 var addemissionsflux = func(c *AIMcell, d *AIMdata) {
@@ -396,166 +386,166 @@ var addtosum = func(c *AIMcell, d *AIMdata) {
 	}
 }
 
-//  Set the time step using the Courant–Friedrichs–Lewy (CFL) condition.
-func (d *AIMdata) setTstepCFL(nprocs int) {
-	const Cmax = 1
-	valChan := make(chan float64)
-	calcCFL := func(procNum int) {
-		// don't worry about the edges of the staggered grids.
-		var uval, vval, wval, thisval, val float64
-		var c *AIMcell
-		for ii := procNum; ii < len(d.Data); ii += nprocs {
-			c = d.Data[ii]
-			uval = math.Abs(c.Uwest) / c.Dx
-			vval = math.Abs(c.Vsouth) / c.Dy
-			wval = math.Abs(c.Wbelow) / c.Dz
-			thisval = max(uval, vval, wval)
-			if thisval > val {
-				val = thisval
-			}
-		}
-		valChan <- val
-	}
-	for procNum := 0; procNum < nprocs; procNum++ {
-		go calcCFL(procNum)
-	}
-	val := 0.
-	for i := 0; i < nprocs; i++ { // get max value from each processor
-		procval := <-valChan
-		if procval > val {
-			val = procval
-		}
-	}
-	d.Dt = Cmax / math.Pow(3., 0.5) / val // seconds
-}
+////  Set the time step using the Courant–Friedrichs–Lewy (CFL) condition.
+//func (d *AIMdata) setTstepCFL(nprocs int) {
+//	const Cmax = 1
+//	valChan := make(chan float64)
+//	calcCFL := func(procNum int) {
+//		// don't worry about the edges of the staggered grids.
+//		var uval, vval, wval, thisval, val float64
+//		var c *AIMcell
+//		for ii := procNum; ii < len(d.Data); ii += nprocs {
+//			c = d.Data[ii]
+//			uval = math.Abs(c.Uwest) / c.Dx
+//			vval = math.Abs(c.Vsouth) / c.Dy
+//			wval = math.Abs(c.Wbelow) / c.Dz
+//			thisval = max(uval, vval, wval)
+//			if thisval > val {
+//				val = thisval
+//			}
+//		}
+//		valChan <- val
+//	}
+//	for procNum := 0; procNum < nprocs; procNum++ {
+//		go calcCFL(procNum)
+//	}
+//	val := 0.
+//	for i := 0; i < nprocs; i++ { // get max value from each processor
+//		procval := <-valChan
+//		if procval > val {
+//			val = procval
+//		}
+//	}
+//	d.Dt = Cmax / math.Pow(3., 0.5) / val // seconds
+//}
 
 //  Set the time step using the WRF rule of thumb.
 func (d *AIMdata) setTstepRuleOfThumb() {
 	d.Dt = d.Data[0].Dx / 1000. * 6
 }
 
-// Read variable which includes random walk bins from NetCDF file.
-func (d *AIMdata) readNCFbins(filename string, wg *sync.WaitGroup, Var string) {
-	defer wg.Done()
-	dat := getNCFbuffer(filename, Var)
-	var bstride, kstride, jstride int
-	switch Var {
-	case "Ubins", "Ufreq":
-		bstride = d.Nz * d.Ny * (d.Nx + 1)
-		kstride = d.Ny * (d.Nx + 1)
-		jstride = d.Nx + 1
-	case "Vbins", "Vfreq":
-		bstride = d.Nz * (d.Ny + 1) * d.Nx
-		kstride = (d.Ny + 1) * d.Nx
-		jstride = d.Nx
-	case "Wbins", "Wfreq":
-		bstride = (d.Nz + 1) * d.Ny * d.Nx
-		kstride = d.Ny * d.Nx
-		jstride = d.Nx
-	default:
-		panic("Unexpected error!")
-	}
-	ii := 0
-	var index int
-	for k := 0; k < d.Nz; k++ {
-		for j := 0; j < d.Ny; j++ {
-			for i := 0; i < d.Nx; i++ {
-				for b := 0; b < d.nbins; b++ {
-					index = b*bstride + k*kstride + j*jstride + i
-					switch Var {
-					case "Ubins":
-						d.Data[ii].UbinsWest[b] = dat[index]
-					case "Ufreq":
-						d.Data[ii].UfreqWest[b] = dat[index]
-					case "Vbins":
-						d.Data[ii].VbinsSouth[b] = dat[index]
-					case "Vfreq":
-						d.Data[ii].VfreqSouth[b] = dat[index]
-					case "Wbins":
-						d.Data[ii].WbinsBelow[b] = dat[index]
-					case "Wfreq":
-						d.Data[ii].WfreqBelow[b] = dat[index]
-					default:
-						panic(fmt.Sprintf("Variable %v unknown.\n", Var))
-					}
-				}
-				ii++
-			}
-		}
-	}
-	// Set North, East, and Top edge velocity bins for Arakawa C-grid.
-	ii = 0
-	switch Var {
-	case "Ubins":
-		i := d.Nx
-		for k := 0; k < d.Nz; k++ {
-			for j := 0; j < d.Ny; j++ {
-				for b := 0; b < d.nbins; b++ {
-					index = b*bstride + k*kstride + j*jstride + i
-					d.eastBoundary[ii].UbinsWest[b] = dat[index]
-				}
-				ii++
-			}
-		}
-	case "Ufreq":
-		i := d.Nx
-		for k := 0; k < d.Nz; k++ {
-			for j := 0; j < d.Ny; j++ {
-				for b := 0; b < d.nbins; b++ {
-					index = b*bstride + k*kstride + j*jstride + i
-					d.eastBoundary[ii].UfreqWest[b] = dat[index]
-				}
-				ii++
-			}
-		}
-	case "Vbins":
-		j := d.Ny
-		for k := 0; k < d.Nz; k++ {
-			for i := 0; i < d.Nx; i++ {
-				for b := 0; b < d.nbins; b++ {
-					index = b*bstride + k*kstride + j*jstride + i
-					d.northBoundary[ii].VbinsSouth[b] = dat[index]
-				}
-				ii++
-			}
-		}
-	case "Vfreq":
-		j := d.Ny
-		for k := 0; k < d.Nz; k++ {
-			for i := 0; i < d.Nx; i++ {
-				for b := 0; b < d.nbins; b++ {
-					index = b*bstride + k*kstride + j*jstride + i
-					d.northBoundary[ii].VfreqSouth[b] = dat[index]
-				}
-				ii++
-			}
-		}
-	case "Wbins":
-		k := d.Nz
-		for j := 0; j < d.Ny; j++ {
-			for i := 0; i < d.Nx; i++ {
-				for b := 0; b < d.nbins; b++ {
-					index = b*bstride + k*kstride + j*jstride + i
-					d.topBoundary[ii].WbinsBelow[b] = dat[index]
-				}
-				ii++
-			}
-		}
-	case "Wfreq":
-		k := d.Nz
-		for j := 0; j < d.Ny; j++ {
-			for i := 0; i < d.Nx; i++ {
-				for b := 0; b < d.nbins; b++ {
-					index = b*bstride + k*kstride + j*jstride + i
-					d.topBoundary[ii].WfreqBelow[b] = dat[index]
-				}
-				ii++
-			}
-		}
-	default:
-		panic(fmt.Sprintf("Variable %v unknown.\n", Var))
-	}
-}
+//// Read variable which includes random walk bins from NetCDF file.
+//func (d *AIMdata) readNCFbins(filename string, wg *sync.WaitGroup, Var string) {
+//	defer wg.Done()
+//	dat := getNCFbuffer(filename, Var)
+//	var bstride, kstride, jstride int
+//	switch Var {
+//	case "Ubins", "Ufreq":
+//		bstride = d.Nz * d.Ny * (d.Nx + 1)
+//		kstride = d.Ny * (d.Nx + 1)
+//		jstride = d.Nx + 1
+//	case "Vbins", "Vfreq":
+//		bstride = d.Nz * (d.Ny + 1) * d.Nx
+//		kstride = (d.Ny + 1) * d.Nx
+//		jstride = d.Nx
+//	case "Wbins", "Wfreq":
+//		bstride = (d.Nz + 1) * d.Ny * d.Nx
+//		kstride = d.Ny * d.Nx
+//		jstride = d.Nx
+//	default:
+//		panic("Unexpected error!")
+//	}
+//	ii := 0
+//	var index int
+//	for k := 0; k < d.Nz; k++ {
+//		for j := 0; j < d.Ny; j++ {
+//			for i := 0; i < d.Nx; i++ {
+//				for b := 0; b < d.nbins; b++ {
+//					index = b*bstride + k*kstride + j*jstride + i
+//					switch Var {
+//					case "Ubins":
+//						d.Data[ii].UbinsWest[b] = dat[index]
+//					case "Ufreq":
+//						d.Data[ii].UfreqWest[b] = dat[index]
+//					case "Vbins":
+//						d.Data[ii].VbinsSouth[b] = dat[index]
+//					case "Vfreq":
+//						d.Data[ii].VfreqSouth[b] = dat[index]
+//					case "Wbins":
+//						d.Data[ii].WbinsBelow[b] = dat[index]
+//					case "Wfreq":
+//						d.Data[ii].WfreqBelow[b] = dat[index]
+//					default:
+//						panic(fmt.Sprintf("Variable %v unknown.\n", Var))
+//					}
+//				}
+//				ii++
+//			}
+//		}
+//	}
+//	// Set North, East, and Top edge velocity bins for Arakawa C-grid.
+//	ii = 0
+//	switch Var {
+//	case "Ubins":
+//		i := d.Nx
+//		for k := 0; k < d.Nz; k++ {
+//			for j := 0; j < d.Ny; j++ {
+//				for b := 0; b < d.nbins; b++ {
+//					index = b*bstride + k*kstride + j*jstride + i
+//					d.eastBoundary[ii].UbinsWest[b] = dat[index]
+//				}
+//				ii++
+//			}
+//		}
+//	case "Ufreq":
+//		i := d.Nx
+//		for k := 0; k < d.Nz; k++ {
+//			for j := 0; j < d.Ny; j++ {
+//				for b := 0; b < d.nbins; b++ {
+//					index = b*bstride + k*kstride + j*jstride + i
+//					d.eastBoundary[ii].UfreqWest[b] = dat[index]
+//				}
+//				ii++
+//			}
+//		}
+//	case "Vbins":
+//		j := d.Ny
+//		for k := 0; k < d.Nz; k++ {
+//			for i := 0; i < d.Nx; i++ {
+//				for b := 0; b < d.nbins; b++ {
+//					index = b*bstride + k*kstride + j*jstride + i
+//					d.northBoundary[ii].VbinsSouth[b] = dat[index]
+//				}
+//				ii++
+//			}
+//		}
+//	case "Vfreq":
+//		j := d.Ny
+//		for k := 0; k < d.Nz; k++ {
+//			for i := 0; i < d.Nx; i++ {
+//				for b := 0; b < d.nbins; b++ {
+//					index = b*bstride + k*kstride + j*jstride + i
+//					d.northBoundary[ii].VfreqSouth[b] = dat[index]
+//				}
+//				ii++
+//			}
+//		}
+//	case "Wbins":
+//		k := d.Nz
+//		for j := 0; j < d.Ny; j++ {
+//			for i := 0; i < d.Nx; i++ {
+//				for b := 0; b < d.nbins; b++ {
+//					index = b*bstride + k*kstride + j*jstride + i
+//					d.topBoundary[ii].WbinsBelow[b] = dat[index]
+//				}
+//				ii++
+//			}
+//		}
+//	case "Wfreq":
+//		k := d.Nz
+//		for j := 0; j < d.Ny; j++ {
+//			for i := 0; i < d.Nx; i++ {
+//				for b := 0; b < d.nbins; b++ {
+//					index = b*bstride + k*kstride + j*jstride + i
+//					d.topBoundary[ii].WfreqBelow[b] = dat[index]
+//				}
+//				ii++
+//			}
+//		}
+//	default:
+//		panic(fmt.Sprintf("Variable %v unknown.\n", Var))
+//	}
+//}
 
 // Read variable from NetCDF file.
 func (d *AIMdata) readNCF(filename string, wg *sync.WaitGroup, Var string) {
@@ -569,6 +559,18 @@ func (d *AIMdata) readNCF(filename string, wg *sync.WaitGroup, Var string) {
 			for i := 0; i < d.Nx; i++ {
 				index := k*kstride + j*jstride + i
 				switch Var {
+				case "uPlusSpeed":
+					d.Data[ii].uPlusSpeed = float64(dat[index])
+				case "uMinusSpeed":
+					d.Data[ii].uMinusSpeed = float64(dat[index])
+				case "vPlusSpeed":
+					d.Data[ii].vPlusSpeed = float64(dat[index])
+				case "vMinusSpeed":
+					d.Data[ii].vMinusSpeed = float64(dat[index])
+				case "wPlusSpeed":
+					d.Data[ii].wPlusSpeed = float64(dat[index])
+				case "wMinusSpeed":
+					d.Data[ii].wMinusSpeed = float64(dat[index])
 				case "orgPartitioning":
 					d.Data[ii].orgPartitioning = float64(dat[index])
 				case "SPartitioning":

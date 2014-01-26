@@ -91,41 +91,38 @@ func upwindFlux(q_im1, q_i, ua float64) float64 {
 }
 
 // Get advective flux in West and East directions
-func (c *AIMcell) westEastFlux(ii int) (fluxWest, fluxEast float64) {
-	fluxWest = upwindFlux(c.West.Ci[ii], c.Ci[ii], c.Uwest)
-	fluxEast = upwindFlux(c.Ci[ii], c.East.Ci[ii], c.East.Uwest)
-	return
+func (c *AIMcell) westEastFlux(ii int) float64 {
+	return c.West.uPlusSpeed*c.West.Ci[ii] - c.Ci[ii]*c.uMinusSpeed +
+		c.East.uMinusSpeed*c.East.Ci[ii] - c.Ci[ii]*c.uPlusSpeed
 }
 
 // Get advective flux in South and North directions
-func (c *AIMcell) southNorthFlux(ii int) (fluxSouth, fluxNorth float64) {
-	fluxSouth = upwindFlux(c.South.Ci[ii], c.Ci[ii], c.Vsouth)
-	fluxNorth = upwindFlux(c.Ci[ii], c.North.Ci[ii], c.North.Vsouth)
-	return
+func (c *AIMcell) southNorthFlux(ii int) float64 {
+	return c.South.vPlusSpeed*c.South.Ci[ii] - c.Ci[ii]*c.vMinusSpeed +
+		c.North.vMinusSpeed*c.North.Ci[ii] - c.Ci[ii]*c.vPlusSpeed
 }
 
 // Get advective flux in Below and Above directions
-func (c *AIMcell) belowAboveFlux(ii int) (fluxBelow, fluxAbove float64) {
-	fluxBelow = upwindFlux(c.Below.Ci[ii], c.Ci[ii], c.Wbelow)
-	fluxAbove = upwindFlux(c.Ci[ii], c.Above.Ci[ii], c.Above.Wbelow)
-	return
+func (c *AIMcell) belowAboveFlux(ii int) float64 {
+	return c.Below.wPlusSpeed*c.Below.Ci[ii] - c.Ci[ii]*c.wMinusSpeed +
+		c.Above.wMinusSpeed*c.Above.Ci[ii] - c.Ci[ii]*c.wPlusSpeed
 }
 
 // Calculates advective flux in the cell based
 // on a third order Runge-Kutta scheme
 // from Wicker and Skamarock (2002) Equation 3a.
 func (c *AIMcell) RK3advectionPass1(d *AIMdata) {
-	var fluxMinus, fluxPlus float64
+	var flux float64
 	for ii, _ := range c.Cf {
 		// i direction
-		fluxMinus, fluxPlus = c.westEastFlux(ii)
-		c.Cˣ[ii] = c.Ci[ii] - d.Dt/3./c.Dx*(fluxPlus-fluxMinus)
+		flux = c.westEastFlux(ii)
+		c.Cˣ[ii] = c.Ci[ii] + d.Dt/3./c.Dx*flux
 		// j direction
-		fluxMinus, fluxPlus = c.southNorthFlux(ii)
-		c.Cˣ[ii] -= d.Dt / 3. / c.Dy * (fluxPlus - fluxMinus)
+		flux = c.southNorthFlux(ii)
+		c.Cˣ[ii] += d.Dt / 3. / c.Dy * flux
 		// k direction
-		fluxMinus, fluxPlus = c.belowAboveFlux(ii)
-		c.Cˣ[ii] -= d.Dt / 3. / c.Dz * (fluxPlus - fluxMinus)
+		flux = c.belowAboveFlux(ii)
+		c.Cˣ[ii] += d.Dt / 3. / c.Dz * flux
 	}
 	return
 }
@@ -134,17 +131,17 @@ func (c *AIMcell) RK3advectionPass1(d *AIMdata) {
 // on a third order Runge-Kutta scheme
 // from Wicker and Skamarock (2002) Equation 3b.
 func (c *AIMcell) RK3advectionPass2(d *AIMdata) {
-	var fluxMinus, fluxPlus float64
+	var flux float64
 	for ii, _ := range c.Cf {
 		// i direction
-		fluxMinus, fluxPlus = c.westEastFlux(ii)
-		c.Cˣˣ[ii] = c.Cf[ii] - d.Dt/2./c.Dx*(fluxPlus-fluxMinus)
+		flux = c.westEastFlux(ii)
+		c.Cˣˣ[ii] = c.Cf[ii] + d.Dt/2./c.Dx*flux
 		// j direction
-		fluxMinus, fluxPlus = c.southNorthFlux(ii)
-		c.Cˣˣ[ii] -= d.Dt / 2. / c.Dy * (fluxPlus - fluxMinus)
+		flux = c.southNorthFlux(ii)
+		c.Cˣˣ[ii] += d.Dt / 2. / c.Dy * flux
 		// k direction
-		fluxMinus, fluxPlus = c.belowAboveFlux(ii)
-		c.Cˣˣ[ii] -= d.Dt / 2. / c.Dz * (fluxPlus - fluxMinus)
+		flux = c.belowAboveFlux(ii)
+		c.Cˣˣ[ii] += d.Dt / 2. / c.Dz * flux
 	}
 	return
 }
@@ -153,24 +150,24 @@ func (c *AIMcell) RK3advectionPass2(d *AIMdata) {
 // on a third order Runge-Kutta scheme
 // from Wicker and Skamarock (2002) Equation 3c.
 func (c *AIMcell) RK3advectionPass3(d *AIMdata) {
-	var fluxMinus, fluxPlus float64
+	var flux float64
 	for ii, _ := range c.Cf {
 		// i direction
-		fluxMinus, fluxPlus = c.westEastFlux(ii)
-		c.Cf[ii] -= d.Dt / c.Dx * (fluxPlus - fluxMinus)
+		flux = c.westEastFlux(ii)
+		c.Cf[ii] += d.Dt / c.Dx * flux
 		// j direction
-		fluxMinus, fluxPlus = c.southNorthFlux(ii)
-		c.Cf[ii] -= d.Dt / c.Dy * (fluxPlus - fluxMinus)
+		flux = c.southNorthFlux(ii)
+		c.Cf[ii] += d.Dt / c.Dy * flux
 		// k direction
-		fluxMinus, fluxPlus = c.belowAboveFlux(ii)
-		c.Cf[ii] -= d.Dt / c.Dz * (fluxPlus - fluxMinus)
+		flux = c.belowAboveFlux(ii)
+		c.Cf[ii] += d.Dt / c.Dz * flux
 		if math.IsNaN(c.Cf[ii]) {
 			panic(fmt.Sprintf("Found a NaN value. Pol: %v, k=%v, j=%v, i=%v",
 				polNames[ii], c.k, c.j, c.i))
 		}
-		if math.Abs(c.Cf[ii]-c.Ci[ii]) > 1. {
-			c.Cf[ii] = c.Ci[ii]
-		}
+		//		if math.Abs(c.Cf[ii]-c.Ci[ii]) > 1. {
+		//			c.Cf[ii] = c.Ci[ii]
+		//		}
 	}
 	return
 }
@@ -234,7 +231,7 @@ func (c *AIMcell) COBRAchemistry(d *AIMdata) {
 
 	// All SO4 forms particles, so sulfur particle formation is limited by the
 	// SO2 -> SO4 reaction.
-	ΔS := c.SO2oxidation * c.Cf[igS] * d.Dt //* 100. ////////////////////////////////////////////////////////////
+	ΔS := c.SO2oxidation * c.Cf[igS] * d.Dt * 100. ////////////////////////////////////////////////////////////
 	//ΔS := kS * c.Cf[igS] * d.Dt
 	c.Cf[igS] -= ΔS
 	c.Cf[ipS] += ΔS
