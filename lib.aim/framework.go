@@ -14,7 +14,7 @@ type AIMdata struct {
 	Nx, Ny, Nz       int          // number of meteorology bins
 	arrayLock        sync.RWMutex // Avoid concentration arrays being written by one subroutine and read by another at the same time.
 	Dt               float64      // seconds
-	vs               float64      // Settling velocity, m/s
+	vs               float64      // Settling velocity [m/s]
 	VOCoxidationRate float64      // VOC oxidation rate constant
 	westBoundary     []*AIMcell   // boundary cells
 	eastBoundary     []*AIMcell   // boundary cells
@@ -30,25 +30,25 @@ type AIMcell struct {
 	wPlusSpeed, wMinusSpeed        float64   // [m/s]
 	orgPartitioning, SPartitioning float64   // gaseous fraction
 	NOPartitioning, NHPartitioning float64   // gaseous fraction
-	wdParticle, wdSO2, wdOtherGas  float64   // wet deposition rate, 1/s
-	particleDryDep                 float64   // aerosol dry deposition velocity, m/s
-	SO2oxidation                   float64   // SO2 oxidation to SO4 by HO; 1/s
-	Kz                             float64   // vertical diffusivity, m2/s
-	KyySouth                       float64   // horizontal diffusivity [m2/s] (staggered grid)
-	KxxWest                        float64   // horizontal diffusivity [m2/s] (staggered grid)
-	M2u                            float64   // ACM2 upward mixing (Pleim 2007), 1/s
-	M2d                            float64   // ACM2 downward mixing (Pleim 2007), 1/s
+	wdParticle, wdSO2, wdOtherGas  float64   // wet deposition rate [1/s]
+	particleDryDep                 float64   // aerosol dry deposition velocity [m/s]
+	SO2oxidation                   float64   // SO2 oxidation to SO4 by HO [1/s]
+	Kz                             float64   // vertical diffusivity [m2/s]
+	KyySouth                       float64   // horizontal diffusivity at south edge [m2/s] (staggered grid)
+	KxxWest                        float64   // horizontal diffusivity at west edge [m2/s]
+	M2u                            float64   // ACM2 upward mixing (Pleim 2007) [1/s]
+	M2d                            float64   // ACM2 downward mixing (Pleim 2007) [1/s]
 	kPblTop                        float64   // k index of boundary layer top
-	Dx, Dy, Dz                     float64   // grid size (meters)
-	Volume                         float64   // cubic meters
+	Dx, Dy, Dz                     float64   // grid size [meters]
+	Volume                         float64   // [cubic meters]
 	k, j, i                        int       // cell indicies
 	ii                             int       // master cell index
-	Ci                             []float64 // concentrations at beginning of time step (μg/m3)
-	Cˣ, Cˣˣ                        []float64 // concentrations after first and second Runge-Kutta passes (μg/m3)
-	Cf                             []float64 // concentrations at end of time step (μg/m3)
-	Csum                           []float64 // sum of concentrations over time for later averaging (μg/m3)
-	Cbackground                    []float64 // background pollutant concentrations (not associated with the current simulation) (μg/m3)
-	emisFlux                       []float64 //  emissions (μg/m3/s)
+	Ci                             []float64 // concentrations at beginning of time step [μg/m3]
+	Cˣ, Cˣˣ                        []float64 // concentrations after first and second Runge-Kutta passes [μg/m3]
+	Cf                             []float64 // concentrations at end of time step [μg/m3]
+	Csum                           []float64 // sum of concentrations over time for later averaging [μg/m3]
+	Cbackground                    []float64 // background pollutant concentrations (not associated with the current simulation) [μg/m3]
+	emisFlux                       []float64 //  emissions [μg/m3/s]
 	West                           *AIMcell  // Neighbor to the East
 	East                           *AIMcell  // Neighbor to the West
 	South                          *AIMcell  // Neighbor to the South
@@ -56,8 +56,8 @@ type AIMcell struct {
 	Below                          *AIMcell  // Neighbor below
 	Above                          *AIMcell  // Neighbor above
 	GroundLevel                    *AIMcell  // Neighbor at ground level
-	dzPlusHalf                     float64   // Distance between centers of cell and Above (m)
-	dzMinusHalf                    float64   // Distance between centers of cell and Below (m)
+	dzPlusHalf                     float64   // Distance between centers of cell and Above [m]
+	dzMinusHalf                    float64   // Distance between centers of cell and Below [m]
 	nextToEdge                     bool      // Is the grid cell next to the edge?
 	twoFromEdge                    bool      // Is the grid cell 2 cells from the edge?
 }
@@ -99,7 +99,7 @@ func InitAIMdata(filename string, httpPort string) *AIMdata {
 	dx, dy := 12000., 12000. // need to make these adjustable
 	d.VOCoxidationRate = f.Header.GetAttribute("", "VOCoxidationRate").([]float64)[0]
 	var wg sync.WaitGroup
-	wg.Add(28) // Number of readNCF functions to run simultaneously
+	wg.Add(29) // Number of readNCF functions to run simultaneously
 	layerHeights := sparse.ZerosDense(d.Nz+1, d.Ny, d.Nx)
 	readNCF(filename, &wg, "layerHeights", layerHeights)
 	// set up data holders
@@ -220,6 +220,7 @@ func InitAIMdata(filename string, httpPort string) *AIMdata {
 	go d.readNCF(filename, &wg, "pblTopLayer")
 	go d.readNCF(filename, &wg, "SO2oxidation")
 	go d.readNCF(filename, &wg, "particleDryDep")
+	go d.readNCF(filename, &wg, "Kyy")
 	wg.Wait()
 	d.arrayLock.Unlock()
 
@@ -238,6 +239,9 @@ func InitAIMdata(filename string, httpPort string) *AIMdata {
 				}
 				if i == d.Nx-1 {
 					d.Data[ii].East = d.eastBoundary[k*d.Ny+j]
+					// Since we have converted from unstaggered to staggered
+					// grid for Kxx, fill in final value for Kxx
+					d.eastBoundary.KxxWest = d.Data[ii].KxxWest
 				} else {
 					jj = d.getIndex(k, j, i+1)
 					d.Data[jj].checkIndicies(k, j, i+1)
@@ -252,6 +256,9 @@ func InitAIMdata(filename string, httpPort string) *AIMdata {
 				}
 				if j == d.Ny-1 {
 					d.Data[ii].North = d.northBoundary[k*d.Nx+i]
+					// Since we have converted from unstaggered to staggered
+					// grid for Kxx, fill in final value for Kxx
+					d.eastBoundary.KyySouth = d.Data[ii].KyySouth
 				} else {
 					jj = d.getIndex(k, j+1, i)
 					d.Data[jj].checkIndicies(k, j+1, i)
@@ -317,52 +324,6 @@ func interpolate(random float32, freqs, bins []float32, b int) (val float64) {
 	return
 }
 
-//func setVelocities(nprocs, procNum int, cellsChan chan []*AIMcell,
-//	wg *sync.WaitGroup, seed int64) {
-//	r := rand.New(rand.NewSource(seed))
-//	var c *AIMcell
-//	for cells := range cellsChan {
-//		ewrandom := r.Float32()
-//		nsrandom := r.Float32()
-//		tbrandom := r.Float32()
-//		for ii := procNum; ii < len(cells); ii += nprocs {
-//			c = cells[ii]
-//			if c.k <= topLayerToCalc+1 {
-//				// choose bins using a weighted random method
-//				for b := 0; b < len(c.UbinsWest)-1; b++ {
-//					if ewrandom <= c.UfreqWest[b+1] {
-//						c.Uwest = interpolate(ewrandom, c.UfreqWest,
-//							c.UbinsWest, b)
-//						break
-//					}
-//				}
-//				for b := 0; b < len(c.VbinsSouth)-1; b++ {
-//					if nsrandom <= c.VfreqSouth[b+1] {
-//						c.Vsouth = interpolate(nsrandom, c.VfreqSouth,
-//							c.VbinsSouth, b)
-//						break
-//					}
-//				}
-//				for b := 0; b < len(c.WbinsBelow)-1; b++ {
-//					if tbrandom <= c.WfreqBelow[b+1] {
-//						c.Wbelow = interpolate(tbrandom, c.WfreqBelow,
-//							c.WbinsBelow, b)
-//						break
-//					}
-//				}
-//			}
-//		}
-//		wg.Done()
-//	}
-//}
-//
-//var SmoothVelocities = func(c *AIMcell, d *AIMdata) {
-//	velocityImbalance := (c.Uwest - c.East.Uwest +
-//		c.Vsouth - c.North.Vsouth) / 4.
-//	c.Uwest += velocityImbalance
-//	c.Vsouth += velocityImbalance
-//}
-
 // Add in emissions flux to each cell at every time step, also
 // set initial concentrations to final concentrations from previous
 // time step, and set old velocities to velocities from previous time
@@ -372,13 +333,6 @@ func (c *AIMcell) addEmissionsFlux(d *AIMdata) {
 		c.Cf[i] += c.emisFlux[i] * d.Dt
 		c.Ci[i] = c.Cf[i]
 	}
-	//c.Uold = c.Uwest
-	//c.Vold = c.Vsouth
-	//c.Wold = c.Wbelow
-}
-
-var addemissionsflux = func(c *AIMcell, d *AIMdata) {
-	c.addEmissionsFlux(d)
 }
 
 // Add current concentration to sum for later averaging
@@ -388,166 +342,41 @@ var addtosum = func(c *AIMcell, d *AIMdata) {
 	}
 }
 
-////  Set the time step using the Courant–Friedrichs–Lewy (CFL) condition.
-//func (d *AIMdata) setTstepCFL(nprocs int) {
-//	const Cmax = 1
-//	valChan := make(chan float64)
-//	calcCFL := func(procNum int) {
-//		// don't worry about the edges of the staggered grids.
-//		var uval, vval, wval, thisval, val float64
-//		var c *AIMcell
-//		for ii := procNum; ii < len(d.Data); ii += nprocs {
-//			c = d.Data[ii]
-//			uval = math.Abs(c.Uwest) / c.Dx
-//			vval = math.Abs(c.Vsouth) / c.Dy
-//			wval = math.Abs(c.Wbelow) / c.Dz
-//			thisval = max(uval, vval, wval)
-//			if thisval > val {
-//				val = thisval
-//			}
-//		}
-//		valChan <- val
-//	}
-//	for procNum := 0; procNum < nprocs; procNum++ {
-//		go calcCFL(procNum)
-//	}
-//	val := 0.
-//	for i := 0; i < nprocs; i++ { // get max value from each processor
-//		procval := <-valChan
-//		if procval > val {
-//			val = procval
-//		}
-//	}
-//	d.Dt = Cmax / math.Pow(3., 0.5) / val // seconds
-//}
+//  Set the time step using the Courant–Friedrichs–Lewy (CFL) condition.
+func (d *AIMdata) setTstepCFL(nprocs int) {
+	const Cmax = 1
+	valChan := make(chan float64)
+	calcCFL := func(procNum int) {
+		var thisval, val float64
+		var c *AIMcell
+		for ii := procNum; ii < len(d.Data); ii += nprocs {
+			c = d.Data[ii]
+			thisval = max(c.uWestSpeed/c.Dx, c.uEastSpeed/c.Dx,
+				c.vSouthSpeed/c.Dy, c.vNorthSpeed/c.Dy,
+				c.wBelowSpeed/c.Dz, c.wAboveSpeed/c.Dz)
+			if thisval > val {
+				val = thisval
+			}
+		}
+		valChan <- val
+	}
+	for procNum := 0; procNum < nprocs; procNum++ {
+		go calcCFL(procNum)
+	}
+	val := 0.
+	for i := 0; i < nprocs; i++ { // get max value from each processor
+		procval := <-valChan
+		if procval > val {
+			val = procval
+		}
+	}
+	d.Dt = Cmax / math.Pow(3., 0.5) / val // seconds
+}
 
 //  Set the time step using the WRF rule of thumb.
 func (d *AIMdata) setTstepRuleOfThumb() {
 	d.Dt = d.Data[0].Dx / 1000. * 6
 }
-
-//// Read variable which includes random walk bins from NetCDF file.
-//func (d *AIMdata) readNCFbins(filename string, wg *sync.WaitGroup, Var string) {
-//	defer wg.Done()
-//	dat := getNCFbuffer(filename, Var)
-//	var bstride, kstride, jstride int
-//	switch Var {
-//	case "Ubins", "Ufreq":
-//		bstride = d.Nz * d.Ny * (d.Nx + 1)
-//		kstride = d.Ny * (d.Nx + 1)
-//		jstride = d.Nx + 1
-//	case "Vbins", "Vfreq":
-//		bstride = d.Nz * (d.Ny + 1) * d.Nx
-//		kstride = (d.Ny + 1) * d.Nx
-//		jstride = d.Nx
-//	case "Wbins", "Wfreq":
-//		bstride = (d.Nz + 1) * d.Ny * d.Nx
-//		kstride = d.Ny * d.Nx
-//		jstride = d.Nx
-//	default:
-//		panic("Unexpected error!")
-//	}
-//	ii := 0
-//	var index int
-//	for k := 0; k < d.Nz; k++ {
-//		for j := 0; j < d.Ny; j++ {
-//			for i := 0; i < d.Nx; i++ {
-//				for b := 0; b < d.nbins; b++ {
-//					index = b*bstride + k*kstride + j*jstride + i
-//					switch Var {
-//					case "Ubins":
-//						d.Data[ii].UbinsWest[b] = dat[index]
-//					case "Ufreq":
-//						d.Data[ii].UfreqWest[b] = dat[index]
-//					case "Vbins":
-//						d.Data[ii].VbinsSouth[b] = dat[index]
-//					case "Vfreq":
-//						d.Data[ii].VfreqSouth[b] = dat[index]
-//					case "Wbins":
-//						d.Data[ii].WbinsBelow[b] = dat[index]
-//					case "Wfreq":
-//						d.Data[ii].WfreqBelow[b] = dat[index]
-//					default:
-//						panic(fmt.Sprintf("Variable %v unknown.\n", Var))
-//					}
-//				}
-//				ii++
-//			}
-//		}
-//	}
-//	// Set North, East, and Top edge velocity bins for Arakawa C-grid.
-//	ii = 0
-//	switch Var {
-//	case "Ubins":
-//		i := d.Nx
-//		for k := 0; k < d.Nz; k++ {
-//			for j := 0; j < d.Ny; j++ {
-//				for b := 0; b < d.nbins; b++ {
-//					index = b*bstride + k*kstride + j*jstride + i
-//					d.eastBoundary[ii].UbinsWest[b] = dat[index]
-//				}
-//				ii++
-//			}
-//		}
-//	case "Ufreq":
-//		i := d.Nx
-//		for k := 0; k < d.Nz; k++ {
-//			for j := 0; j < d.Ny; j++ {
-//				for b := 0; b < d.nbins; b++ {
-//					index = b*bstride + k*kstride + j*jstride + i
-//					d.eastBoundary[ii].UfreqWest[b] = dat[index]
-//				}
-//				ii++
-//			}
-//		}
-//	case "Vbins":
-//		j := d.Ny
-//		for k := 0; k < d.Nz; k++ {
-//			for i := 0; i < d.Nx; i++ {
-//				for b := 0; b < d.nbins; b++ {
-//					index = b*bstride + k*kstride + j*jstride + i
-//					d.northBoundary[ii].VbinsSouth[b] = dat[index]
-//				}
-//				ii++
-//			}
-//		}
-//	case "Vfreq":
-//		j := d.Ny
-//		for k := 0; k < d.Nz; k++ {
-//			for i := 0; i < d.Nx; i++ {
-//				for b := 0; b < d.nbins; b++ {
-//					index = b*bstride + k*kstride + j*jstride + i
-//					d.northBoundary[ii].VfreqSouth[b] = dat[index]
-//				}
-//				ii++
-//			}
-//		}
-//	case "Wbins":
-//		k := d.Nz
-//		for j := 0; j < d.Ny; j++ {
-//			for i := 0; i < d.Nx; i++ {
-//				for b := 0; b < d.nbins; b++ {
-//					index = b*bstride + k*kstride + j*jstride + i
-//					d.topBoundary[ii].WbinsBelow[b] = dat[index]
-//				}
-//				ii++
-//			}
-//		}
-//	case "Wfreq":
-//		k := d.Nz
-//		for j := 0; j < d.Ny; j++ {
-//			for i := 0; i < d.Nx; i++ {
-//				for b := 0; b < d.nbins; b++ {
-//					index = b*bstride + k*kstride + j*jstride + i
-//					d.topBoundary[ii].WfreqBelow[b] = dat[index]
-//				}
-//				ii++
-//			}
-//		}
-//	default:
-//		panic(fmt.Sprintf("Variable %v unknown.\n", Var))
-//	}
-//}
 
 // Read variable from NetCDF file.
 func (d *AIMdata) readNCF(filename string, wg *sync.WaitGroup, Var string) {
@@ -618,6 +447,25 @@ func (d *AIMdata) readNCF(filename string, wg *sync.WaitGroup, Var string) {
 				case "particleDryDep": // 2d variable
 					index = j*jstride + i
 					d.Data[ii].particleDryDep = float64(dat[index])
+				case "Kyy": // convert from unstaggered to staggered
+					jminus := float64(dat[k*kstride+(j-1)*jstride+i])
+					iminus := float64(dat[k*kstride+j*jstride+i-1])
+					val := float64(dat[index])
+					if iminus >= 0 {
+						// calculate harmonic mean between center and west
+						// values to get Kxx at grid edge
+						d.Data[ii].KxxWest = 2 * val * iminus / (val + iminus)
+					} else {
+						d.Data[ii].KxxWest = val
+					}
+					if jminus >= 0 {
+						// calculate harmonic mean between center and south
+						// values to get Kyy at grid edge
+						d.Data[ii].KyySouth = 2 * val * jminus / (val + jminus)
+					} else {
+						d.Data[ii].KyySouth = val
+					}
+
 				default:
 					panic(fmt.Sprintf("Variable %v unknown.\n", Var))
 				}

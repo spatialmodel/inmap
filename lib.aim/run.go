@@ -29,13 +29,10 @@ const (
 	NtoNH4 = mwNH4 / mwN
 )
 
-const tolerance = 0.005       // tolerance for convergence
-const checkPeriod = 3600.      // seconds, how often to check for convergence
-const startupPeriod = 6.       // days
-const calculationPeriod = 6.   // days
-const windChangePeriod = 3600. // seconds, average period for wind velocity changes.
-const secondsPerDay = 1. / 3600. / 24.
-const topLayerToCalc = 28
+const tolerance = 0.005   // tolerance for convergence
+const checkPeriod = 3600. // seconds, how often to check for convergence
+const daysPerSecond = 1. / 3600. / 24.
+const topLayerToCalc = 28 // The top layer to do calculations for
 
 // These are the names of pollutants accepted as emissions (μg/s)
 var EmisNames = []string{"VOC", "NOx", "NH3", "SOx", "PM2_5"}
@@ -88,49 +85,46 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 	timeSinceLastCheck := 0.
 	nprocs := runtime.GOMAXPROCS(0) // number of processors
 	funcChan := make([]chan func(*AIMcell, *AIMdata), nprocs)
-	cellsChan := make([]chan []*AIMcell, nprocs)
 	var wg sync.WaitGroup
-	// All random number generators must have the same seed
-	//seed := time.Now().UnixNano()
-	//r := rand.New(rand.NewSource(seed))
+
 	for procNum := 0; procNum < nprocs; procNum++ {
 		funcChan[procNum] = make(chan func(*AIMcell, *AIMdata), nprocs*10)
-		cellsChan[procNum] = make(chan []*AIMcell, nprocs*10)
 		// Start thread for concurrent computations
 		go d.doScience(nprocs, procNum, funcChan[procNum], &wg)
-		// Start thread for random velocity selection
-		//		go setVelocities(nprocs, procNum, cellsChan[procNum], &wg, seed)
 	}
-	for {
-		d.arrayLock.Lock()
-		// only change the velocities occasionally
-		//		if r.Float64() < d.Dt/windChangePeriod {
-		//			fmt.Println("Changing velocities...")
-		//			// prepare random velocities for this time step
-		//			wg.Add(4 * nprocs)
-		//			for pp := 0; pp < nprocs; pp++ {
-		//				cellsChan[pp] <- d.Data          // set cell velocities
-		//				cellsChan[pp] <- d.eastBoundary  // set east boundary velocities
-		//				cellsChan[pp] <- d.northBoundary // set north boundary velocities
-		//				cellsChan[pp] <- d.topBoundary   // set top boundary velocities
-		///	funcChan[pp] <- SmoothVelocities // smooth velocities to conserve mass
-		//	funcChan[pp] <- SmoothVelocities // smooth velocities to conserve mass
-		//	funcChan[pp] <- SmoothVelocities // smooth velocities to conserve mass
-		//			}
-		//			wg.Wait() // wait for velocity setters
-		//		}
 
-		// Add emissions
-		wg.Add(nprocs)
+	// make list of science functions to run at each timestep
+	scienceFuncs := []func(c *AIMcell, d *AIMdata){
+		func(c *AIMcell, d *AIMdata) { c.RK3advectionPass1(d) },
+		func(c *AIMcell, d *AIMdata) { c.RK3advectionPass2(d) },
+		func(c *AIMcell, d *AIMdata) { c.RK3advectionPass3(d) },
+		func(c *AIMcell, d *AIMdata) {
+			c.Mixing(d.Dt)
+			c.VOCoxidationFlux(d)
+			c.COBRAchemistry(d)
+			c.DryDeposition(d)
+			c.WetDeposition(d.Dt)
+			c.addEmissionsFlux(d)
+		}}
+
+	//d.setTstepCFL(nprocs) // Set time step
+	d.setTstepRuleOfThumb() // Set time step
+
+	for { // Run main calculation loop until pollutant concentrations stabilize
+
+		// Send all of the science functions to the concurrent
+		// processors for calculating
+		d.arrayLock.Lock() // Lock the cell array to avoid race conditions
+		wg.Add(len(scienceFuncs) * nprocs)
 		for pp := 0; pp < nprocs; pp++ {
-			funcChan[pp] <- addemissionsflux // add in emissions
+			for _, function := range scienceFuncs {
+				funcChan[pp] <- function
+			}
 		}
 
-		// do some things while emissions are being added.
+		// do some things while waiting for the science to finish
 		iteration++
-		//d.setTstepCFL(nprocs) // Set time step
-		d.setTstepRuleOfThumb() // Set time step
-		nDaysRun += d.Dt * secondsPerDay
+		nDaysRun += d.Dt * daysPerSecond
 		fmt.Printf("马上。。。Iteration %-4d  walltime=%6.3gh  Δwalltime=%4.2gs  "+
 			"timestep=%2.0fs  day=%.3g\n",
 			iteration, time.Since(startTime).Hours(),
@@ -138,26 +132,10 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 		timeStepTime = time.Now()
 		timeSinceLastCheck += d.Dt
 
-		wg.Wait() // wait for emissions to be added
-		d.arrayLock.Unlock()
+		wg.Wait()            // Wait for the science to finish
+		d.arrayLock.Unlock() // Unlock the cell array: we're done editing it
 
-		// Send all of the science functions to the concurrent
-		// processors for calculating
-		const nSciencFuncs = 8 // This is the number of science functions to wait for
-		wg.Add(nSciencFuncs * nprocs)
-		for pp := 0; pp < nprocs; pp++ {
-			funcChan[pp] <- rk3AdvectionStep1
-			funcChan[pp] <- rk3AdvectionStep2
-			funcChan[pp] <- rk3AdvectionStep3
-			funcChan[pp] <- verticalMixing
-			funcChan[pp] <- dryDeposition
-			funcChan[pp] <- vOCoxidationFlux
-			funcChan[pp] <- wetDeposition
-			//funcChan[pp] <- chemicalPartitioning
-			funcChan[pp] <- cobraChemistry
-		}
-		wg.Wait()
-
+		// Occasionally, check to see if the pollutant concentrations have converged
 		timeToQuit := true
 		if timeSinceLastCheck >= checkPeriod {
 			timeSinceLastCheck = 0.
@@ -176,6 +154,7 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 			}
 		}
 	}
+	// Prepare output data
 	outputConc = make(map[string]*sparse.DenseArray)
 	for _, pol := range OutputNames {
 		if pol == "TotalPM2_5" {
@@ -185,7 +164,7 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 				outputConc[pol].AddDense(outputConc[subspecies])
 			}
 		} else {
-			outputConc[pol] = d.ToArray(pol, "instantaneous")
+			outputConc[pol] = d.ToArray(pol)
 		}
 	}
 	return
@@ -224,93 +203,45 @@ func (d *AIMdata) addEmisFlux(arr *sparse.DenseArray, scale float64, iPol int) {
 }
 
 // Convert the concentration data into a regular array
-func (d *AIMdata) ToArray(pol string, Type string) *sparse.DenseArray {
-	if Type != "instantaneous" && Type != "average" {
-		panic(fmt.Sprintf("Unknown array type `%v`.", Type))
-	}
+func (d *AIMdata) ToArray(pol string) *sparse.DenseArray {
 	o := sparse.ZerosDense(d.Nz, d.Ny, d.Nx)
 	d.arrayLock.RLock()
 	switch pol {
 	case "VOC":
 		for i, c := range d.Data {
-			switch Type {
-			case "instantaneous":
-				o.Elements[i] = c.Cf[igOrg]
-			case "average":
-				o.Elements[i] = c.Csum[igOrg]
-			}
+			o.Elements[i] = c.Cf[igOrg]
 		}
 	case "SOA":
 		for i, c := range d.Data {
-			switch Type {
-			case "instantaneous":
-				o.Elements[i] = c.Cf[ipOrg]
-			case "average":
-				o.Elements[i] = c.Csum[ipOrg]
-			}
+			o.Elements[i] = c.Cf[ipOrg]
 		}
 	case "PrimaryPM2_5":
 		for i, c := range d.Data {
-			switch Type {
-			case "instantaneous":
-				o.Elements[i] = c.Cf[iPM2_5]
-			case "average":
-				o.Elements[i] = c.Csum[iPM2_5]
-			}
+			o.Elements[i] = c.Cf[iPM2_5]
 		}
 	case "NH3":
 		for i, c := range d.Data {
-			switch Type {
-			case "instantaneous":
-				o.Elements[i] = c.Cf[igNH] / NH3ToN
-			case "average":
-				o.Elements[i] = c.Csum[igNH] / NH3ToN
-			}
+			o.Elements[i] = c.Cf[igNH] / NH3ToN
 		}
 	case "pNH4":
 		for i, c := range d.Data {
-			switch Type {
-			case "instantaneous":
-				o.Elements[i] = c.Cf[ipNH] * NtoNH4
-			case "average":
-				o.Elements[i] = c.Csum[ipNH] * NtoNH4
-			}
+			o.Elements[i] = c.Cf[ipNH] * NtoNH4
 		}
 	case "SOx":
 		for i, c := range d.Data {
-			switch Type {
-			case "instantaneous":
-				o.Elements[i] = c.Cf[igS] / SOxToS
-			case "average":
-				o.Elements[i] = c.Csum[igS] / SOxToS
-			}
+			o.Elements[i] = c.Cf[igS] / SOxToS
 		}
 	case "pSO4":
 		for i, c := range d.Data {
-			switch Type {
-			case "instantaneous":
-				o.Elements[i] = c.Cf[ipS] * StoSO4
-			case "average":
-				o.Elements[i] = c.Csum[ipS] * StoSO4
-			}
+			o.Elements[i] = c.Cf[ipS] * StoSO4
 		}
 	case "NOx":
 		for i, c := range d.Data {
-			switch Type {
-			case "instantaneous":
-				o.Elements[i] = c.Cf[igNO] / NOxToN
-			case "average":
-				o.Elements[i] = c.Csum[igNO] / NOxToN
-			}
+			o.Elements[i] = c.Cf[igNO] / NOxToN
 		}
 	case "pNO3":
 		for i, c := range d.Data {
-			switch Type {
-			case "instantaneous":
-				o.Elements[i] = c.Cf[ipNO] * NtoNO3
-			case "average":
-				o.Elements[i] = c.Csum[ipNO] * NtoNO3
-			}
+			o.Elements[i] = c.Cf[ipNO] * NtoNO3
 		}
 	case "VOCemissions":
 		for i, c := range d.Data {
@@ -332,18 +263,30 @@ func (d *AIMdata) ToArray(pol string, Type string) *sparse.DenseArray {
 		for i, c := range d.Data {
 			o.Elements[i] = c.emisFlux[iPM2_5]
 		}
-		//	case "U":
-		//		for i, c := range d.Data {
-		//			o.Elements[i] = c.Uwest
-		//		}
-		//	case "V":
-		//		for i, c := range d.Data {
-		//			o.Elements[i] = c.Vsouth
-		//		}
-		//	case "W":
-		//		for i, c := range d.Data {
-		//			o.Elements[i] = c.Wbelow
-		//		}
+	case "uWestSpeed":
+		for i, c := range d.Data {
+			o.Elements[i] = c.uWestSpeed
+		}
+	case "uEastSpeed":
+		for i, c := range d.Data {
+			o.Elements[i] = c.uEastSpeed
+		}
+	case "vNorthSpeed":
+		for i, c := range d.Data {
+			o.Elements[i] = c.vNorthSpeed
+		}
+	case "vSouthSpeed":
+		for i, c := range d.Data {
+			o.Elements[i] = c.vSouthSpeed
+		}
+	case "wAboveSpeed":
+		for i, c := range d.Data {
+			o.Elements[i] = c.wAboveSpeed
+		}
+	case "wBelowSpeed":
+		for i, c := range d.Data {
+			o.Elements[i] = c.wBelowSpeed
+		}
 	case "Organicpartitioning":
 		for i, c := range d.Data {
 			o.Elements[i] = c.orgPartitioning
@@ -388,11 +331,6 @@ func (d *AIMdata) ToArray(pol string, Type string) *sparse.DenseArray {
 		for i, c := range d.Data {
 			o.Elements[i] = c.kPblTop
 		}
-		//	case "velocityImbalance":
-		//		for i, c := range d.Data {
-		//			o.Elements[i] = c.Uwest - c.East.Uwest +
-		//				c.Vsouth - c.North.Vsouth
-		//		}
 	default:
 		panic(fmt.Sprintf("Unknown variable %v.", pol))
 	}

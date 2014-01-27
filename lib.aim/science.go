@@ -14,23 +14,18 @@ const (
 	kappa = 0.4     // von karmon's constant
 )
 
-func min(v1, v2 float64) float64 {
-	if v1 < v2 {
-		return v1
-	} else {
-		return v2
-	}
-}
-
+// Calculates settling velocity [m/s] based on
+// Stokes law, with no slip correction.
 func (d *AIMdata) SettlingVelocity() {
-	// Settling velocity, m/s
 	d.vs = (rhop - rhof) * g * dp * dp / -18. / mu
-	fmt.Printf("Settling velocity: %v s\n", d.vs)
 }
 
-// Calculate vertical mixing based on Pleim (2007) for
+// Calculate vertical mixing based on Pleim (2007), which is
+// combined local-nonlocal closure scheme, for
 // boundary layer and Wilson (2004) for above the boundary layer.
-func (c *AIMcell) VerticalMixing(Δt float64) {
+// Also calculate horizontal mixing assuming that Kxx and Kyy
+// are the same as Kzz.
+func (c *AIMcell) Mixing(Δt float64) {
 	a := c.Above
 	b := c.Below
 	g := c.GroundLevel
@@ -40,75 +35,41 @@ func (c *AIMcell) VerticalMixing(Δt float64) {
 			c.Cf[ii] += (g.M2u*g.Ci[ii] - c.M2d*c.Ci[ii] +
 				a.M2d*a.Ci[ii]*a.Dz/c.Dz +
 				1./c.Dz*(a.Kz*(a.Ci[ii]-c.Ci[ii])/c.dzPlusHalf+
-					c.Kz*(b.Ci[ii]-c.Ci[ii])/c.dzMinusHalf)) * Δt //* 0.1 //////////////////////////////////////////////////////////////////////////////////////////
-			// Horizontal mixing
-			//const Kyy = 100000. // m2/s /////////////////////////////////////////////////////////////////////////////////////////////////
-			//c.Cf[ii] += 1. / c.Dx * (Kyy*(c.East.Ci[ii]-c.Ci[ii])/c.Dx +
-			//	Kyy*(c.West.Ci[ii]-c.Ci[ii])/c.Dx) * Δt
-			//c.Cf[ii] += 1. / c.Dy * (Kyy*(c.North.Ci[ii]-c.Ci[ii])/c.Dy +
-			//	Kyy*(c.South.Ci[ii]-c.Ci[ii])/c.Dy) * Δt
-
+					c.Kz*(b.Ci[ii]-c.Ci[ii])/c.dzMinusHalf)) * Δt
 		} else { // Above boundary layer: no convective or horizontal mixing
 			c.Cf[ii] += 1. / c.Dz * (a.Kz*(a.Ci[ii]-c.Ci[ii])/c.dzPlusHalf +
 				c.Kz*(b.Ci[ii]-c.Ci[ii])/c.dzMinusHalf) * Δt * 3. //////////////////////////////////////////////////////////////////////////////////
 		}
 	}
+	// Horizontal mixing
+	c.Cf[ii] += 1. / c.Dx * (c.KxxEast*(c.East.Ci[ii]-c.Ci[ii])/c.Dx +
+		c.West.KxxEast*(c.West.Ci[ii]-c.Ci[ii])/c.Dx) * Δt
+	c.Cf[ii] += 1. / c.Dy * (c.KyySouth*(c.North.Ci[ii]-c.Ci[ii])/c.Dy +
+		c.North.KyySouth*(c.South.Ci[ii]-c.Ci[ii])/c.Dy) * Δt
 }
 
-var verticalMixing = func(c *AIMcell, d *AIMdata) {
-	c.VerticalMixing(d.Dt)
-}
-
-// The second through sixth-order flux-form spatial approximations for
-// δ(uq)/δx. From equation 4 from Wicker and Skamarock (2002),
-// except for second order flux which is from WRF subroutine
-// "advect_scalar".
-func rkFlux2(q_im1, q_i, ua float64) float64 {
-	return 0.5 * ua * (q_i + q_im1)
-}
-func rkFlux4(q_im2, q_im1, q_i, q_ip1, ua float64) float64 {
-	return ua * (7.*(q_i+q_im1) - (q_ip1 + q_im2)) / 12.0
-}
-func rkFlux3(q_im2, q_im1, q_i, q_ip1, ua float64) float64 {
-	return rkFlux4(q_im2, q_im1, q_i, q_ip1, ua) +
-		math.Abs(ua)*((q_ip1-q_im2)-3.*(q_i-q_im1))/12.0
-}
-func rkFlux6(q_im3, q_im2, q_im1, q_i, q_ip1, q_ip2, ua float64) float64 {
-	return ua * (37.*(q_i+q_im1) - 8.*(q_ip1+q_im2) + (q_ip2 + q_im3)) / 60.0
-}
-func rkFlux5(q_im3, q_im2, q_im1, q_i, q_ip1, q_ip2, ua float64) float64 {
-	return rkFlux6(q_im3, q_im2, q_im1, q_i, q_ip1, q_ip2, ua) -
-		math.Abs(ua)*((q_ip2-q_im3)-5.*(q_ip1-q_im2)+10.*(q_i-q_im1))/60.0
-}
-
-// Upwind flux-form spatial approximation for δ(uq)/δx.
-func upwindFlux(q_im1, q_i, ua float64) float64 {
-	if ua > 0. {
-		return ua * q_im1
-	} else {
-		return ua * q_i
-	}
-}
-
-// Get advective flux in West and East directions
+// Calculates advective flux in West and East directions
+// using upwind flux-form spatial approximation for δ(uq)/δx.
 func (c *AIMcell) westEastFlux(ii int) float64 {
 	return c.West.uPlusSpeed*c.West.Ci[ii] - c.Ci[ii]*c.uMinusSpeed +
 		c.East.uMinusSpeed*c.East.Ci[ii] - c.Ci[ii]*c.uPlusSpeed
 }
 
-// Get advective flux in South and North directions
+// Calculates advective flux in South and North directions
+// using upwind flux-form spatial approximation for δ(uq)/δx.
 func (c *AIMcell) southNorthFlux(ii int) float64 {
 	return c.South.vPlusSpeed*c.South.Ci[ii] - c.Ci[ii]*c.vMinusSpeed +
 		c.North.vMinusSpeed*c.North.Ci[ii] - c.Ci[ii]*c.vPlusSpeed
 }
 
-// Get advective flux in Below and Above directions
+// Calculates advective flux in Below and Above directions
+// using upwind flux-form spatial approximation for δ(uq)/δx.
 func (c *AIMcell) belowAboveFlux(ii int) float64 {
 	return c.Below.wPlusSpeed*c.Below.Ci[ii] - c.Ci[ii]*c.wMinusSpeed +
 		c.Above.wMinusSpeed*c.Above.Ci[ii] - c.Ci[ii]*c.wPlusSpeed
 }
 
-// Calculates advective flux in the cell based
+// Calculates advection in the cell based
 // on a third order Runge-Kutta scheme
 // from Wicker and Skamarock (2002) Equation 3a.
 func (c *AIMcell) RK3advectionPass1(d *AIMdata) {
@@ -127,7 +88,7 @@ func (c *AIMcell) RK3advectionPass1(d *AIMdata) {
 	return
 }
 
-// Calculates advective flux in the cell based
+// Calculates advection in the cell based
 // on a third order Runge-Kutta scheme
 // from Wicker and Skamarock (2002) Equation 3b.
 func (c *AIMcell) RK3advectionPass2(d *AIMdata) {
@@ -146,7 +107,7 @@ func (c *AIMcell) RK3advectionPass2(d *AIMdata) {
 	return
 }
 
-// Calculates advective flux in the cell based
+// Calculates advection flux in the cell based
 // on a third order Runge-Kutta scheme
 // from Wicker and Skamarock (2002) Equation 3c.
 func (c *AIMcell) RK3advectionPass3(d *AIMdata) {
@@ -161,27 +122,8 @@ func (c *AIMcell) RK3advectionPass3(d *AIMdata) {
 		// k direction
 		flux = c.belowAboveFlux(ii)
 		c.Cf[ii] += d.Dt / c.Dz * flux
-		if math.IsNaN(c.Cf[ii]) {
-			panic(fmt.Sprintf("Found a NaN value. Pol: %v, k=%v, j=%v, i=%v",
-				polNames[ii], c.k, c.j, c.i))
-		}
-		//		if math.Abs(c.Cf[ii]-c.Ci[ii]) > 1. {
-		//			c.Cf[ii] = c.Ci[ii]
-		//		}
 	}
 	return
-}
-
-var rk3AdvectionStep1 = func(c *AIMcell, d *AIMdata) {
-	c.RK3advectionPass1(d)
-}
-
-var rk3AdvectionStep2 = func(c *AIMcell, d *AIMdata) {
-	c.RK3advectionPass2(d)
-}
-
-var rk3AdvectionStep3 = func(c *AIMcell, d *AIMdata) {
-	c.RK3advectionPass3(d)
 }
 
 // Partitions organic matter ("gOrg" and "pOrg"), the
@@ -206,10 +148,6 @@ func (c *AIMcell) ChemicalPartitioning() {
 	totalNH := c.Cf[igNH] + c.Cf[ipNH]
 	c.Cf[igNH] = totalNH * c.NHPartitioning
 	c.Cf[ipNH] = totalNH * (1 - c.NHPartitioning)
-}
-
-var chemicalPartitioning = func(c *AIMcell, d *AIMdata) {
-	c.ChemicalPartitioning()
 }
 
 // Calculates the secondary formation of PM2.5 based on the
@@ -272,17 +210,9 @@ func (c *AIMcell) COBRAchemistry(d *AIMdata) {
 
 }
 
-var cobraChemistry = func(c *AIMcell, d *AIMdata) {
-	c.COBRAchemistry(d)
-}
-
 // VOC oxidation flux
 func (c *AIMcell) VOCoxidationFlux(d *AIMdata) {
 	c.Cf[igOrg] -= c.Ci[igOrg] * d.VOCoxidationRate * d.Dt
-}
-
-var vOCoxidationFlux = func(c *AIMcell, d *AIMdata) {
-	c.VOCoxidationFlux(d)
 }
 
 // Caluclates Dry deposition using deposition velocities from Muller and
@@ -316,10 +246,6 @@ func (c *AIMcell) DryDeposition(d *AIMdata) {
 	}
 }
 
-var dryDeposition = func(c *AIMcell, d *AIMdata) {
-	c.DryDeposition(d)
-}
-
 func (c *AIMcell) WetDeposition(Δt float64) {
 	particleFrac := 1. - c.wdParticle*Δt
 	SO2Frac := 1. - c.wdSO2*Δt
@@ -335,11 +261,15 @@ func (c *AIMcell) WetDeposition(Δt float64) {
 	c.Cf[ipNO] *= particleFrac   // pNO
 }
 
-var wetDeposition = func(c *AIMcell, d *AIMdata) {
-	c.WetDeposition(d.Dt)
-}
-
 // convert float to int (rounding)
 func f2i(f float64) int {
 	return int(f + 0.5)
+}
+
+func min(v1, v2 float64) float64 {
+	if v1 < v2 {
+		return v1
+	} else {
+		return v2
+	}
 }
