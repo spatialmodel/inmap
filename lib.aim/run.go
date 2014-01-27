@@ -29,7 +29,7 @@ const (
 	NtoNH4 = mwNH4 / mwN
 )
 
-const tolerance = 0.001       // tolerance for convergence
+const tolerance = 0.005       // tolerance for convergence
 const checkPeriod = 3600.      // seconds, how often to check for convergence
 const startupPeriod = 6.       // days
 const calculationPeriod = 6.   // days

@@ -20,10 +20,9 @@ const (
 	wrfout     = "/home/marshall/tessumcm/WRFchem_output/WRF.2005_nei.na12.chem.3.4/output/wrfout_d01_[DATE]"
 	outputFile = "aimData.ncf"
 	startDate  = "20050101"
-	//endDate    = "20051231"
-	endDate   = "20050101"
-	nWindBins = 20 // number of bins for wind speed
-	nProcs    = 16 // number of processors to use
+	endDate    = "20051231"
+	//endDate = "20050101"
+	nProcs  = 16 // number of processors to use
 
 	// non-user settings
 	wrfFormat    = "2006-01-02_15_04_05"
@@ -108,13 +107,12 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 
-	// calculate wind speed bins
-	windBinsChanU := make(chan *sparse.DenseArray)
-	go calcWindBins(windBinsChanU)
-	windBinsChanV := make(chan *sparse.DenseArray)
-	go calcWindBins(windBinsChanV)
-	windBinsChanW := make(chan *sparse.DenseArray)
-	go calcWindBins(windBinsChanW)
+	// calculate wind speed and direction
+	windDirectionChanU := make(chan *sparse.DenseArray)
+	windDirectionChanV := make(chan *sparse.DenseArray)
+	windDirectionChanW := make(chan *sparse.DenseArray)
+	go calcWindDirection(windDirectionChanU, windDirectionChanV,
+		windDirectionChanW)
 	ustarChan := make(chan *sparse.DenseArray)
 	go average(ustarChan)
 	pblhChan := make(chan *sparse.DenseArray)
@@ -132,17 +130,17 @@ func main() {
 	wAvgChan := make(chan *sparse.DenseArray)
 	go windSpeed(uAvgChan, vAvgChan, wAvgChan)
 
-	iterateTimeSteps("Reading data for bin sizes: ",
-		readSingleVar("U", windBinsChanU, uAvgChan),
-		readSingleVar("V", windBinsChanV, vAvgChan),
-		readSingleVar("W", windBinsChanW, wAvgChan),
+	iterateTimeSteps("Reading data--pass 1: ",
+		readSingleVar("U", windDirectionChanU, uAvgChan),
+		readSingleVar("V", windDirectionChanV, vAvgChan),
+		readSingleVar("W", windDirectionChanW, wAvgChan),
 		readSingleVar("UST", ustarChan),
 		readSingleVar("PBLH", pblhChan),
 		readSingleVar("PH", phChan), readSingleVar("PHB", phbChan),
 		readSingleVar("QRAIN", qrainChan), readSingleVar("ALT", altChan))
-	windBinsChanU <- nil
-	windBinsChanV <- nil
-	windBinsChanW <- nil
+	windDirectionChanU <- nil
+	windDirectionChanV <- nil
+	windDirectionChanW <- nil
 	ustarChan <- nil
 	pblhChan <- nil
 	phChan <- nil
@@ -152,9 +150,12 @@ func main() {
 	uAvgChan <- nil
 	vAvgChan <- nil
 	wAvgChan <- nil
-	windBinsU := <-windBinsChanU
-	windBinsV := <-windBinsChanV
-	windBinsW := <-windBinsChanW
+	uPlusSpeed := <-windDirectionChanU
+	uMinusSpeed := <-windDirectionChanU
+	vPlusSpeed := <-windDirectionChanU
+	vMinusSpeed := <-windDirectionChanU
+	wPlusSpeed := <-windDirectionChanU
+	wMinusSpeed := <-windDirectionChanU
 	ustar := <-ustarChan
 	pblh := <-pblhChan
 	ph := <-phChan
@@ -165,14 +166,6 @@ func main() {
 
 	layerHeights := calcLayerHeights(ph, phb)
 	wdParticle, wdSO2, wdOtherGas := calcWetDeposition(qrain, alt)
-
-	// fill wind speed bins with data
-	windStatsChanU := make(chan *sparse.DenseArray)
-	go calcWindStats(windBinsU, windStatsChanU)
-	windStatsChanV := make(chan *sparse.DenseArray)
-	go calcWindStats(windBinsV, windStatsChanV)
-	windStatsChanW := make(chan *sparse.DenseArray)
-	go calcWindStats(windBinsW, windStatsChanW)
 
 	// calculate gas/particle partitioning
 	VOCchan := make(chan *sparse.DenseArray)
@@ -199,9 +192,7 @@ func main() {
 	go StabilityMixingChemistry(layerHeights, ustar, pblh, alt,
 		Tchan, PBchan, Pchan, surfaceHeatFluxChan, hoChan, luIndexChan)
 
-	iterateTimeSteps("Reading data for concentrations and bin frequencies: ",
-		readSingleVar("U", windStatsChanU), readSingleVar("V", windStatsChanV),
-		readSingleVar("W", windStatsChanW),
+	iterateTimeSteps("Reading data--pass 2: ",
 		readGasGroup(VOC, VOCchan), readParticleGroup(SOA, SOAchan),
 		readGasGroup(NOx, NOxchan), readParticleGroup(pNO, pNOchan),
 		readGasGroup(SOx, SOxchan), readParticleGroup(pS, pSchan),
@@ -211,12 +202,6 @@ func main() {
 		readSingleVar("P", Pchan), readSingleVar("ho", hoChan),
 		readSingleVar("LU_INDEX", luIndexChan))
 
-	windStatsChanU <- nil
-	windStatsChanV <- nil
-	windStatsChanW <- nil
-	windStatsU := <-windStatsChanU
-	windStatsV := <-windStatsChanV
-	windStatsW := <-windStatsChanW
 	VOCchan <- nil
 	NOxchan <- nil
 	SOxchan <- nil
@@ -248,38 +233,69 @@ func main() {
 	pblTopLayer := <-Tchan
 	SO2oxidation := <-Tchan
 	particleDryDep := <-Tchan
+	Kyy := <-Tchan
 
 	// write out data to file
 	fmt.Printf("Writing out data to %v...\n", outputFile)
 	h := cdf.NewHeader(
-		[]string{"bins",
-			"x", "xStagger",
-			"y", "yStagger",
-			"z", "zStagger"},
-		[]int{nWindBins + 1,
-			windStatsV.Shape[3], windStatsU.Shape[3],
-			windStatsU.Shape[2], windStatsV.Shape[2],
-			windStatsU.Shape[1], windStatsW.Shape[1]})
+		[]string{"x", "y", "z", "zStagger"},
+		[]int{windSpeed.Shape[2], windSpeed.Shape[1], windSpeed.Shape[0],
+			windSpeed.Shape[0] + 1})
 	h.AddAttribute("", "comment", "Meteorology and baseline chemistry data file")
-	h.AddVariable("Ubins", []string{"bins", "z", "y", "xStagger"}, []float32{0})
-	h.AddAttribute("Ubins", "description", "Centers of U velocity bins")
-	h.AddAttribute("Ubins", "units", "m/s")
-	h.AddVariable("Vbins", []string{"bins", "z", "yStagger", "x"}, []float32{0})
-	h.AddAttribute("Vbins", "description", "Centers of W velocity bins")
-	h.AddAttribute("Vbins", "units", "m/s")
-	h.AddVariable("Wbins", []string{"bins", "zStagger", "y", "x"}, []float32{0})
-	h.AddAttribute("Wbins", "description", "Centers of W velocity bins")
-	h.AddAttribute("Wbins", "units", "m/s")
 
-	h.AddVariable("Ufreq", []string{"bins", "z", "y", "xStagger"}, []float32{0})
-	h.AddAttribute("Ufreq", "description", "Frequencies U velocity bins")
-	h.AddAttribute("Ufreq", "units", "fraction")
-	h.AddVariable("Vfreq", []string{"bins", "z", "yStagger", "x"}, []float32{0})
-	h.AddAttribute("Vfreq", "description", "Freqencies for W velocity bins")
-	h.AddAttribute("Vfreq", "units", "fraction")
-	h.AddVariable("Wfreq", []string{"bins", "zStagger", "y", "x"}, []float32{0})
-	h.AddAttribute("Wfreq", "description", "Frequencies for W velocity bins")
-	h.AddAttribute("Wfreq", "units", "fraction")
+	h.AddVariable("uPlusFrac", []string{"z", "y", "x"}, []float32{0})
+	h.AddAttribute("uPlusFrac", "description",
+		"Fraction of wind going toward +U direction")
+	h.AddAttribute("uPlusFrac", "units", "fraction")
+	h.AddVariable("uPlusSpeed", []string{"z", "y", "x"}, []float32{0})
+	h.AddAttribute("uPlusSpeed", "description",
+		"Average speed of wind going in +U direction")
+	h.AddAttribute("uPlusSpeed", "units", "m/s")
+
+	h.AddVariable("uMinusFrac", []string{"z", "y", "x"}, []float32{0})
+	h.AddAttribute("uMinusFrac", "description",
+		"Fraction of wind going toward -U direction")
+	h.AddAttribute("uMinusFrac", "units", "fraction")
+	h.AddVariable("uMinusSpeed", []string{"z", "y", "x"}, []float32{0})
+	h.AddAttribute("uMinusSpeed", "description",
+		"Average speed of wind going in -U direction")
+	h.AddAttribute("uMinusSpeed", "units", "m/s")
+
+	h.AddVariable("vPlusFrac", []string{"z", "y", "x"}, []float32{0})
+	h.AddAttribute("vPlusFrac", "description",
+		"Fraction of wind going toward +V direction")
+	h.AddAttribute("vPlusFrac", "units", "fraction")
+	h.AddVariable("vPlusSpeed", []string{"z", "y", "x"}, []float32{0})
+	h.AddAttribute("vPlusSpeed", "description",
+		"Average speed of wind going in +V direction")
+	h.AddAttribute("vPlusSpeed", "units", "m/s")
+
+	h.AddVariable("vMinusFrac", []string{"z", "y", "x"}, []float32{0})
+	h.AddAttribute("vMinusFrac", "description",
+		"Fraction of wind going toward -V direction")
+	h.AddAttribute("vMinusFrac", "units", "fraction")
+	h.AddVariable("vMinusSpeed", []string{"z", "y", "x"}, []float32{0})
+	h.AddAttribute("vMinusSpeed", "description",
+		"Average speed of wind going in -V direction")
+	h.AddAttribute("vMinusSpeed", "units", "m/s")
+
+	h.AddVariable("wPlusFrac", []string{"z", "y", "x"}, []float32{0})
+	h.AddAttribute("wPlusFrac", "description",
+		"Fraction of wind going toward +W direction")
+	h.AddAttribute("wPlusFrac", "units", "fraction")
+	h.AddVariable("wPlusSpeed", []string{"z", "y", "x"}, []float32{0})
+	h.AddAttribute("wPlusSpeed", "description",
+		"Average speed of wind going in +W direction")
+	h.AddAttribute("wPlusSpeed", "units", "m/s")
+
+	h.AddVariable("wMinusFrac", []string{"z", "y", "x"}, []float32{0})
+	h.AddAttribute("wMinusFrac", "description",
+		"Fraction of wind going toward -W direction")
+	h.AddAttribute("wMinusFrac", "units", "fraction")
+	h.AddVariable("wMinusSpeed", []string{"z", "y", "x"}, []float32{0})
+	h.AddAttribute("wMinusSpeed", "description",
+		"Average speed of wind going in -W direction")
+	h.AddAttribute("wMinusSpeed", "units", "m/s")
 
 	h.AddVariable("orgPartitioning", []string{"z", "y", "x"}, []float32{0})
 	h.AddAttribute("orgPartitioning", "description", "Mass fraction of organic matter in gas (vs. particle) phase")
@@ -328,6 +344,10 @@ func main() {
 	h.AddVariable("particleDryDep", []string{"y", "x"}, []float32{0})
 	h.AddAttribute("particleDryDep", "description", "Dry deposition velocity for particles")
 	h.AddAttribute("particleDryDep", "units", "m s-1")
+
+	h.AddVariable("Kyy", []string{"z", "y", "x"}, []float32{0})
+	h.AddAttribute("Kyy", "description", "Horizontal eddy diffusion coefficient")
+	h.AddAttribute("Kyy", "units", "m2 s-1")
 
 	h.AddVariable("layerHeights", []string{"zStagger", "y", "x"}, []float32{0})
 	h.AddAttribute("layerHeights", "description", "Height at edge of layer")
@@ -393,12 +413,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	writeNCF(f, "Ubins", windBinsU)
-	writeNCF(f, "Vbins", windBinsV)
-	writeNCF(f, "Wbins", windBinsW)
-	writeNCF(f, "Ufreq", statsCumulative(windStatsU))
-	writeNCF(f, "Vfreq", statsCumulative(windStatsV))
-	writeNCF(f, "Wfreq", statsCumulative(windStatsW))
+	writeNCF(f, "uPlusSpeed", uPlusSpeed)
+	writeNCF(f, "uMinusSpeed", uMinusSpeed)
+	writeNCF(f, "vPlusSpeed", vPlusSpeed)
+	writeNCF(f, "vMinusSpeed", vMinusSpeed)
+	writeNCF(f, "wPlusSpeed", wPlusSpeed)
+	writeNCF(f, "wMinusSpeed", wMinusSpeed)
 	writeNCF(f, "orgPartitioning", orgPartitioning)
 	writeNCF(f, "VOC", VOC)
 	writeNCF(f, "SOA", SOA)
@@ -427,6 +447,11 @@ func main() {
 	writeNCF(f, "Sclass", Sclass)
 	writeNCF(f, "SO2oxidation", SO2oxidation)
 	writeNCF(f, "particleDryDep", particleDryDep)
+	writeNCF(f, "Kyy", Kyy)
+	err = cdf.UpdateNumRecs(ff)
+	if err != nil {
+		panic(err)
+	}
 	ff.Close()
 }
 
@@ -577,118 +602,118 @@ func writeNCF(f *cdf.File, Var string, data *sparse.DenseArray) {
 	}
 }
 
-func initBins(data *sparse.DenseArray, nbins int) *sparse.DenseArray {
-	dims := make([]int, len(data.Shape)+1)
-	dims[0] = nbins
-	for i, d := range data.Shape {
-		dims[i+1] = d
-	}
-	return sparse.ZerosDense(dims...)
-}
+//func initBins(data *sparse.DenseArray, nbins int) *sparse.DenseArray {
+//	dims := make([]int, len(data.Shape)+1)
+//	dims[0] = nbins
+//	for i, d := range data.Shape {
+//		dims[i+1] = d
+//	}
+//	return sparse.ZerosDense(dims...)
+//}
+//
+//func calcWindBins(datachan chan *sparse.DenseArray) {
+//	var bins, max, min *sparse.DenseArray
+//	firstData := true
+//	for {
+//		data := <-datachan
+//		if data == nil {
+//			fmt.Println("Calculating bin edges...")
+//			for i := 0; i < bins.Shape[1]; i++ {
+//				for j := 0; j < bins.Shape[2]; j++ {
+//					for k := 0; k < bins.Shape[3]; k++ {
+//						maxval := max.Get(i, j, k)
+//						minval := min.Get(i, j, k)
+//						for b := 0; b <= nWindBins; b++ {
+//							edge := minval + float64(b)/float64(nWindBins)*
+//								(maxval-minval)
+//							bins.Set(edge, b, i, j, k)
+//						}
+//					}
+//				}
+//			}
+//			datachan <- bins
+//			return
+//		}
+//		if firstData {
+//			bins = initBins(data, nWindBins+1)
+//			max = sparse.ZerosDense(data.Shape...)
+//			min = sparse.ZerosDense(data.Shape...)
+//			firstData = false
+//		}
+//		for i, e := range data.Elements {
+//			if e > max.Elements[i] {
+//				max.Elements[i] = e
+//			}
+//			if e < min.Elements[i] {
+//				min.Elements[i] = e
+//			}
+//		}
+//	}
+//}
 
-func calcWindBins(datachan chan *sparse.DenseArray) {
-	var bins, max, min *sparse.DenseArray
-	firstData := true
-	for {
-		data := <-datachan
-		if data == nil {
-			fmt.Println("Calculating bin edges...")
-			for i := 0; i < bins.Shape[1]; i++ {
-				for j := 0; j < bins.Shape[2]; j++ {
-					for k := 0; k < bins.Shape[3]; k++ {
-						maxval := max.Get(i, j, k)
-						minval := min.Get(i, j, k)
-						for b := 0; b <= nWindBins; b++ {
-							edge := minval + float64(b)/float64(nWindBins)*
-								(maxval-minval)
-							bins.Set(edge, b, i, j, k)
-						}
-					}
-				}
-			}
-			datachan <- bins
-			return
-		}
-		if firstData {
-			bins = initBins(data, nWindBins+1)
-			max = sparse.ZerosDense(data.Shape...)
-			min = sparse.ZerosDense(data.Shape...)
-			firstData = false
-		}
-		for i, e := range data.Elements {
-			if e > max.Elements[i] {
-				max.Elements[i] = e
-			}
-			if e < min.Elements[i] {
-				min.Elements[i] = e
-			}
-		}
-	}
-}
-
-// calculate the fraction of time steps with wind speeds in each bin
-func calcWindStats(bins *sparse.DenseArray, datachan chan *sparse.DenseArray) {
-	var stats *sparse.DenseArray
-	firstData := true
-	for {
-		data := <-datachan
-		if data == nil {
-			// make sure frequencies add up to 1
-			for i := 0; i < bins.Shape[1]; i++ {
-				for j := 0; j < bins.Shape[2]; j++ {
-					for k := 0; k < bins.Shape[3]; k++ {
-						total := 0.
-						for b := 0; b < bins.Shape[0]; b++ {
-							total += stats.Get(b, i, j, k)
-						}
-						if total-1 > tolerance || total-1 < -1.*tolerance {
-							panic(fmt.Sprintf("Fractions add up to %v, not 1!",
-								total))
-						}
-					}
-				}
-			}
-
-			datachan <- stats
-			return
-		}
-		if firstData {
-			stats = initBins(data, nWindBins+1)
-			firstData = false
-		}
-		type empty struct{}
-		sem := make(chan empty, bins.Shape[1]) // semaphore pattern
-		for i := 0; i < bins.Shape[1]; i++ {
-			go func(i int) { // concurrent processing
-				for j := 0; j < bins.Shape[2]; j++ {
-					for k := 0; k < bins.Shape[3]; k++ {
-						val := data.Get(i, j, k)
-						if val+tolerance < bins.Get(0, i, j, k) {
-							panic(fmt.Sprintf(
-								"Value %v is less than minimum bin %v.",
-								val, bins.Get(0, i, j, k)))
-						}
-						if val-tolerance > bins.Get(nWindBins, i, j, k) {
-							panic(fmt.Sprintf(
-								"Value %v is more than maximum bin %v.\n",
-								val, bins.Get(nWindBins, i, j, k)))
-						}
-						for b := 0; b < bins.Shape[0]; b++ {
-							if val <= bins.Get(b, i, j, k) {
-								stats.AddVal(1./numTsteps, b, i, j, k)
-								break
-							}
-						}
-					}
-				}
-				sem <- empty{}
-			}(i)
-		}
-		for i := 0; i < bins.Shape[1]; i++ { // wait for routines to finish
-			<-sem
-		}
-	}
-}
+//// calculate the fraction of time steps with wind speeds in each bin
+//func calcWindStats(bins *sparse.DenseArray, datachan chan *sparse.DenseArray) {
+//	var stats *sparse.DenseArray
+//	firstData := true
+//	for {
+//		data := <-datachan
+//		if data == nil {
+//			// make sure frequencies add up to 1
+//			for i := 0; i < bins.Shape[1]; i++ {
+//				for j := 0; j < bins.Shape[2]; j++ {
+//					for k := 0; k < bins.Shape[3]; k++ {
+//						total := 0.
+//						for b := 0; b < bins.Shape[0]; b++ {
+//							total += stats.Get(b, i, j, k)
+//						}
+//						if total-1 > tolerance || total-1 < -1.*tolerance {
+//							panic(fmt.Sprintf("Fractions add up to %v, not 1!",
+//								total))
+//						}
+//					}
+//				}
+//			}
+//
+//			datachan <- stats
+//			return
+//		}
+//		if firstData {
+//			stats = initBins(data, nWindBins+1)
+//			firstData = false
+//		}
+//		type empty struct{}
+//		sem := make(chan empty, bins.Shape[1]) // semaphore pattern
+//		for i := 0; i < bins.Shape[1]; i++ {
+//			go func(i int) { // concurrent processing
+//				for j := 0; j < bins.Shape[2]; j++ {
+//					for k := 0; k < bins.Shape[3]; k++ {
+//						val := data.Get(i, j, k)
+//						if val+tolerance < bins.Get(0, i, j, k) {
+//							panic(fmt.Sprintf(
+//								"Value %v is less than minimum bin %v.",
+//								val, bins.Get(0, i, j, k)))
+//						}
+//						if val-tolerance > bins.Get(nWindBins, i, j, k) {
+//							panic(fmt.Sprintf(
+//								"Value %v is more than maximum bin %v.\n",
+//								val, bins.Get(nWindBins, i, j, k)))
+//						}
+//						for b := 0; b < bins.Shape[0]; b++ {
+//							if val <= bins.Get(b, i, j, k) {
+//								stats.AddVal(1./numTsteps, b, i, j, k)
+//								break
+//							}
+//						}
+//					}
+//				}
+//				sem <- empty{}
+//			}(i)
+//		}
+//		for i := 0; i < bins.Shape[1]; i++ { // wait for routines to finish
+//			<-sem
+//		}
+//	}
+//}
 
 func calcPartitioning(gaschan, particlechan chan *sparse.DenseArray) {
 	var gas, particle *sparse.DenseArray
@@ -824,6 +849,84 @@ func calcWetDeposition(qrain, alt *sparse.DenseArray) (
 	return
 }
 
+// Calculate average wind directions and speeds
+func calcWindDirection(uChan, vChan, wChan chan *sparse.DenseArray) {
+	var uPlusSpeed *sparse.DenseArray
+	var uMinusSpeed *sparse.DenseArray
+	var vPlusSpeed *sparse.DenseArray
+	var vMinusSpeed *sparse.DenseArray
+	var wPlusSpeed *sparse.DenseArray
+	var wMinusSpeed *sparse.DenseArray
+	firstData := true
+	var dims []int
+	for {
+		u := <-uChan
+		v := <-vChan
+		w := <-wChan
+		if u == nil {
+			arrayAverage(uPlusSpeed)
+			arrayAverage(uMinusSpeed)
+			arrayAverage(vPlusSpeed)
+			arrayAverage(vMinusSpeed)
+			arrayAverage(wPlusSpeed)
+			arrayAverage(wMinusSpeed)
+			uChan <- uPlusSpeed
+			uChan <- uMinusSpeed
+			uChan <- vPlusSpeed
+			uChan <- vMinusSpeed
+			uChan <- wPlusSpeed
+			uChan <- wMinusSpeed
+			return
+		}
+		if firstData {
+			// get unstaggered grid sizes
+			dims = make([]int, len(u.Shape))
+			for i, ulen := range u.Shape {
+				vlen := v.Shape[i]
+				dims[i] = minInt(ulen, vlen)
+			}
+			uPlusSpeed = sparse.ZerosDense(dims...)
+			uMinusSpeed = sparse.ZerosDense(dims...)
+			vPlusSpeed = sparse.ZerosDense(dims...)
+			vMinusSpeed = sparse.ZerosDense(dims...)
+			wPlusSpeed = sparse.ZerosDense(dims...)
+			wMinusSpeed = sparse.ZerosDense(dims...)
+			firstData = false
+		}
+		for k := 0; k < dims[0]; k++ {
+			for j := 0; j < dims[1]; j++ {
+				for i := 0; i < dims[2]; i++ {
+					ucenter := (u.Get(k, j, i) + u.Get(k, j, i+1)) / 2.
+					vcenter := (v.Get(k, j, i) + v.Get(k, j+1, i)) / 2.
+					wcenter := (w.Get(k, j, i) + w.Get(k+1, j, i)) / 2.
+					if ucenter > 0 {
+						uPlusSpeed.AddVal(ucenter, k, j, i)
+					} else {
+						uMinusSpeed.AddVal(-ucenter, k, j, i)
+					}
+					if vcenter > 0 {
+						vPlusSpeed.AddVal(vcenter, k, j, i)
+					} else {
+						vMinusSpeed.AddVal(-vcenter, k, j, i)
+					}
+					if wcenter > 0 {
+						wPlusSpeed.AddVal(wcenter, k, j, i)
+					} else {
+						wMinusSpeed.AddVal(-wcenter, k, j, i)
+					}
+				}
+			}
+		}
+	}
+	return
+}
+
+func arrayAverage(s *sparse.DenseArray) {
+	for i, val := range s.Elements {
+		s.Elements[i] = val / numTsteps
+	}
+}
+
 // Calculate RMS wind speed
 func windSpeed(uChan, vChan, wChan chan *sparse.DenseArray) {
 	var speed *sparse.DenseArray
@@ -890,6 +993,8 @@ var USGSz0 = []float64{.50, .1, .06, .1, 0.095, .20, .11,
 // perturbation potential temperature (Temp,K), Pressure (Pb and P, Pa),
 // surface heat flux (W/m2), HO mixing ratio (ppmv), and USGS land use index
 // (luIndex).
+// 5) Horizontal eddy diffusion coefficient (Kyy, [m2/s]) assumed to be the
+// same as vertical eddy diffusivity.
 func StabilityMixingChemistry(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
 	Tchan, PBchan, Pchan, surfaceHeatFluxChan, hoChan,
 	luIndexChan chan *sparse.DenseArray) {
@@ -907,6 +1012,7 @@ func StabilityMixingChemistry(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
 	var M2u *sparse.DenseArray
 	var SO2oxidation *sparse.DenseArray
 	var particleDryDep *sparse.DenseArray
+	var Kyy *sparse.DenseArray
 	// Get Layer index of PBL top (staggered)
 	pblTopLayer := sparse.ZerosDense(pblh.Shape...)
 	for j := 0; j < LayerHeights.Shape[1]; j++ {
@@ -952,6 +1058,9 @@ func StabilityMixingChemistry(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
 			for i, val := range particleDryDep.Elements {
 				particleDryDep.Elements[i] = val / numTsteps
 			}
+			for i, val := range Kyy.Elements {
+				Kyy.Elements[i] = val / numTsteps
+			}
 			Tchan <- Temp
 			Tchan <- S1
 			Tchan <- Sclass
@@ -961,6 +1070,7 @@ func StabilityMixingChemistry(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
 			Tchan <- pblTopLayer
 			Tchan <- SO2oxidation
 			Tchan <- particleDryDep
+			Tchan <- Kyy
 			return
 		}
 		if firstData {
@@ -972,6 +1082,7 @@ func StabilityMixingChemistry(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
 			M2d = sparse.ZerosDense(T.Shape...)               // units = 1/s
 			SO2oxidation = sparse.ZerosDense(T.Shape...)      // units = 1/s
 			particleDryDep = sparse.ZerosDense(pblh.Shape...) // units = m/s
+			Kyy = sparse.ZerosDense(LayerHeights.Shape...)    // units = m2/s
 			firstData = false
 		}
 		type empty struct{}
@@ -990,7 +1101,7 @@ func StabilityMixingChemistry(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
 						}
 						To += T.Get(k, j, i) + 300.
 					}
-					u := ustar.Get(j, i)
+					u := ustar.Get(j, i) // friction velocity
 					h := LayerHeights.Get(kPblTop, j, i)
 					// Potential temperature flux = surfaceHeatFlux / Cp /  ρ
 					// θf (K m / s) = hfx (W / m2) / Cp (J / kg-K) * alt (m3 / kg)
@@ -1012,6 +1123,14 @@ func StabilityMixingChemistry(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
 					vd := gocart.DryDeposition(hfx.Get(j, i), 1./alt.Get(0, j, i),
 						ustar.Get(j, i), To, h, USGSz0[f2i(luIndex.Get(j, i))])
 					particleDryDep.AddVal(vd, j, i)
+
+		//			// S and P eq. 18.129: Kyy = 0.1 zi^(3/4) (-κ*L)^(-1/3) ustar
+		//			if L < 0 { // equation is only good for unstable conditions
+		//				Kyy.AddVal(0.1*math.Pow(h, 0.75)*
+		//					math.Pow(-κ*L, -0.3333)*u, j, i)
+		//			} else {
+		//				Kyy.AddVal(3., j, i)
+		//			}
 
 					for k := 0; k < T.Shape[0]; k++ {
 						Tval := T.Get(k, j, i)
@@ -1049,12 +1168,14 @@ func StabilityMixingChemistry(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
 						km := calculateKm(z, h, L, u)
 						if k >= kPblTop-1 { // free atmosphere (unstaggered grid)
 							Kz.AddVal(1., k, j, i)
+							Kyy.AddVal(1., k, j, i)
 							if k == T.Shape[0]-1 { // Top Layer
 								Kz.AddVal(1., k+1, j, i)
 							}
 						} else { // Boundary layer (unstaggered grid)
 							// Pleim 2007, Eq. 11b
 							Kz.AddVal(km*(1-fconv), k, j, i)
+							Kyy.AddVal(km, k, j, i)
 							// Pleim 2007, Eq. 4
 							M2d.AddVal(m2u*(h-z)/Δz, k, j, i)
 						}

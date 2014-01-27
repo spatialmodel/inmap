@@ -4,7 +4,7 @@ import (
 	"bitbucket.org/ctessum/sparse"
 	"code.google.com/p/lvd.go/cdf"
 	"fmt"
-//	"math"
+	//	"math"
 	"os"
 	"sync"
 )
@@ -25,15 +25,17 @@ type AIMdata struct {
 
 // Data for a single grid cell
 type AIMcell struct {
-	uPlusSpeed, uMinusSpeed        float64   // m/s
-	vPlusSpeed, vMinusSpeed        float64   // m/s
-	wPlusSpeed, wMinusSpeed        float64   // m/s
+	uPlusSpeed, uMinusSpeed        float64   // [m/s]
+	vPlusSpeed, vMinusSpeed        float64   // [m/s]
+	wPlusSpeed, wMinusSpeed        float64   // [m/s]
 	orgPartitioning, SPartitioning float64   // gaseous fraction
 	NOPartitioning, NHPartitioning float64   // gaseous fraction
 	wdParticle, wdSO2, wdOtherGas  float64   // wet deposition rate, 1/s
 	particleDryDep                 float64   // aerosol dry deposition velocity, m/s
 	SO2oxidation                   float64   // SO2 oxidation to SO4 by HO; 1/s
 	Kz                             float64   // vertical diffusivity, m2/s
+	KyySouth                       float64   // horizontal diffusivity [m2/s] (staggered grid)
+	KxxWest                        float64   // horizontal diffusivity [m2/s] (staggered grid)
 	M2u                            float64   // ACM2 upward mixing (Pleim 2007), 1/s
 	M2d                            float64   // ACM2 downward mixing (Pleim 2007), 1/s
 	kPblTop                        float64   // k index of boundary layer top
