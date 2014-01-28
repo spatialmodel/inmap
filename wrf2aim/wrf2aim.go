@@ -22,7 +22,7 @@ const (
 	startDate  = "20050101"
 	endDate    = "20051231"
 	//endDate = "20050101"
-	nProcs  = 16 // number of processors to use
+	nProcs = 16 // number of processors to use
 
 	// non-user settings
 	wrfFormat    = "2006-01-02_15_04_05"
@@ -1124,13 +1124,13 @@ func StabilityMixingChemistry(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
 						ustar.Get(j, i), To, h, USGSz0[f2i(luIndex.Get(j, i))])
 					particleDryDep.AddVal(vd, j, i)
 
-		//			// S and P eq. 18.129: Kyy = 0.1 zi^(3/4) (-κ*L)^(-1/3) ustar
-		//			if L < 0 { // equation is only good for unstable conditions
-		//				Kyy.AddVal(0.1*math.Pow(h, 0.75)*
-		//					math.Pow(-κ*L, -0.3333)*u, j, i)
-		//			} else {
-		//				Kyy.AddVal(3., j, i)
-		//			}
+					//			// S and P eq. 18.129: Kyy = 0.1 zi^(3/4) (-κ*L)^(-1/3) ustar
+					//			if L < 0 { // equation is only good for unstable conditions
+					//				Kyy.AddVal(0.1*math.Pow(h, 0.75)*
+					//					math.Pow(-κ*L, -0.3333)*u, j, i)
+					//			} else {
+					//				Kyy.AddVal(3., j, i)
+					//			}
 
 					for k := 0; k < T.Shape[0]; k++ {
 						Tval := T.Get(k, j, i)
@@ -1175,7 +1175,8 @@ func StabilityMixingChemistry(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
 						} else { // Boundary layer (unstaggered grid)
 							// Pleim 2007, Eq. 11b
 							Kz.AddVal(km*(1-fconv), k, j, i)
-							Kyy.AddVal(km, k, j, i)
+							kmyy := calculateKm(z+Δz/2., h, L, u)
+							Kyy.AddVal(kmyy, k, j, i)
 							// Pleim 2007, Eq. 4
 							M2d.AddVal(m2u*(h-z)/Δz, k, j, i)
 						}

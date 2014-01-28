@@ -28,10 +28,11 @@ func (d *AIMdata) WebServer(httpPort string) {
 
 var mapOptions = []string{"PrimaryPM2_5", "VOC", "SOA", "NH3", "pNH4", "SOx",
 	"pSO4", "NOx", "pNO3", "VOCemissions", "NOxemissions", "NH3emissions",
-	"SOxemissions", "PM2_5emissions", "U", "V", "W", "Organicpartitioning",
-	"Sulfurpartitioning", "Nitratepartitioning", "Ammoniapartitioning",
-	"Particlewetdeposition", "SO2wetdeposition",
-	"Non-SO2gaswetdeposition", "Kz", "M2u", "M2d", "kPblTop", "velocityImbalance"}
+	"SOxemissions", "PM2_5emissions", "uPlusSpeed", "uMinusSpeed",
+	"vPlusSpeed", "vMinusSpeed", "wPlusSpeed", "wMinusSpeed",
+	"Organicpartitioning", "Sulfurpartitioning", "Nitratepartitioning",
+	"Ammoniapartitioning", "Particlewetdeposition", "SO2wetdeposition",
+	"Non-SO2gaswetdeposition", "KxxWest", "KyySouth", "Kz", "M2u", "M2d", "kPblTop"}
 
 func reportHandler(w http.ResponseWriter, r *http.Request) {
 	webframework.RenderHeader(w, "AIM status", "")

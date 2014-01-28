@@ -4,8 +4,9 @@ import (
 	"bitbucket.org/ctessum/sparse"
 	"code.google.com/p/lvd.go/cdf"
 	"fmt"
-	//	"math"
+	"math"
 	"os"
+	"sort"
 	"sync"
 )
 
@@ -240,8 +241,8 @@ func InitAIMdata(filename string, httpPort string) *AIMdata {
 				if i == d.Nx-1 {
 					d.Data[ii].East = d.eastBoundary[k*d.Ny+j]
 					// Since we have converted from unstaggered to staggered
-					// grid for Kxx, fill in final value for Kxx
-					d.eastBoundary.KxxWest = d.Data[ii].KxxWest
+					// grid for Kxx, fill in final value for Kxx.
+					d.Data[ii].East.KxxWest = d.Data[ii].KxxWest
 				} else {
 					jj = d.getIndex(k, j, i+1)
 					d.Data[jj].checkIndicies(k, j, i+1)
@@ -257,8 +258,8 @@ func InitAIMdata(filename string, httpPort string) *AIMdata {
 				if j == d.Ny-1 {
 					d.Data[ii].North = d.northBoundary[k*d.Nx+i]
 					// Since we have converted from unstaggered to staggered
-					// grid for Kxx, fill in final value for Kxx
-					d.eastBoundary.KyySouth = d.Data[ii].KyySouth
+					// grid for Kxx, fill in final value for Kxx.
+					d.Data[ii].North.KyySouth = d.Data[ii].KyySouth
 				} else {
 					jj = d.getIndex(k, j+1, i)
 					d.Data[jj].checkIndicies(k, j+1, i)
@@ -351,9 +352,9 @@ func (d *AIMdata) setTstepCFL(nprocs int) {
 		var c *AIMcell
 		for ii := procNum; ii < len(d.Data); ii += nprocs {
 			c = d.Data[ii]
-			thisval = max(c.uWestSpeed/c.Dx, c.uEastSpeed/c.Dx,
-				c.vSouthSpeed/c.Dy, c.vNorthSpeed/c.Dy,
-				c.wBelowSpeed/c.Dz, c.wAboveSpeed/c.Dz)
+			thisval = max(c.uPlusSpeed/c.Dx, c.uMinusSpeed/c.Dx,
+				c.vPlusSpeed/c.Dy, c.vMinusSpeed/c.Dy,
+				c.wPlusSpeed/c.Dz, c.wMinusSpeed/c.Dz)
 			if thisval > val {
 				val = thisval
 			}
@@ -448,20 +449,30 @@ func (d *AIMdata) readNCF(filename string, wg *sync.WaitGroup, Var string) {
 					index = j*jstride + i
 					d.Data[ii].particleDryDep = float64(dat[index])
 				case "Kyy": // convert from unstaggered to staggered
-					jminus := float64(dat[k*kstride+(j-1)*jstride+i])
-					iminus := float64(dat[k*kstride+j*jstride+i-1])
+					jminusIndex := k*kstride + (j-1)*jstride + i
+					iminusIndex := k*kstride + j*jstride + i - 1
 					val := float64(dat[index])
-					if iminus >= 0 {
-						// calculate harmonic mean between center and west
-						// values to get Kxx at grid edge
-						d.Data[ii].KxxWest = 2 * val * iminus / (val + iminus)
+					if iminusIndex >= 0 {
+						iminus := float64(dat[iminusIndex])
+						if val == 0. || iminus == 0. {
+							d.Data[ii].KxxWest = 0.
+						} else {
+							// calculate harmonic mean between center and west
+							// values to get Kxx at grid edge
+							d.Data[ii].KxxWest = 2 * val * iminus / (val + iminus)
+						}
 					} else {
 						d.Data[ii].KxxWest = val
 					}
-					if jminus >= 0 {
-						// calculate harmonic mean between center and south
-						// values to get Kyy at grid edge
-						d.Data[ii].KyySouth = 2 * val * jminus / (val + jminus)
+					if jminusIndex >= 0 {
+						jminus := float64(dat[jminusIndex])
+						if val == 0. || jminus == 0. {
+							d.Data[ii].KyySouth = 0.
+						} else {
+							// calculate harmonic mean between center and south
+							// values to get Kyy at grid edge
+							d.Data[ii].KyySouth = 2 * val * jminus / (val + jminus)
+						}
 					} else {
 						d.Data[ii].KyySouth = val
 					}
@@ -483,6 +494,11 @@ func getNCFbuffer(filename string, Var string) []float32 {
 	f, err := cdf.Open(ff)
 	if err != nil {
 		panic(err)
+	}
+	vars := f.Header.Variables()
+	sort.Strings(vars)
+	if i := sort.SearchStrings(vars, Var); vars[i] != Var {
+		panic(fmt.Sprintf("Variable %v is not in input data file", Var))
 	}
 	dims := f.Header.Lengths(Var)
 	defer ff.Close()

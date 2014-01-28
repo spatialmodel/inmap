@@ -95,6 +95,7 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 
 	// make list of science functions to run at each timestep
 	scienceFuncs := []func(c *AIMcell, d *AIMdata){
+		func(c *AIMcell, d *AIMdata) { c.addEmissionsFlux(d) },
 		func(c *AIMcell, d *AIMdata) { c.RK3advectionPass1(d) },
 		func(c *AIMcell, d *AIMdata) { c.RK3advectionPass2(d) },
 		func(c *AIMcell, d *AIMdata) { c.RK3advectionPass3(d) },
@@ -104,7 +105,6 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 			c.COBRAchemistry(d)
 			c.DryDeposition(d)
 			c.WetDeposition(d.Dt)
-			c.addEmissionsFlux(d)
 		}}
 
 	//d.setTstepCFL(nprocs) // Set time step
@@ -263,29 +263,29 @@ func (d *AIMdata) ToArray(pol string) *sparse.DenseArray {
 		for i, c := range d.Data {
 			o.Elements[i] = c.emisFlux[iPM2_5]
 		}
-	case "uWestSpeed":
+	case "uPlusSpeed":
 		for i, c := range d.Data {
-			o.Elements[i] = c.uWestSpeed
+			o.Elements[i] = c.uPlusSpeed
 		}
-	case "uEastSpeed":
+	case "uMinusSpeed":
 		for i, c := range d.Data {
-			o.Elements[i] = c.uEastSpeed
+			o.Elements[i] = c.uMinusSpeed
 		}
-	case "vNorthSpeed":
+	case "vPlusSpeed":
 		for i, c := range d.Data {
-			o.Elements[i] = c.vNorthSpeed
+			o.Elements[i] = c.vPlusSpeed
 		}
-	case "vSouthSpeed":
+	case "vMinusSpeed":
 		for i, c := range d.Data {
-			o.Elements[i] = c.vSouthSpeed
+			o.Elements[i] = c.vMinusSpeed
 		}
-	case "wAboveSpeed":
+	case "wPlusSpeed":
 		for i, c := range d.Data {
-			o.Elements[i] = c.wAboveSpeed
+			o.Elements[i] = c.wPlusSpeed
 		}
-	case "wBelowSpeed":
+	case "wMinusSpeed":
 		for i, c := range d.Data {
-			o.Elements[i] = c.wBelowSpeed
+			o.Elements[i] = c.wMinusSpeed
 		}
 	case "Organicpartitioning":
 		for i, c := range d.Data {
@@ -314,6 +314,14 @@ func (d *AIMdata) ToArray(pol string) *sparse.DenseArray {
 	case "Non-SO2gaswetdeposition":
 		for i, c := range d.Data {
 			o.Elements[i] = c.wdOtherGas
+		}
+	case "KxxWest":
+		for i, c := range d.Data {
+			o.Elements[i] = c.KxxWest
+		}
+	case "KyySouth":
+		for i, c := range d.Data {
+			o.Elements[i] = c.KyySouth
 		}
 	case "Kz":
 		for i, c := range d.Data {
