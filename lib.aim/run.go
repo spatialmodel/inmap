@@ -88,7 +88,7 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 	var wg sync.WaitGroup
 
 	for procNum := 0; procNum < nprocs; procNum++ {
-		funcChan[procNum] = make(chan func(*AIMcell, *AIMdata), nprocs*10)
+		funcChan[procNum] = make(chan func(*AIMcell, *AIMdata), 1)
 		// Start thread for concurrent computations
 		go d.doScience(nprocs, procNum, funcChan[procNum], &wg)
 	}
@@ -107,8 +107,8 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 			c.WetDeposition(d.Dt)
 		}}
 
-	//d.setTstepCFL(nprocs) // Set time step
-	d.setTstepRuleOfThumb() // Set time step
+	d.setTstepCFL(nprocs) // Set time step
+	//d.setTstepRuleOfThumb() // Set time step
 
 	for { // Run main calculation loop until pollutant concentrations stabilize
 
@@ -116,8 +116,8 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 		// processors for calculating
 		d.arrayLock.Lock() // Lock the cell array to avoid race conditions
 		wg.Add(len(scienceFuncs) * nprocs)
-		for pp := 0; pp < nprocs; pp++ {
-			for _, function := range scienceFuncs {
+		for _, function := range scienceFuncs {
+			for pp := 0; pp < nprocs; pp++ {
 				funcChan[pp] <- function
 			}
 		}
@@ -132,12 +132,13 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 		timeStepTime = time.Now()
 		timeSinceLastCheck += d.Dt
 
-		wg.Wait()            // Wait for the science to finish
 		d.arrayLock.Unlock() // Unlock the cell array: we're done editing it
 
 		// Occasionally, check to see if the pollutant concentrations have converged
-		timeToQuit := true
 		if timeSinceLastCheck >= checkPeriod {
+			wg.Wait() // Wait for the science to finish, only when we need to check
+			// for convergence.
+			timeToQuit := true
 			timeSinceLastCheck = 0.
 			for ii, pol := range polNames {
 				var sum float64

@@ -345,7 +345,7 @@ var addtosum = func(c *AIMcell, d *AIMdata) {
 
 //  Set the time step using the Courant–Friedrichs–Lewy (CFL) condition.
 func (d *AIMdata) setTstepCFL(nprocs int) {
-	const Cmax = 1
+	const Cmax = 1.5 // From Wicker and Skamarock (2002) Table 1.
 	valChan := make(chan float64)
 	calcCFL := func(procNum int) {
 		var thisval, val float64
