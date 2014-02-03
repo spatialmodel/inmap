@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bitbucket.org/ctessum/atmos/emep"
 	"bitbucket.org/ctessum/atmos/gocart"
+	"bitbucket.org/ctessum/atmos/seinfeld"
 	"bitbucket.org/ctessum/sparse"
 	"code.google.com/p/lvd.go/cdf"
 	"flag"
@@ -30,14 +32,15 @@ const (
 	tolerance    = 1.e-10 // tolerance for comparing floats
 
 	// physical constants
-	MWa   = 28.97   // g/mol, molar mass of air
-	mwN   = 46.0055 // g/mol, molar mass of nitrogen
-	mwS   = 32.0655 // g/mol, molar mass of sulfur
-	mwNH4 = 18.03851
-	mwSO4 = 96.0632
-	mwNO3 = 62.00501
-	g     = 9.80665 // m/s2
-	κ     = 0.41    // Von Kármán constant
+	MWa      = 28.97   // g/mol, molar mass of air
+	mwN      = 46.0055 // g/mol, molar mass of nitrogen
+	mwS      = 32.0655 // g/mol, molar mass of sulfur
+	mwNH4    = 18.03851
+	mwSO4    = 96.0632
+	mwNO3    = 62.00501
+	g        = 9.80665 // m/s2
+	κ        = 0.41    // Von Kármán constant
+	atmPerPa = 9.86923267e-6
 )
 
 var (
@@ -113,18 +116,12 @@ func main() {
 	windDirectionChanW := make(chan *sparse.DenseArray)
 	go calcWindDirection(windDirectionChanU, windDirectionChanV,
 		windDirectionChanW)
-	ustarChan := make(chan *sparse.DenseArray)
-	go average(ustarChan)
 	pblhChan := make(chan *sparse.DenseArray)
 	go average(pblhChan)
 	phChan := make(chan *sparse.DenseArray)
 	go average(phChan)
 	phbChan := make(chan *sparse.DenseArray)
 	go average(phbChan)
-	qrainChan := make(chan *sparse.DenseArray)
-	go average(qrainChan)
-	altChan := make(chan *sparse.DenseArray)
-	go average(altChan)
 	uAvgChan := make(chan *sparse.DenseArray)
 	vAvgChan := make(chan *sparse.DenseArray)
 	wAvgChan := make(chan *sparse.DenseArray)
@@ -134,19 +131,15 @@ func main() {
 		readSingleVar("U", windDirectionChanU, uAvgChan),
 		readSingleVar("V", windDirectionChanV, vAvgChan),
 		readSingleVar("W", windDirectionChanW, wAvgChan),
-		readSingleVar("UST", ustarChan),
 		readSingleVar("PBLH", pblhChan),
-		readSingleVar("PH", phChan), readSingleVar("PHB", phbChan),
-		readSingleVar("QRAIN", qrainChan), readSingleVar("ALT", altChan))
+		readSingleVar("PH", phChan), readSingleVar("PHB", phbChan))
+
 	windDirectionChanU <- nil
 	windDirectionChanV <- nil
 	windDirectionChanW <- nil
-	ustarChan <- nil
 	pblhChan <- nil
 	phChan <- nil
 	phbChan <- nil
-	qrainChan <- nil
-	altChan <- nil
 	uAvgChan <- nil
 	vAvgChan <- nil
 	wAvgChan <- nil
@@ -156,16 +149,12 @@ func main() {
 	vMinusSpeed := <-windDirectionChanU
 	wPlusSpeed := <-windDirectionChanU
 	wMinusSpeed := <-windDirectionChanU
-	ustar := <-ustarChan
 	pblh := <-pblhChan
 	ph := <-phChan
 	phb := <-phbChan
-	qrain := <-qrainChan
-	alt := <-altChan
 	windSpeed := <-uAvgChan
 
 	layerHeights := calcLayerHeights(ph, phb)
-	wdParticle, wdSO2, wdOtherGas := calcWetDeposition(qrain, alt)
 
 	// calculate gas/particle partitioning
 	VOCchan := make(chan *sparse.DenseArray)
@@ -181,6 +170,12 @@ func main() {
 	pNHchan := make(chan *sparse.DenseArray)
 	go calcPartitioning(NH3chan, pNHchan)
 
+	qrainChan := make(chan *sparse.DenseArray)
+	cloudFracChan := make(chan *sparse.DenseArray)
+	altChanWetDep := make(chan *sparse.DenseArray)
+	go calcWetDeposition(layerHeights, qrainChan, cloudFracChan,
+		altChanWetDep)
+
 	// Calculate stability for plume rise, vertical mixing,
 	// and chemical reaction rates
 	Tchan := make(chan *sparse.DenseArray)
@@ -188,9 +183,14 @@ func main() {
 	Pchan := make(chan *sparse.DenseArray)
 	surfaceHeatFluxChan := make(chan *sparse.DenseArray)
 	hoChan := make(chan *sparse.DenseArray)
+	h2o2Chan := make(chan *sparse.DenseArray)
 	luIndexChan := make(chan *sparse.DenseArray) // surface skin temp
-	go StabilityMixingChemistry(layerHeights, ustar, pblh, alt,
-		Tchan, PBchan, Pchan, surfaceHeatFluxChan, hoChan, luIndexChan)
+	ustarChan := make(chan *sparse.DenseArray)
+	altChanMixing := make(chan *sparse.DenseArray)
+	qCloudChan := make(chan *sparse.DenseArray)
+	go StabilityMixingChemistry(layerHeights, pblh, ustarChan, altChanMixing,
+		Tchan, PBchan, Pchan, surfaceHeatFluxChan, hoChan, h2o2Chan,
+		luIndexChan, qCloudChan)
 
 	iterateTimeSteps("Reading data--pass 2: ",
 		readGasGroup(VOC, VOCchan), readParticleGroup(SOA, SOAchan),
@@ -198,14 +198,33 @@ func main() {
 		readGasGroup(SOx, SOxchan), readParticleGroup(pS, pSchan),
 		readGasGroup(NH3, NH3chan), readParticleGroup(pNH, pNHchan),
 		readSingleVar("HFX", surfaceHeatFluxChan),
+		readSingleVar("UST", ustarChan),
 		readSingleVar("T", Tchan), readSingleVar("PB", PBchan),
 		readSingleVar("P", Pchan), readSingleVar("ho", hoChan),
-		readSingleVar("LU_INDEX", luIndexChan))
+		readSingleVar("h2o2", h2o2Chan),
+		readSingleVar("LU_INDEX", luIndexChan),
+		readSingleVar("QRAIN", qrainChan),
+		readSingleVar("CLDFRA", cloudFracChan),
+		readSingleVar("QCLOUD", qCloudChan),
+		readSingleVar("ALT", altChanWetDep, altChanMixing))
 
 	VOCchan <- nil
 	NOxchan <- nil
 	SOxchan <- nil
 	NH3chan <- nil
+	Tchan <- nil
+	PBchan <- nil
+	Pchan <- nil
+	surfaceHeatFluxChan <- nil
+	hoChan <- nil
+	h2o2Chan <- nil
+	luIndexChan <- nil
+	ustarChan <- nil
+	qrainChan <- nil
+	cloudFracChan <- nil
+	altChanWetDep <- nil
+	altChanMixing <- nil
+	qCloudChan <- nil
 	orgPartitioning := <-VOCchan
 	VOC := <-VOCchan
 	SOA := <-VOCchan
@@ -218,12 +237,6 @@ func main() {
 	NHPartitioning := <-NH3chan
 	gNH := <-NH3chan
 	pNH := <-NH3chan
-	Tchan <- nil
-	PBchan <- nil
-	Pchan <- nil
-	surfaceHeatFluxChan <- nil
-	hoChan <- nil
-	luIndexChan <- nil
 	temperature := <-Tchan
 	S1 := <-Tchan
 	Sclass := <-Tchan
@@ -233,7 +246,14 @@ func main() {
 	pblTopLayer := <-Tchan
 	SO2oxidation := <-Tchan
 	particleDryDep := <-Tchan
+	SO2DryDep := <-Tchan
+	NOxDryDep := <-Tchan
+	NH3DryDep := <-Tchan
+	VOCDryDep := <-Tchan
 	Kyy := <-Tchan
+	particleWetDep := <-qrainChan
+	SO2WetDep := <-qrainChan
+	otherGasWetDep := <-qrainChan
 
 	// write out data to file
 	fmt.Printf("Writing out data to %v...\n", outputFile)
@@ -345,6 +365,22 @@ func main() {
 	h.AddAttribute("particleDryDep", "description", "Dry deposition velocity for particles")
 	h.AddAttribute("particleDryDep", "units", "m s-1")
 
+	h.AddVariable("SO2DryDep", []string{"y", "x"}, []float32{0})
+	h.AddAttribute("SO2DryDep", "description", "Dry deposition velocity for SO2")
+	h.AddAttribute("SO2DryDep", "units", "m s-1")
+
+	h.AddVariable("NOxDryDep", []string{"y", "x"}, []float32{0})
+	h.AddAttribute("NOxDryDep", "description", "Dry deposition velocity for NOx")
+	h.AddAttribute("NOxDryDep", "units", "m s-1")
+
+	h.AddVariable("NH3DryDep", []string{"y", "x"}, []float32{0})
+	h.AddAttribute("NH3DryDep", "description", "Dry deposition velocity for NH3")
+	h.AddAttribute("NH3DryDep", "units", "m s-1")
+
+	h.AddVariable("VOCDryDep", []string{"y", "x"}, []float32{0})
+	h.AddAttribute("VOCDryDep", "description", "Dry deposition velocity for VOCs")
+	h.AddAttribute("VOCDryDep", "units", "m s-1")
+
 	h.AddVariable("Kyy", []string{"z", "y", "x"}, []float32{0})
 	h.AddAttribute("Kyy", "description", "Horizontal eddy diffusion coefficient")
 	h.AddAttribute("Kyy", "units", "m2 s-1")
@@ -353,15 +389,15 @@ func main() {
 	h.AddAttribute("layerHeights", "description", "Height at edge of layer")
 	h.AddAttribute("layerHeights", "units", "m")
 
-	h.AddVariable("wdParticle", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("wdParticle", "description", "Wet deposition rate constant for fine particles")
-	h.AddAttribute("wdParticle", "units", "s-1")
-	h.AddVariable("wdSO2", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("wdSO2", "description", "Wet deposition rate constant for SO2 gas")
-	h.AddAttribute("wdSO2", "units", "s-1")
-	h.AddVariable("wdOtherGas", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("wdOtherGas", "description", "Wet deposition rate constant for other gases")
-	h.AddAttribute("wdOtherGas", "units", "s-1")
+	h.AddVariable("particleWetDep", []string{"z", "y", "x"}, []float32{0})
+	h.AddAttribute("particleWetDep", "description", "Wet deposition rate constant for fine particles")
+	h.AddAttribute("particleWetDep", "units", "s-1")
+	h.AddVariable("SO2WetDep", []string{"z", "y", "x"}, []float32{0})
+	h.AddAttribute("SO2WetDep", "description", "Wet deposition rate constant for SO2 gas")
+	h.AddAttribute("SO2WetDep", "units", "s-1")
+	h.AddVariable("otherGasWetDep", []string{"z", "y", "x"}, []float32{0})
+	h.AddAttribute("otherGasWetDep", "description", "Wet deposition rate constant for other gases")
+	h.AddAttribute("otherGasWetDep", "units", "s-1")
 
 	h.AddVariable("Kz", []string{"zStagger", "y", "x"}, []float32{0})
 	h.AddAttribute("Kz", "description", "Vertical turbulent diffusivity")
@@ -400,10 +436,6 @@ func main() {
 	h.AddAttribute("Sclass", "description", "Stability parameter")
 	h.AddAttribute("Sclass", "units", "0=Unstable; 1=Stable")
 
-	h.AddVariable("alt", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("alt", "description", "Inverse density")
-	h.AddAttribute("alt", "units", "m3 kg-1")
-
 	h.Define()
 	ff, err := os.Create(outputFile)
 	if err != nil {
@@ -432,21 +464,24 @@ func main() {
 	writeNCF(f, "gNH", gNH)
 	writeNCF(f, "pNH", pNH)
 	writeNCF(f, "layerHeights", layerHeights)
-	writeNCF(f, "wdParticle", wdParticle)
-	writeNCF(f, "wdSO2", wdSO2)
-	writeNCF(f, "wdOtherGas", wdOtherGas)
+	writeNCF(f, "particleWetDep", particleWetDep)
+	writeNCF(f, "SO2WetDep", SO2WetDep)
+	writeNCF(f, "otherGasWetDep", otherGasWetDep)
 	writeNCF(f, "Kz", Kz)
 	writeNCF(f, "M2u", M2u)
 	writeNCF(f, "M2d", M2d)
 	writeNCF(f, "pblTopLayer", pblTopLayer)
 	writeNCF(f, "pblh", pblh)
-	writeNCF(f, "alt", alt)
 	writeNCF(f, "windSpeed", windSpeed)
 	writeNCF(f, "temperature", temperature)
 	writeNCF(f, "S1", S1)
 	writeNCF(f, "Sclass", Sclass)
 	writeNCF(f, "SO2oxidation", SO2oxidation)
 	writeNCF(f, "particleDryDep", particleDryDep)
+	writeNCF(f, "SO2DryDep", SO2DryDep)
+	writeNCF(f, "NOxDryDep", NOxDryDep)
+	writeNCF(f, "NH3DryDep", NH3DryDep)
+	writeNCF(f, "VOCDryDep", VOCDryDep)
 	writeNCF(f, "Kyy", Kyy)
 	err = cdf.UpdateNumRecs(ff)
 	if err != nil {
@@ -602,119 +637,6 @@ func writeNCF(f *cdf.File, Var string, data *sparse.DenseArray) {
 	}
 }
 
-//func initBins(data *sparse.DenseArray, nbins int) *sparse.DenseArray {
-//	dims := make([]int, len(data.Shape)+1)
-//	dims[0] = nbins
-//	for i, d := range data.Shape {
-//		dims[i+1] = d
-//	}
-//	return sparse.ZerosDense(dims...)
-//}
-//
-//func calcWindBins(datachan chan *sparse.DenseArray) {
-//	var bins, max, min *sparse.DenseArray
-//	firstData := true
-//	for {
-//		data := <-datachan
-//		if data == nil {
-//			fmt.Println("Calculating bin edges...")
-//			for i := 0; i < bins.Shape[1]; i++ {
-//				for j := 0; j < bins.Shape[2]; j++ {
-//					for k := 0; k < bins.Shape[3]; k++ {
-//						maxval := max.Get(i, j, k)
-//						minval := min.Get(i, j, k)
-//						for b := 0; b <= nWindBins; b++ {
-//							edge := minval + float64(b)/float64(nWindBins)*
-//								(maxval-minval)
-//							bins.Set(edge, b, i, j, k)
-//						}
-//					}
-//				}
-//			}
-//			datachan <- bins
-//			return
-//		}
-//		if firstData {
-//			bins = initBins(data, nWindBins+1)
-//			max = sparse.ZerosDense(data.Shape...)
-//			min = sparse.ZerosDense(data.Shape...)
-//			firstData = false
-//		}
-//		for i, e := range data.Elements {
-//			if e > max.Elements[i] {
-//				max.Elements[i] = e
-//			}
-//			if e < min.Elements[i] {
-//				min.Elements[i] = e
-//			}
-//		}
-//	}
-//}
-
-//// calculate the fraction of time steps with wind speeds in each bin
-//func calcWindStats(bins *sparse.DenseArray, datachan chan *sparse.DenseArray) {
-//	var stats *sparse.DenseArray
-//	firstData := true
-//	for {
-//		data := <-datachan
-//		if data == nil {
-//			// make sure frequencies add up to 1
-//			for i := 0; i < bins.Shape[1]; i++ {
-//				for j := 0; j < bins.Shape[2]; j++ {
-//					for k := 0; k < bins.Shape[3]; k++ {
-//						total := 0.
-//						for b := 0; b < bins.Shape[0]; b++ {
-//							total += stats.Get(b, i, j, k)
-//						}
-//						if total-1 > tolerance || total-1 < -1.*tolerance {
-//							panic(fmt.Sprintf("Fractions add up to %v, not 1!",
-//								total))
-//						}
-//					}
-//				}
-//			}
-//
-//			datachan <- stats
-//			return
-//		}
-//		if firstData {
-//			stats = initBins(data, nWindBins+1)
-//			firstData = false
-//		}
-//		type empty struct{}
-//		sem := make(chan empty, bins.Shape[1]) // semaphore pattern
-//		for i := 0; i < bins.Shape[1]; i++ {
-//			go func(i int) { // concurrent processing
-//				for j := 0; j < bins.Shape[2]; j++ {
-//					for k := 0; k < bins.Shape[3]; k++ {
-//						val := data.Get(i, j, k)
-//						if val+tolerance < bins.Get(0, i, j, k) {
-//							panic(fmt.Sprintf(
-//								"Value %v is less than minimum bin %v.",
-//								val, bins.Get(0, i, j, k)))
-//						}
-//						if val-tolerance > bins.Get(nWindBins, i, j, k) {
-//							panic(fmt.Sprintf(
-//								"Value %v is more than maximum bin %v.\n",
-//								val, bins.Get(nWindBins, i, j, k)))
-//						}
-//						for b := 0; b < bins.Shape[0]; b++ {
-//							if val <= bins.Get(b, i, j, k) {
-//								stats.AddVal(1./numTsteps, b, i, j, k)
-//								break
-//							}
-//						}
-//					}
-//				}
-//				sem <- empty{}
-//			}(i)
-//		}
-//		for i := 0; i < bins.Shape[1]; i++ { // wait for routines to finish
-//			<-sem
-//		}
-//	}
-//}
-
 func calcPartitioning(gaschan, particlechan chan *sparse.DenseArray) {
 	var gas, particle *sparse.DenseArray
 	firstData := true
@@ -823,30 +745,47 @@ func calcLayerHeights(ph, phb *sparse.DenseArray) (
 	return
 }
 
-// Calculate wet deposition using WRF rain mixing ratio (QRAIN) and inverse density (ALT) and
-// formulas from http://www.emep.int/UniDoc/node12.html.
-// wdParticle = A * P / Vdr * E; P = QRAIN * Vdr * ρgas => wdParticle = A * QRAIN * ρgas * E
-// wdGas = wSub * P / Δz / ρwater = wSub * QRAIN * Vdr * ρgas / Δz / ρwater
-func calcWetDeposition(qrain, alt *sparse.DenseArray) (
-	wdParticle, wdSO2, wdOtherGas *sparse.DenseArray) {
+// calculate wet deposition
+func calcWetDeposition(layerHeights *sparse.DenseArray, qrainChan,
+	cloudFracChan, altChan chan *sparse.DenseArray) {
+	var wdParticle, wdSO2, wdOtherGas *sparse.DenseArray
 
-	wdParticle = sparse.ZerosDense(qrain.Shape...) // units = 1/s
-	wdSO2 = sparse.ZerosDense(qrain.Shape...)      // units = 1/s
-	wdOtherGas = sparse.ZerosDense(qrain.Shape...) // units = 1/s
-	const A = 5.2                                  // m3 kg-1 s-1; Empirical coefficient
-	const E = 0.1                                  // size-dependent collection efficiency of aerosols by the raindrops
-	const wSubSO2 = 0.15                           // sub-cloud scavanging ratio
-	const wSubOther = 0.5                          // sub-cloud scavanging ratio
-	const ρwater = 1000.                           // kg/m3
-	const Vdr = 5.                                 // m/s
-	const Δz = 1000.                               // m
-	for i, q := range qrain.Elements {
-		alti := alt.Elements[i]
-		wdParticle.Elements[i] = A * q / alti * E
-		wdSO2.Elements[i] = wSubSO2 * q * Vdr / alti / Δz / ρwater
-		wdOtherGas.Elements[i] = wSubOther * q * Vdr / alti / Δz / ρwater
+	Δz := sparse.ZerosDense(layerHeights.Shape[0]-1, layerHeights.Shape[1],
+		layerHeights.Shape[2]) // grid cell height, m
+	for k := 0; k < layerHeights.Shape[0]-1; k++ {
+		for j := 0; j < layerHeights.Shape[1]; j++ {
+			for i := 0; i < layerHeights.Shape[2]; i++ {
+				Δz.Set(layerHeights.Get(k+1, j, i)-layerHeights.Get(k, j, i),
+					k, j, i)
+			}
+		}
 	}
-	return
+
+	firstData := true
+	for {
+		qrain := <-qrainChan         // mass frac
+		cloudFrac := <-cloudFracChan // frac
+		alt := <-altChan             // m3/kg
+		if qrain == nil {
+			qrainChan <- arrayAverage(wdParticle)
+			qrainChan <- arrayAverage(wdSO2)
+			qrainChan <- arrayAverage(wdOtherGas)
+			return
+		}
+		if firstData {
+			wdParticle = sparse.ZerosDense(qrain.Shape...) // units = 1/s
+			wdSO2 = sparse.ZerosDense(qrain.Shape...)      // units = 1/s
+			wdOtherGas = sparse.ZerosDense(qrain.Shape...) // units = 1/s
+			firstData = false
+		}
+		for i := 0; i < len(qrain.Elements); i++ {
+			wdp, wds, wdo := emep.WetDeposition(cloudFrac.Elements[i],
+				qrain.Elements[i], 1/alt.Elements[i], Δz.Elements[i])
+			wdParticle.Elements[i] += wdp
+			wdSO2.Elements[i] += wds
+			wdOtherGas.Elements[i] += wdo
+		}
+	}
 }
 
 // Calculate average wind directions and speeds
@@ -864,18 +803,12 @@ func calcWindDirection(uChan, vChan, wChan chan *sparse.DenseArray) {
 		v := <-vChan
 		w := <-wChan
 		if u == nil {
-			arrayAverage(uPlusSpeed)
-			arrayAverage(uMinusSpeed)
-			arrayAverage(vPlusSpeed)
-			arrayAverage(vMinusSpeed)
-			arrayAverage(wPlusSpeed)
-			arrayAverage(wMinusSpeed)
-			uChan <- uPlusSpeed
-			uChan <- uMinusSpeed
-			uChan <- vPlusSpeed
-			uChan <- vMinusSpeed
-			uChan <- wPlusSpeed
-			uChan <- wMinusSpeed
+			uChan <- arrayAverage(uPlusSpeed)
+			uChan <- arrayAverage(uMinusSpeed)
+			uChan <- arrayAverage(vPlusSpeed)
+			uChan <- arrayAverage(vMinusSpeed)
+			uChan <- arrayAverage(wPlusSpeed)
+			uChan <- arrayAverage(wMinusSpeed)
 			return
 		}
 		if firstData {
@@ -921,10 +854,11 @@ func calcWindDirection(uChan, vChan, wChan chan *sparse.DenseArray) {
 	return
 }
 
-func arrayAverage(s *sparse.DenseArray) {
+func arrayAverage(s *sparse.DenseArray) *sparse.DenseArray {
 	for i, val := range s.Elements {
 		s.Elements[i] = val / numTsteps
 	}
+	return s
 }
 
 // Calculate RMS wind speed
@@ -995,9 +929,10 @@ var USGSz0 = []float64{.50, .1, .06, .1, 0.095, .20, .11,
 // (luIndex).
 // 5) Horizontal eddy diffusion coefficient (Kyy, [m2/s]) assumed to be the
 // same as vertical eddy diffusivity.
-func StabilityMixingChemistry(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
-	Tchan, PBchan, Pchan, surfaceHeatFluxChan, hoChan,
-	luIndexChan chan *sparse.DenseArray) {
+func StabilityMixingChemistry(LayerHeights, pblh *sparse.DenseArray,
+	ustarChan, altChan, Tchan, PBchan, Pchan, surfaceHeatFluxChan,
+	hoChan, h2o2Chan, luIndexChan,
+	qCloudChan chan *sparse.DenseArray) {
 	const (
 		po    = 101300. // Pa, reference pressure
 		kappa = 0.2854  // related to von karman's constant
@@ -1012,6 +947,10 @@ func StabilityMixingChemistry(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
 	var M2u *sparse.DenseArray
 	var SO2oxidation *sparse.DenseArray
 	var particleDryDep *sparse.DenseArray
+	var SO2DryDep *sparse.DenseArray
+	var NOxDryDep *sparse.DenseArray
+	var NH3DryDep *sparse.DenseArray
+	var VOCDryDep *sparse.DenseArray
 	var Kyy *sparse.DenseArray
 	// Get Layer index of PBL top (staggered)
 	pblTopLayer := sparse.ZerosDense(pblh.Shape...)
@@ -1032,45 +971,17 @@ func StabilityMixingChemistry(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
 		P := <-Pchan                 // Pa
 		hfx := <-surfaceHeatFluxChan // W/m2
 		ho := <-hoChan               // ppmv
-		luIndex := <-luIndexChan
+		h2o2 := <-h2o2Chan           // ppmv
+		luIndex := <-luIndexChan     // land use index
+		ustar := <-ustarChan         // friction velocity (m/s)
+		alt := <-altChan             // inverse density (m3/kg)
+		qCloud := <-qCloudChan       // cloud water mixing ratio (kg/kg)
 		if T == nil {
-			for i, val := range Temp.Elements {
-				Temp.Elements[i] = val / numTsteps
+			for _, arr := range []*sparse.DenseArray{Temp, S1, Sclass, Kz, M2u,
+				M2d, pblTopLayer, SO2oxidation, particleDryDep, SO2DryDep,
+				NOxDryDep, NH3DryDep, VOCDryDep, Kyy} {
+				Tchan <- arrayAverage(arr)
 			}
-			for i, val := range S1.Elements {
-				S1.Elements[i] = val / numTsteps
-			}
-			for i, val := range Sclass.Elements {
-				Sclass.Elements[i] = val / numTsteps
-			}
-			for i, val := range Kz.Elements {
-				Kz.Elements[i] = val / numTsteps
-			}
-			for i, val := range M2u.Elements {
-				M2u.Elements[i] = val / numTsteps
-			}
-			for i, val := range M2d.Elements {
-				M2d.Elements[i] = val / numTsteps
-			}
-			for i, val := range SO2oxidation.Elements {
-				SO2oxidation.Elements[i] = val / numTsteps
-			}
-			for i, val := range particleDryDep.Elements {
-				particleDryDep.Elements[i] = val / numTsteps
-			}
-			for i, val := range Kyy.Elements {
-				Kyy.Elements[i] = val / numTsteps
-			}
-			Tchan <- Temp
-			Tchan <- S1
-			Tchan <- Sclass
-			Tchan <- Kz
-			Tchan <- M2u
-			Tchan <- M2d
-			Tchan <- pblTopLayer
-			Tchan <- SO2oxidation
-			Tchan <- particleDryDep
-			Tchan <- Kyy
 			return
 		}
 		if firstData {
@@ -1082,6 +993,10 @@ func StabilityMixingChemistry(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
 			M2d = sparse.ZerosDense(T.Shape...)               // units = 1/s
 			SO2oxidation = sparse.ZerosDense(T.Shape...)      // units = 1/s
 			particleDryDep = sparse.ZerosDense(pblh.Shape...) // units = m/s
+			SO2DryDep = sparse.ZerosDense(pblh.Shape...)      // units = m/s
+			NOxDryDep = sparse.ZerosDense(pblh.Shape...)      // units = m/s
+			NH3DryDep = sparse.ZerosDense(pblh.Shape...)      // units = m/s
+			VOCDryDep = sparse.ZerosDense(pblh.Shape...)      // units = m/s
 			Kyy = sparse.ZerosDense(LayerHeights.Shape...)    // units = m2/s
 			firstData = false
 		}
@@ -1120,17 +1035,27 @@ func StabilityMixingChemistry(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
 					// Pleim 2007, Eq 11a
 					M2u.AddVal(m2u, j, i)
 
-					vd := gocart.DryDeposition(hfx.Get(j, i), 1./alt.Get(0, j, i),
-						ustar.Get(j, i), To, h, USGSz0[f2i(luIndex.Get(j, i))])
-					particleDryDep.AddVal(vd, j, i)
-
-					//			// S and P eq. 18.129: Kyy = 0.1 zi^(3/4) (-κ*L)^(-1/3) ustar
-					//			if L < 0 { // equation is only good for unstable conditions
-					//				Kyy.AddVal(0.1*math.Pow(h, 0.75)*
-					//					math.Pow(-κ*L, -0.3333)*u, j, i)
-					//			} else {
-					//				Kyy.AddVal(3., j, i)
-					//			}
+					gocartObk := gocart.ObhukovLen(hfx.Get(j, i),
+						1./alt.Get(0, j, i), To, u)
+					p := (P.Get(0, j, i) + PB.Get(0, j, i))
+					zo := USGSz0[f2i(luIndex.Get(j, i))]
+					const rParticle = 0.15e-6 // [m], Seinfeld & Pandis fig 8.11
+					const ρparticle = 1830.   // [kg/m3] Jacobson (2005) Ex. 13.5
+					particleDryDep.AddVal(
+						gocart.ParticleDryDep(gocartObk, u, To, h,
+							zo, rParticle, ρparticle, p), j, i)
+					SO2DryDep.AddVal(
+						gocart.GasDryDep(gocartObk, u, h,
+							zo, gocart.DratioForRb["SO2"]), j, i)
+					NOxDryDep.AddVal(
+						gocart.GasDryDep(gocartObk, u, h,
+							zo, gocart.DratioForRb["NOx"]), j, i)
+					NH3DryDep.AddVal(
+						gocart.GasDryDep(gocartObk, u, h,
+							zo, gocart.DratioForRb["NH3"]), j, i)
+					VOCDryDep.AddVal(
+						gocart.GasDryDep(gocartObk, u, h,
+							zo, gocart.DratioForRb["HCHO"]), j, i)
 
 					for k := 0; k < T.Shape[0]; k++ {
 						Tval := T.Get(k, j, i)
@@ -1141,8 +1066,8 @@ func StabilityMixingChemistry(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
 									LayerHeights.Get(k-1, j, i)) // K/m
 						}
 
-						pressureCorrection := math.Pow(
-							(P.Get(k, j, i)+PB.Get(k, j, i))/po, kappa)
+						p := P.Get(k, j, i) + PB.Get(k, j, i) // Pa
+						pressureCorrection := math.Pow(p/po, kappa)
 
 						// potential temperature, K
 						θ := Tval + 300.
@@ -1181,7 +1106,7 @@ func StabilityMixingChemistry(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
 							M2d.AddVal(m2u*(h-z)/Δz, k, j, i)
 						}
 
-						// Chemistry
+						// Gas phase sulfur chemistry
 						const Na = 6.02214129e23 // molec./mol (Avogadro's constant)
 						const cm3perm3 = 100. * 100. * 100.
 						const molarMassAir = 28.97 / 1000.             // kg/mol
@@ -1191,9 +1116,21 @@ func StabilityMixingChemistry(LayerHeights, ustar, pblh, alt *sparse.DenseArray,
 						// SO2 oxidation rate (Stockwell 1997, Table 2d)
 						const kinf = 1.5e-12
 						ko := 3.e-31 * math.Pow(t/300., -3.3)
-						kSO2 := (ko * M / (1 + ko*M/kinf)) * math.Pow(0.6,
+						SO2rate := (ko * M / (1 + ko*M/kinf)) * math.Pow(0.6,
 							1./(1+math.Pow(math.Log10(ko*M/kinf), 2.))) // cm3/molec/s
-						SO2oxidation.AddVal(kSO2*hoConc, k, j, i) // 1/s
+						kSO2 := SO2rate * hoConc
+
+						// Aqueous phase sulfur chemistry
+						qCloudVal := qCloud.Get(k, j, i)
+						if qCloudVal > 0. {
+							const pH = 3.5 // doesn't really matter for SO2
+							qCloudVal /=
+								alt.Get(k, j, i) * 1000. // convert to volume frac.
+							kSO2 += seinfeld.SulfurH2O2aqueousOxidationRate(
+								h2o2.Get(k, j, i)*1000., pH, t, p*atmPerPa,
+								qCloudVal)
+						}
+						SO2oxidation.AddVal(kSO2, k, j, i) // 1/s
 					}
 				}
 				sem <- empty{}

@@ -42,9 +42,9 @@ func (c *AIMcell) Mixing(Δt float64) {
 		}
 		// Horizontal mixing
 		c.Cf[ii] += 1. / c.Dx * (c.East.KxxWest*(c.East.Ci[ii]-c.Ci[ii])/c.Dx +
-			c.KxxWest*(c.West.Ci[ii]-c.Ci[ii])/c.Dx) * Δt
+			c.KxxWest*(c.West.Ci[ii]-c.Ci[ii])/c.Dx) * Δt * 1000. ///////////////////////////////////////////////////////////////////////////////////
 		c.Cf[ii] += 1. / c.Dy * (c.North.KyySouth*(c.North.Ci[ii]-c.Ci[ii])/c.Dy +
-			c.KyySouth*(c.South.Ci[ii]-c.Ci[ii])/c.Dy) * Δt
+			c.KyySouth*(c.South.Ci[ii]-c.Ci[ii])/c.Dy) * Δt * 1000. ///////////////////////////////////////////////////////////////////////////
 	}
 }
 
