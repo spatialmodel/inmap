@@ -241,7 +241,7 @@ func main() {
 	temperature := <-Tchan
 	S1 := <-Tchan
 	Sclass := <-Tchan
-	Kz := <-Tchan
+	Kzz := <-Tchan
 	M2u := <-Tchan
 	M2d := <-Tchan
 	SO2oxidation := <-Tchan
@@ -375,9 +375,9 @@ func main() {
 	h.AddAttribute("otherGasWetDep", "description", "Wet deposition rate constant for other gases")
 	h.AddAttribute("otherGasWetDep", "units", "s-1")
 
-	h.AddVariable("Kz", []string{"zStagger", "y", "x"}, []float32{0})
-	h.AddAttribute("Kz", "description", "Vertical turbulent diffusivity")
-	h.AddAttribute("Kz", "units", "m2 s-1")
+	h.AddVariable("Kzz", []string{"zStagger", "y", "x"}, []float32{0})
+	h.AddAttribute("Kzz", "description", "Vertical turbulent diffusivity")
+	h.AddAttribute("Kzz", "units", "m2 s-1")
 
 	h.AddVariable("M2u", []string{"y", "x"}, []float32{0})
 	h.AddAttribute("M2u", "description", "ACM2 nonlocal upward mixing (Pleim 2007)")
@@ -443,7 +443,7 @@ func main() {
 	writeNCF(f, "particleWetDep", particleWetDep)
 	writeNCF(f, "SO2WetDep", SO2WetDep)
 	writeNCF(f, "otherGasWetDep", otherGasWetDep)
-	writeNCF(f, "Kz", Kz)
+	writeNCF(f, "Kzz", Kzz)
 	writeNCF(f, "M2u", M2u)
 	writeNCF(f, "M2d", M2d)
 	writeNCF(f, "pblTopLayer", pblTopLayer)
@@ -918,7 +918,7 @@ func StabilityMixingChemistry(LayerHeights, pblh *sparse.DenseArray,
 	var Temp *sparse.DenseArray
 	var S1 *sparse.DenseArray
 	var Sclass *sparse.DenseArray
-	var Kz *sparse.DenseArray
+	var Kzz *sparse.DenseArray
 	var M2d *sparse.DenseArray
 	var M2u *sparse.DenseArray
 	var SO2oxidation *sparse.DenseArray
@@ -965,7 +965,7 @@ func StabilityMixingChemistry(LayerHeights, pblh *sparse.DenseArray,
 			Temp = sparse.ZerosDense(T.Shape...) // units = K
 			S1 = sparse.ZerosDense(T.Shape...)
 			Sclass = sparse.ZerosDense(T.Shape...)
-			Kz = sparse.ZerosDense(LayerHeights.Shape...)     // units = m2/s
+			Kzz = sparse.ZerosDense(LayerHeights.Shape...)     // units = m2/s
 			M2u = sparse.ZerosDense(pblh.Shape...)            // units = 1/s
 			M2d = sparse.ZerosDense(T.Shape...)               // units = 1/s
 			SO2oxidation = sparse.ZerosDense(T.Shape...)      // units = 1/s
@@ -1069,14 +1069,14 @@ func StabilityMixingChemistry(LayerHeights, pblh *sparse.DenseArray,
 						Δz := zabove - z
 						km := calculateKm(z, h, L, u)
 						if k >= kPblTop-1 { // free atmosphere (unstaggered grid)
-							Kz.AddVal(1., k, j, i)
+							Kzz.AddVal(1., k, j, i)
 							Kyy.AddVal(1., k, j, i)
 							if k == T.Shape[0]-1 { // Top Layer
-								Kz.AddVal(1., k+1, j, i)
+								Kzz.AddVal(1., k+1, j, i)
 							}
 						} else { // Boundary layer (unstaggered grid)
 							// Pleim 2007, Eq. 11b
-							Kz.AddVal(km*(1-fconv), k, j, i)
+							Kzz.AddVal(km*(1-fconv), k, j, i)
 							kmyy := calculateKm(z+Δz/2., h, L, u)
 							Kyy.AddVal(kmyy, k, j, i)
 							// Pleim 2007, Eq. 4
