@@ -42,9 +42,9 @@ func (c *AIMcell) Mixing(Δt float64) {
 		}
 		// Horizontal mixing
 		c.Cf[ii] += 1. / c.Dx * (c.East.KxxWest*(c.East.Ci[ii]-c.Ci[ii])/c.Dx +
-			c.KxxWest*(c.West.Ci[ii]-c.Ci[ii])/c.Dx) * Δt * 1000. ///////////////////////////////////////////////////////////////////////////////////
+			c.KxxWest*(c.West.Ci[ii]-c.Ci[ii])/c.Dx) * Δt //* 1000. ///////////////////////////////////////////////////////////////////////////////////
 		c.Cf[ii] += 1. / c.Dy * (c.North.KyySouth*(c.North.Ci[ii]-c.Ci[ii])/c.Dy +
-			c.KyySouth*(c.South.Ci[ii]-c.Ci[ii])/c.Dy) * Δt * 1000. ///////////////////////////////////////////////////////////////////////////
+			c.KyySouth*(c.South.Ci[ii]-c.Ci[ii])/c.Dy) * Δt //* 1000. ///////////////////////////////////////////////////////////////////////////
 	}
 }
 
@@ -232,12 +232,11 @@ func (c *AIMcell) DryDeposition(d *AIMdata) {
 	)
 	if c.k == 0 {
 		fac := 1. / c.Dz * d.Dt
-		no2fac := 1 - vNO2*fac
-		so2fac := 1 - vSO2*fac
-		vocfac := 1 - vVOC*fac
-		nh3fac := 1 - vNH3*fac
+		noxfac := 1 - c.NOxDryDep*fac
+		so2fac := 1 - c.SO2DryDep*fac
+		vocfac := 1 - c.VOCDryDep*fac
+		nh3fac := 1 - c.NH3DryDep*fac
 		pm25fac := 1 - c.particleDryDep*fac
-		//pSfac := 1 - c.particleDryDep*fac * 0.01 ///////////////////////////////////////////////////////////////////////////////////
 		c.Cf[igOrg] *= vocfac
 		c.Cf[ipOrg] *= pm25fac
 		c.Cf[iPM2_5] *= pm25fac
@@ -245,25 +244,24 @@ func (c *AIMcell) DryDeposition(d *AIMdata) {
 		c.Cf[ipNH] *= pm25fac
 		c.Cf[igS] *= so2fac
 		c.Cf[ipS] *= pm25fac
-		//c.Cf[ipS] *= pSfac
-		c.Cf[igNO] *= no2fac
+		c.Cf[igNO] *= noxfac
 		c.Cf[ipNO] *= pm25fac
 	}
 }
 
 func (c *AIMcell) WetDeposition(Δt float64) {
-	particleFrac := 1. - c.wdParticle*Δt
-	SO2Frac := 1. - c.wdSO2*Δt
-	otherGasFrac := 1 - c.wdOtherGas*Δt
-	c.Cf[igOrg] *= otherGasFrac  // gOrg
-	c.Cf[ipOrg] *= particleFrac  // pOrg
-	c.Cf[iPM2_5] *= particleFrac // PM2_5
-	c.Cf[igNH] *= otherGasFrac   // gNH
-	c.Cf[ipNH] *= particleFrac   // pNH
-	c.Cf[igS] *= SO2Frac         // gS
-	c.Cf[ipS] *= particleFrac    // pS
-	c.Cf[igNO] *= otherGasFrac   // gNO
-	c.Cf[ipNO] *= particleFrac   // pNO
+	particleFrac := 1. - c.particleWetDep*Δt
+	SO2Frac := 1. - c.SO2WetDep*Δt
+	otherGasFrac := 1 - c.otherGasWetDep*Δt
+	c.Cf[igOrg] *= otherGasFrac
+	c.Cf[ipOrg] *= particleFrac
+	c.Cf[iPM2_5] *= particleFrac
+	c.Cf[igNH] *= otherGasFrac
+	c.Cf[ipNH] *= particleFrac
+	c.Cf[igS] *= SO2Frac
+	c.Cf[ipS] *= particleFrac
+	c.Cf[igNO] *= otherGasFrac
+	c.Cf[ipNO] *= particleFrac
 }
 
 // convert float to int (rounding)

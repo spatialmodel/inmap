@@ -237,13 +237,13 @@ func main() {
 	NHPartitioning := <-NH3chan
 	gNH := <-NH3chan
 	pNH := <-NH3chan
+	pblTopLayer := <-Tchan
 	temperature := <-Tchan
 	S1 := <-Tchan
 	Sclass := <-Tchan
 	Kz := <-Tchan
 	M2u := <-Tchan
 	M2d := <-Tchan
-	pblTopLayer := <-Tchan
 	SO2oxidation := <-Tchan
 	particleDryDep := <-Tchan
 	SO2DryDep := <-Tchan
@@ -263,55 +263,31 @@ func main() {
 			windSpeed.Shape[0] + 1})
 	h.AddAttribute("", "comment", "Meteorology and baseline chemistry data file")
 
-	h.AddVariable("uPlusFrac", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("uPlusFrac", "description",
-		"Fraction of wind going toward +U direction")
-	h.AddAttribute("uPlusFrac", "units", "fraction")
 	h.AddVariable("uPlusSpeed", []string{"z", "y", "x"}, []float32{0})
 	h.AddAttribute("uPlusSpeed", "description",
 		"Average speed of wind going in +U direction")
 	h.AddAttribute("uPlusSpeed", "units", "m/s")
 
-	h.AddVariable("uMinusFrac", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("uMinusFrac", "description",
-		"Fraction of wind going toward -U direction")
-	h.AddAttribute("uMinusFrac", "units", "fraction")
 	h.AddVariable("uMinusSpeed", []string{"z", "y", "x"}, []float32{0})
 	h.AddAttribute("uMinusSpeed", "description",
 		"Average speed of wind going in -U direction")
 	h.AddAttribute("uMinusSpeed", "units", "m/s")
 
-	h.AddVariable("vPlusFrac", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("vPlusFrac", "description",
-		"Fraction of wind going toward +V direction")
-	h.AddAttribute("vPlusFrac", "units", "fraction")
 	h.AddVariable("vPlusSpeed", []string{"z", "y", "x"}, []float32{0})
 	h.AddAttribute("vPlusSpeed", "description",
 		"Average speed of wind going in +V direction")
 	h.AddAttribute("vPlusSpeed", "units", "m/s")
 
-	h.AddVariable("vMinusFrac", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("vMinusFrac", "description",
-		"Fraction of wind going toward -V direction")
-	h.AddAttribute("vMinusFrac", "units", "fraction")
 	h.AddVariable("vMinusSpeed", []string{"z", "y", "x"}, []float32{0})
 	h.AddAttribute("vMinusSpeed", "description",
 		"Average speed of wind going in -V direction")
 	h.AddAttribute("vMinusSpeed", "units", "m/s")
 
-	h.AddVariable("wPlusFrac", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("wPlusFrac", "description",
-		"Fraction of wind going toward +W direction")
-	h.AddAttribute("wPlusFrac", "units", "fraction")
 	h.AddVariable("wPlusSpeed", []string{"z", "y", "x"}, []float32{0})
 	h.AddAttribute("wPlusSpeed", "description",
 		"Average speed of wind going in +W direction")
 	h.AddAttribute("wPlusSpeed", "units", "m/s")
 
-	h.AddVariable("wMinusFrac", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("wMinusFrac", "description",
-		"Fraction of wind going toward -W direction")
-	h.AddAttribute("wMinusFrac", "units", "fraction")
 	h.AddVariable("wMinusSpeed", []string{"z", "y", "x"}, []float32{0})
 	h.AddAttribute("wMinusSpeed", "description",
 		"Average speed of wind going in -W direction")
@@ -977,8 +953,9 @@ func StabilityMixingChemistry(LayerHeights, pblh *sparse.DenseArray,
 		alt := <-altChan             // inverse density (m3/kg)
 		qCloud := <-qCloudChan       // cloud water mixing ratio (kg/kg)
 		if T == nil {
+			Tchan <- pblTopLayer
 			for _, arr := range []*sparse.DenseArray{Temp, S1, Sclass, Kz, M2u,
-				M2d, pblTopLayer, SO2oxidation, particleDryDep, SO2DryDep,
+				M2d, SO2oxidation, particleDryDep, SO2DryDep,
 				NOxDryDep, NH3DryDep, VOCDryDep, Kyy} {
 				Tchan <- arrayAverage(arr)
 			}

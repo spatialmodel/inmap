@@ -31,8 +31,11 @@ type AIMcell struct {
 	wPlusSpeed, wMinusSpeed        float64   // [m/s]
 	orgPartitioning, SPartitioning float64   // gaseous fraction
 	NOPartitioning, NHPartitioning float64   // gaseous fraction
-	wdParticle, wdSO2, wdOtherGas  float64   // wet deposition rate [1/s]
-	particleDryDep                 float64   // aerosol dry deposition velocity [m/s]
+	particleWetDep, SO2WetDep      float64   // wet deposition rate [1/s]
+	otherGasWetDep                 float64   // wet deposition rate [1/s]
+	particleDryDep, NH3DryDep      float64   // Dry deposition velocities [m/s]
+	SO2DryDep, VOCDryDep           float64   // Dry deposition velocities [m/s]
+	NOxDryDep                      float64   // Dry deposition velocities [m/s]
 	SO2oxidation                   float64   // SO2 oxidation to SO4 by HO [1/s]
 	Kz                             float64   // vertical diffusivity [m2/s]
 	KyySouth                       float64   // horizontal diffusivity at south edge [m2/s] (staggered grid)
@@ -100,7 +103,7 @@ func InitAIMdata(filename string, httpPort string) *AIMdata {
 	dx, dy := 12000., 12000. // need to make these adjustable
 	d.VOCoxidationRate = f.Header.GetAttribute("", "VOCoxidationRate").([]float64)[0]
 	var wg sync.WaitGroup
-	wg.Add(29) // Number of readNCF functions to run simultaneously
+	wg.Add(33) // Number of readNCF functions to run simultaneously
 	layerHeights := sparse.ZerosDense(d.Nz+1, d.Ny, d.Nx)
 	readNCF(filename, &wg, "layerHeights", layerHeights)
 	// set up data holders
@@ -212,15 +215,19 @@ func InitAIMdata(filename string, httpPort string) *AIMdata {
 	go d.readNCF(filename, &wg, "NHPartitioning")
 	go d.readNCF(filename, &wg, "gNH")
 	go d.readNCF(filename, &wg, "pNH")
-	go d.readNCF(filename, &wg, "wdParticle")
-	go d.readNCF(filename, &wg, "wdSO2")
-	go d.readNCF(filename, &wg, "wdOtherGas")
+	go d.readNCF(filename, &wg, "particleWetDep")
+	go d.readNCF(filename, &wg, "SO2WetDep")
+	go d.readNCF(filename, &wg, "otherGasWetDep")
 	go d.readNCF(filename, &wg, "Kz")
 	go d.readNCF(filename, &wg, "M2u")
 	go d.readNCF(filename, &wg, "M2d")
 	go d.readNCF(filename, &wg, "pblTopLayer")
 	go d.readNCF(filename, &wg, "SO2oxidation")
 	go d.readNCF(filename, &wg, "particleDryDep")
+	go d.readNCF(filename, &wg, "NH3DryDep")
+	go d.readNCF(filename, &wg, "NOxDryDep")
+	go d.readNCF(filename, &wg, "SO2DryDep")
+	go d.readNCF(filename, &wg, "VOCDryDep")
 	go d.readNCF(filename, &wg, "Kyy")
 	wg.Wait()
 	d.arrayLock.Unlock()
@@ -427,12 +434,12 @@ func (d *AIMdata) readNCF(filename string, wg *sync.WaitGroup, Var string) {
 					d.Data[ii].Cbackground[igS] = float64(dat[index])
 				case "pS":
 					d.Data[ii].Cbackground[ipS] = float64(dat[index])
-				case "wdParticle":
-					d.Data[ii].wdParticle = float64(dat[index])
-				case "wdSO2":
-					d.Data[ii].wdSO2 = float64(dat[index])
-				case "wdOtherGas":
-					d.Data[ii].wdOtherGas = float64(dat[index])
+				case "particleWetDep":
+					d.Data[ii].particleWetDep = float64(dat[index])
+				case "SO2WetDep":
+					d.Data[ii].SO2WetDep = float64(dat[index])
+				case "otherGasWetDep":
+					d.Data[ii].otherGasWetDep = float64(dat[index])
 				case "Kz":
 					d.Data[ii].Kz = float64(dat[index])
 				case "M2u": // 2d variable
@@ -448,6 +455,18 @@ func (d *AIMdata) readNCF(filename string, wg *sync.WaitGroup, Var string) {
 				case "particleDryDep": // 2d variable
 					index = j*jstride + i
 					d.Data[ii].particleDryDep = float64(dat[index])
+				case "NH3DryDep": // 2d variable
+					index = j*jstride + i
+					d.Data[ii].NH3DryDep = float64(dat[index])
+				case "NOxDryDep": // 2d variable
+					index = j*jstride + i
+					d.Data[ii].NOxDryDep = float64(dat[index])
+				case "VOCDryDep": // 2d variable
+					index = j*jstride + i
+					d.Data[ii].VOCDryDep = float64(dat[index])
+				case "SO2DryDep": // 2d variable
+					index = j*jstride + i
+					d.Data[ii].SO2DryDep = float64(dat[index])
 				case "Kyy": // convert from unstaggered to staggered
 					jminusIndex := k*kstride + (j-1)*jstride + i
 					iminusIndex := k*kstride + j*jstride + i - 1

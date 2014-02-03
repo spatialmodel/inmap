@@ -306,15 +306,15 @@ func (d *AIMdata) ToArray(pol string) *sparse.DenseArray {
 		}
 	case "Particlewetdeposition":
 		for i, c := range d.Data {
-			o.Elements[i] = c.wdParticle
+			o.Elements[i] = c.particleWetDep
 		}
 	case "SO2wetdeposition":
 		for i, c := range d.Data {
-			o.Elements[i] = c.wdSO2
+			o.Elements[i] = c.SO2WetDep
 		}
 	case "Non-SO2gaswetdeposition":
 		for i, c := range d.Data {
-			o.Elements[i] = c.wdOtherGas
+			o.Elements[i] = c.otherGasWetDep
 		}
 	case "KxxWest":
 		for i, c := range d.Data {
