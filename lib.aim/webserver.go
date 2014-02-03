@@ -32,7 +32,7 @@ var mapOptions = []string{"PrimaryPM2_5", "VOC", "SOA", "NH3", "pNH4", "SOx",
 	"vPlusSpeed", "vMinusSpeed", "wPlusSpeed", "wMinusSpeed",
 	"Organicpartitioning", "Sulfurpartitioning", "Nitratepartitioning",
 	"Ammoniapartitioning", "Particlewetdeposition", "SO2wetdeposition",
-	"Non-SO2gaswetdeposition", "KxxWest", "KyySouth", "Kz", "M2u", "M2d", "kPblTop"}
+	"Non-SO2gaswetdeposition", "KxxWest", "KyySouth", "Kzz", "M2u", "M2d", "kPblTop"}
 
 func reportHandler(w http.ResponseWriter, r *http.Request) {
 	webframework.RenderHeader(w, "AIM status", "")

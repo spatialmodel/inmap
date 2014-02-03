@@ -34,17 +34,17 @@ func (c *AIMcell) Mixing(Δt float64) {
 		if c.k < f2i(c.kPblTop) { // Within boundary layer
 			c.Cf[ii] += (g.M2u*g.Ci[ii] - c.M2d*c.Ci[ii] +
 				a.M2d*a.Ci[ii]*a.Dz/c.Dz +
-				1./c.Dz*(a.Kz*(a.Ci[ii]-c.Ci[ii])/c.dzPlusHalf+
-					c.Kz*(b.Ci[ii]-c.Ci[ii])/c.dzMinusHalf)) * Δt
+				1./c.Dz*(a.Kzz*(a.Ci[ii]-c.Ci[ii])/c.dzPlusHalf+
+					c.Kzz*(b.Ci[ii]-c.Ci[ii])/c.dzMinusHalf)) * Δt
 		} else { // Above boundary layer: no convective or horizontal mixing
-			c.Cf[ii] += 1. / c.Dz * (a.Kz*(a.Ci[ii]-c.Ci[ii])/c.dzPlusHalf +
-				c.Kz*(b.Ci[ii]-c.Ci[ii])/c.dzMinusHalf) * Δt * 3. //////////////////////////////////////////////////////////////////////////////////
+			c.Cf[ii] += 1. / c.Dz * (a.Kzz*(a.Ci[ii]-c.Ci[ii])/c.dzPlusHalf +
+				c.Kzz*(b.Ci[ii]-c.Ci[ii])/c.dzMinusHalf) * Δt * 3. //////////////////////////////////////////////////////////////////////////////////
 		}
 		// Horizontal mixing
 		c.Cf[ii] += 1. / c.Dx * (c.East.KxxWest*(c.East.Ci[ii]-c.Ci[ii])/c.Dx +
-			c.KxxWest*(c.West.Ci[ii]-c.Ci[ii])/c.Dx) * Δt //* 1000. ///////////////////////////////////////////////////////////////////////////////////
+			c.KxxWest*(c.West.Ci[ii]-c.Ci[ii])/c.Dx) * Δt
 		c.Cf[ii] += 1. / c.Dy * (c.North.KyySouth*(c.North.Ci[ii]-c.Ci[ii])/c.Dy +
-			c.KyySouth*(c.South.Ci[ii]-c.Ci[ii])/c.Dy) * Δt //* 1000. ///////////////////////////////////////////////////////////////////////////
+			c.KyySouth*(c.South.Ci[ii]-c.Ci[ii])/c.Dy) * Δt
 	}
 }
 
@@ -174,7 +174,7 @@ func (c *AIMcell) COBRAchemistry(d *AIMdata) {
 
 	// All SO4 forms particles, so sulfur particle formation is limited by the
 	// SO2 -> SO4 reaction.
-	ΔS := c.SO2oxidation * c.Cf[igS] * d.Dt * 100. ////////////////////////////////////////////////////////////
+	ΔS := c.SO2oxidation * c.Cf[igS] * d.Dt
 	//ΔS := kS * c.Cf[igS] * d.Dt
 	c.Cf[igS] -= ΔS
 	c.Cf[ipS] += ΔS

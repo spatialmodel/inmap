@@ -37,7 +37,7 @@ type AIMcell struct {
 	SO2DryDep, VOCDryDep           float64   // Dry deposition velocities [m/s]
 	NOxDryDep                      float64   // Dry deposition velocities [m/s]
 	SO2oxidation                   float64   // SO2 oxidation to SO4 by HO [1/s]
-	Kz                             float64   // vertical diffusivity [m2/s]
+	Kzz                             float64   // vertical diffusivity [m2/s]
 	KyySouth                       float64   // horizontal diffusivity at south edge [m2/s] (staggered grid)
 	KxxWest                        float64   // horizontal diffusivity at west edge [m2/s]
 	M2u                            float64   // ACM2 upward mixing (Pleim 2007) [1/s]
@@ -218,7 +218,7 @@ func InitAIMdata(filename string, httpPort string) *AIMdata {
 	go d.readNCF(filename, &wg, "particleWetDep")
 	go d.readNCF(filename, &wg, "SO2WetDep")
 	go d.readNCF(filename, &wg, "otherGasWetDep")
-	go d.readNCF(filename, &wg, "Kz")
+	go d.readNCF(filename, &wg, "Kzz")
 	go d.readNCF(filename, &wg, "M2u")
 	go d.readNCF(filename, &wg, "M2d")
 	go d.readNCF(filename, &wg, "pblTopLayer")
@@ -440,8 +440,8 @@ func (d *AIMdata) readNCF(filename string, wg *sync.WaitGroup, Var string) {
 					d.Data[ii].SO2WetDep = float64(dat[index])
 				case "otherGasWetDep":
 					d.Data[ii].otherGasWetDep = float64(dat[index])
-				case "Kz":
-					d.Data[ii].Kz = float64(dat[index])
+				case "Kzz":
+					d.Data[ii].Kzz = float64(dat[index])
 				case "M2u": // 2d variable
 					index = j*jstride + i
 					d.Data[ii].M2u = float64(dat[index])

@@ -965,7 +965,7 @@ func StabilityMixingChemistry(LayerHeights, pblh *sparse.DenseArray,
 			Temp = sparse.ZerosDense(T.Shape...) // units = K
 			S1 = sparse.ZerosDense(T.Shape...)
 			Sclass = sparse.ZerosDense(T.Shape...)
-			Kzz = sparse.ZerosDense(LayerHeights.Shape...)     // units = m2/s
+			Kzz = sparse.ZerosDense(LayerHeights.Shape...)    // units = m2/s
 			M2u = sparse.ZerosDense(pblh.Shape...)            // units = 1/s
 			M2d = sparse.ZerosDense(T.Shape...)               // units = 1/s
 			SO2oxidation = sparse.ZerosDense(T.Shape...)      // units = 1/s
@@ -982,9 +982,8 @@ func StabilityMixingChemistry(LayerHeights, pblh *sparse.DenseArray,
 		for j := 0; j < T.Shape[1]; j++ {
 			go func(j int) { // concurrent processing
 				for i := 0; i < T.Shape[2]; i++ {
-					// Calculate boundary layer average temperature (K)
-					// and index for top layer of the PBL
 					kPblTop := f2i(pblTopLayer.Get(j, i))
+					// Calculate boundary layer average temperature (K)
 					To := 0.
 					for k := 0; k < LayerHeights.Shape[0]; k++ {
 						if k == kPblTop {
@@ -993,27 +992,19 @@ func StabilityMixingChemistry(LayerHeights, pblh *sparse.DenseArray,
 						}
 						To += T.Get(k, j, i) + 300.
 					}
+					// Calculate convective mixing rate
 					u := ustar.Get(j, i) // friction velocity
 					h := LayerHeights.Get(kPblTop, j, i)
-					// Potential temperature flux = surfaceHeatFlux / Cp /  ρ
-					// θf (K m / s) = hfx (W / m2) / Cp (J / kg-K) * alt (m3 / kg)
-					θf := hfx.Get(j, i) / Cp * alt.Get(0, j, i)
-					// L=Monin-Obukhov length, Pleim et al., 2007 equation 14.
-					L := To * math.Pow(u, 3) / g / κ / θf
-
-					fconv := max(0., 1/(1+math.Pow(κ, -2./3.)/.72*
-						math.Pow(-h/L, -1./3.))) // Pleim 2007, Eq. 19
-
-					z1plushalf := LayerHeights.Get(1, j, i)
-					Δz1plushalf := LayerHeights.Get(2, j, i) / 2.
-					kh := calculateKh(z1plushalf, h, L, u)
-					// Pleim 2007, Eq. 9
-					m2u := fconv * kh / Δz1plushalf / max(1., h-z1plushalf)
-					// Pleim 2007, Eq 11a
+					hflux := hfx.Get(j, i)                // heat flux [W m-2]
+					ρ := 1 / alt.Get(0, j, i)             // density [kg/m3]
+					L := acm2.ObukhovLen(hflux, ρ, To, u) // Monin-Obukhov length [m]
+					fconv := acm2.ConvectiveFraction(L, h)
+					m2u := acm2.M2u(LayerHeights.Get(1, j, i),
+						LayerHeights.Get(2, j, i), h, L, u, fconv)
 					M2u.AddVal(m2u, j, i)
 
-					gocartObk := gocart.ObhukovLen(hfx.Get(j, i),
-						1./alt.Get(0, j, i), To, u)
+					// Calculate dry deposition
+					gocartObk := gocart.ObhukovLen(hflux, ρ, To, u)
 					p := (P.Get(0, j, i) + PB.Get(0, j, i))
 					zo := USGSz0[f2i(luIndex.Get(j, i))]
 					const rParticle = 0.15e-6 // [m], Seinfeld & Pandis fig 8.11
@@ -1066,8 +1057,10 @@ func StabilityMixingChemistry(LayerHeights, pblh *sparse.DenseArray,
 						// Mixing
 						z := LayerHeights.Get(k, j, i)
 						zabove := LayerHeights.Get(k+1, j, i)
+						zcenter := (LayerHeights.Get(k, j, i) + 
+							LayerHeights.Get(k+1, j, i))/2
 						Δz := zabove - z
-						km := calculateKm(z, h, L, u)
+
 						if k >= kPblTop-1 { // free atmosphere (unstaggered grid)
 							Kzz.AddVal(1., k, j, i)
 							Kyy.AddVal(1., k, j, i)
@@ -1075,12 +1068,10 @@ func StabilityMixingChemistry(LayerHeights, pblh *sparse.DenseArray,
 								Kzz.AddVal(1., k+1, j, i)
 							}
 						} else { // Boundary layer (unstaggered grid)
-							// Pleim 2007, Eq. 11b
-							Kzz.AddVal(km*(1-fconv), k, j, i)
-							kmyy := calculateKm(z+Δz/2., h, L, u)
+							Kzz.AddVal(acm2.Kzz(zcenter,h,L,u,fconv), k, j, i)
+							M2d.AddVal(acm2.M2d(m2u, z, Δz, h), k, j, i)
+							kmyy := acm2.calculateKm(zcenter, h, L, u)
 							Kyy.AddVal(kmyy, k, j, i)
-							// Pleim 2007, Eq. 4
-							M2d.AddVal(m2u*(h-z)/Δz, k, j, i)
 						}
 
 						// Gas phase sulfur chemistry
@@ -1120,42 +1111,6 @@ func StabilityMixingChemistry(LayerHeights, pblh *sparse.DenseArray,
 	return
 }
 
-// Calculate heat diffusivity
-func calculateKh(z, h, L, ustar float64) (kh float64) {
-	var zs, ϕ_h float64
-	if L < 0. { // Unstable conditions
-		// Pleim 2007, equation 12.5
-		zs = min(z, 0.1*h)
-		// Pleim Eq. 13
-		ϕ_h = math.Pow(1.-16.*zs/L, -0.5)
-	} else { // Stable conditions
-		zs = z
-		// Dyer, 1974 (Concluding Remarks)
-		ϕ_h = 1. + 5.*zs/L
-	}
-	// Pleim Eq. 12; units = m2/s
-	kh = κ * ustar / ϕ_h * z * math.Pow(1-z/h, 2)
-	return
-}
-
-// Calculate mass diffusivity
-func calculateKm(z, h, L, ustar float64) (km float64) {
-	var zs, ϕ_m float64
-	if L < 0. { // Unstable conditions
-		// Pleim 2007, equation 12.5
-		zs = min(z, 0.1*h)
-		// Pleim Eq. 13
-		ϕ_m = math.Pow(1.-16.*zs/L, -0.25)
-	} else { // Stable conditions
-		zs = z
-		// Dyer, 1974 (Concluding Remarks)
-		ϕ_m = 1. + 5.*zs/L
-	}
-	// Pleim Eq. 12; units = m2/s
-	km = κ * ustar / ϕ_m * z * math.Pow(1-z/h, 2)
-	return
-}
-
 func minInt(vals ...int) int {
 	minval := vals[0]
 	for _, val := range vals {
@@ -1166,24 +1121,6 @@ func minInt(vals ...int) int {
 	return minval
 }
 
-func min(vals ...float64) float64 {
-	minval := vals[0]
-	for _, val := range vals {
-		if val < minval {
-			minval = val
-		}
-	}
-	return minval
-}
-func max(vals ...float64) float64 {
-	maxval := vals[0]
-	for _, val := range vals {
-		if val > maxval {
-			maxval = val
-		}
-	}
-	return maxval
-}
 
 // convert float to int (rounding)
 func f2i(f float64) int {

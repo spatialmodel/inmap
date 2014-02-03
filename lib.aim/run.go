@@ -324,9 +324,9 @@ func (d *AIMdata) ToArray(pol string) *sparse.DenseArray {
 		for i, c := range d.Data {
 			o.Elements[i] = c.KyySouth
 		}
-	case "Kz":
+	case "Kzz":
 		for i, c := range d.Data {
-			o.Elements[i] = c.Kz
+			o.Elements[i] = c.Kzz
 		}
 	case "M2u":
 		for i, c := range d.Data {
