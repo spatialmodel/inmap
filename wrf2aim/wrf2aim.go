@@ -4,6 +4,7 @@ import (
 	"bitbucket.org/ctessum/atmos/emep"
 	"bitbucket.org/ctessum/atmos/gocart"
 	"bitbucket.org/ctessum/atmos/seinfeld"
+	"bitbucket.org/ctessum/atmos/acm2"
 	"bitbucket.org/ctessum/sparse"
 	"code.google.com/p/lvd.go/cdf"
 	"flag"
@@ -954,7 +955,7 @@ func StabilityMixingChemistry(LayerHeights, pblh *sparse.DenseArray,
 		qCloud := <-qCloudChan       // cloud water mixing ratio (kg/kg)
 		if T == nil {
 			Tchan <- pblTopLayer
-			for _, arr := range []*sparse.DenseArray{Temp, S1, Sclass, Kz, M2u,
+			for _, arr := range []*sparse.DenseArray{Temp, S1, Sclass, Kzz, M2u,
 				M2d, SO2oxidation, particleDryDep, SO2DryDep,
 				NOxDryDep, NH3DryDep, VOCDryDep, Kyy} {
 				Tchan <- arrayAverage(arr)
@@ -1057,8 +1058,8 @@ func StabilityMixingChemistry(LayerHeights, pblh *sparse.DenseArray,
 						// Mixing
 						z := LayerHeights.Get(k, j, i)
 						zabove := LayerHeights.Get(k+1, j, i)
-						zcenter := (LayerHeights.Get(k, j, i) + 
-							LayerHeights.Get(k+1, j, i))/2
+						zcenter := (LayerHeights.Get(k, j, i) +
+							LayerHeights.Get(k+1, j, i)) / 2
 						Δz := zabove - z
 
 						if k >= kPblTop-1 { // free atmosphere (unstaggered grid)
@@ -1068,9 +1069,9 @@ func StabilityMixingChemistry(LayerHeights, pblh *sparse.DenseArray,
 								Kzz.AddVal(1., k+1, j, i)
 							}
 						} else { // Boundary layer (unstaggered grid)
-							Kzz.AddVal(acm2.Kzz(zcenter,h,L,u,fconv), k, j, i)
+							Kzz.AddVal(acm2.Kzz(z, h, L, u, fconv), k, j, i)
 							M2d.AddVal(acm2.M2d(m2u, z, Δz, h), k, j, i)
-							kmyy := acm2.calculateKm(zcenter, h, L, u)
+							kmyy := acm2.CalculateKm(zcenter, h, L, u)
 							Kyy.AddVal(kmyy, k, j, i)
 						}
 
@@ -1120,7 +1121,6 @@ func minInt(vals ...int) int {
 	}
 	return minval
 }
-
 
 // convert float to int (rounding)
 func f2i(f float64) int {
