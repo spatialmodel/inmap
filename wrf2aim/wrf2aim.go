@@ -1,10 +1,10 @@
 package main
 
 import (
+	"bitbucket.org/ctessum/atmos/acm2"
 	"bitbucket.org/ctessum/atmos/emep"
 	"bitbucket.org/ctessum/atmos/gocart"
 	"bitbucket.org/ctessum/atmos/seinfeld"
-	"bitbucket.org/ctessum/atmos/acm2"
 	"bitbucket.org/ctessum/sparse"
 	"code.google.com/p/lvd.go/cdf"
 	"flag"
@@ -174,6 +174,8 @@ func main() {
 	qrainChan := make(chan *sparse.DenseArray)
 	cloudFracChan := make(chan *sparse.DenseArray)
 	altChanWetDep := make(chan *sparse.DenseArray)
+	altChan := make(chan *sparse.DenseArray)
+	go average(altChan)
 	go calcWetDeposition(layerHeights, qrainChan, cloudFracChan,
 		altChanWetDep)
 
@@ -207,7 +209,7 @@ func main() {
 		readSingleVar("QRAIN", qrainChan),
 		readSingleVar("CLDFRA", cloudFracChan),
 		readSingleVar("QCLOUD", qCloudChan),
-		readSingleVar("ALT", altChanWetDep, altChanMixing))
+		readSingleVar("ALT", altChanWetDep, altChanMixing, altChan))
 
 	VOCchan <- nil
 	NOxchan <- nil
@@ -225,7 +227,9 @@ func main() {
 	cloudFracChan <- nil
 	altChanWetDep <- nil
 	altChanMixing <- nil
+	altChan <- nil
 	qCloudChan <- nil
+	alt := <-altChan
 	orgPartitioning := <-VOCchan
 	VOC := <-VOCchan
 	SOA := <-VOCchan
@@ -413,6 +417,10 @@ func main() {
 	h.AddAttribute("Sclass", "description", "Stability parameter")
 	h.AddAttribute("Sclass", "units", "0=Unstable; 1=Stable")
 
+	h.AddVariable("alt", []string{"z", "y", "x"}, []float32{0})
+	h.AddAttribute("alt", "description", "Inverse density")
+	h.AddAttribute("alt", "units", "m3 kg-1")
+
 	h.Define()
 	ff, err := os.Create(outputFile)
 	if err != nil {
@@ -460,6 +468,7 @@ func main() {
 	writeNCF(f, "NH3DryDep", NH3DryDep)
 	writeNCF(f, "VOCDryDep", VOCDryDep)
 	writeNCF(f, "Kyy", Kyy)
+	writeNCF(f, "alt", alt)
 	err = cdf.UpdateNumRecs(ff)
 	if err != nil {
 		panic(err)
