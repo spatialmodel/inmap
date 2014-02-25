@@ -11,325 +11,246 @@ import (
 )
 
 type AIMdata struct {
-	Data             []*AIMcell   // One data holder for each grid cell
-	Nx, Ny, Nz       int          // number of meteorology bins
-	arrayLock        sync.RWMutex // Avoid concentration arrays being written by one subroutine and read by another at the same time.
-	Dt               float64      // seconds
-	vs               float64      // Settling velocity [m/s]
-	VOCoxidationRate float64      // VOC oxidation rate constant
-	westBoundary     []*AIMcell   // boundary cells
-	eastBoundary     []*AIMcell   // boundary cells
-	northBoundary    []*AIMcell   // boundary cells
-	southBoundary    []*AIMcell   // boundary cells
-	topBoundary      []*AIMcell   // boundary cells; assume bottom boundary is the same as lowest layer
+	Data             []*AIMcell // One data holder for each grid cell
+	Dt               float64    // seconds
+	vs               float64    // Settling velocity [m/s]
+	VOCoxidationRate float64    // VOC oxidation rate constant
+	westBoundary     []*AIMcell // boundary cells
+	eastBoundary     []*AIMcell // boundary cells
+	northBoundary    []*AIMcell // boundary cells
+	southBoundary    []*AIMcell // boundary cells
+	topBoundary      []*AIMcell // boundary cells; assume bottom boundary is the same as lowest layer
 }
 
 // Data for a single grid cell
 type AIMcell struct {
-	uPlusSpeed, uMinusSpeed        float64   // [m/s]
-	vPlusSpeed, vMinusSpeed        float64   // [m/s]
-	wPlusSpeed, wMinusSpeed        float64   // [m/s]
-	orgPartitioning, SPartitioning float64   // gaseous fraction
-	NOPartitioning, NHPartitioning float64   // gaseous fraction
-	particleWetDep, SO2WetDep      float64   // wet deposition rate [1/s]
-	otherGasWetDep                 float64   // wet deposition rate [1/s]
-	particleDryDep, NH3DryDep      float64   // Dry deposition velocities [m/s]
-	SO2DryDep, VOCDryDep           float64   // Dry deposition velocities [m/s]
-	NOxDryDep                      float64   // Dry deposition velocities [m/s]
-	SO2oxidation                   float64   // SO2 oxidation to SO4 by HO [1/s]
-	Kzz                             float64   // vertical diffusivity [m2/s]
-	KyySouth                       float64   // horizontal diffusivity at south edge [m2/s] (staggered grid)
-	KxxWest                        float64   // horizontal diffusivity at west edge [m2/s]
-	M2u                            float64   // ACM2 upward mixing (Pleim 2007) [1/s]
-	M2d                            float64   // ACM2 downward mixing (Pleim 2007) [1/s]
-	kPblTop                        float64   // k index of boundary layer top
-	Dx, Dy, Dz                     float64   // grid size [meters]
-	Volume                         float64   // [cubic meters]
-	k, j, i                        int       // cell indicies
-	ii                             int       // master cell index
-	Ci                             []float64 // concentrations at beginning of time step [μg/m3]
-	Cˣ, Cˣˣ                        []float64 // concentrations after first and second Runge-Kutta passes [μg/m3]
-	Cf                             []float64 // concentrations at end of time step [μg/m3]
-	Csum                           []float64 // sum of concentrations over time for later averaging [μg/m3]
-	Cbackground                    []float64 // background pollutant concentrations (not associated with the current simulation) [μg/m3]
-	emisFlux                       []float64 //  emissions [μg/m3/s]
-	West                           *AIMcell  // Neighbor to the East
-	East                           *AIMcell  // Neighbor to the West
-	South                          *AIMcell  // Neighbor to the South
-	North                          *AIMcell  // Neighbor to the North
-	Below                          *AIMcell  // Neighbor below
-	Above                          *AIMcell  // Neighbor above
-	GroundLevel                    *AIMcell  // Neighbor at ground level
-	dzPlusHalf                     float64   // Distance between centers of cell and Above [m]
-	dzMinusHalf                    float64   // Distance between centers of cell and Below [m]
-	nextToEdge                     bool      // Is the grid cell next to the edge?
-	twoFromEdge                    bool      // Is the grid cell 2 cells from the edge?
+	geom                           geom.T       // Cell geometry
+	UPlusSpeed, UMinusSpeed        float64      // [m/s]
+	VPlusSpeed, VMinusSpeed        float64      // [m/s]
+	WPlusSpeed, WMinusSpeed        float64      // [m/s]
+	OrgPartitioning, SPartitioning float64      // gaseous fraction
+	NOPartitioning, NHPartitioning float64      // gaseous fraction
+	ParticleWetDep, SO2WetDep      float64      // wet deposition rate [1/s]
+	OtherGasWetDep                 float64      // wet deposition rate [1/s]
+	ParticleDryDep, NH3DryDep      float64      // Dry deposition velocities [m/s]
+	SO2DryDep, VOCDryDep           float64      // Dry deposition velocities [m/s]
+	NOxDryDep                      float64      // Dry deposition velocities [m/s]
+	SO2oxidation                   float64      // SO2 oxidation to SO4 by HO [1/s]
+	Kzz                            float64      // vertical diffusivity at bottom edge [m2/s]
+	Kyyxx                          float64      // unstaggered horizontal diffusivity [m2/s]
+	KyySouth                       float64      // horizontal diffusivity at south edge [m2/s] (staggered grid)
+	KxxWest                        float64      // horizontal diffusivity at west edge [m2/s]
+	M2u                            float64      // ACM2 upward mixing (Pleim 2007) [1/s]
+	M2d                            float64      // ACM2 downward mixing (Pleim 2007) [1/s]
+	PblTopLayer                    float64      // k index of boundary layer top
+	Dx, Dy, Dz                     float64      // grid size [meters]
+	Volume                         float64      // [cubic meters]
+	Row                            int          // master cell index
+	Ci                             []float64    // concentrations at beginning of time step [μg/m3]
+	Cˣ, Cˣˣ                        []float64    // concentrations after first and second Runge-Kutta passes [μg/m3]
+	Cf                             []float64    // concentrations at end of time step [μg/m3]
+	emisFlux                       []float64    //  emissions [μg/m3/s]
+	West                           []*AIMcell   // Neighbors to the East
+	East                           []*AIMcell   // Neighbors to the West
+	South                          []*AIMcell   // Neighbors to the South
+	North                          []*AIMcell   // Neighbors to the North
+	Below                          []*AIMcell   // Neighbors below
+	Above                          []*AIMcell   // Neighbors above
+	GroundLevel                    []*AIMcell   // Neighbors at ground level
+	iWest                          []int        // Row indexes of neighbors to the East
+	iEast                          []int        // Row indexes of neighbors to the West
+	iSouth                         []int        // Row indexes of neighbors to the South
+	iNorth                         []int        // Row indexes of neighbors to the north
+	iBelow                         []int        // Row indexes of neighbors below
+	iAbove                         []int        // Row indexes of neighbors above
+	iGroundLevel                   []int        // Row indexes of neighbors at ground level
+	dxPlusHalf                     []float64    // Distance between centers of cell and East [m]
+	dxMinusHalf                    []float64    // Distance between centers of cell and West [m]
+	dyPlusHalf                     []float64    // Distance between centers of cell and North [m]
+	dyMinusHalf                    []float64    // Distance between centers of cell and South [m]
+	dzPlusHalf                     []float64    // Distance between centers of cell and Above [m]
+	dzMinusHalf                    []float64    // Distance between centers of cell and Below [m]
+	nextToEdge                     bool         // Is the grid cell next to the edge?
+	Layer                          int          // layer index of grid cell
+	lock                           sync.RWMutex // Avoid cell being written by one subroutine and read by another at the same time.
 }
 
-func newAIMcell(dx, dy, dz float64) *AIMcell {
+func (c *AIMcell) prepare() {
 	c := new(AIMcell)
-	c.Dx, c.Dy, c.Dz = dx, dy, dz
-	c.Volume = dx * dy * dz
+	c.Volume = c.Dx * c.Dy * c.Dz
 	c.Ci = make([]float64, len(polNames))
 	c.Cf = make([]float64, len(polNames))
 	c.Cˣ = make([]float64, len(polNames))
 	c.Cˣˣ = make([]float64, len(polNames))
-	c.Csum = make([]float64, len(polNames))
-	c.Cbackground = make([]float64, len(polNames))
 	c.emisFlux = make([]float64, len(polNames))
-	return c
+}
+
+func (c *AIMcell) makecopy() *AIMcell {
+	c2 := new(AIMcell)
+	c2.Dx, c2.Dy, cd.Dz = c.Dx, c.Dy, c.Dz
+	c2.prepare()
+	return c2
 }
 
 // Initialize the model, where `filename` is the path to
-// the NetCDF file with meteorology and background concentration data,
+// the GeoJSON files with meteorology and background concentration data
+// (where `[layer]` is a stand-in for the layer number),
+// `nLayers` is the number of vertical layers in the model,
 // and `httpPort` is the port number for hosting the html GUI.
-func InitAIMdata(filename string, httpPort string) *AIMdata {
-	d := new(AIMdata)
-	d.arrayLock.Lock()
+func InitAIMdata(filename string, nLayers int, httpPort string) *AIMdata {
 	go d.WebServer(httpPort)
-	ff, err := os.Open(filename)
-	if err != nil {
-		panic(err)
+
+	type dataHolder struct {
+		Type       string
+		Geometry   *geojson.Geometry
+		Properties *AIMcell
 	}
-	defer ff.Close()
-	f, err := cdf.Open(ff)
-	if err != nil {
-		panic(err)
+	type dataHolderHolder struct {
+		Proj4, Type string
+		Features    []*dataHolder
 	}
-	dims := f.Header.Lengths("orgPartitioning")
-	d.Nz = dims[0]
-	d.Ny = dims[1]
-	d.Nx = dims[2]
-	dx, dy := 12000., 12000. // need to make these adjustable
-	d.VOCoxidationRate = f.Header.GetAttribute("", "VOCoxidationRate").([]float64)[0]
-	var wg sync.WaitGroup
-	wg.Add(33) // Number of readNCF functions to run simultaneously
-	layerHeights := sparse.ZerosDense(d.Nz+1, d.Ny, d.Nx)
-	readNCF(filename, &wg, "layerHeights", layerHeights)
+	inputData := make([]*dataHolderHolder, nLayers)
+	ncells := 0
+	for k := 0; k < nLayers; k++ {
+		f, err := os.Open(filename)
+		if err != nil {
+			panic(err)
+		}
+		var d dataHolderHolder
+		err = json.Unmarshal(f, &dataHolderHolder)
+		inputData[k] = &d
+		ncells += len(d.Features)
+		f.Close()
+	}
 	// set up data holders
-	d.Data = make([]*AIMcell, d.Nz*d.Ny*d.Nx)
-	ii := 0
-	for k := 0; k < d.Nz; k++ {
-		for j := 0; j < d.Ny; j++ {
-			for i := 0; i < d.Nx; i++ {
-				// calculate Dz (varies by layer)
-				dz := layerHeights.Get(k+1, j, i) - layerHeights.Get(k, j, i)
-				d.Data[ii] = newAIMcell(dx, dy, dz)
-				d.Data[ii].k = k
-				d.Data[ii].j = j
-				d.Data[ii].i = i
-				d.Data[ii].ii = ii
-				ii++
+	d := new(AIMdata)
+	d.Data = make([]*AIMcell, ncells)
+	for _, indata := range inputData {
+		for _, c := range indata {
+			c.prepare()
+			d.Data[c.Row] = c
+		}
+	}
+	d.westBoundary = make([]*AIMcell, 0)
+	d.eastBoundary = make([]*AIMcell, 0)
+	d.southBoundary = make([]*AIMcell, 0)
+	d.northBoundary = make([]*AIMcell, 0)
+	d.topBoundary = make([]*AIMcell, 0)
+	for _, cell := range d.Data {
+		if len(cell.iWest) == 0 {
+			c := cell.makecopy()
+			c.nextToEdge = true
+			cell.nextToEdge = true
+			cell.West = []*AIMcell{c}
+			d.westBoundary = append(d.westBoundary, c)
+		} else {
+			cell.West = make([]*AIMcell, len(cell.iWest))
+			for i, row := range cell.iWest {
+				cell.West[i] = d.Data[row]
 			}
+			cell.iWest = nil
 		}
-	}
-	d.arrayLock.Unlock()
-	// set up boundary data holders
-	d.westBoundary = make([]*AIMcell, d.Nz*d.Ny)
-	ii = 0
-	i := 0
-	for k := 0; k < d.Nz; k++ {
-		for j := 0; j < d.Ny; j++ {
-			d.westBoundary[ii] = newAIMcell(dx, dy, 0.)
-			d.westBoundary[ii].k = k
-			d.westBoundary[ii].j = j
-			d.westBoundary[ii].i = i
-			d.westBoundary[ii].ii = ii
-			d.westBoundary[ii].nextToEdge = true
-			ii++
-		}
-	}
-	d.eastBoundary = make([]*AIMcell, d.Nz*d.Ny)
-	ii = 0
-	i = d.Nx
-	for k := 0; k < d.Nz; k++ {
-		for j := 0; j < d.Ny; j++ {
-			d.eastBoundary[ii] = newAIMcell(dx, dy, 0.)
-			d.eastBoundary[ii].k = k
-			d.eastBoundary[ii].j = j
-			d.eastBoundary[ii].i = i
-			d.eastBoundary[ii].ii = ii
-			d.eastBoundary[ii].nextToEdge = true
-			ii++
-		}
-	}
-	d.southBoundary = make([]*AIMcell, d.Nz*d.Nx)
-	ii = 0
-	j := 0
-	for k := 0; k < d.Nz; k++ {
-		for i := 0; i < d.Nx; i++ {
-			d.southBoundary[ii] = newAIMcell(dx, dy, 0.)
-			d.southBoundary[ii].k = k
-			d.southBoundary[ii].j = j
-			d.southBoundary[ii].i = i
-			d.southBoundary[ii].ii = ii
-			d.southBoundary[ii].nextToEdge = true
-			ii++
-		}
-	}
-	d.northBoundary = make([]*AIMcell, d.Nz*d.Nx)
-	ii = 0
-	j = d.Ny
-	for k := 0; k < d.Nz; k++ {
-		for i := 0; i < d.Nx; i++ {
-			d.northBoundary[ii] = newAIMcell(dx, dy, 0.)
-			d.northBoundary[ii].k = k
-			d.northBoundary[ii].j = j
-			d.northBoundary[ii].i = i
-			d.northBoundary[ii].ii = ii
-			d.northBoundary[ii].nextToEdge = true
-			ii++
-		}
-	}
-	d.topBoundary = make([]*AIMcell, d.Ny*d.Nx)
-	ii = 0
-	k := d.Nz
-	for j := 0; j < d.Ny; j++ {
-		for i := 0; i < d.Nx; i++ {
-			d.topBoundary[ii] = newAIMcell(dx, dy, 0.)
-			d.topBoundary[ii].k = k
-			d.topBoundary[ii].j = j
-			d.topBoundary[ii].i = i
-			d.topBoundary[ii].ii = ii
-			d.topBoundary[ii].nextToEdge = true
-			ii++
-		}
-	}
-
-	d.arrayLock.Lock()
-	go d.readNCF(filename, &wg, "uPlusSpeed")
-	go d.readNCF(filename, &wg, "uMinusSpeed")
-	go d.readNCF(filename, &wg, "vPlusSpeed")
-	go d.readNCF(filename, &wg, "vMinusSpeed")
-	go d.readNCF(filename, &wg, "wPlusSpeed")
-	go d.readNCF(filename, &wg, "wMinusSpeed")
-	go d.readNCF(filename, &wg, "orgPartitioning")
-	go d.readNCF(filename, &wg, "VOC")
-	go d.readNCF(filename, &wg, "SOA")
-	go d.readNCF(filename, &wg, "SPartitioning")
-	go d.readNCF(filename, &wg, "gS")
-	go d.readNCF(filename, &wg, "pS")
-	go d.readNCF(filename, &wg, "NOPartitioning")
-	go d.readNCF(filename, &wg, "gNO")
-	go d.readNCF(filename, &wg, "pNO")
-	go d.readNCF(filename, &wg, "NHPartitioning")
-	go d.readNCF(filename, &wg, "gNH")
-	go d.readNCF(filename, &wg, "pNH")
-	go d.readNCF(filename, &wg, "particleWetDep")
-	go d.readNCF(filename, &wg, "SO2WetDep")
-	go d.readNCF(filename, &wg, "otherGasWetDep")
-	go d.readNCF(filename, &wg, "Kzz")
-	go d.readNCF(filename, &wg, "M2u")
-	go d.readNCF(filename, &wg, "M2d")
-	go d.readNCF(filename, &wg, "pblTopLayer")
-	go d.readNCF(filename, &wg, "SO2oxidation")
-	go d.readNCF(filename, &wg, "particleDryDep")
-	go d.readNCF(filename, &wg, "NH3DryDep")
-	go d.readNCF(filename, &wg, "NOxDryDep")
-	go d.readNCF(filename, &wg, "SO2DryDep")
-	go d.readNCF(filename, &wg, "VOCDryDep")
-	go d.readNCF(filename, &wg, "Kyy")
-	wg.Wait()
-	d.arrayLock.Unlock()
-
-	// Set up links to neighbors
-	ii = 0
-	var jj int
-	for k := 0; k < d.Nz; k++ {
-		for j := 0; j < d.Ny; j++ {
-			for i := 0; i < d.Nx; i++ {
-				if i == 0 {
-					d.Data[ii].West = d.westBoundary[k*d.Ny+j]
-				} else {
-					jj = d.getIndex(k, j, i-1)
-					d.Data[jj].checkIndicies(k, j, i-1)
-					d.Data[ii].West = d.Data[jj]
-				}
-				if i == d.Nx-1 {
-					d.Data[ii].East = d.eastBoundary[k*d.Ny+j]
-					// Since we have converted from unstaggered to staggered
-					// grid for Kxx, fill in final value for Kxx.
-					d.Data[ii].East.KxxWest = d.Data[ii].KxxWest
-				} else {
-					jj = d.getIndex(k, j, i+1)
-					d.Data[jj].checkIndicies(k, j, i+1)
-					d.Data[ii].East = d.Data[jj]
-				}
-				if j == 0 {
-					d.Data[ii].South = d.southBoundary[k*d.Nx+i]
-				} else {
-					jj = d.getIndex(k, j-1, i)
-					d.Data[jj].checkIndicies(k, j-1, i)
-					d.Data[ii].South = d.Data[jj]
-				}
-				if j == d.Ny-1 {
-					d.Data[ii].North = d.northBoundary[k*d.Nx+i]
-					// Since we have converted from unstaggered to staggered
-					// grid for Kxx, fill in final value for Kxx.
-					d.Data[ii].North.KyySouth = d.Data[ii].KyySouth
-				} else {
-					jj = d.getIndex(k, j+1, i)
-					d.Data[jj].checkIndicies(k, j+1, i)
-					d.Data[ii].North = d.Data[jj]
-				}
-				if k == 0 {
-					d.Data[ii].Below = d.Data[ii] // assume bottom boundary is the same as lowest layer.
-				} else {
-					jj = d.getIndex(k-1, j, i)
-					d.Data[jj].checkIndicies(k-1, j, i)
-					d.Data[ii].Below = d.Data[jj]
-				}
-				if k == d.Nz-1 {
-					d.Data[ii].Above = d.topBoundary[j*d.Nx+i]
-				} else {
-					jj = d.getIndex(k+1, j, i)
-					d.Data[jj].checkIndicies(k+1, j, i)
-					d.Data[ii].Above = d.Data[jj]
-				}
-				if k == 0 || k == d.Nz-1 || j == 0 || j == d.Ny-1 ||
-					i == 0 || i == d.Nx-1 {
-					d.Data[ii].nextToEdge = true
-				}
-				if k == 1 || k == d.Nz-2 || j == 1 || j == d.Ny-2 ||
-					i == 1 || i == d.Nx-2 {
-					d.Data[ii].twoFromEdge = true
-				}
-				jj = d.getIndex(0, j, i)
-				d.Data[jj].checkIndicies(0, j, i)
-				d.Data[ii].GroundLevel = d.Data[jj]
-
-				d.Data[ii].dzPlusHalf = (d.Data[ii].Dz +
-					d.Data[ii].Above.Dz) / 2.
-				d.Data[ii].dzMinusHalf = (d.Data[ii].Dz +
-					d.Data[ii].Below.Dz) / 2.
-				ii++
+		if len(cell.iEast) == 0 {
+			c := cell.makecopy()
+			c.nextToEdge = true
+			// Since we have converted from unstaggered to staggered
+			// grid for Kxx, fill in final value for Kxx.
+			c.KxxWest = cell.Kyyxx
+			cell.nextToEdge = true
+			cell.East = []*AIMcell{c}
+			d.eastBoundary = append(d.eastBoundary, c)
+		} else {
+			cell.East = make([]*AIMcell, len(cell.iEast))
+			for i, row := range cell.iEast {
+				cell.East[i] = d.Data[row]
 			}
+			cell.iEast = nil
+		}
+		if len(cell.iSouth) == 0 {
+			c := cell.makecopy()
+			c.nextToEdge = true
+			cell.nextToEdge = true
+			cell.South = []*AIMcell{c}
+			d.southBoundary = append(d.southBoundary, c)
+		} else {
+			cell.South = make([]*AIMcell, len(cell.iSouth))
+			for i, row := range cell.iSouth {
+				cell.South[i] = d.Data[row]
+			}
+			cell.iSouth = nil
+		}
+		if len(cell.iNorth) == 0 {
+			c := cell.makecopy()
+			c.nextToEdge = true
+			// Since we have converted from unstaggered to staggered
+			// grid for Kyy, fill in final value for Kyy.
+			c.KyySouth = cell.Kyyxx
+			cell.nextToEdge = true
+			cell.North = []*AIMcell{c}
+			d.northBoundary = append(d.northBoundary, c)
+		} else {
+			cell.North = make([]*AIMcell, len(cell.iNorth))
+			for i, row := range cell.iNorth {
+				cell.North[i] = d.Data[row]
+			}
+			cell.iNorth = nil
+		}
+		if len(cell.iAbove) == 0 {
+			c := cell.makecopy()
+			c.nextToEdge = true
+			cell.nextToEdge = true
+			cell.Above = []*AIMcell{c}
+			d.topBoundary = append(d.topBoundary, c)
+		} else {
+			cell.Above = make([]*AIMcell, len(cell.iAbove))
+			for i, row := range cell.iAbove {
+				cell.Above[i] = d.Data[row]
+			}
+			cell.iAbove = nil
+		}
+		if cell.Layer != 0 {
+			cell.Below = make([]*AIMcell, len(cell.iBelow))
+			cell.GroundLevel = make([]*AIMcell, len(cell.iGroundLevel))
+			for i, row := range cell.iBelow {
+				cell.Below[i] = d.Data[row]
+			}
+			for i, row := range cell.iGroundLevel {
+				cell.GroundLevel[i] = d.Data[row]
+			}
+			cell.iBelow = nil
+			cell.iGroundLevel = nil
+		} else { // assume bottom boundary is the same as lowest layer.
+			cell.Below = []*AIMcell{d.Data[cell.Row]}
+			cell.GroundLevel = []*AIMcell{d.Data[cell.Row]}
+		}
+
+		// Calculate center-to-center cell distance
+		cell.dxPlusHalf = make([]float64, len(cell.East))
+		for i, c := range cell.East {
+			cell.dxPlusHalf[i] = (cell.Dx + c.Dx) / 2.
+		}
+		cell.dxMinusHalf = make([]float64, len(cell.West))
+		for i, c := range cell.West {
+			cell.dxMinusHalf[i] = (cell.Dx + c.Dx) / 2.
+		}
+		cell.dyPlusHalf = make([]float64, len(cell.North))
+		for i, c := range cell.Above {
+			cell.dyPlusHalf[i] = (cell.Dy + c.Dy) / 2.
+		}
+		cell.dyMinusHalf = make([]float64, len(cell.South))
+		for i, c := range cell.Below {
+			cell.dyMinusHalf[i] = (cell.Dy + c.Dy) / 2.
+		}
+		cell.dzPlusHalf = make([]float64, len(cell.Above))
+		for i, c := range cell.Above {
+			cell.dzPlusHalf[i] = (cell.Dz + c.Dz) / 2.
+		}
+		cell.dzMinusHalf = make([]float64, len(cell.Below))
+		for i, c := range cell.Below {
+			cell.dzMinusHalf[i] = (cell.Dz + c.Dz) / 2.
 		}
 	}
-	d.SettlingVelocity()
 	return d
-}
-
-// convert 3d index to 1d index
-func (d *AIMdata) getIndex(k, j, i int) int {
-	return k*d.Ny*d.Nx + j*d.Nx + i
-}
-func (c *AIMcell) checkIndicies(k, j, i int) {
-	if k != c.k || j != c.j || k != c.k {
-		panic(fmt.Sprintf("Expected indicies (%v,%v,%v) do not match actual "+
-			"indicies (%v,%v,%v). Master index=%v.\n", k, j, i, c.k, c.j, c.i, c.ii))
-	}
-}
-
-func interpolate(random float32, freqs, bins []float32, b int) (val float64) {
-	x := freqs[b+1] - freqs[b]
-	if x == 0. {
-		val = float64(bins[b])
-	} else {
-		frac := (random - freqs[b]) / (x)
-		val = float64(bins[b] + (bins[b+1]-bins[b])*frac)
-	}
-	return
 }
 
 // Add in emissions flux to each cell at every time step, also
@@ -340,13 +261,6 @@ func (c *AIMcell) addEmissionsFlux(d *AIMdata) {
 	for i, _ := range polNames {
 		c.Cf[i] += c.emisFlux[i] * d.Dt
 		c.Ci[i] = c.Cf[i]
-	}
-}
-
-// Add current concentration to sum for later averaging
-var addtosum = func(c *AIMcell, d *AIMdata) {
-	for i, _ := range polNames {
-		c.Csum[i] += c.Cf[i]
 	}
 }
 
@@ -503,33 +417,4 @@ func (d *AIMdata) readNCF(filename string, wg *sync.WaitGroup, Var string) {
 			}
 		}
 	}
-}
-
-func getNCFbuffer(filename string, Var string) []float32 {
-	ff, err := os.Open(filename)
-	if err != nil {
-		panic(err)
-	}
-	f, err := cdf.Open(ff)
-	if err != nil {
-		panic(err)
-	}
-	vars := f.Header.Variables()
-	sort.Strings(vars)
-	if i := sort.SearchStrings(vars, Var); vars[i] != Var {
-		panic(fmt.Sprintf("Variable %v is not in input data file", Var))
-	}
-	dims := f.Header.Lengths(Var)
-	defer ff.Close()
-	nread := 1
-	for _, dim := range dims {
-		nread *= dim
-	}
-	r := f.Reader(Var, nil, nil)
-	buf := r.Zero(nread)
-	_, err = r.Read(buf)
-	if err != nil {
-		panic(err)
-	}
-	return buf.([]float32)
 }

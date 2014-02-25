@@ -40,21 +40,22 @@ var (
 )
 
 type gridCell struct {
-	geom                                             *geos.Geometry
-	ggeom                                            geom.T
+	ggeom                                            *geos.Geometry
+	geom                                             geom.T
 	bbox                                             *rtreego.Rect
-	Row, Col                                         int
+	Row, Col, Layer                                  int
 	Dx, Dy, Dz                                       float64
 	index                                            [][2]int
 	Totalpop, Whitepop, Totalpoor, Whitepoor         float64
-	West, East, North, South, Above, Below           []int
+	IWest, IEast, INorth, ISouth, IAbove, IBelow     []int
+	IGroundLevel                                     []int
 	UPlusSpeed, UMinusSpeed, VPlusSpeed, VMinusSpeed float64
 	WPlusSpeed, WMinusSpeed                          float64
 	OrgPartitioning, NOPartitioning, SPartitioning   float64
 	NHPartitioning, FracAmmoniaPoor                  float64
 	SO2oxidation                                     float64
 	ParticleDryDep, SO2DryDep, NOxDryDep, NH3DryDep  float64
-	VOCDryDep, Kyy, LayerHeights                     float64
+	VOCDryDep, Kyyxx, LayerHeights                   float64
 	ParticleWetDep, SO2WetDep, OtherGasWetDep        float64
 	Kzz, M2u, M2d, PblTopLayer, Pblh, WindSpeed      float64
 	Temperature, S1, Sclass                          float64
@@ -92,11 +93,11 @@ func variableGrid(data map[string]dataHolder) {
 	id := 0
 	for cell := range cellChan {
 		cell.Row = id
-		cell.ggeom, err = gis.GEOStoGeom(cell.geom)
+		cell.geom, err = gis.GEOStoGeom(cell.ggeom)
 		if err != nil {
 			panic(err)
 		}
-		cell.bbox, err = gis.GeomToRect(cell.ggeom)
+		cell.bbox, err = gis.GeomToRect(cell.geom)
 		if err != nil {
 			panic(err)
 		}
@@ -117,19 +118,19 @@ func variableGrid(data map[string]dataHolder) {
 func getNeighbors(cells []*gridCell, cellTree *rtreego.Rtree) {
 	for _, cell := range cells {
 		b := geom.NewBounds()
-		b = cell.ggeom.Bounds(b)
+		b = cell.geom.Bounds(b)
 		westbox := newRect(b.Min.X-2*bboxOffset, b.Min.Y+bboxOffset,
 			b.Min.X-bboxOffset, b.Max.Y-bboxOffset)
-		cell.West = getIndexes(cellTree, westbox)
+		cell.IWest = getIndexes(cellTree, westbox)
 		eastbox := newRect(b.Max.X+bboxOffset, b.Min.Y+bboxOffset,
 			b.Max.X+2*bboxOffset, b.Max.Y-bboxOffset)
-		cell.East = getIndexes(cellTree, eastbox)
+		cell.IEast = getIndexes(cellTree, eastbox)
 		southbox := newRect(b.Min.X+bboxOffset, b.Min.Y-2*bboxOffset,
 			b.Max.X-bboxOffset, b.Max.Y-bboxOffset)
-		cell.South = getIndexes(cellTree, southbox)
+		cell.ISouth = getIndexes(cellTree, southbox)
 		northbox := newRect(b.Min.X+bboxOffset, b.Max.Y+bboxOffset,
 			b.Max.X-bboxOffset, b.Max.Y+2*bboxOffset)
-		cell.North = getIndexes(cellTree, northbox)
+		cell.INorth = getIndexes(cellTree, northbox)
 	}
 }
 
@@ -171,7 +172,7 @@ func writeJson(cells []*gridCell, k int) {
 	for i, cell := range cells {
 		x := new(JsonHolder)
 		x.Type = "Feature"
-		x.Geometry, err = geojson.ToGeoJSON(cell.ggeom)
+		x.Geometry, err = geojson.ToGeoJSON(cell.geom)
 		if err != nil {
 			panic(err)
 		}
@@ -243,11 +244,11 @@ func CreateCell(pop *rtreego.Rtree, index [][2]int) (
 	// Polygon must go counter-clockwise
 	wkt := fmt.Sprintf("POLYGON ((%v %v, %v %v, %v %v, %v %v, %v %v))",
 		l, b, r, b, r, u, l, u, l, b)
-	cell.geom, err = geos.FromWKT(wkt)
+	cell.ggeom, err = geos.FromWKT(wkt)
 	if err != nil {
 		panic(err)
 	}
-	cellBounds, err := gis.GeosToRect(cell.geom)
+	cellBounds, err := gis.GeosToRect(cell.ggeom)
 	if err != nil {
 		panic(err)
 	}
@@ -255,14 +256,14 @@ func CreateCell(pop *rtreego.Rtree, index [][2]int) (
 	var intersects bool
 	for pp, pInterface := range pop.SearchIntersect(cellBounds) {
 		p := pInterface.(*population)
-		intersects, err = cell.geom.Intersects(p.geom)
+		intersects, err = cell.ggeom.Intersects(p.geom)
 		if err != nil {
 			fmt.Println("xxxxxxxx", pp)
 			panic(err)
 		}
 		if intersects {
 			intersection, err =
-				IntersectionFaultTolerant(cell.geom, p.geom)
+				IntersectionFaultTolerant(cell.ggeom, p.geom)
 			area1, err := intersection.Area()
 			if err != nil {
 				panic(err)
@@ -289,7 +290,7 @@ func CreateCell(pop *rtreego.Rtree, index [][2]int) (
 
 func writeCell(shp *gis.Shapefile, cell *gridCell) {
 	fieldIDs := []int{0, 1, 2, 3, 4, 5}
-	err := shp.WriteFeature(cell.Row, cell.geom, fieldIDs,
+	err := shp.WriteFeature(cell.Row, cell.ggeom, fieldIDs,
 		cell.Row, cell.Col, cell.Totalpop, cell.Whitepop,
 		cell.Totalpoor, cell.Whitepoor)
 	if err != nil {
@@ -403,7 +404,7 @@ func getData(cells []*gridCell, data map[string]dataHolder, k, kmax int) {
 		cell.NOxDryDep = 0.
 		cell.NH3DryDep = 0.
 		cell.VOCDryDep = 0.
-		cell.Kyy = 0.
+		cell.Kyyxx = 0.
 		cell.LayerHeights = 0.
 		cell.Dz = 0.
 		cell.ParticleWetDep = 0.
@@ -419,13 +420,15 @@ func getData(cells []*gridCell, data map[string]dataHolder, k, kmax int) {
 		cell.S1 = 0.
 		cell.Sclass = 0.
 
+		cell.Layer = k
 		// Link with cells above and below.
 		if k != 0 {
 			cell.Row += len(cells)
-			cell.Below = []int{cell.Row - len(cells)}
+			cell.IBelow = []int{cell.Row - len(cells)}
 		}
+		cell.IGroundLevel = []int{cell.Row - k*len(cells)}
 		if k != kmax-1 {
-			cell.Above = []int{cell.Row + len(cells)}
+			cell.IAbove = []int{cell.Row + len(cells)}
 		}
 
 		ctmcells := ctmtree.SearchIntersect(cell.bbox)
@@ -471,7 +474,7 @@ func getData(cells []*gridCell, data map[string]dataHolder, k, kmax int) {
 				ctmrow, ctmcol) / ncells
 			cell.VOCDryDep += data["VOCDryDep"].data.Get(
 				ctmrow, ctmcol) / ncells
-			cell.Kyy += data["Kyy"].data.Get(
+			cell.Kyyxx += data["Kyy"].data.Get(
 				k, ctmrow, ctmcol) / ncells
 			cell.LayerHeights += data["LayerHeights"].data.Get(
 				k, ctmrow, ctmcol) / ncells
