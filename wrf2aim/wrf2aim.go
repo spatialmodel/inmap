@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"path/filepath"
 	"runtime"
 	"runtime/pprof"
 	"strings"
@@ -20,10 +21,11 @@ import (
 
 const (
 	// user settings
-	wrfout     = "/home/marshall/tessumcm/WRFchem_output/WRF.2005_nei.na12.chem.3.4/output/wrfout_d01_[DATE]"
-	outputFile = "aimData.ncf"
-	startDate  = "20050101"
-	endDate    = "20051231"
+	wrfout           = "/home/marshall/tessumcm/WRFchem_output/WRF.2005_nei.na12.chem.3.4/output/wrfout_d01_[DATE]"
+	outputDir        = "/home/marshall/tessumcm/src/bitbucket.org/ctessum/aim/wrf2aim/aimData"
+	outputFilePrefix = "aimData"
+	startDate        = "20050101"
+	endDate          = "20051231"
 	//endDate = "20050101"
 	nProcs = 16 // number of processors to use
 
@@ -155,7 +157,7 @@ func main() {
 	phb := <-phbChan
 	windSpeed := <-uAvgChan
 
-	layerHeights := calcLayerHeights(ph, phb)
+	layerHeights, Dz := calcLayerHeights(ph, phb)
 
 	// calculate gas/particle partitioning
 	VOCchan := make(chan *sparse.DenseArray)
@@ -170,6 +172,11 @@ func main() {
 	NH3chan := make(chan *sparse.DenseArray)
 	pNHchan := make(chan *sparse.DenseArray)
 	go calcPartitioning(NH3chan, pNHchan)
+
+	NH3chan2 := make(chan *sparse.DenseArray)
+	pNHchan2 := make(chan *sparse.DenseArray)
+	pSchan2 := make(chan *sparse.DenseArray)
+	go ammoniaStatus(NH3chan2, pNHchan2, pSchan2)
 
 	qrainChan := make(chan *sparse.DenseArray)
 	cloudFracChan := make(chan *sparse.DenseArray)
@@ -198,8 +205,8 @@ func main() {
 	iterateTimeSteps("Reading data--pass 2: ",
 		readGasGroup(VOC, VOCchan), readParticleGroup(SOA, SOAchan),
 		readGasGroup(NOx, NOxchan), readParticleGroup(pNO, pNOchan),
-		readGasGroup(SOx, SOxchan), readParticleGroup(pS, pSchan),
-		readGasGroup(NH3, NH3chan), readParticleGroup(pNH, pNHchan),
+		readGasGroup(SOx, SOxchan), readParticleGroup(pS, pSchan, pSchan2),
+		readGasGroup(NH3, NH3chan, NH3chan2), readParticleGroup(pNH, pNHchan, pNHchan2),
 		readSingleVar("HFX", surfaceHeatFluxChan),
 		readSingleVar("UST", ustarChan),
 		readSingleVar("T", Tchan), readSingleVar("PB", PBchan),
@@ -215,6 +222,9 @@ func main() {
 	NOxchan <- nil
 	SOxchan <- nil
 	NH3chan <- nil
+	NH3chan2 <- nil
+	pNHchan2 <- nil
+	pSchan2 <- nil
 	Tchan <- nil
 	PBchan <- nil
 	Pchan <- nil
@@ -259,8 +269,10 @@ func main() {
 	particleWetDep := <-qrainChan
 	SO2WetDep := <-qrainChan
 	otherGasWetDep := <-qrainChan
+	fracAmmoniaPoor := <-NH3chan2
 
 	// write out data to file
+	outputFile := filepath.Join(outputDir, outputFilePrefix+".ncf")
 	fmt.Printf("Writing out data to %v...\n", outputFile)
 	h := cdf.NewHeader(
 		[]string{"x", "y", "z", "zStagger"},
@@ -268,159 +280,108 @@ func main() {
 			windSpeed.Shape[0] + 1})
 	h.AddAttribute("", "comment", "Meteorology and baseline chemistry data file")
 
-	h.AddVariable("uPlusSpeed", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("uPlusSpeed", "description",
-		"Average speed of wind going in +U direction")
-	h.AddAttribute("uPlusSpeed", "units", "m/s")
+	data := map[string]dataHolder{
+		"UPlusSpeed": dataHolder{[]string{"z", "y", "x"},
+			"Average speed of wind going in +U direction", "m/s", uPlusSpeed},
+		"UMinusSpeed": dataHolder{[]string{"z", "y", "x"},
+			"Average speed of wind going in -U direction", "m/s", uMinusSpeed},
+		"VPlusSpeed": dataHolder{[]string{"z", "y", "x"},
+			"Average speed of wind going in +V direction", "m/s", vPlusSpeed},
+		"VMinusSpeed": dataHolder{[]string{"z", "y", "x"},
+			"Average speed of wind going in -V direction", "m/s", vMinusSpeed},
+		"WPlusSpeed": dataHolder{[]string{"z", "y", "x"},
+			"Average speed of wind going in +W direction", "m/s", wPlusSpeed},
+		"WMinusSpeed": dataHolder{[]string{"z", "y", "x"},
+			"Average speed of wind going in -W direction", "m/s", wMinusSpeed},
+		"OrgPartitioning": dataHolder{[]string{"z", "y", "x"},
+			"Mass fraction of organic matter in gas {vs. particle} phase",
+			"fraction", orgPartitioning},
+		"VOC": dataHolder{[]string{"z", "y", "x"},
+			"Average VOC concentration", "ug m-3", VOC},
+		"SOA": dataHolder{[]string{"z", "y", "x"},
+			"Average secondary organic aerosol concentration", "ug m-3", SOA},
+		"NOPartitioning": dataHolder{[]string{"z", "y", "x"},
+			"Mass fraction of N from NOx in gas {vs. particle} phase", "fraction",
+			NOPartitioning},
+		"gNO": dataHolder{[]string{"z", "y", "x"},
+			"Average concentration of nitrogen fraction of gaseous NOx", "ug m-3",
+			gNO},
+		"pNO": dataHolder{[]string{"z", "y", "x"},
+			"Average concentration of nitrogen fraction of particulate NO3",
+			"ug m-3", pNO},
+		"SPartitioning": dataHolder{[]string{"z", "y", "x"},
+			"Mass fraction of S from SOx in gas {vs. particle} phase", "fraction",
+			SPartitioning},
+		"gS": dataHolder{[]string{"z", "y", "x"},
+			"Average concentration of sulfur fraction of gaseous SOx", "ug m-3",
+			gS},
+		"pS": dataHolder{[]string{"z", "y", "x"},
+			"Average concentration of sulfur fraction of particulate sulfate",
+			"ug m-3", pS},
+		"NHPartitioning": dataHolder{[]string{"z", "y", "x"},
+			"Mass fraction of N from NH3 in gas {vs. particle} phase", "fraction",
+			NHPartitioning},
+		"gNH": dataHolder{[]string{"z", "y", "x"},
+			"Average concentration of nitrogen fraction of gaseous ammonia",
+			"ug m-3", gNH},
+		"pNH": dataHolder{[]string{"z", "y", "x"},
+			"Average concentration of nitrogen fraction of particulate ammonium",
+			"ug m-3", pNH},
+		"FracAmmoniaPoor": dataHolder{[]string{"z", "y", "x"},
+			"Fraction of the time that aerosol chemistry is ammonia poor",
+			"fraction", fracAmmoniaPoor},
+		"SO2oxidation": dataHolder{[]string{"z", "y", "x"},
+			"Rate of SO2 oxidation to SO4 by hydroxyl radical and H2O2",
+			"s-1", SO2oxidation},
+		"ParticleDryDep": dataHolder{[]string{"y", "x"},
+			"Dry deposition velocity for particles", "m s-1", particleDryDep},
+		"SO2DryDep": dataHolder{[]string{"y", "x"},
+			"Dry deposition velocity for SO2", "m s-1", SO2DryDep},
+		"NOxDryDep": dataHolder{[]string{"y", "x"},
+			"Dry deposition velocity for NOx", "m s-1", NOxDryDep},
+		"NH3DryDep": dataHolder{[]string{"y", "x"},
+			"Dry deposition velocity for NH3", "m s-1", NH3DryDep},
+		"VOCDryDep": dataHolder{[]string{"y", "x"},
+			"Dry deposition velocity for VOCs", "m s-1", VOCDryDep},
+		"Kyy": dataHolder{[]string{"z", "y", "x"},
+			"Horizontal eddy diffusion coefficient", "m2 s-1", Kyy},
+		"LayerHeights": dataHolder{[]string{"zStagger", "y", "x"},
+			"Height at edge of layer", "m", layerHeights},
+		"Dz": dataHolder{[]string{"z", "y", "x"},
+			"Height of each layer", "m", Dz},
+		"ParticleWetDep": dataHolder{[]string{"z", "y", "x"},
+			"Wet deposition rate constant for fine particles",
+			"s-1", particleWetDep},
+		"SO2WetDep": dataHolder{[]string{"z", "y", "x"},
+			"Wet deposition rate constant for SO2 gas", "s-1", SO2WetDep},
+		"OtherGasWetDep": dataHolder{[]string{"z", "y", "x"},
+			"Wet deposition rate constant for other gases", "s-1", otherGasWetDep},
+		"Kzz": dataHolder{[]string{"zStagger", "y", "x"},
+			"Vertical turbulent diffusivity", "m2 s-1", Kzz},
+		"M2u": dataHolder{[]string{"y", "x"},
+			"ACM2 nonlocal upward mixing {Pleim 2007}", "s-1", M2u},
+		"M2d": dataHolder{[]string{"z", "y", "x"},
+			"ACM2 nonlocal downward mixing {Pleim 2007}", "s-1", M2d},
+		"PblTopLayer": dataHolder{[]string{"y", "x"},
+			"Planetary boundary layer top grid index", "-", pblTopLayer},
+		"Pblh": dataHolder{[]string{"y", "x"},
+			"Planetary boundary layer height", "m", pblh},
+		"WindSpeed": dataHolder{[]string{"z", "y", "x"},
+			"RMS wind speed", "m s-1", windSpeed},
+		"Temperature": dataHolder{[]string{"z", "y", "x"},
+			"Average Temperature", "K", temperature},
+		"S1": dataHolder{[]string{"z", "y", "x"},
+			"Stability parameter", "?", S1},
+		"Sclass": dataHolder{[]string{"z", "y", "x"},
+			"Stability parameter", "0=Unstable; 1=Stable", Sclass},
+		"alt": dataHolder{[]string{"z", "y", "x"},
+			"Inverse density", "m3 kg-1", alt}}
 
-	h.AddVariable("uMinusSpeed", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("uMinusSpeed", "description",
-		"Average speed of wind going in -U direction")
-	h.AddAttribute("uMinusSpeed", "units", "m/s")
-
-	h.AddVariable("vPlusSpeed", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("vPlusSpeed", "description",
-		"Average speed of wind going in +V direction")
-	h.AddAttribute("vPlusSpeed", "units", "m/s")
-
-	h.AddVariable("vMinusSpeed", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("vMinusSpeed", "description",
-		"Average speed of wind going in -V direction")
-	h.AddAttribute("vMinusSpeed", "units", "m/s")
-
-	h.AddVariable("wPlusSpeed", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("wPlusSpeed", "description",
-		"Average speed of wind going in +W direction")
-	h.AddAttribute("wPlusSpeed", "units", "m/s")
-
-	h.AddVariable("wMinusSpeed", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("wMinusSpeed", "description",
-		"Average speed of wind going in -W direction")
-	h.AddAttribute("wMinusSpeed", "units", "m/s")
-
-	h.AddVariable("orgPartitioning", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("orgPartitioning", "description", "Mass fraction of organic matter in gas (vs. particle) phase")
-	h.AddAttribute("orgPartitioning", "units", "fraction")
-	h.AddVariable("VOC", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("VOC", "description", "Average VOC concentration")
-	h.AddAttribute("VOC", "units", "ug m-3")
-	h.AddVariable("SOA", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("SOA", "description", "Average secondary organic aerosol concentration")
-	h.AddAttribute("SOA", "units", "ug m-3")
-
-	h.AddVariable("NOPartitioning", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("NOPartitioning", "description", "Mass fraction of N from NOx in gas (vs. particle) phase")
-	h.AddAttribute("NOPartitioning", "units", "fraction")
-	h.AddVariable("gNO", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("gNO", "description", "Average concentration of nitrogen fraction of gaseous NOx")
-	h.AddAttribute("gNO", "units", "ug m-3")
-	h.AddVariable("pNO", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("pNO", "description", "Average concentration of nitrogen fraction of particulate NO3")
-	h.AddAttribute("pNO", "units", "ug m-3")
-
-	h.AddVariable("SPartitioning", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("SPartitioning", "description", "Mass fraction of S from SOx in gas (vs. particle) phase")
-	h.AddAttribute("SPartitioning", "units", "fraction")
-	h.AddVariable("gS", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("gS", "description", "Average concentration of sulfur fraction of gaseous SOx")
-	h.AddAttribute("gS", "units", "ug m-3")
-	h.AddVariable("pS", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("pS", "description", "Average concentration of sulfur fraction of particulate sulfate")
-	h.AddAttribute("pS", "units", "ug m-3")
-
-	h.AddVariable("NHPartitioning", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("NHPartitioning", "description", "Mass fraction of N from NH3 in gas (vs. particle) phase")
-	h.AddAttribute("NHPartitioning", "units", "fraction")
-	h.AddVariable("gNH", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("gNH", "description", "Average concentration of nitrogen fraction of gaseous ammonia")
-	h.AddAttribute("gNH", "units", "ug m-3")
-	h.AddVariable("pNH", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("pNH", "description", "Average concentration of nitrogen fraction of particulate ammonium")
-	h.AddAttribute("pNH", "units", "ug m-3")
-
-	h.AddVariable("SO2oxidation", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("SO2oxidation", "description", "Rate of SO2 oxidation to SO4 by hydroxyl radical")
-	h.AddAttribute("SO2oxidation", "units", "s-1")
-
-	h.AddVariable("particleDryDep", []string{"y", "x"}, []float32{0})
-	h.AddAttribute("particleDryDep", "description", "Dry deposition velocity for particles")
-	h.AddAttribute("particleDryDep", "units", "m s-1")
-
-	h.AddVariable("SO2DryDep", []string{"y", "x"}, []float32{0})
-	h.AddAttribute("SO2DryDep", "description", "Dry deposition velocity for SO2")
-	h.AddAttribute("SO2DryDep", "units", "m s-1")
-
-	h.AddVariable("NOxDryDep", []string{"y", "x"}, []float32{0})
-	h.AddAttribute("NOxDryDep", "description", "Dry deposition velocity for NOx")
-	h.AddAttribute("NOxDryDep", "units", "m s-1")
-
-	h.AddVariable("NH3DryDep", []string{"y", "x"}, []float32{0})
-	h.AddAttribute("NH3DryDep", "description", "Dry deposition velocity for NH3")
-	h.AddAttribute("NH3DryDep", "units", "m s-1")
-
-	h.AddVariable("VOCDryDep", []string{"y", "x"}, []float32{0})
-	h.AddAttribute("VOCDryDep", "description", "Dry deposition velocity for VOCs")
-	h.AddAttribute("VOCDryDep", "units", "m s-1")
-
-	h.AddVariable("Kyy", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("Kyy", "description", "Horizontal eddy diffusion coefficient")
-	h.AddAttribute("Kyy", "units", "m2 s-1")
-
-	h.AddVariable("layerHeights", []string{"zStagger", "y", "x"}, []float32{0})
-	h.AddAttribute("layerHeights", "description", "Height at edge of layer")
-	h.AddAttribute("layerHeights", "units", "m")
-
-	h.AddVariable("particleWetDep", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("particleWetDep", "description", "Wet deposition rate constant for fine particles")
-	h.AddAttribute("particleWetDep", "units", "s-1")
-	h.AddVariable("SO2WetDep", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("SO2WetDep", "description", "Wet deposition rate constant for SO2 gas")
-	h.AddAttribute("SO2WetDep", "units", "s-1")
-	h.AddVariable("otherGasWetDep", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("otherGasWetDep", "description", "Wet deposition rate constant for other gases")
-	h.AddAttribute("otherGasWetDep", "units", "s-1")
-
-	h.AddVariable("Kzz", []string{"zStagger", "y", "x"}, []float32{0})
-	h.AddAttribute("Kzz", "description", "Vertical turbulent diffusivity")
-	h.AddAttribute("Kzz", "units", "m2 s-1")
-
-	h.AddVariable("M2u", []string{"y", "x"}, []float32{0})
-	h.AddAttribute("M2u", "description", "ACM2 nonlocal upward mixing (Pleim 2007)")
-	h.AddAttribute("M2u", "units", "s-1")
-
-	h.AddVariable("M2d", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("M2d", "description", "ACM2 nonlocal downward mixing (Pleim 2007)")
-	h.AddAttribute("M2d", "units", "s-1")
-
-	h.AddVariable("pblTopLayer", []string{"y", "x"}, []float32{0})
-	h.AddAttribute("pblTopLayer", "description", "Planetary boundary layer top grid index")
-	h.AddAttribute("pblTopLayer", "units", "-")
-
-	h.AddVariable("pblh", []string{"y", "x"}, []float32{0})
-	h.AddAttribute("pblh", "description", "Planetary boundary layer height")
-	h.AddAttribute("pblh", "units", "m")
-
-	h.AddAttribute("", "VOCoxidationRate", []float64{1.e-12}) // Estimated from Stockwell et al., A new mechanism for regional atmospheric chemistry modeling, J. Geophys. Res. 1997
-	h.AddAttribute("", "VOCoxidationRateUnits", "s-1")
-
-	h.AddVariable("windSpeed", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("windSpeed", "description", "RMS wind speed")
-	h.AddAttribute("windSpeed", "units", "m s-1")
-
-	h.AddVariable("temperature", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("temperature", "description", "Average Temperature")
-	h.AddAttribute("temperature", "units", "K")
-	h.AddVariable("S1", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("S1", "description", "Stability parameter")
-	h.AddAttribute("S1", "units", "?")
-	h.AddVariable("Sclass", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("Sclass", "description", "Stability parameter")
-	h.AddAttribute("Sclass", "units", "0=Unstable; 1=Stable")
-
-	h.AddVariable("alt", []string{"z", "y", "x"}, []float32{0})
-	h.AddAttribute("alt", "description", "Inverse density")
-	h.AddAttribute("alt", "units", "m3 kg-1")
-
+	for name, d := range data {
+		h.AddVariable(name, d.dims, []float32{0})
+		h.AddAttribute(name, "description", d.Description)
+		h.AddAttribute(name, "units", d.Units)
+	}
 	h.Define()
 	ff, err := os.Create(outputFile)
 	if err != nil {
@@ -430,50 +391,22 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	writeNCF(f, "uPlusSpeed", uPlusSpeed)
-	writeNCF(f, "uMinusSpeed", uMinusSpeed)
-	writeNCF(f, "vPlusSpeed", vPlusSpeed)
-	writeNCF(f, "vMinusSpeed", vMinusSpeed)
-	writeNCF(f, "wPlusSpeed", wPlusSpeed)
-	writeNCF(f, "wMinusSpeed", wMinusSpeed)
-	writeNCF(f, "orgPartitioning", orgPartitioning)
-	writeNCF(f, "VOC", VOC)
-	writeNCF(f, "SOA", SOA)
-	writeNCF(f, "NOPartitioning", NOPartitioning)
-	writeNCF(f, "gNO", gNO)
-	writeNCF(f, "pNO", pNO)
-	writeNCF(f, "SPartitioning", SPartitioning)
-	writeNCF(f, "gS", gS)
-	writeNCF(f, "pS", pS)
-	writeNCF(f, "NHPartitioning", NHPartitioning)
-	writeNCF(f, "gNH", gNH)
-	writeNCF(f, "pNH", pNH)
-	writeNCF(f, "layerHeights", layerHeights)
-	writeNCF(f, "particleWetDep", particleWetDep)
-	writeNCF(f, "SO2WetDep", SO2WetDep)
-	writeNCF(f, "otherGasWetDep", otherGasWetDep)
-	writeNCF(f, "Kzz", Kzz)
-	writeNCF(f, "M2u", M2u)
-	writeNCF(f, "M2d", M2d)
-	writeNCF(f, "pblTopLayer", pblTopLayer)
-	writeNCF(f, "pblh", pblh)
-	writeNCF(f, "windSpeed", windSpeed)
-	writeNCF(f, "temperature", temperature)
-	writeNCF(f, "S1", S1)
-	writeNCF(f, "Sclass", Sclass)
-	writeNCF(f, "SO2oxidation", SO2oxidation)
-	writeNCF(f, "particleDryDep", particleDryDep)
-	writeNCF(f, "SO2DryDep", SO2DryDep)
-	writeNCF(f, "NOxDryDep", NOxDryDep)
-	writeNCF(f, "NH3DryDep", NH3DryDep)
-	writeNCF(f, "VOCDryDep", VOCDryDep)
-	writeNCF(f, "Kyy", Kyy)
-	writeNCF(f, "alt", alt)
+	for name, d := range data {
+		writeNCF(f, name, d.data)
+	}
 	err = cdf.UpdateNumRecs(ff)
 	if err != nil {
 		panic(err)
 	}
 	ff.Close()
+	variableGrid(data)
+}
+
+type dataHolder struct {
+	dims        []string
+	Description string
+	Units       string
+	data        *sparse.DenseArray
 }
 
 func iterateTimeSteps(msg string, funcs ...cdfReaderFunc) {
@@ -567,7 +500,7 @@ func readSingleVar(Var string,
 	}
 }
 
-func readGasGroup(Vars map[string]float64, datachan chan *sparse.DenseArray) cdfReaderFunc {
+func readGasGroup(Vars map[string]float64, datachans ...chan *sparse.DenseArray) cdfReaderFunc {
 	return func(f *cdfFile, hour int, wg *sync.WaitGroup) {
 		defer wg.Done()
 		alt := readNCF("ALT", f, hour) // inverse density (m3 kg-1)
@@ -584,11 +517,13 @@ func readGasGroup(Vars map[string]float64, datachan chan *sparse.DenseArray) cdf
 				out.Elements[i] += val * factor / MWa * 1000. / alt.Elements[i]
 			}
 		}
-		datachan <- out
+		for _, datachan := range datachans {
+			datachan <- out
+		}
 	}
 }
 
-func readParticleGroup(Vars map[string]float64, datachan chan *sparse.DenseArray) cdfReaderFunc {
+func readParticleGroup(Vars map[string]float64, datachans ...chan *sparse.DenseArray) cdfReaderFunc {
 	return func(f *cdfFile, hour int, wg *sync.WaitGroup) {
 		defer wg.Done()
 		alt := readNCF("ALT", f, hour) // inverse density (m3 kg-1)
@@ -605,7 +540,9 @@ func readParticleGroup(Vars map[string]float64, datachan chan *sparse.DenseArray
 				out.Elements[i] += val * factor / alt.Elements[i]
 			}
 		}
-		datachan <- out
+		for _, datachan := range datachans {
+			datachan <- out
+		}
 	}
 }
 
@@ -650,6 +587,37 @@ func calcPartitioning(gaschan, particlechan chan *sparse.DenseArray) {
 		}
 		gas.AddDense(gasdata)
 		particle.AddDense(particledata)
+	}
+}
+
+// Calculate fraction of the time that the atmosphere is ammonia-poor, where
+// total ammonia [moles] < 2 * total sulfur VI [moles].
+func ammoniaStatus(NH3chan, pNHchan, pSchan chan *sparse.DenseArray) {
+	var fracAmmoniaPoor *sparse.DenseArray
+	firstData := true
+	for {
+		nh3array := <-NH3chan // μg/m3 N
+		pnharray := <-pNHchan // μg/m3 N
+		psarray := <-pSchan   // μg/m3 S
+		if nh3array == nil {
+			NH3chan <- arrayAverage(fracAmmoniaPoor)
+			return
+		}
+		if firstData {
+			fracAmmoniaPoor = sparse.ZerosDense(nh3array.Shape...)
+			firstData = false
+		}
+		for i, nh3 := range nh3array.Elements {
+			pnh := pnharray.Elements[i]
+			ps := psarray.Elements[i]
+			var poor float64
+			if (nh3+pnh)/mwN < 2.*ps/mwS {
+				poor = 1.
+			} else {
+				poor = 0.
+			}
+			fracAmmoniaPoor.Elements[i] += poor
+		}
 	}
 }
 
@@ -717,14 +685,18 @@ func statsCumulative(in *sparse.DenseArray) *sparse.DenseArray {
 // For more information, refer to
 // http://www.openwfm.org/wiki/How_to_interpret_WRF_variables
 func calcLayerHeights(ph, phb *sparse.DenseArray) (
-	layerHeights *sparse.DenseArray) {
+	layerHeights, Dz *sparse.DenseArray) {
 	layerHeights = sparse.ZerosDense(ph.Shape...)
+	Dz = sparse.ZerosDense(ph.Shape[0]-1, ph.Shape[1], ph.Shape[2])
 	for k := 0; k < ph.Shape[0]; k++ {
 		for j := 0; j < ph.Shape[1]; j++ {
 			for i := 0; i < ph.Shape[2]; i++ {
 				h := (ph.Get(k, j, i) + phb.Get(k, j, i) -
 					ph.Get(0, j, i) - phb.Get(0, j, i)) / g // m
 				layerHeights.Set(h, k, j, i)
+				if k > 0 {
+					Dz.Set(h-layerHeights.Get(k-1, j, i), k-1, j, i)
+				}
 			}
 		}
 	}

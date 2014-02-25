@@ -170,7 +170,7 @@ func (c *AIMcell) COBRAchemistry(d *AIMdata) {
 	//const kS = 0.000002083
 	// Rate of NOx conversion to NO3 (1/s); Muller Table 2, multiplied by COBRA
 	// seasonal coefficient of 0.25 for NH4NO3 formation.
-	const kNO = 0.000005556 * 0.5 ///////////////////////////////////////////////////////////////////////////////////////////////////
+	const kNO = 0.000005556 * 0.25
 
 	// All SO4 forms particles, so sulfur particle formation is limited by the
 	// SO2 -> SO4 reaction.
@@ -178,18 +178,6 @@ func (c *AIMcell) COBRAchemistry(d *AIMdata) {
 	//ΔS := kS * c.Cf[igS] * d.Dt
 	c.Cf[igS] -= ΔS
 	c.Cf[ipS] += ΔS
-
-	//if totalSparticle > 0. && totalNHparticle > 0. {
-	// COBRA step 1: Calcuate mole ratio of NH4 to SO4.
-	//	R := totalNHparticle / totalSparticle
-	//	if R < 2. { // 1a and 1b: all gNH converts to pNH
-	//		c.Cf[ipNH] += c.Cf[igNH]
-	//		c.Cf[igNH] = 0.
-	//	} else { // 1c. Some  gNH converts to pNH.
-	//		nhTransfer := min(c.Cf[igNH], 2.*totalSparticle*mwN) // μg Nitrogen
-	//		c.Cf[ipNH] += nhTransfer
-	//		c.Cf[igNH] -= nhTransfer
-	//	}
 
 	// VOC/SOA partitioning
 	totalOrg := c.Cf[igOrg] + c.Cf[ipOrg]
@@ -201,6 +189,11 @@ func (c *AIMcell) COBRAchemistry(d *AIMdata) {
 	c.Cf[igNH] = totalNH * c.NHPartitioning
 	c.Cf[ipNH] = totalNH * (1 - c.NHPartitioning)
 
+	// NOx / pNH partitioning
+	totalNO := c.Cf[igNO] + c.Cf[ipNO]
+	c.Cf[igNO] = totalNO * c.NOPartitioning
+	c.Cf[ipNO] = totalNO * (1 - c.NOPartitioning)
+
 	// Step 2. NH4NO3 formation
 	if totalNHgas > 0. {
 		ΔN := kNO * c.Cf[igNO] * d.Dt
@@ -211,8 +204,6 @@ func (c *AIMcell) COBRAchemistry(d *AIMdata) {
 		c.Cf[igNO] -= ΔNO
 		c.Cf[ipNO] += ΔNO
 	}
-	//}
-
 }
 
 // VOC oxidation flux
