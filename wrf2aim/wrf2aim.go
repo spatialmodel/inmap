@@ -935,10 +935,21 @@ func StabilityMixingChemistry(LayerHeights, pblh *sparse.DenseArray,
 		alt := <-altChan             // inverse density (m3/kg)
 		qCloud := <-qCloudChan       // cloud water mixing ratio (kg/kg)
 		if T == nil {
+			// convert Kzz to unstaggered grid
+			KzzUnstaggered := sparse.ZerosDense(alt.Shape...)
+			for j := 0; j < KzzUnstaggered.Shape[1]; j++ {
+				for i := 0; i < KzzUnstaggered.Shape[2]; i++ {
+					for k := 0; k < KzzUnstaggered.Shape[0]; k++ {
+						KzzUnstaggered.Set(
+							(Kzz.Get(k, j, i)+Kzz.Get(k+1, j, i))/2.,
+							k, j, i)
+					}
+				}
+			}
 			Tchan <- pblTopLayer
-			for _, arr := range []*sparse.DenseArray{Temp, S1, Sclass, Kzz, M2u,
-				M2d, SO2oxidation, particleDryDep, SO2DryDep,
-				NOxDryDep, NH3DryDep, VOCDryDep, Kyy} {
+			for _, arr := range []*sparse.DenseArray{Temp, S1, Sclass,
+				KzzUnstaggered, M2u, M2d, SO2oxidation, particleDryDep,
+				SO2DryDep, NOxDryDep, NH3DryDep, VOCDryDep, Kyy} {
 				Tchan <- arrayAverage(arr)
 			}
 			return
@@ -1043,11 +1054,12 @@ func StabilityMixingChemistry(LayerHeights, pblh *sparse.DenseArray,
 							LayerHeights.Get(k+1, j, i)) / 2
 						Δz := zabove - z
 
-						if k >= kPblTop-1 { // free atmosphere (unstaggered grid)
-							Kzz.AddVal(1., k, j, i)
-							Kyy.AddVal(1., k, j, i)
+						const freeAtmKzz = 3. // [m2 s-1]
+						if k >= kPblTop-1 {   // free atmosphere (unstaggered grid)
+							Kzz.AddVal(freeAtmKzz, k, j, i)
+							Kyy.AddVal(freeAtmKzz, k, j, i)
 							if k == T.Shape[0]-1 { // Top Layer
-								Kzz.AddVal(1., k+1, j, i)
+								Kzz.AddVal(freeAtmKzz, k+1, j, i)
 							}
 						} else { // Boundary layer (unstaggered grid)
 							Kzz.AddVal(acm2.Kzz(z, h, L, u, fconv), k, j, i)

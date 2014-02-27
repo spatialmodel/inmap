@@ -1,12 +1,12 @@
 package aim
 
 import (
-	"bitbucket.org/ctessum/sparse"
-	"code.google.com/p/lvd.go/cdf"
-	"fmt"
+	"encoding/json"
+	"github.com/twpayne/gogeom/geom"
+	"github.com/twpayne/gogeom/geom/encoding/geojson"
+	"io/ioutil"
 	"math"
 	"os"
-	"sort"
 	"sync"
 )
 
@@ -36,10 +36,11 @@ type AIMcell struct {
 	SO2DryDep, VOCDryDep           float64      // Dry deposition velocities [m/s]
 	NOxDryDep                      float64      // Dry deposition velocities [m/s]
 	SO2oxidation                   float64      // SO2 oxidation to SO4 by HO [1/s]
-	Kzz                            float64      // vertical diffusivity at bottom edge [m2/s]
-	Kyyxx                          float64      // unstaggered horizontal diffusivity [m2/s]
-	KyySouth                       float64      // horizontal diffusivity at south edge [m2/s] (staggered grid)
-	KxxWest                        float64      // horizontal diffusivity at west edge [m2/s]
+	Kzz                            float64      // Grid center vertical diffusivity after applying convective fraction [m2/s]
+	KzzAbove, KzzBelow             []float64    // horizontal diffusivity [m2/s] (staggered grid)
+	Kyyxx                          float64      // Grid center horizontal diffusivity [m2/s]
+	KyySouth, KyyNorth             []float64    // horizontal diffusivity [m2/s] (staggered grid)
+	KxxWest, KxxEast               []float64    // horizontal diffusivity at [m2/s] (staggered grid)
 	M2u                            float64      // ACM2 upward mixing (Pleim 2007) [1/s]
 	M2d                            float64      // ACM2 downward mixing (Pleim 2007) [1/s]
 	PblTopLayer                    float64      // k index of boundary layer top
@@ -57,6 +58,9 @@ type AIMcell struct {
 	Below                          []*AIMcell   // Neighbors below
 	Above                          []*AIMcell   // Neighbors above
 	GroundLevel                    []*AIMcell   // Neighbors at ground level
+	WestFrac, EastFrac             []float64    // Fraction of cell covered by each neighbor (adds up to 1).
+	NorthFrac, SouthFrac           []float64    // Fraction of cell covered by each neighbor (adds up to 1).
+	AboveFrac, BelowFrac           []float64    // Fraction of cell covered by each neighbor (adds up to 1).
 	iWest                          []int        // Row indexes of neighbors to the East
 	iEast                          []int        // Row indexes of neighbors to the West
 	iSouth                         []int        // Row indexes of neighbors to the South
@@ -64,19 +68,17 @@ type AIMcell struct {
 	iBelow                         []int        // Row indexes of neighbors below
 	iAbove                         []int        // Row indexes of neighbors above
 	iGroundLevel                   []int        // Row indexes of neighbors at ground level
-	dxPlusHalf                     []float64    // Distance between centers of cell and East [m]
-	dxMinusHalf                    []float64    // Distance between centers of cell and West [m]
-	dyPlusHalf                     []float64    // Distance between centers of cell and North [m]
-	dyMinusHalf                    []float64    // Distance between centers of cell and South [m]
-	dzPlusHalf                     []float64    // Distance between centers of cell and Above [m]
-	dzMinusHalf                    []float64    // Distance between centers of cell and Below [m]
-	nextToEdge                     bool         // Is the grid cell next to the edge?
+	DxPlusHalf                     []float64    // Distance between centers of cell and East [m]
+	DxMinusHalf                    []float64    // Distance between centers of cell and West [m]
+	DyPlusHalf                     []float64    // Distance between centers of cell and North [m]
+	DyMinusHalf                    []float64    // Distance between centers of cell and South [m]
+	DzPlusHalf                     []float64    // Distance between centers of cell and Above [m]
+	DzMinusHalf                    []float64    // Distance between centers of cell and Below [m]
 	Layer                          int          // layer index of grid cell
 	lock                           sync.RWMutex // Avoid cell being written by one subroutine and read by another at the same time.
 }
 
 func (c *AIMcell) prepare() {
-	c := new(AIMcell)
 	c.Volume = c.Dx * c.Dy * c.Dz
 	c.Ci = make([]float64, len(polNames))
 	c.Cf = make([]float64, len(polNames))
@@ -87,7 +89,8 @@ func (c *AIMcell) prepare() {
 
 func (c *AIMcell) makecopy() *AIMcell {
 	c2 := new(AIMcell)
-	c2.Dx, c2.Dy, cd.Dz = c.Dx, c.Dy, c.Dz
+	c2.Dx, c2.Dy, c2.Dz = c.Dx, c.Dy, c.Dz
+	c2.Kyyxx = c.Kyyxx
 	c2.prepare()
 	return c2
 }
@@ -98,7 +101,6 @@ func (c *AIMcell) makecopy() *AIMcell {
 // `nLayers` is the number of vertical layers in the model,
 // and `httpPort` is the port number for hosting the html GUI.
 func InitAIMdata(filename string, nLayers int, httpPort string) *AIMdata {
-	go d.WebServer(httpPort)
 
 	type dataHolder struct {
 		Type       string
@@ -116,8 +118,12 @@ func InitAIMdata(filename string, nLayers int, httpPort string) *AIMdata {
 		if err != nil {
 			panic(err)
 		}
+		buf, err := ioutil.ReadAll(f)
+		if err != nil {
+			panic(err)
+		}
 		var d dataHolderHolder
-		err = json.Unmarshal(f, &dataHolderHolder)
+		err = json.Unmarshal(buf, &d)
 		inputData[k] = &d
 		ncells += len(d.Features)
 		f.Close()
@@ -126,9 +132,9 @@ func InitAIMdata(filename string, nLayers int, httpPort string) *AIMdata {
 	d := new(AIMdata)
 	d.Data = make([]*AIMcell, ncells)
 	for _, indata := range inputData {
-		for _, c := range indata {
-			c.prepare()
-			d.Data[c.Row] = c
+		for _, c := range indata.Features {
+			c.Properties.prepare()
+			d.Data[c.Properties.Row] = c.Properties
 		}
 	}
 	d.westBoundary = make([]*AIMcell, 0)
@@ -137,10 +143,9 @@ func InitAIMdata(filename string, nLayers int, httpPort string) *AIMdata {
 	d.northBoundary = make([]*AIMcell, 0)
 	d.topBoundary = make([]*AIMcell, 0)
 	for _, cell := range d.Data {
+		// Link cells to neighbors and/or boundaries.
 		if len(cell.iWest) == 0 {
 			c := cell.makecopy()
-			c.nextToEdge = true
-			cell.nextToEdge = true
 			cell.West = []*AIMcell{c}
 			d.westBoundary = append(d.westBoundary, c)
 		} else {
@@ -152,11 +157,6 @@ func InitAIMdata(filename string, nLayers int, httpPort string) *AIMdata {
 		}
 		if len(cell.iEast) == 0 {
 			c := cell.makecopy()
-			c.nextToEdge = true
-			// Since we have converted from unstaggered to staggered
-			// grid for Kxx, fill in final value for Kxx.
-			c.KxxWest = cell.Kyyxx
-			cell.nextToEdge = true
 			cell.East = []*AIMcell{c}
 			d.eastBoundary = append(d.eastBoundary, c)
 		} else {
@@ -168,8 +168,6 @@ func InitAIMdata(filename string, nLayers int, httpPort string) *AIMdata {
 		}
 		if len(cell.iSouth) == 0 {
 			c := cell.makecopy()
-			c.nextToEdge = true
-			cell.nextToEdge = true
 			cell.South = []*AIMcell{c}
 			d.southBoundary = append(d.southBoundary, c)
 		} else {
@@ -181,11 +179,6 @@ func InitAIMdata(filename string, nLayers int, httpPort string) *AIMdata {
 		}
 		if len(cell.iNorth) == 0 {
 			c := cell.makecopy()
-			c.nextToEdge = true
-			// Since we have converted from unstaggered to staggered
-			// grid for Kyy, fill in final value for Kyy.
-			c.KyySouth = cell.Kyyxx
-			cell.nextToEdge = true
 			cell.North = []*AIMcell{c}
 			d.northBoundary = append(d.northBoundary, c)
 		} else {
@@ -197,8 +190,6 @@ func InitAIMdata(filename string, nLayers int, httpPort string) *AIMdata {
 		}
 		if len(cell.iAbove) == 0 {
 			c := cell.makecopy()
-			c.nextToEdge = true
-			cell.nextToEdge = true
 			cell.Above = []*AIMcell{c}
 			d.topBoundary = append(d.topBoundary, c)
 		} else {
@@ -223,34 +214,65 @@ func InitAIMdata(filename string, nLayers int, httpPort string) *AIMdata {
 			cell.Below = []*AIMcell{d.Data[cell.Row]}
 			cell.GroundLevel = []*AIMcell{d.Data[cell.Row]}
 		}
+		cell.neighborInfo()
 
-		// Calculate center-to-center cell distance
-		cell.dxPlusHalf = make([]float64, len(cell.East))
-		for i, c := range cell.East {
-			cell.dxPlusHalf[i] = (cell.Dx + c.Dx) / 2.
-		}
-		cell.dxMinusHalf = make([]float64, len(cell.West))
-		for i, c := range cell.West {
-			cell.dxMinusHalf[i] = (cell.Dx + c.Dx) / 2.
-		}
-		cell.dyPlusHalf = make([]float64, len(cell.North))
-		for i, c := range cell.Above {
-			cell.dyPlusHalf[i] = (cell.Dy + c.Dy) / 2.
-		}
-		cell.dyMinusHalf = make([]float64, len(cell.South))
-		for i, c := range cell.Below {
-			cell.dyMinusHalf[i] = (cell.Dy + c.Dy) / 2.
-		}
-		cell.dzPlusHalf = make([]float64, len(cell.Above))
-		for i, c := range cell.Above {
-			cell.dzPlusHalf[i] = (cell.Dz + c.Dz) / 2.
-		}
-		cell.dzMinusHalf = make([]float64, len(cell.Below))
-		for i, c := range cell.Below {
-			cell.dzMinusHalf[i] = (cell.Dz + c.Dz) / 2.
-		}
 	}
+	go d.WebServer(httpPort)
 	return d
+}
+
+// Calculate center-to-center cell distance,
+// fractions of grid cell covered by each neighbor
+// and harmonic mean staggered-grid diffusivities.
+func (cell *AIMcell) neighborInfo() {
+	cell.DxPlusHalf = make([]float64, len(cell.East))
+	cell.EastFrac = make([]float64, len(cell.East))
+	cell.KxxEast = make([]float64, len(cell.East))
+	for i, c := range cell.East {
+		cell.DxPlusHalf[i] = (cell.Dx + c.Dx) / 2.
+		cell.EastFrac[i] = min(c.Dy/cell.Dy, 1.)
+		cell.KxxEast[i] = harmonicMean(cell.Kyyxx, c.Kyyxx)
+	}
+	cell.DxMinusHalf = make([]float64, len(cell.West))
+	cell.WestFrac = make([]float64, len(cell.West))
+	cell.KxxWest = make([]float64, len(cell.West))
+	for i, c := range cell.West {
+		cell.DxMinusHalf[i] = (cell.Dx + c.Dx) / 2.
+		cell.WestFrac[i] = min(c.Dy/cell.Dy, 1.)
+		cell.KxxWest[i] = harmonicMean(cell.Kyyxx, c.Kyyxx)
+	}
+	cell.DyPlusHalf = make([]float64, len(cell.North))
+	cell.NorthFrac = make([]float64, len(cell.North))
+	cell.KyyNorth = make([]float64, len(cell.North))
+	for i, c := range cell.North {
+		cell.DyPlusHalf[i] = (cell.Dy + c.Dy) / 2.
+		cell.NorthFrac[i] = min(c.Dx/cell.Dx, 1.)
+		cell.KyyNorth[i] = harmonicMean(cell.Kyyxx, c.Kyyxx)
+	}
+	cell.DyMinusHalf = make([]float64, len(cell.South))
+	cell.SouthFrac = make([]float64, len(cell.South))
+	cell.KyySouth = make([]float64, len(cell.South))
+	for i, c := range cell.South {
+		cell.DyMinusHalf[i] = (cell.Dy + c.Dy) / 2.
+		cell.SouthFrac[i] = min(c.Dx/cell.Dx, 1.)
+		cell.KyySouth[i] = harmonicMean(cell.Kyyxx, c.Kyyxx)
+	}
+	cell.DzPlusHalf = make([]float64, len(cell.Above))
+	cell.AboveFrac = make([]float64, len(cell.Above))
+	cell.KzzAbove = make([]float64, len(cell.Above))
+	for i, c := range cell.Above {
+		cell.DzPlusHalf[i] = (cell.Dz + c.Dz) / 2.
+		cell.AboveFrac[i] = min((c.Dx*c.Dy)/(cell.Dx*cell.Dy), 1.)
+		cell.KzzAbove[i] = harmonicMean(cell.Kzz, c.Kzz)
+	}
+	cell.DzMinusHalf = make([]float64, len(cell.Below))
+	cell.BelowFrac = make([]float64, len(cell.Below))
+	cell.KzzBelow = make([]float64, len(cell.Below))
+	for i, c := range cell.Below {
+		cell.DzMinusHalf[i] = (cell.Dz + c.Dz) / 2.
+		cell.BelowFrac[i] = min((c.Dx*c.Dy)/(cell.Dx*cell.Dy), 1.)
+		cell.KzzBelow[i] = harmonicMean(cell.Kzz, c.Kzz)
+	}
 }
 
 // Add in emissions flux to each cell at every time step, also
@@ -273,9 +295,9 @@ func (d *AIMdata) setTstepCFL(nprocs int) {
 		var c *AIMcell
 		for ii := procNum; ii < len(d.Data); ii += nprocs {
 			c = d.Data[ii]
-			thisval = max(c.uPlusSpeed/c.Dx, c.uMinusSpeed/c.Dx,
-				c.vPlusSpeed/c.Dy, c.vMinusSpeed/c.Dy,
-				c.wPlusSpeed/c.Dz, c.wMinusSpeed/c.Dz)
+			thisval = max(c.UPlusSpeed/c.Dx, c.UMinusSpeed/c.Dx,
+				c.VPlusSpeed/c.Dy, c.VMinusSpeed/c.Dy,
+				c.WPlusSpeed/c.Dz, c.WMinusSpeed/c.Dz)
 			if thisval > val {
 				val = thisval
 			}
@@ -300,121 +322,6 @@ func (d *AIMdata) setTstepRuleOfThumb() {
 	d.Dt = d.Data[0].Dx / 1000. * 6
 }
 
-// Read variable from NetCDF file.
-func (d *AIMdata) readNCF(filename string, wg *sync.WaitGroup, Var string) {
-	defer wg.Done()
-	dat := getNCFbuffer(filename, Var)
-	kstride := d.Ny * d.Nx
-	jstride := d.Nx
-	ii := 0
-	for k := 0; k < d.Nz; k++ {
-		for j := 0; j < d.Ny; j++ {
-			for i := 0; i < d.Nx; i++ {
-				index := k*kstride + j*jstride + i
-				switch Var {
-				case "uPlusSpeed":
-					d.Data[ii].uPlusSpeed = float64(dat[index])
-				case "uMinusSpeed":
-					d.Data[ii].uMinusSpeed = float64(dat[index])
-				case "vPlusSpeed":
-					d.Data[ii].vPlusSpeed = float64(dat[index])
-				case "vMinusSpeed":
-					d.Data[ii].vMinusSpeed = float64(dat[index])
-				case "wPlusSpeed":
-					d.Data[ii].wPlusSpeed = float64(dat[index])
-				case "wMinusSpeed":
-					d.Data[ii].wMinusSpeed = float64(dat[index])
-				case "orgPartitioning":
-					d.Data[ii].orgPartitioning = float64(dat[index])
-				case "SPartitioning":
-					d.Data[ii].SPartitioning = float64(dat[index])
-				case "NOPartitioning":
-					d.Data[ii].NOPartitioning = float64(dat[index])
-				case "NHPartitioning":
-					d.Data[ii].NHPartitioning = float64(dat[index])
-				case "VOC":
-					d.Data[ii].Cbackground[igOrg] = float64(dat[index])
-				case "SOA":
-					d.Data[ii].Cbackground[ipOrg] = float64(dat[index])
-				case "gNO":
-					d.Data[ii].Cbackground[igNO] = float64(dat[index])
-				case "pNO":
-					d.Data[ii].Cbackground[ipNO] = float64(dat[index])
-				case "gNH":
-					d.Data[ii].Cbackground[igNH] = float64(dat[index])
-				case "pNH":
-					d.Data[ii].Cbackground[ipNH] = float64(dat[index])
-				case "gS":
-					d.Data[ii].Cbackground[igS] = float64(dat[index])
-				case "pS":
-					d.Data[ii].Cbackground[ipS] = float64(dat[index])
-				case "particleWetDep":
-					d.Data[ii].particleWetDep = float64(dat[index])
-				case "SO2WetDep":
-					d.Data[ii].SO2WetDep = float64(dat[index])
-				case "otherGasWetDep":
-					d.Data[ii].otherGasWetDep = float64(dat[index])
-				case "Kzz":
-					d.Data[ii].Kzz = float64(dat[index])
-				case "M2u": // 2d variable
-					index = j*jstride + i
-					d.Data[ii].M2u = float64(dat[index])
-				case "M2d":
-					d.Data[ii].M2d = float64(dat[index])
-				case "pblTopLayer": // 2d variable
-					index = j*jstride + i
-					d.Data[ii].kPblTop = float64(dat[index])
-				case "SO2oxidation":
-					d.Data[ii].SO2oxidation = float64(dat[index])
-				case "particleDryDep": // 2d variable
-					index = j*jstride + i
-					d.Data[ii].particleDryDep = float64(dat[index])
-				case "NH3DryDep": // 2d variable
-					index = j*jstride + i
-					d.Data[ii].NH3DryDep = float64(dat[index])
-				case "NOxDryDep": // 2d variable
-					index = j*jstride + i
-					d.Data[ii].NOxDryDep = float64(dat[index])
-				case "VOCDryDep": // 2d variable
-					index = j*jstride + i
-					d.Data[ii].VOCDryDep = float64(dat[index])
-				case "SO2DryDep": // 2d variable
-					index = j*jstride + i
-					d.Data[ii].SO2DryDep = float64(dat[index])
-				case "Kyy": // convert from unstaggered to staggered
-					jminusIndex := k*kstride + (j-1)*jstride + i
-					iminusIndex := k*kstride + j*jstride + i - 1
-					val := float64(dat[index])
-					if iminusIndex >= 0 {
-						iminus := float64(dat[iminusIndex])
-						if val == 0. || iminus == 0. {
-							d.Data[ii].KxxWest = 0.
-						} else {
-							// calculate harmonic mean between center and west
-							// values to get Kxx at grid edge
-							d.Data[ii].KxxWest = 2 * val * iminus / (val + iminus)
-						}
-					} else {
-						d.Data[ii].KxxWest = val
-					}
-					if jminusIndex >= 0 {
-						jminus := float64(dat[jminusIndex])
-						if val == 0. || jminus == 0. {
-							d.Data[ii].KyySouth = 0.
-						} else {
-							// calculate harmonic mean between center and south
-							// values to get Kyy at grid edge
-							d.Data[ii].KyySouth = 2 * val * jminus / (val + jminus)
-						}
-					} else {
-						d.Data[ii].KyySouth = val
-					}
-
-				default:
-					panic(fmt.Sprintf("Variable %v unknown.\n", Var))
-				}
-				ii++
-			}
-		}
-	}
+func harmonicMean(a, b float64) float64 {
+	return 2. * a * b / (a + b)
 }

@@ -14,12 +14,6 @@ const (
 	kappa = 0.4     // von karmon's constant
 )
 
-// Calculates settling velocity [m/s] based on
-// Stokes law, with no slip correction.
-func (d *AIMdata) SettlingVelocity() {
-	d.vs = (rhop - rhof) * g * dp * dp / -18. / mu
-}
-
 // Calculate vertical mixing based on Pleim (2007), which is
 // combined local-nonlocal closure scheme, for
 // boundary layer and Wilson (2004) for above the boundary layer.
@@ -31,20 +25,20 @@ func (c *AIMcell) Mixing(Δt float64) {
 	g := c.GroundLevel
 	for ii, _ := range c.Cf {
 		// Pleim (2007) Equation 10.
-		if c.k < f2i(c.kPblTop) { // Within boundary layer
+		if c.Layer < f2i(c.PblTopLayer) { // Within boundary layer
 			c.Cf[ii] += (g.M2u*g.Ci[ii] - c.M2d*c.Ci[ii] +
 				a.M2d*a.Ci[ii]*a.Dz/c.Dz +
-				1./c.Dz*(a.Kzz*(a.Ci[ii]-c.Ci[ii])/c.dzPlusHalf+
-					c.Kzz*(b.Ci[ii]-c.Ci[ii])/c.dzMinusHalf)) * Δt
+				1./c.Dz*(a.Kzz*(a.Ci[ii]-c.Ci[ii])/c.DzPlusHalf+
+					c.Kzz*(b.Ci[ii]-c.Ci[ii])/c.DzMinusHalf)) * Δt
 		} else { // Above boundary layer: no convective or horizontal mixing
-			c.Cf[ii] += 1. / c.Dz * (a.Kzz*(a.Ci[ii]-c.Ci[ii])/c.dzPlusHalf +
-				c.Kzz*(b.Ci[ii]-c.Ci[ii])/c.dzMinusHalf) * Δt * 3. //////////////////////////////////////////////////////////////////////////////////
+			c.Cf[ii] += 1. / c.Dz * (a.Kzz*(a.Ci[ii]-c.Ci[ii])/c.DzPlusHalf +
+				c.Kzz*(b.Ci[ii]-c.Ci[ii])/c.DzMinusHalf) * Δt
 		}
 		// Horizontal mixing
-		c.Cf[ii] += 1. / c.Dx * (c.East.KxxWest*(c.East.Ci[ii]-c.Ci[ii])/c.Dx +
-			c.KxxWest*(c.West.Ci[ii]-c.Ci[ii])/c.Dx) * Δt
-		c.Cf[ii] += 1. / c.Dy * (c.North.KyySouth*(c.North.Ci[ii]-c.Ci[ii])/c.Dy +
-			c.KyySouth*(c.South.Ci[ii]-c.Ci[ii])/c.Dy) * Δt
+		c.Cf[ii] += 1. / c.Dx * (c.East.KxxWest*(c.East.Ci[ii]-c.Ci[ii])/c.DxPlusHalf +
+			c.KxxWest*(c.West.Ci[ii]-c.Ci[ii])/c.DxMinusHalf) * Δt
+		c.Cf[ii] += 1. / c.Dy * (c.North.KyySouth*(c.North.Ci[ii]-c.Ci[ii])/c.DyPlusHalf +
+			c.KyySouth*(c.South.Ci[ii]-c.Ci[ii])/c.DyMinusHalf) * Δt
 	}
 }
 
@@ -163,14 +157,14 @@ func (c *AIMcell) ChemicalPartitioning() {
 // VOC/SOA partitioning is performed using the method above.
 func (c *AIMcell) COBRAchemistry(d *AIMdata) {
 	//totalSparticle := (c.Cf[ipS] + c.Cbackground[ipS]) / mwS    // moles S
-	totalNHgas := (c.Cf[igNH] + c.Cbackground[igNH]) // μg N
+	//totalNHgas := (c.Cf[igNH] + c.Cbackground[igNH]) // μg N
 	//totalNHparticle := (c.Cf[ipNH] + c.Cbackground[ipNH]) / mwN // moles N
 
 	// Rate of SO2 conversion to SO4 (1/s); Muller Table 2
 	//const kS = 0.000002083
 	// Rate of NOx conversion to NO3 (1/s); Muller Table 2, multiplied by COBRA
 	// seasonal coefficient of 0.25 for NH4NO3 formation.
-	const kNO = 0.000005556 * 0.25
+	//const kNO = 0.000005556 * 0.25
 
 	// All SO4 forms particles, so sulfur particle formation is limited by the
 	// SO2 -> SO4 reaction.
@@ -189,29 +183,29 @@ func (c *AIMcell) COBRAchemistry(d *AIMdata) {
 	c.Cf[igNH] = totalNH * c.NHPartitioning
 	c.Cf[ipNH] = totalNH * (1 - c.NHPartitioning)
 
-	// NOx / pNH partitioning
+	// NOx / pN0 partitioning
 	totalNO := c.Cf[igNO] + c.Cf[ipNO]
 	c.Cf[igNO] = totalNO * c.NOPartitioning
 	c.Cf[ipNO] = totalNO * (1 - c.NOPartitioning)
 
 	// Step 2. NH4NO3 formation
-	if totalNHgas > 0. {
-		ΔN := kNO * c.Cf[igNO] * d.Dt
-		ΔNO := min(totalNHgas, ΔN)
-		ΔNH := min(c.Cf[igNH], ΔNO)
-		c.Cf[igNH] -= ΔNH
-		c.Cf[ipNH] += ΔNH
-		c.Cf[igNO] -= ΔNO
-		c.Cf[ipNO] += ΔNO
-	}
+	//if totalNHgas > 0. {
+	//	ΔN := kNO * c.Cf[igNO] * d.Dt
+	//	ΔNO := min(totalNHgas, ΔN)
+	//	ΔNH := min(c.Cf[igNH], ΔNO)
+	//	c.Cf[igNH] -= ΔNH
+	//	c.Cf[ipNH] += ΔNH
+	//	c.Cf[igNO] -= ΔNO
+	//	c.Cf[ipNO] += ΔNO
+	//}
 }
 
 // VOC oxidation flux
-func (c *AIMcell) VOCoxidationFlux(d *AIMdata) {
-	c.Cf[igOrg] -= c.Ci[igOrg] * d.VOCoxidationRate * d.Dt
-}
+//func (c *AIMcell) VOCoxidationFlux(d *AIMdata) {
+//	c.Cf[igOrg] -= c.Ci[igOrg] * d.VOCoxidationRate * d.Dt
+//}
 
-// Caluclates Dry deposition using deposition velocities from Muller and
+// Calculates Dry deposition using deposition velocities from Muller and
 // Mendelsohn (2006), Hauglustain et al. (1994), Phillips et al. (2004),
 // and and the GOCART aerosol module in WRF/Chem.
 func (c *AIMcell) DryDeposition(d *AIMdata) {

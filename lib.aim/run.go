@@ -1,7 +1,6 @@
 package aim
 
 import (
-	"bitbucket.org/ctessum/sparse"
 	"fmt"
 	"math"
 	"runtime"
@@ -55,8 +54,8 @@ var OutputNames = []string{"VOC", "SOA", "PrimaryPM2_5", "NH3", "pNH4",
 
 // Run air quality model. Emissions are assumed to be in units
 // of μg/s, and must only include the pollutants listed in "EmisNames".
-func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
-	outputConc map[string]*sparse.DenseArray) {
+func (d *AIMdata) Run(emissions map[string][]float64) (
+	outputConc map[string][]float64) {
 
 	startTime := time.Now()
 	timeStepTime := time.Now()
@@ -101,7 +100,6 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 		func(c *AIMcell, d *AIMdata) { c.RK3advectionPass3(d) },
 		func(c *AIMcell, d *AIMdata) {
 			c.Mixing(d.Dt)
-			c.VOCoxidationFlux(d)
 			c.COBRAchemistry(d)
 			c.DryDeposition(d)
 			c.WetDeposition(d.Dt)
@@ -114,7 +112,6 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 
 		// Send all of the science functions to the concurrent
 		// processors for calculating
-		d.arrayLock.Lock() // Lock the cell array to avoid race conditions
 		wg.Add(len(scienceFuncs) * nprocs)
 		for _, function := range scienceFuncs {
 			for pp := 0; pp < nprocs; pp++ {
@@ -131,8 +128,6 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 			time.Since(timeStepTime).Seconds(), d.Dt, nDaysRun)
 		timeStepTime = time.Now()
 		timeSinceLastCheck += d.Dt
-
-		d.arrayLock.Unlock() // Unlock the cell array: we're done editing it
 
 		// Occasionally, check to see if the pollutant concentrations have converged
 		if timeSinceLastCheck >= checkPeriod {
@@ -156,13 +151,15 @@ func (d *AIMdata) Run(emissions map[string]*sparse.DenseArray) (
 		}
 	}
 	// Prepare output data
-	outputConc = make(map[string]*sparse.DenseArray)
+	outputConc = make(map[string][]float64)
 	for _, pol := range OutputNames {
 		if pol == "TotalPM2_5" {
-			outputConc[pol] = sparse.ZerosDense(d.Nz, d.Ny, d.Nx)
+			outputConc[pol] = make([]float64, len(d.Data))
 			for _, subspecies := range []string{"PrimaryPM2_5", "SOA",
 				"pNH4", "pSO4", "pNO3"} {
-				outputConc[pol].AddDense(outputConc[subspecies])
+				for i, val := range outputConc[subspecies] {
+					outputConc[pol][i] += val
+				}
 			}
 		} else {
 			outputConc[pol] = d.ToArray(pol)
@@ -178,9 +175,11 @@ func (d *AIMdata) doScience(nprocs, procNum int,
 	for f := range funcChan {
 		for ii := procNum; ii < len(d.Data); ii += nprocs {
 			c = d.Data[ii]
-			if c.k <= topLayerToCalc {
+			c.lock.Lock() // Lock the cell to avoid race conditions
+			if c.Layer <= topLayerToCalc {
 				f(c, d) // run function
 			}
+			c.lock.Unlock() // Unlock the cell: we're done editing it
 		}
 		wg.Done()
 	}
@@ -188,162 +187,90 @@ func (d *AIMdata) doScience(nprocs, procNum int,
 
 // Calculate emissions flux given emissions array in units of μg/s
 // and a scale for molecular mass conversion.
-func (d *AIMdata) addEmisFlux(arr *sparse.DenseArray, scale float64, iPol int) {
-	ii := 0
-	for k := 0; k < d.Nz; k++ {
-		for j := 0; j < d.Ny; j++ {
-			for i := 0; i < d.Nx; i++ {
-				fluxScale := 1. / d.Data[ii].Dx / d.Data[ii].Dy /
-					d.Data[ii].Dz // μg/s /m/m/m = μg/m3/s
-				d.Data[ii].emisFlux[iPol] = arr.Get(k, j, i) * scale * fluxScale
-				ii++
-			}
-		}
+func (d *AIMdata) addEmisFlux(arr []float64, scale float64, iPol int) {
+	for row, val := range arr {
+		fluxScale := 1. / d.Data[row].Dx / d.Data[row].Dy /
+			d.Data[row].Dz // μg/s /m/m/m = μg/m3/s
+		d.Data[row].emisFlux[iPol] = arr[row] * scale * fluxScale
 	}
 	return
 }
 
 // Convert the concentration data into a regular array
-func (d *AIMdata) ToArray(pol string) *sparse.DenseArray {
-	o := sparse.ZerosDense(d.Nz, d.Ny, d.Nx)
-	d.arrayLock.RLock()
-	switch pol {
-	case "VOC":
-		for i, c := range d.Data {
-			o.Elements[i] = c.Cf[igOrg]
+func (d *AIMdata) ToArray(pol string) []float64 {
+	o := make([]float64, len(d.Data))
+	for i, c := range d.Data {
+		c.lock.RLock()
+		switch pol {
+		case "VOC":
+			o[i] = c.Cf[igOrg]
+		case "SOA":
+			o[i] = c.Cf[ipOrg]
+		case "PrimaryPM2_5":
+			o[i] = c.Cf[iPM2_5]
+		case "NH3":
+			o[i] = c.Cf[igNH] / NH3ToN
+		case "pNH4":
+			o[i] = c.Cf[ipNH] * NtoNH4
+		case "SOx":
+			o[i] = c.Cf[igS] / SOxToS
+		case "pSO4":
+			o[i] = c.Cf[ipS] * StoSO4
+		case "NOx":
+			o[i] = c.Cf[igNO] / NOxToN
+		case "pNO3":
+			o[i] = c.Cf[ipNO] * NtoNO3
+		case "VOCemissions":
+			o[i] = c.emisFlux[igOrg]
+		case "NOxemissions":
+			o[i] = c.emisFlux[igNO]
+		case "NH3emissions":
+			o[i] = c.emisFlux[igNH]
+		case "SOxemissions":
+			o[i] = c.emisFlux[igS]
+		case "PM2_5emissions":
+			o[i] = c.emisFlux[iPM2_5]
+		case "UPlusSpeed":
+			o[i] = c.UPlusSpeed
+		case "UMinusSpeed":
+			o[i] = c.UMinusSpeed
+		case "VPlusSpeed":
+			o[i] = c.VPlusSpeed
+		case "VMinusSpeed":
+			o[i] = c.VMinusSpeed
+		case "WPlusSpeed":
+			o[i] = c.WPlusSpeed
+		case "WMinusSpeed":
+			o[i] = c.WMinusSpeed
+		case "Organicpartitioning":
+			o[i] = c.OrgPartitioning
+		case "Sulfurpartitioning":
+			o[i] = c.SPartitioning
+		case "Nitratepartitioning":
+			o[i] = c.NOPartitioning
+		case "Ammoniapartitioning":
+			o[i] = c.NHPartitioning
+		case "Particlewetdeposition":
+			o[i] = c.ParticleWetDep
+		case "SO2wetdeposition":
+			o[i] = c.SO2WetDep
+		case "Non-SO2gaswetdeposition":
+			o[i] = c.OtherGasWetDep
+		case "Kyyxx":
+			o[i] = c.Kyyxx
+		case "Kzz":
+			o[i] = c.Kzz
+		case "M2u":
+			o[i] = c.M2u
+		case "M2d":
+			o[i] = c.M2d
+		case "PblTopLayer":
+			o[i] = c.PblTopLayer
+		default:
+			panic(fmt.Sprintf("Unknown variable %v.", pol))
 		}
-	case "SOA":
-		for i, c := range d.Data {
-			o.Elements[i] = c.Cf[ipOrg]
-		}
-	case "PrimaryPM2_5":
-		for i, c := range d.Data {
-			o.Elements[i] = c.Cf[iPM2_5]
-		}
-	case "NH3":
-		for i, c := range d.Data {
-			o.Elements[i] = c.Cf[igNH] / NH3ToN
-		}
-	case "pNH4":
-		for i, c := range d.Data {
-			o.Elements[i] = c.Cf[ipNH] * NtoNH4
-		}
-	case "SOx":
-		for i, c := range d.Data {
-			o.Elements[i] = c.Cf[igS] / SOxToS
-		}
-	case "pSO4":
-		for i, c := range d.Data {
-			o.Elements[i] = c.Cf[ipS] * StoSO4
-		}
-	case "NOx":
-		for i, c := range d.Data {
-			o.Elements[i] = c.Cf[igNO] / NOxToN
-		}
-	case "pNO3":
-		for i, c := range d.Data {
-			o.Elements[i] = c.Cf[ipNO] * NtoNO3
-		}
-	case "VOCemissions":
-		for i, c := range d.Data {
-			o.Elements[i] = c.emisFlux[igOrg]
-		}
-	case "NOxemissions":
-		for i, c := range d.Data {
-			o.Elements[i] = c.emisFlux[igNO]
-		}
-	case "NH3emissions":
-		for i, c := range d.Data {
-			o.Elements[i] = c.emisFlux[igNH]
-		}
-	case "SOxemissions":
-		for i, c := range d.Data {
-			o.Elements[i] = c.emisFlux[igS]
-		}
-	case "PM2_5emissions":
-		for i, c := range d.Data {
-			o.Elements[i] = c.emisFlux[iPM2_5]
-		}
-	case "uPlusSpeed":
-		for i, c := range d.Data {
-			o.Elements[i] = c.uPlusSpeed
-		}
-	case "uMinusSpeed":
-		for i, c := range d.Data {
-			o.Elements[i] = c.uMinusSpeed
-		}
-	case "vPlusSpeed":
-		for i, c := range d.Data {
-			o.Elements[i] = c.vPlusSpeed
-		}
-	case "vMinusSpeed":
-		for i, c := range d.Data {
-			o.Elements[i] = c.vMinusSpeed
-		}
-	case "wPlusSpeed":
-		for i, c := range d.Data {
-			o.Elements[i] = c.wPlusSpeed
-		}
-	case "wMinusSpeed":
-		for i, c := range d.Data {
-			o.Elements[i] = c.wMinusSpeed
-		}
-	case "Organicpartitioning":
-		for i, c := range d.Data {
-			o.Elements[i] = c.orgPartitioning
-		}
-	case "Sulfurpartitioning":
-		for i, c := range d.Data {
-			o.Elements[i] = c.SPartitioning
-		}
-	case "Nitratepartitioning":
-		for i, c := range d.Data {
-			o.Elements[i] = c.NOPartitioning
-		}
-	case "Ammoniapartitioning":
-		for i, c := range d.Data {
-			o.Elements[i] = c.NHPartitioning
-		}
-	case "Particlewetdeposition":
-		for i, c := range d.Data {
-			o.Elements[i] = c.particleWetDep
-		}
-	case "SO2wetdeposition":
-		for i, c := range d.Data {
-			o.Elements[i] = c.SO2WetDep
-		}
-	case "Non-SO2gaswetdeposition":
-		for i, c := range d.Data {
-			o.Elements[i] = c.otherGasWetDep
-		}
-	case "KxxWest":
-		for i, c := range d.Data {
-			o.Elements[i] = c.KxxWest
-		}
-	case "KyySouth":
-		for i, c := range d.Data {
-			o.Elements[i] = c.KyySouth
-		}
-	case "Kzz":
-		for i, c := range d.Data {
-			o.Elements[i] = c.Kzz
-		}
-	case "M2u":
-		for i, c := range d.Data {
-			o.Elements[i] = c.M2u
-		}
-	case "M2d":
-		for i, c := range d.Data {
-			o.Elements[i] = c.M2d
-		}
-	case "kPblTop":
-		for i, c := range d.Data {
-			o.Elements[i] = c.kPblTop
-		}
-	default:
-		panic(fmt.Sprintf("Unknown variable %v.", pol))
+		c.lock.RUnlock()
 	}
-	d.arrayLock.RUnlock()
 	return o
 }
 
