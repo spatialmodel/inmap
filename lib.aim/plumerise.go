@@ -1,152 +1,40 @@
 package aim
 
 import (
-	"bitbucket.org/ctessum/sparse"
-	"code.google.com/p/lvd.go/cdf"
-	"fmt"
-	"math"
-	"os"
-	"sync"
+	"bitbucket.org/ctessum/atmos/plumerise"
 )
 
-type PlumeRiseInfo struct {
-	Nx, Ny, Nz   int
-	layerHeights *sparse.DenseArray // heights at layer edges, m
-	temperature  *sparse.DenseArray // Average temperature, K
-	windSpeed    *sparse.DenseArray // RMS wind speed, m/s
-	s1           *sparse.DenseArray // stability parameter
-	sClass       *sparse.DenseArray // stability class: "0=Unstable; 1=Stable
-	wg           sync.WaitGroup
-}
+// Calculates plume rise when given stack information
+// (see bitbucket.org/ctessum/atmos/plumerise for required units)
+// and the index of the (ground level) grid cell (called `row`).
+// Returns the index of the cell the emissions should be added to.
+// This function assumes that when one grid cell is above another
+// grid cell, the upper cell is never smaller than the lower cell.
+func (d *AIMdata) CalcPlumeRise(stackHeight, stackDiam, stackTemp,
+	stackVel float64, row int) (plumeRow int) {
+	layerHeights := make([]float64, d.nLayers)
+	temperature := make([]float64, d.nLayers)
+	windSpeed := make([]float64, d.nLayers)
+	sClass := make([]float64, d.nLayers)
+	s1 := make([]float64, d.nLayers)
 
-func GetPlumeRiseInfo(filename string) *PlumeRiseInfo {
-	d := new(PlumeRiseInfo)
-	ff, err := os.Open(filename)
-	if err != nil {
-		panic(err)
-	}
-	defer ff.Close()
-	f, err := cdf.Open(ff)
-	if err != nil {
-		panic(err)
-	}
-	dims := f.Header.Lengths("orgPartitioning")
-	d.Nz = dims[0]
-	d.Ny = dims[1]
-	d.Nx = dims[2]
-	var wg sync.WaitGroup
-	wg.Add(5)
-	d.layerHeights = sparse.ZerosDense(d.Nz+1, d.Ny, d.Nx)
-	go readNCF(filename, &wg, "layerHeights", d.layerHeights)
-	d.temperature = sparse.ZerosDense(d.Nz, d.Ny, d.Nx)
-	go readNCF(filename, &wg, "temperature", d.temperature)
-	d.windSpeed = sparse.ZerosDense(d.Nz, d.Ny, d.Nx)
-	go readNCF(filename, &wg, "windSpeed", d.windSpeed)
-	d.s1 = sparse.ZerosDense(d.Nz, d.Ny, d.Nx)
-	go readNCF(filename, &wg, "S1", d.s1)
-	d.sClass = sparse.ZerosDense(d.Nz, d.Ny, d.Nx)
-	go readNCF(filename, &wg, "Sclass", d.sClass)
-	wg.Wait()
-	return d
-}
-
-// CalcPlumeRise takes emissions stack height(m), diameter (m), temperature (K),
-// and exit velocity (m/s) and calculates the k index of the equivalent
-// emissions height after accounting for plume rise at grid index (y=j,x=i).
-// Uses the plume rise calculation: ASME (1973), as described in Sienfeld and Pandis,
-// ``Atmospheric Chemistry and Physics - From Air Pollution to Climate Change
-func (m *PlumeRiseInfo) CalcPlumeRise(stackHeight, stackDiam, stackTemp,
-	stackVel float64, j, i int) (kPlume int) {
-	// Find K level of stack
-	kStak := 0
-	for m.layerHeights.Get(kStak+1, j, i) < stackHeight {
-		if kStak > m.Nz {
-			msg := "stack height > top of grid"
-			panic(msg)
-		}
-		kStak++
-	}
-	deltaH := 0. // Plume rise, (m).
-	var calcType string
-
-	airTemp := m.temperature.Get(kStak, j, i)
-	windSpd := m.windSpeed.Get(kStak, j, i)
-
-	if (stackTemp-airTemp) < 50. &&
-		stackVel > windSpd && stackVel > 10. {
-		// Plume is dominated by momentum forces
-		calcType = "Momentum"
-
-		deltaH = stackDiam * math.Pow(stackVel, 1.4) / math.Pow(windSpd, 1.4)
-
-	} else { // Plume is dominated by buoyancy forces
-
-		// Bouyancy flux, m4/s3
-		F := g * (stackTemp - airTemp) / stackTemp * stackVel *
-			math.Pow(stackDiam/2, 2)
-
-		if m.sClass.Get(kStak, j, i) > 0.5 { // stable conditions
-			calcType = "Stable"
-
-			deltaH = 29. * math.Pow(
-				F/m.s1.Get(kStak, j, i), 0.333333333) /
-				math.Pow(windSpd, 0.333333333)
-
-		} else { // unstable conditions
-			calcType = "Unstable"
-
-			deltaH = 7.4 * math.Pow(F*math.Pow(stackHeight, 2.),
-				0.333333333) / windSpd
-
-		}
-	}
-	if math.IsNaN(deltaH) {
-		msg := "plume height == NaN\n" +
-			fmt.Sprintf("calcType: %v, deltaH: %v, stackDiam: %v,\n",
-				calcType, deltaH, stackDiam) +
-			fmt.Sprintf("stackVel: %v, windSpd: %v, stackTemp: %v,\n",
-				stackVel, windSpd, stackTemp) +
-			fmt.Sprintf("airTemp: %v, stackHeight: %v\n", airTemp, stackHeight)
-		panic(msg)
+	cell := d.Data[row]
+	for i := 0; i < d.nLayers; i++ {
+		layerHeights[i] = cell.LayerHeight
+		windSpeed[i] = cell.WindSpeed
+		sClass[i] = cell.SClass
+		s1[i] = cell.S1
+		cell = cell.Above[0]
 	}
 
-	plumeHeight := stackHeight + deltaH
+	kPlume, err := plumerise.PlumeRiseASME(stackHeight, stackDiam, stackTemp,
+		stackVel, layerHeights, temperature, windSpeed,
+		sClass, s1)
 
-	// Find K level of plume
-	for kPlume = 0; m.layerHeights.Get(kPlume+1, j, i) < plumeHeight; kPlume++ {
-		if kPlume > m.Nz {
-			break
-		}
+	plumeCell := d.Data[row]
+	for i := 0; i < kPlume; i++ {
+		plumeCell = plumeCell.Above[0]
 	}
+	plumeRow = plumeCell.Row
 	return
-}
-
-// Read variable from NetCDF file.
-func readNCF(filename string, wg *sync.WaitGroup, Var string,
-	data *sparse.DenseArray) {
-	ff, err := os.Open(filename)
-	if err != nil {
-		panic(err)
-	}
-	f, err := cdf.Open(ff)
-	if err != nil {
-		panic(err)
-	}
-	dims := f.Header.Lengths(Var)
-	defer ff.Close()
-	defer wg.Done()
-	nread := 1
-	for _, dim := range dims {
-		nread *= dim
-	}
-	r := f.Reader(Var, nil, nil)
-	buf := r.Zero(nread)
-	_, err = r.Read(buf)
-	if err != nil {
-		panic(err)
-	}
-	dat := buf.([]float32)
-	for i, val := range dat {
-		data.Elements[i] = float64(val)
-	}
 }

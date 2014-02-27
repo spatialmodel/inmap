@@ -17,50 +17,99 @@ const (
 // Calculate vertical mixing based on Pleim (2007), which is
 // combined local-nonlocal closure scheme, for
 // boundary layer and Wilson (2004) for above the boundary layer.
-// Also calculate horizontal mixing assuming that Kxx and Kyy
-// are the same as Kzz.
+// Also calculate horizontal mixing.
 func (c *AIMcell) Mixing(Δt float64) {
-	a := c.Above
-	b := c.Below
-	g := c.GroundLevel
 	for ii, _ := range c.Cf {
 		// Pleim (2007) Equation 10.
 		if c.Layer < f2i(c.PblTopLayer) { // Within boundary layer
-			c.Cf[ii] += (g.M2u*g.Ci[ii] - c.M2d*c.Ci[ii] +
-				a.M2d*a.Ci[ii]*a.Dz/c.Dz +
-				1./c.Dz*(a.Kzz*(a.Ci[ii]-c.Ci[ii])/c.DzPlusHalf+
-					c.Kzz*(b.Ci[ii]-c.Ci[ii])/c.DzMinusHalf)) * Δt
+			// Mixing only dependent on current cell
+			c.Cf[ii] += -c.M2d * c.Ci[ii] * Δt
+			for i, g := range c.GroundLevel { // Mixing with ground level
+				c.Cf[ii] += g.M2u * g.Ci[ii] * Δt * c.GroundLevelFrac[i]
+			}
+			for i, a := range c.Above { // Mixing with above
+				c.Cf[ii] += (a.M2d*a.Ci[ii]*a.Dz/c.Dz +
+					1./c.Dz*(c.KzzAbove[i]*(a.Ci[ii]-c.Ci[ii])/
+						c.DzPlusHalf[i])) * Δt * c.AboveFrac[i]
+			}
+			for i, b := range c.Below { // Mixing with below
+				c.Cf[ii] += (c.KzzBelow[i] * (b.Ci[ii] - c.Ci[ii]) /
+					c.DzMinusHalf[i]) * Δt * c.BelowFrac[i]
+			}
 		} else { // Above boundary layer: no convective or horizontal mixing
-			c.Cf[ii] += 1. / c.Dz * (a.Kzz*(a.Ci[ii]-c.Ci[ii])/c.DzPlusHalf +
-				c.Kzz*(b.Ci[ii]-c.Ci[ii])/c.DzMinusHalf) * Δt
+			for i, a := range c.Above { // Mixing with above
+				c.Cf[ii] += 1. / c.Dz * (c.KzzAbove[i] * (a.Ci[ii] - c.Ci[ii]) /
+					c.DzPlusHalf[i]) * Δt * c.AboveFrac[i]
+			}
+			for i, b := range c.Below { // Mixing with below
+				c.Cf[ii] += 1. / c.Dz * (c.KzzBelow[i] * (b.Ci[ii] - c.Ci[ii]) /
+					c.DzMinusHalf[i]) * Δt * c.BelowFrac[i]
+			}
 		}
 		// Horizontal mixing
-		c.Cf[ii] += 1. / c.Dx * (c.East.KxxWest*(c.East.Ci[ii]-c.Ci[ii])/c.DxPlusHalf +
-			c.KxxWest*(c.West.Ci[ii]-c.Ci[ii])/c.DxMinusHalf) * Δt
-		c.Cf[ii] += 1. / c.Dy * (c.North.KyySouth*(c.North.Ci[ii]-c.Ci[ii])/c.DyPlusHalf +
-			c.KyySouth*(c.South.Ci[ii]-c.Ci[ii])/c.DyMinusHalf) * Δt
+		for i, w := range c.West { // Mixing with West
+			c.Cf[ii] += 1. / c.Dx * (c.KxxWest[i] *
+				(w.Ci[ii] - c.Ci[ii]) / c.DxMinusHalf[i]) * Δt * c.WestFrac[i]
+		}
+		for i, e := range c.East { // Mixing with East
+			c.Cf[ii] += 1. / c.Dx * (c.KxxEast[i] *
+				(e.Ci[ii] - c.Ci[ii]) / c.DxPlusHalf[i]) * Δt * c.EastFrac[i]
+		}
+		for i, s := range c.South { // Mixing with South
+			c.Cf[ii] += 1. / c.Dy * (c.KyySouth[i] *
+				(s.Ci[ii] - c.Ci[ii]) / c.DyMinusHalf[i]) * Δt * c.SouthFrac[i]
+		}
+		for i, n := range c.North { // Mixing with North
+			c.Cf[ii] += 1. / c.Dy * (c.KyyNorth[i] *
+				(n.Ci[ii] - c.Ci[ii]) / c.DyPlusHalf[i]) * Δt * c.NorthFrac[i]
+		}
 	}
 }
 
 // Calculates advective flux in West and East directions
 // using upwind flux-form spatial approximation for δ(uq)/δx.
 func (c *AIMcell) westEastFlux(ii int) float64 {
-	return c.West.uPlusSpeed*c.West.Ci[ii] - c.Ci[ii]*c.uMinusSpeed +
-		c.East.uMinusSpeed*c.East.Ci[ii] - c.Ci[ii]*c.uPlusSpeed
+	var flux float64
+	for i, w := range c.West {
+		flux += (w.UPlusSpeed*w.Ci[ii] -
+			c.Ci[ii]*c.UMinusSpeed) * c.WestFrac[i]
+	}
+	for i, e := range c.East {
+		flux += (e.UMinusSpeed*e.Ci[ii] -
+			c.Ci[ii]*c.UPlusSpeed) * c.EastFrac[i]
+	}
+	return flux
 }
 
 // Calculates advective flux in South and North directions
 // using upwind flux-form spatial approximation for δ(uq)/δx.
 func (c *AIMcell) southNorthFlux(ii int) float64 {
-	return c.South.vPlusSpeed*c.South.Ci[ii] - c.Ci[ii]*c.vMinusSpeed +
-		c.North.vMinusSpeed*c.North.Ci[ii] - c.Ci[ii]*c.vPlusSpeed
+	var flux float64
+	for i, s := range c.South {
+		flux += (s.VPlusSpeed*s.Ci[ii] -
+			c.Ci[ii]*c.VMinusSpeed) * c.SouthFrac[i]
+	}
+	for i, n := range c.North {
+		flux += (n.VMinusSpeed*n.Ci[ii] -
+			c.Ci[ii]*c.VPlusSpeed) * c.NorthFrac[i]
+	}
+	return flux
 }
 
 // Calculates advective flux in Below and Above directions
 // using upwind flux-form spatial approximation for δ(uq)/δx.
 func (c *AIMcell) belowAboveFlux(ii int) float64 {
-	return c.Below.wPlusSpeed*c.Below.Ci[ii] - c.Ci[ii]*c.wMinusSpeed +
-		c.Above.wMinusSpeed*c.Above.Ci[ii] - c.Ci[ii]*c.wPlusSpeed
+	var flux float64
+	for i, b := range c.Below {
+		return (b.WPlusSpeed*b.Ci[ii] -
+			c.Ci[ii]*c.WMinusSpeed) * c.BelowFrac[i]
+
+	}
+	for i, a := range c.Above {
+		flux += (a.WMinusSpeed*a.Ci[ii] -
+			c.Ci[ii]*c.WPlusSpeed) * c.AboveFrac[i]
+	}
+	return flux
 }
 
 // Calculates advection in the cell based
@@ -119,7 +168,7 @@ func (c *AIMcell) RK3advectionPass3(d *AIMdata) {
 
 		if math.IsNaN(c.Cf[ii]) {
 			panic(fmt.Sprintf("Found a NaN value. Pol: %v, k=%v, j=%v, i=%v",
-				polNames[ii], c.k, c.j, c.i))
+				polNames[ii], c.Row))
 		}
 	}
 	return
@@ -133,8 +182,8 @@ func (c *AIMcell) ChemicalPartitioning() {
 
 	// Gas/particle partitioning
 	totalOrg := c.Cf[igOrg] + c.Cf[ipOrg]
-	c.Cf[igOrg] = totalOrg * c.orgPartitioning
-	c.Cf[ipOrg] = totalOrg * (1 - c.orgPartitioning)
+	c.Cf[igOrg] = totalOrg * c.OrgPartitioning
+	c.Cf[ipOrg] = totalOrg * (1 - c.OrgPartitioning)
 
 	totalS := c.Cf[igS] + c.Cf[ipS]
 	c.Cf[igS] = totalS * c.SPartitioning
@@ -175,8 +224,8 @@ func (c *AIMcell) COBRAchemistry(d *AIMdata) {
 
 	// VOC/SOA partitioning
 	totalOrg := c.Cf[igOrg] + c.Cf[ipOrg]
-	c.Cf[igOrg] = totalOrg * c.orgPartitioning
-	c.Cf[ipOrg] = totalOrg * (1 - c.orgPartitioning)
+	c.Cf[igOrg] = totalOrg * c.OrgPartitioning
+	c.Cf[ipOrg] = totalOrg * (1 - c.OrgPartitioning)
 
 	// NH3 / NH4 partitioning
 	totalNH := c.Cf[igNH] + c.Cf[ipNH]
@@ -215,13 +264,13 @@ func (c *AIMcell) DryDeposition(d *AIMdata) {
 		vVOC = 0.001 // m/s; Hauglustaine Table 2
 		vNH3 = 0.01  // m/s; Phillips abstract
 	)
-	if c.k == 0 {
+	if c.Layer == 0 {
 		fac := 1. / c.Dz * d.Dt
 		noxfac := 1 - c.NOxDryDep*fac
 		so2fac := 1 - c.SO2DryDep*fac
 		vocfac := 1 - c.VOCDryDep*fac
 		nh3fac := 1 - c.NH3DryDep*fac
-		pm25fac := 1 - c.particleDryDep*fac
+		pm25fac := 1 - c.ParticleDryDep*fac
 		c.Cf[igOrg] *= vocfac
 		c.Cf[ipOrg] *= pm25fac
 		c.Cf[iPM2_5] *= pm25fac
@@ -235,9 +284,9 @@ func (c *AIMcell) DryDeposition(d *AIMdata) {
 }
 
 func (c *AIMcell) WetDeposition(Δt float64) {
-	particleFrac := 1. - c.particleWetDep*Δt
+	particleFrac := 1. - c.ParticleWetDep*Δt
 	SO2Frac := 1. - c.SO2WetDep*Δt
-	otherGasFrac := 1 - c.otherGasWetDep*Δt
+	otherGasFrac := 1 - c.OtherGasWetDep*Δt
 	c.Cf[igOrg] *= otherGasFrac
 	c.Cf[ipOrg] *= particleFrac
 	c.Cf[iPM2_5] *= particleFrac

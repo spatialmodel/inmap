@@ -11,15 +11,14 @@ import (
 )
 
 type AIMdata struct {
-	Data             []*AIMcell // One data holder for each grid cell
-	Dt               float64    // seconds
-	vs               float64    // Settling velocity [m/s]
-	VOCoxidationRate float64    // VOC oxidation rate constant
-	westBoundary     []*AIMcell // boundary cells
-	eastBoundary     []*AIMcell // boundary cells
-	northBoundary    []*AIMcell // boundary cells
-	southBoundary    []*AIMcell // boundary cells
-	topBoundary      []*AIMcell // boundary cells; assume bottom boundary is the same as lowest layer
+	Data          []*AIMcell // One data holder for each grid cell
+	Dt            float64    // seconds
+	nLayers       int        // number of model layers
+	westBoundary  []*AIMcell // boundary cells
+	eastBoundary  []*AIMcell // boundary cells
+	northBoundary []*AIMcell // boundary cells
+	southBoundary []*AIMcell // boundary cells
+	topBoundary   []*AIMcell // boundary cells; assume bottom boundary is the same as lowest layer
 }
 
 // Data for a single grid cell
@@ -35,7 +34,7 @@ type AIMcell struct {
 	ParticleDryDep, NH3DryDep      float64      // Dry deposition velocities [m/s]
 	SO2DryDep, VOCDryDep           float64      // Dry deposition velocities [m/s]
 	NOxDryDep                      float64      // Dry deposition velocities [m/s]
-	SO2oxidation                   float64      // SO2 oxidation to SO4 by HO [1/s]
+	SO2oxidation                   float64      // SO2 oxidation to SO4 by HO and H2O2 [1/s]
 	Kzz                            float64      // Grid center vertical diffusivity after applying convective fraction [m2/s]
 	KzzAbove, KzzBelow             []float64    // horizontal diffusivity [m2/s] (staggered grid)
 	Kyyxx                          float64      // Grid center horizontal diffusivity [m2/s]
@@ -61,6 +60,7 @@ type AIMcell struct {
 	WestFrac, EastFrac             []float64    // Fraction of cell covered by each neighbor (adds up to 1).
 	NorthFrac, SouthFrac           []float64    // Fraction of cell covered by each neighbor (adds up to 1).
 	AboveFrac, BelowFrac           []float64    // Fraction of cell covered by each neighbor (adds up to 1).
+	GroundLevelFrac                []float64    // Fraction of cell above to each ground level cell (adds up to 1).
 	iWest                          []int        // Row indexes of neighbors to the East
 	iEast                          []int        // Row indexes of neighbors to the West
 	iSouth                         []int        // Row indexes of neighbors to the South
@@ -75,6 +75,11 @@ type AIMcell struct {
 	DzPlusHalf                     []float64    // Distance between centers of cell and Above [m]
 	DzMinusHalf                    []float64    // Distance between centers of cell and Below [m]
 	Layer                          int          // layer index of grid cell
+	LayerHeight                    float64      // heights at bottom edge of grid cell, m
+	Temperature                    float64      // Average temperature, K
+	WindSpeed                      float64      // RMS wind speed, [m/s]
+	S1                             float64      // stability parameter [?]
+	SClass                         float64      // stability class: "0=Unstable; 1=Stable
 	lock                           sync.RWMutex // Avoid cell being written by one subroutine and read by another at the same time.
 }
 
@@ -130,6 +135,7 @@ func InitAIMdata(filename string, nLayers int, httpPort string) *AIMdata {
 	}
 	// set up data holders
 	d := new(AIMdata)
+	d.nLayers = nLayers
 	d.Data = make([]*AIMcell, ncells)
 	for _, indata := range inputData {
 		for _, c := range indata.Features {
@@ -272,6 +278,10 @@ func (cell *AIMcell) neighborInfo() {
 		cell.DzMinusHalf[i] = (cell.Dz + c.Dz) / 2.
 		cell.BelowFrac[i] = min((c.Dx*c.Dy)/(cell.Dx*cell.Dy), 1.)
 		cell.KzzBelow[i] = harmonicMean(cell.Kzz, c.Kzz)
+	}
+	cell.GroundLevelFrac = make([]float64, len(cell.GroundLevel))
+	for i, c := range cell.GroundLevel {
+		cell.GroundLevelFrac[i] = min((c.Dx*c.Dy)/(cell.Dx*cell.Dy), 1.)
 	}
 }
 
