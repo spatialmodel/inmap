@@ -55,7 +55,7 @@ var OutputNames = []string{"VOC", "SOA", "PrimaryPM2_5", "NH3", "pNH4",
 // Run air quality model. Emissions are assumed to be in units
 // of μg/s, and must only include the pollutants listed in "EmisNames".
 func (d *AIMdata) Run(emissions map[string][]float64) (
-	outputConc map[string][]float64) {
+	outputConc map[string][][]float64) {
 
 	startTime := time.Now()
 	timeStepTime := time.Now()
@@ -151,18 +151,21 @@ func (d *AIMdata) Run(emissions map[string][]float64) (
 		}
 	}
 	// Prepare output data
-	outputConc = make(map[string][]float64)
+	outputConc = make(map[string][][]float64)
 	for _, pol := range OutputNames {
-		if pol == "TotalPM2_5" {
-			outputConc[pol] = make([]float64, len(d.Data))
-			for _, subspecies := range []string{"PrimaryPM2_5", "SOA",
-				"pNH4", "pSO4", "pNO3"} {
-				for i, val := range outputConc[subspecies] {
-					outputConc[pol][i] += val
+		outputConc[pol] = make([][]float64, d.nLayers)
+		for k := 0; k < d.nLayers; k++ {
+			if pol == "TotalPM2_5" {
+				outputConc[pol][k] = make([]float64, len(d.Data))
+				for _, subspecies := range []string{"PrimaryPM2_5", "SOA",
+					"pNH4", "pSO4", "pNO3"} {
+					for i, val := range outputConc[subspecies][k] {
+						outputConc[pol][k][i] += val
+					}
 				}
+			} else {
+				outputConc[pol][k] = d.toArray(pol,k)
 			}
-		} else {
-			outputConc[pol] = d.ToArray(pol)
 		}
 	}
 	return
@@ -191,87 +194,9 @@ func (d *AIMdata) addEmisFlux(arr []float64, scale float64, iPol int) {
 	for row, val := range arr {
 		fluxScale := 1. / d.Data[row].Dx / d.Data[row].Dy /
 			d.Data[row].Dz // μg/s /m/m/m = μg/m3/s
-		d.Data[row].emisFlux[iPol] = arr[row] * scale * fluxScale
+		d.Data[row].emisFlux[iPol] = val * scale * fluxScale
 	}
 	return
-}
-
-// Convert the concentration data into a regular array
-func (d *AIMdata) ToArray(pol string) []float64 {
-	o := make([]float64, len(d.Data))
-	for i, c := range d.Data {
-		c.lock.RLock()
-		switch pol {
-		case "VOC":
-			o[i] = c.Cf[igOrg]
-		case "SOA":
-			o[i] = c.Cf[ipOrg]
-		case "PrimaryPM2_5":
-			o[i] = c.Cf[iPM2_5]
-		case "NH3":
-			o[i] = c.Cf[igNH] / NH3ToN
-		case "pNH4":
-			o[i] = c.Cf[ipNH] * NtoNH4
-		case "SOx":
-			o[i] = c.Cf[igS] / SOxToS
-		case "pSO4":
-			o[i] = c.Cf[ipS] * StoSO4
-		case "NOx":
-			o[i] = c.Cf[igNO] / NOxToN
-		case "pNO3":
-			o[i] = c.Cf[ipNO] * NtoNO3
-		case "VOCemissions":
-			o[i] = c.emisFlux[igOrg]
-		case "NOxemissions":
-			o[i] = c.emisFlux[igNO]
-		case "NH3emissions":
-			o[i] = c.emisFlux[igNH]
-		case "SOxemissions":
-			o[i] = c.emisFlux[igS]
-		case "PM2_5emissions":
-			o[i] = c.emisFlux[iPM2_5]
-		case "UPlusSpeed":
-			o[i] = c.UPlusSpeed
-		case "UMinusSpeed":
-			o[i] = c.UMinusSpeed
-		case "VPlusSpeed":
-			o[i] = c.VPlusSpeed
-		case "VMinusSpeed":
-			o[i] = c.VMinusSpeed
-		case "WPlusSpeed":
-			o[i] = c.WPlusSpeed
-		case "WMinusSpeed":
-			o[i] = c.WMinusSpeed
-		case "Organicpartitioning":
-			o[i] = c.OrgPartitioning
-		case "Sulfurpartitioning":
-			o[i] = c.SPartitioning
-		case "Nitratepartitioning":
-			o[i] = c.NOPartitioning
-		case "Ammoniapartitioning":
-			o[i] = c.NHPartitioning
-		case "Particlewetdeposition":
-			o[i] = c.ParticleWetDep
-		case "SO2wetdeposition":
-			o[i] = c.SO2WetDep
-		case "Non-SO2gaswetdeposition":
-			o[i] = c.OtherGasWetDep
-		case "Kyyxx":
-			o[i] = c.Kyyxx
-		case "Kzz":
-			o[i] = c.Kzz
-		case "M2u":
-			o[i] = c.M2u
-		case "M2d":
-			o[i] = c.M2d
-		case "PblTopLayer":
-			o[i] = c.PblTopLayer
-		default:
-			panic(fmt.Sprintf("Unknown variable %v.", pol))
-		}
-		c.lock.RUnlock()
-	}
-	return o
 }
 
 func max(vals ...float64) float64 {

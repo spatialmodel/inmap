@@ -2,12 +2,10 @@ package aim
 
 import (
 	"bitbucket.org/ctessum/gis"
-	"bitbucket.org/ctessum/sparse"
 	"bitbucket.org/ctessum/webframework"
 	"bufio"
 	"fmt"
-	"image"
-	"image/png"
+	"github.com/twpayne/gogeom/geom"
 	"net/http"
 	"strconv"
 	"strings"
@@ -118,11 +116,10 @@ func (d *AIMdata) mapHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	c := d.ToArray(name)
+	vals := d.toArray(name, layer)
+	geometry := d.getGeometry(layer)
 	b := bufio.NewWriter(w)
-	layerSubset := c.Subset([]int{int(layer), 0, 0},
-		[]int{int(layer), c.Shape[1] - 1, c.Shape[2] - 1})
-	err = CreateImage(b, layerSubset)
+	err = CreateImage(b, geometry, vals)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -135,19 +132,13 @@ func (d *AIMdata) mapHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // Creates a png image from an array
-func CreateImage(w *bufio.Writer, c *sparse.DenseArray) error {
-	cmap := gis.NewColorMap("LinCutoff")
-	cmap.AddArray(c.Elements)
-	cmap.Set()
-	nx := c.Shape[1]
-	ny := c.Shape[0]
-	i := image.NewRGBA(image.Rect(0, 0, nx, ny))
-	for x := 0; x < nx; x++ {
-		for y := 0; y < ny; y++ {
-			i.Set(x, y, cmap.GetColor(c.Get(ny-y-1, x)))
-		}
-	}
-	return png.Encode(w, i)
+func CreateImage(w *bufio.Writer, g []geom.T, vals []float64) error {
+	m := gis.NewMapData(len(vals), "LinCutoff")
+	m.Cmap.AddArray(vals)
+	m.Cmap.Set()
+	m.Shapes = g
+	m.Data = vals
+	return m.WriteGoogleMapTile(w, 0, 0, 0)
 }
 
 // Creates a legend and serves it.
@@ -158,11 +149,9 @@ func (d *AIMdata) legendHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "image/svg+xml")
-	c := d.ToArray(name)
+	vals := d.toArray(name, layer)
 	cmap := gis.NewColorMap("LinCutoff")
-	layerSubset := c.Subset([]int{int(layer), 0, 0},
-		[]int{int(layer), c.Shape[1] - 1, c.Shape[2] - 1})
-	cmap.AddArray(layerSubset.Elements)
+	cmap.AddArray(vals)
 	cmap.Set()
 	cmap.LegendWidth = 2.1
 	cmap.LegendHeight = 0.2

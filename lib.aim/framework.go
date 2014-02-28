@@ -2,6 +2,7 @@ package aim
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/twpayne/gogeom/geom"
 	"github.com/twpayne/gogeom/geom/encoding/geojson"
 	"io/ioutil"
@@ -14,6 +15,8 @@ type AIMdata struct {
 	Data          []*AIMcell // One data holder for each grid cell
 	Dt            float64    // seconds
 	nLayers       int        // number of model layers
+	layerStart    []int      // start index of each layer (inclusive)
+	layerEnd      []int      // end index of each layer (exclusive)
 	westBoundary  []*AIMcell // boundary cells
 	eastBoundary  []*AIMcell // boundary cells
 	northBoundary []*AIMcell // boundary cells
@@ -106,7 +109,7 @@ func (c *AIMcell) makecopy() *AIMcell {
 // `nLayers` is the number of vertical layers in the model,
 // and `httpPort` is the port number for hosting the html GUI.
 func InitAIMdata(filename string, nLayers int, httpPort string) *AIMdata {
-
+	var err error
 	type dataHolder struct {
 		Type       string
 		Geometry   *geojson.Geometry
@@ -118,6 +121,10 @@ func InitAIMdata(filename string, nLayers int, httpPort string) *AIMdata {
 	}
 	inputData := make([]*dataHolderHolder, nLayers)
 	ncells := 0
+	d := new(AIMdata)
+	d.nLayers = nLayers
+	d.layerStart = make([]int, nLayers)
+	d.layerEnd = make([]int, nLayers)
 	for k := 0; k < nLayers; k++ {
 		f, err := os.Open(filename)
 		if err != nil {
@@ -127,19 +134,23 @@ func InitAIMdata(filename string, nLayers int, httpPort string) *AIMdata {
 		if err != nil {
 			panic(err)
 		}
-		var d dataHolderHolder
-		err = json.Unmarshal(buf, &d)
-		inputData[k] = &d
-		ncells += len(d.Features)
+		var dhh dataHolderHolder
+		err = json.Unmarshal(buf, &dhh)
+		inputData[k] = &dhh
+		d.layerStart[k] = ncells
+		ncells += len(dhh.Features)
+		d.layerEnd[k] = ncells
 		f.Close()
 	}
 	// set up data holders
-	d := new(AIMdata)
-	d.nLayers = nLayers
 	d.Data = make([]*AIMcell, ncells)
 	for _, indata := range inputData {
 		for _, c := range indata.Features {
 			c.Properties.prepare()
+			c.Properties.geom, err = geojson.FromGeoJSON(c.Geometry)
+			if err != nil {
+				panic(err)
+			}
 			d.Data[c.Properties.Row] = c.Properties
 		}
 	}
@@ -334,4 +345,90 @@ func (d *AIMdata) setTstepRuleOfThumb() {
 
 func harmonicMean(a, b float64) float64 {
 	return 2. * a * b / (a + b)
+}
+
+// Convert the concentration data into a regular array
+func (d *AIMdata) toArray(pol string, layer int) []float64 {
+	o := make([]float64, d.layerEnd[layer]-d.layerStart[layer])
+	for i, c := range d.Data[d.layerStart[layer]:d.layerEnd[layer]] {
+		c.lock.RLock()
+		switch pol {
+		case "VOC":
+			o[i] = c.Cf[igOrg]
+		case "SOA":
+			o[i] = c.Cf[ipOrg]
+		case "PrimaryPM2_5":
+			o[i] = c.Cf[iPM2_5]
+		case "NH3":
+			o[i] = c.Cf[igNH] / NH3ToN
+		case "pNH4":
+			o[i] = c.Cf[ipNH] * NtoNH4
+		case "SOx":
+			o[i] = c.Cf[igS] / SOxToS
+		case "pSO4":
+			o[i] = c.Cf[ipS] * StoSO4
+		case "NOx":
+			o[i] = c.Cf[igNO] / NOxToN
+		case "pNO3":
+			o[i] = c.Cf[ipNO] * NtoNO3
+		case "VOCemissions":
+			o[i] = c.emisFlux[igOrg]
+		case "NOxemissions":
+			o[i] = c.emisFlux[igNO]
+		case "NH3emissions":
+			o[i] = c.emisFlux[igNH]
+		case "SOxemissions":
+			o[i] = c.emisFlux[igS]
+		case "PM2_5emissions":
+			o[i] = c.emisFlux[iPM2_5]
+		case "UPlusSpeed":
+			o[i] = c.UPlusSpeed
+		case "UMinusSpeed":
+			o[i] = c.UMinusSpeed
+		case "VPlusSpeed":
+			o[i] = c.VPlusSpeed
+		case "VMinusSpeed":
+			o[i] = c.VMinusSpeed
+		case "WPlusSpeed":
+			o[i] = c.WPlusSpeed
+		case "WMinusSpeed":
+			o[i] = c.WMinusSpeed
+		case "Organicpartitioning":
+			o[i] = c.OrgPartitioning
+		case "Sulfurpartitioning":
+			o[i] = c.SPartitioning
+		case "Nitratepartitioning":
+			o[i] = c.NOPartitioning
+		case "Ammoniapartitioning":
+			o[i] = c.NHPartitioning
+		case "Particlewetdeposition":
+			o[i] = c.ParticleWetDep
+		case "SO2wetdeposition":
+			o[i] = c.SO2WetDep
+		case "Non-SO2gaswetdeposition":
+			o[i] = c.OtherGasWetDep
+		case "Kyyxx":
+			o[i] = c.Kyyxx
+		case "Kzz":
+			o[i] = c.Kzz
+		case "M2u":
+			o[i] = c.M2u
+		case "M2d":
+			o[i] = c.M2d
+		case "PblTopLayer":
+			o[i] = c.PblTopLayer
+		default:
+			panic(fmt.Sprintf("Unknown variable %v.", pol))
+		}
+		c.lock.RUnlock()
+	}
+	return o
+}
+
+func (d *AIMdata) getGeometry(layer int) []geom.T {
+	o := make([]geom.T, d.layerEnd[layer]-d.layerStart[layer])
+	for i, c := range d.Data[d.layerStart[layer]:d.layerEnd[layer]] {
+		o[i] = c.geom
+	}
+	return o
 }

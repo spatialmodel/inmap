@@ -11,7 +11,7 @@ import (
 // This function assumes that when one grid cell is above another
 // grid cell, the upper cell is never smaller than the lower cell.
 func (d *AIMdata) CalcPlumeRise(stackHeight, stackDiam, stackTemp,
-	stackVel float64, row int) (plumeRow int) {
+	stackVel float64, row int) (plumeRow int, err error) {
 	layerHeights := make([]float64, d.nLayers)
 	temperature := make([]float64, d.nLayers)
 	windSpeed := make([]float64, d.nLayers)
@@ -26,10 +26,13 @@ func (d *AIMdata) CalcPlumeRise(stackHeight, stackDiam, stackTemp,
 		s1[i] = cell.S1
 		cell = cell.Above[0]
 	}
-
-	kPlume, err := plumerise.PlumeRiseASME(stackHeight, stackDiam, stackTemp,
+	var kPlume int
+	kPlume, err = plumerise.PlumeRiseASME(stackHeight, stackDiam, stackTemp,
 		stackVel, layerHeights, temperature, windSpeed,
 		sClass, s1)
+	if err != nil {
+		return
+	}
 
 	plumeCell := d.Data[row]
 	for i := 0; i < kPlume; i++ {
