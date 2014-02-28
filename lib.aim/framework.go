@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"math"
 	"os"
+	"strings"
 	"sync"
 )
 
@@ -108,7 +109,7 @@ func (c *AIMcell) makecopy() *AIMcell {
 // (where `[layer]` is a stand-in for the layer number),
 // `nLayers` is the number of vertical layers in the model,
 // and `httpPort` is the port number for hosting the html GUI.
-func InitAIMdata(filename string, nLayers int, httpPort string) *AIMdata {
+func InitAIMdata(filetemplate string, nLayers int, httpPort string) *AIMdata {
 	var err error
 	type dataHolder struct {
 		Type       string
@@ -117,7 +118,7 @@ func InitAIMdata(filename string, nLayers int, httpPort string) *AIMdata {
 	}
 	type dataHolderHolder struct {
 		Proj4, Type string
-		Features    []*dataHolder
+		Features    []dataHolder
 	}
 	inputData := make([]*dataHolderHolder, nLayers)
 	ncells := 0
@@ -126,6 +127,8 @@ func InitAIMdata(filename string, nLayers int, httpPort string) *AIMdata {
 	d.layerStart = make([]int, nLayers)
 	d.layerEnd = make([]int, nLayers)
 	for k := 0; k < nLayers; k++ {
+		filename := strings.Replace(filetemplate, "[layer]",
+			fmt.Sprintf("%v", k), -1)
 		f, err := os.Open(filename)
 		if err != nil {
 			panic(err)
@@ -134,10 +137,14 @@ func InitAIMdata(filename string, nLayers int, httpPort string) *AIMdata {
 		if err != nil {
 			panic(err)
 		}
+		fmt.Println("buf", len(buf))
 		var dhh dataHolderHolder
 		err = json.Unmarshal(buf, &dhh)
 		inputData[k] = &dhh
 		d.layerStart[k] = ncells
+		fmt.Println(dhh.Features[10].Type)
+		fmt.Println(len(dhh.Features))
+		//fmt.Println(dhh.Features[0].Properties.Row)
 		ncells += len(dhh.Features)
 		d.layerEnd[k] = ncells
 		f.Close()
@@ -145,13 +152,15 @@ func InitAIMdata(filename string, nLayers int, httpPort string) *AIMdata {
 	// set up data holders
 	d.Data = make([]*AIMcell, ncells)
 	for _, indata := range inputData {
-		for _, c := range indata.Features {
-			c.Properties.prepare()
-			c.Properties.geom, err = geojson.FromGeoJSON(c.Geometry)
+		for _, feature := range indata.Features {
+			fmt.Println(feature.Properties)
+			c := feature.Properties
+			c.prepare()
+			c.geom, err = geojson.FromGeoJSON(feature.Geometry)
 			if err != nil {
 				panic(err)
 			}
-			d.Data[c.Properties.Row] = c.Properties
+			d.Data[c.Row] = c
 		}
 	}
 	d.westBoundary = make([]*AIMcell, 0)
@@ -232,7 +241,6 @@ func InitAIMdata(filename string, nLayers int, httpPort string) *AIMdata {
 			cell.GroundLevel = []*AIMcell{d.Data[cell.Row]}
 		}
 		cell.neighborInfo()
-
 	}
 	go d.WebServer(httpPort)
 	return d

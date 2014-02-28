@@ -100,7 +100,7 @@ func (d *AIMdata) Run(emissions map[string][]float64) (
 		func(c *AIMcell, d *AIMdata) { c.RK3advectionPass3(d) },
 		func(c *AIMcell, d *AIMdata) {
 			c.Mixing(d.Dt)
-			c.COBRAchemistry(d)
+			c.Chemistry(d)
 			c.DryDeposition(d)
 			c.WetDeposition(d.Dt)
 		}}
@@ -164,7 +164,7 @@ func (d *AIMdata) Run(emissions map[string][]float64) (
 					}
 				}
 			} else {
-				outputConc[pol][k] = d.toArray(pol,k)
+				outputConc[pol][k] = d.toArray(pol, k)
 			}
 		}
 	}
@@ -197,16 +197,6 @@ func (d *AIMdata) addEmisFlux(arr []float64, scale float64, iPol int) {
 		d.Data[row].emisFlux[iPol] = val * scale * fluxScale
 	}
 	return
-}
-
-func max(vals ...float64) float64 {
-	m := 0.
-	for _, v := range vals {
-		if v > m {
-			m = v
-		}
-	}
-	return m
 }
 
 func checkConvergence(newSum, oldSum float64, Var string) bool {

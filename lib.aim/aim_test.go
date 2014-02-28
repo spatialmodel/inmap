@@ -10,41 +10,135 @@ import (
 var d *AIMdata
 
 const (
-	j, i          = 219, 252 // Minneapolis!
+	testRow       = 25300 // somewhere in Chicago
 	testTolerance = 1e-8
-	Δt            = 72.  // seconds
+	Δt            = 6.   // seconds
 	E             = 0.01 // emissions
 )
 
 func init() {
 	runtime.GOMAXPROCS(8)
-	d = InitAIMdata("../wrf2aim/aimData.ncf", "8080")
+	d = InitAIMdata("../wrf2aim/aimData/aimData_[layer].geojson", 27, "8080")
 	d.Dt = Δt
 }
 
 // Tests whether the cells correctly reference each other
 func TestCellAlignment(t *testing.T) {
-	var previousAbove, previous int
-	for k := 0; k < d.Nz; k++ {
-		ii := d.getIndex(k, j, i)
-		c := d.Data[ii]
-		if k == 0 {
-			if c.ii != c.GroundLevel.ii {
-				t.FailNow()
-			}
-		} else {
-			if c.ii != previousAbove {
-				t.FailNow()
-			}
-			if c.Below.ii != previous {
-				t.FailNow()
-			}
-		}
-		if c.k != k {
+	for row, cell := range d.Data {
+		if cell.Row != row {
+			t.Logf("Failed for Row %v index", cell.Row)
 			t.FailNow()
 		}
-		previousAbove = c.Above.ii
-		previous = c.ii
+		for _, w := range cell.West {
+			if len(w.East) != 0 {
+				pass := false
+				for _, e := range w.East {
+					if e.Row == cell.Row {
+						pass = true
+						break
+					}
+				}
+				if !pass {
+					t.Logf("Failed for Row %v West", cell.Row)
+					t.FailNow()
+				}
+			}
+		}
+		for _, e := range cell.East {
+			if len(e.West) != 0 {
+				pass := false
+				for _, w := range e.West {
+					if w.Row == cell.Row {
+						pass = true
+						break
+					}
+				}
+				if !pass {
+					t.Logf("Failed for Row %v East", cell.Row)
+					t.FailNow()
+				}
+			}
+		}
+		for _, n := range cell.North {
+			if len(n.South) != 0 {
+				pass := false
+				for _, s := range n.South {
+					if s.Row == cell.Row {
+						pass = true
+						break
+					}
+				}
+				if !pass {
+					t.Logf("Failed for Row %v North", cell.Row)
+					t.FailNow()
+				}
+			}
+		}
+		for _, s := range cell.South {
+			if len(s.North) != 0 {
+				pass := false
+				for _, n := range s.North {
+					if n.Row == cell.Row {
+						pass = true
+						break
+					}
+				}
+				if !pass {
+					t.Logf("Failed for Row %v South", cell.Row)
+					t.FailNow()
+				}
+			}
+		}
+		for _, a := range cell.Above {
+			if len(a.Below) != 0 {
+				pass := false
+				for _, b := range a.Below {
+					if b.Row == cell.Row {
+						pass = true
+						break
+					}
+				}
+				if !pass {
+					t.Logf("Failed for Row %v Above", cell.Row)
+					t.FailNow()
+				}
+			}
+		}
+		for _, b := range cell.Below {
+			if len(b.Above) != 0 {
+				pass := false
+				for _, a := range b.Above {
+					if a.Row == cell.Row {
+						pass = true
+						break
+					}
+				}
+				if !pass {
+					t.Logf("Failed for Row %v Above", cell.Row)
+					t.FailNow()
+				}
+			}
+		}
+		// Assume upper cells are never higher resolution than lower cells
+		for _, g := range cell.GroundLevel {
+			g2 := g
+			pass := false
+			for {
+				if g2.Above == nil {
+					pass = false
+					break
+				}
+				g2 = g2.Above[0]
+				if g2.Row == cell.Row {
+					pass = true
+					break
+				}
+			}
+			if !pass {
+				t.Logf("Failed for Row %v GroundLevel", cell.Row)
+				t.FailNow()
+			}
+		}
 	}
 }
 
@@ -52,39 +146,34 @@ func TestCellAlignment(t *testing.T) {
 func TestVerticalMixing(t *testing.T) {
 	nsteps := 100
 	for tt := 0; tt < nsteps; tt++ {
-		for k := 0; k < d.Nz; k++ {
-			ii := d.getIndex(k, j, i)
-			c := d.Data[ii]
-			if k == 0 {
-				c.Ci[0] += E / c.Dz // ground level emissions
-				c.Cf[0] += E / c.Dz // ground level emissions
-			}
+		d.Data[testRow].Ci[0] += E / d.Data[testRow].Dz // ground level emissions
+		d.Data[testRow].Cf[0] += E / d.Data[testRow].Dz // ground level emissions
+		for _, cell := range d.Data {
+			cell.Mixing(Δt)
 		}
-		for k := 0; k < d.Nz; k++ {
-			ii := d.getIndex(k, j, i)
-			d.Data[ii].VerticalMixing(Δt)
-		}
-		for k := 0; k < d.Nz; k++ {
-			ii := d.getIndex(k, j, i)
-			c := d.Data[ii]
-			c.Ci[0] = c.Cf[0]
+		for _, cell := range d.Data {
+			cell.Ci[0] = cell.Cf[0]
 		}
 	}
 	sum := 0.
-	for k := 0; k < d.Nz; k++ {
-		ii := d.getIndex(k, j, i)
-		sum += d.Data[ii].Cf[0] * d.Data[ii].Dz
-		t.Logf("level %v=%.3v\n", k, d.Data[ii].Cf[0]*d.Data[ii].Dz)
+	maxval := 0.
+	for _, cell := range d.Data {
+		sum += cell.Cf[0] * cell.Dz
+		maxval = max(maxval, cell.Cf[0])
 	}
 	t.Logf("sum=%.12g (it should equal %v)\n", sum, E*float64(nsteps))
 	if different(sum, E*float64(nsteps)) {
+		t.FailNow()
+	}
+	if !different(sum, maxval) {
+		t.Log("All of the mass is in one cell--it didn't mix")
 		t.FailNow()
 	}
 }
 
 // Test whether mass is conserved during chemical reactions.
 func TestChemistry(t *testing.T) {
-	c := d.Data[d.getIndex(0, j, i)]
+	c := d.Data[testRow]
 	nsteps := 10
 	vals := make([]float64, len(polNames))
 	for tt := 0; tt < nsteps; tt++ {
@@ -96,7 +185,7 @@ func TestChemistry(t *testing.T) {
 		for i, v := range vals {
 			c.Cf[i] = v
 		}
-		c.COBRAchemistry(d)
+		c.Chemistry(d)
 		finalSum := 0.
 		for _, val := range c.Cf {
 			finalSum += val
@@ -126,8 +215,7 @@ func TestAdvection(t *testing.T) {
 	}
 	nsteps := 5
 	for tt := 0; tt < nsteps; tt++ {
-		ii := d.getIndex(0, j, i)
-		c := d.Data[ii]
+		c := d.Data[testRow]
 		c.Ci[0] += E / c.Dz / c.Dy / c.Dx // ground level emissions
 		c.Cf[0] += E / c.Dz / c.Dy / c.Dx // ground level emissions
 		for _, c := range d.Data {
@@ -152,7 +240,6 @@ func TestAdvection(t *testing.T) {
 	if different(sum, E*float64(nsteps)) {
 		t.FailNow()
 	}
-
 }
 
 func different(a, b float64) bool {

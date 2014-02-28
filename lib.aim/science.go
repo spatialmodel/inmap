@@ -204,7 +204,7 @@ func (c *AIMcell) ChemicalPartitioning() {
 // Changes have been made to adapt the equations from gaussian
 // plume model form to gridded model form.
 // VOC/SOA partitioning is performed using the method above.
-func (c *AIMcell) COBRAchemistry(d *AIMdata) {
+func (c *AIMcell) Chemistry(d *AIMdata) {
 	//totalSparticle := (c.Cf[ipS] + c.Cbackground[ipS]) / mwS    // moles S
 	//totalNHgas := (c.Cf[igNH] + c.Cbackground[igNH]) // μg N
 	//totalNHparticle := (c.Cf[ipNH] + c.Cbackground[ipNH]) / mwN // moles N
@@ -303,6 +303,15 @@ func f2i(f float64) int {
 	return int(f + 0.5)
 }
 
+func max(vals ...float64) float64 {
+	m := 0.
+	for _, v := range vals {
+		if v > m {
+			m = v
+		}
+	}
+	return m
+}
 func min(v1, v2 float64) float64 {
 	if v1 < v2 {
 		return v1

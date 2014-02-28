@@ -111,7 +111,7 @@ func variableGrid(data map[string]dataHolder) {
 	kmax := data["UPlusSpeed"].data.Shape[0]
 	for k := 0; k < kmax; k++ {
 		getData(cells, data, k, kmax)
-		writeJson(cells, k)
+		writeJsonAndGob(cells, k)
 	}
 }
 
@@ -163,7 +163,7 @@ type JsonHolderHolder struct {
 	Features    []*JsonHolder
 }
 
-func writeJson(cells []*gridCell, k int) {
+func writeJsonAndGob(cells []*gridCell, k int) {
 	var err error
 	outData := new(JsonHolderHolder)
 	outData.Proj4 = proj
@@ -189,6 +189,17 @@ func writeJson(cells []*gridCell, k int) {
 		panic(err)
 	}
 	_, err = f.Write(b)
+	if err != nil {
+		panic(err)
+	}
+	f.Close()
+	fname := fmt.Sprintf("%v_%v.gob", outputFilePrefix, k)
+	f, err := os.Create(filepath.Join(outputDir, fname))
+	if err != nil {
+		panic(err)
+	}
+	g := gob.NewEncoder(f)
+	err = g.Encode(outData)
 	if err != nil {
 		panic(err)
 	}
