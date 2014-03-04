@@ -1,10 +1,5 @@
 package aim
 
-import (
-	"fmt"
-	"math"
-)
-
 const (
 	dp    = 1.e-6   // m, particle diameter
 	rhof  = 1.2466  // kg/m3, air density
@@ -16,35 +11,27 @@ const (
 
 // Calculate vertical mixing based on Pleim (2007), which is
 // combined local-nonlocal closure scheme, for
-// boundary layer and Wilson (2004) for above the boundary layer.
+// boundary layer and based on Wilson (2004) for above the boundary layer.
 // Also calculate horizontal mixing.
 func (c *AIMcell) Mixing(Δt float64) {
 	for ii, _ := range c.Cf {
 		// Pleim (2007) Equation 10.
-		if c.Layer < f2i(c.PblTopLayer) { // Within boundary layer
-			// Mixing only dependent on current cell
-			c.Cf[ii] += -c.M2d * c.Ci[ii] * Δt
-			for i, g := range c.GroundLevel { // Mixing with ground level
+		if c.Layer < f2i(c.PblTopLayer) { // Convective mixing
+			for i, g := range c.GroundLevel { // Upward convection
 				c.Cf[ii] += g.M2u * g.Ci[ii] * Δt * c.GroundLevelFrac[i]
 			}
-			for i, a := range c.Above { // Mixing with above
-				c.Cf[ii] += (a.M2d*a.Ci[ii]*a.Dz/c.Dz +
-					1./c.Dz*(c.KzzAbove[i]*(a.Ci[ii]-c.Ci[ii])/
-						c.DzPlusHalf[i])) * Δt * c.AboveFrac[i]
+			for i, a := range c.Above { // Balancing downward mixing
+				c.Cf[ii] += (a.M2d*a.Ci[ii]*a.Dz/c.Dz - c.M2d*c.Ci[ii]) *
+					Δt * c.AboveFrac[i]
 			}
-			for i, b := range c.Below { // Mixing with below
-				c.Cf[ii] += (c.KzzBelow[i] * (b.Ci[ii] - c.Ci[ii]) /
-					c.DzMinusHalf[i]) * Δt * c.BelowFrac[i]
-			}
-		} else { // Above boundary layer: no convective or horizontal mixing
-			for i, a := range c.Above { // Mixing with above
-				c.Cf[ii] += 1. / c.Dz * (c.KzzAbove[i] * (a.Ci[ii] - c.Ci[ii]) /
-					c.DzPlusHalf[i]) * Δt * c.AboveFrac[i]
-			}
-			for i, b := range c.Below { // Mixing with below
-				c.Cf[ii] += 1. / c.Dz * (c.KzzBelow[i] * (b.Ci[ii] - c.Ci[ii]) /
-					c.DzMinusHalf[i]) * Δt * c.BelowFrac[i]
-			}
+		}
+		for i, a := range c.Above { // Mixing with above
+			c.Cf[ii] += 1. / c.Dz * (c.KzzAbove[i] * (a.Ci[ii] - c.Ci[ii]) /
+				c.DzPlusHalf[i]) * Δt * c.AboveFrac[i]
+		}
+		for i, b := range c.Below { // Mixing with below
+			c.Cf[ii] += 1. / c.Dz * (c.KzzBelow[i] * (b.Ci[ii] - c.Ci[ii]) /
+				c.DzMinusHalf[i]) * Δt * c.BelowFrac[i]
 		}
 		// Horizontal mixing
 		for i, w := range c.West { // Mixing with West
@@ -68,6 +55,7 @@ func (c *AIMcell) Mixing(Δt float64) {
 
 // Calculates advective flux in West and East directions
 // using upwind flux-form spatial approximation for δ(uq)/δx.
+// Returns mass flux per unit area per unit time.
 func (c *AIMcell) westEastFlux(ii int) float64 {
 	var flux float64
 	for i, w := range c.West {
@@ -83,6 +71,7 @@ func (c *AIMcell) westEastFlux(ii int) float64 {
 
 // Calculates advective flux in South and North directions
 // using upwind flux-form spatial approximation for δ(uq)/δx.
+// Returns mass flux per unit area per unit time.
 func (c *AIMcell) southNorthFlux(ii int) float64 {
 	var flux float64
 	for i, s := range c.South {
@@ -98,12 +87,14 @@ func (c *AIMcell) southNorthFlux(ii int) float64 {
 
 // Calculates advective flux in Below and Above directions
 // using upwind flux-form spatial approximation for δ(uq)/δx.
+// Returns mass flux per unit area per unit time.
 func (c *AIMcell) belowAboveFlux(ii int) float64 {
 	var flux float64
-	for i, b := range c.Below {
-		return (b.WPlusSpeed*b.Ci[ii] -
-			c.Ci[ii]*c.WMinusSpeed) * c.BelowFrac[i]
-
+	if c.Layer != 0 { // Can't advect downwards from bottom cell
+		for i, b := range c.Below {
+			flux += (b.WPlusSpeed*b.Ci[ii] -
+				c.Ci[ii]*c.WMinusSpeed) * c.BelowFrac[i]
+		}
 	}
 	for i, a := range c.Above {
 		flux += (a.WMinusSpeed*a.Ci[ii] -
@@ -113,65 +104,13 @@ func (c *AIMcell) belowAboveFlux(ii int) float64 {
 }
 
 // Calculates advection in the cell based
-// on a third order Runge-Kutta scheme
-// from Wicker and Skamarock (2002) Equation 3a.
-func (c *AIMcell) RK3advectionPass1(d *AIMdata) {
-	var flux float64
+// on the upwind differences scheme.
+func (c *AIMcell) UpwindAdvection(Δt float64) {
 	for ii, _ := range c.Cf {
-		// i direction
-		flux = c.westEastFlux(ii)
-		c.Cˣ[ii] = c.Ci[ii] + d.Dt/3./c.Dx*flux
-		// j direction
-		flux = c.southNorthFlux(ii)
-		c.Cˣ[ii] += d.Dt / 3. / c.Dy * flux
-		// k direction
-		flux = c.belowAboveFlux(ii)
-		c.Cˣ[ii] += d.Dt / 3. / c.Dz * flux
+		c.Cf[ii] += c.westEastFlux(ii) / c.Dx * Δt
+		c.Cf[ii] += c.southNorthFlux(ii) / c.Dy * Δt
+		c.Cf[ii] += c.belowAboveFlux(ii) / c.Dz * Δt
 	}
-	return
-}
-
-// Calculates advection in the cell based
-// on a third order Runge-Kutta scheme
-// from Wicker and Skamarock (2002) Equation 3b.
-func (c *AIMcell) RK3advectionPass2(d *AIMdata) {
-	var flux float64
-	for ii, _ := range c.Cf {
-		// i direction
-		flux = c.westEastFlux(ii)
-		c.Cˣˣ[ii] = c.Cf[ii] + d.Dt/2./c.Dx*flux
-		// j direction
-		flux = c.southNorthFlux(ii)
-		c.Cˣˣ[ii] += d.Dt / 2. / c.Dy * flux
-		// k direction
-		flux = c.belowAboveFlux(ii)
-		c.Cˣˣ[ii] += d.Dt / 2. / c.Dz * flux
-	}
-	return
-}
-
-// Calculates advection flux in the cell based
-// on a third order Runge-Kutta scheme
-// from Wicker and Skamarock (2002) Equation 3c.
-func (c *AIMcell) RK3advectionPass3(d *AIMdata) {
-	var flux float64
-	for ii, _ := range c.Cf {
-		// i direction
-		flux = c.westEastFlux(ii)
-		c.Cf[ii] += d.Dt / c.Dx * flux
-		// j direction
-		flux = c.southNorthFlux(ii)
-		c.Cf[ii] += d.Dt / c.Dy * flux
-		// k direction
-		flux = c.belowAboveFlux(ii)
-		c.Cf[ii] += d.Dt / c.Dz * flux
-
-		if math.IsNaN(c.Cf[ii]) {
-			panic(fmt.Sprintf("Found a NaN value. Pol: %v, k=%v, j=%v, i=%v",
-				polNames[ii], c.Row))
-		}
-	}
-	return
 }
 
 // Partitions organic matter ("gOrg" and "pOrg"), the

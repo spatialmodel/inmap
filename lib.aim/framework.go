@@ -1,11 +1,9 @@
 package aim
 
 import (
-	"encoding/json"
+	"encoding/gob"
 	"fmt"
 	"github.com/twpayne/gogeom/geom"
-	"github.com/twpayne/gogeom/geom/encoding/geojson"
-	"io/ioutil"
 	"math"
 	"os"
 	"strings"
@@ -51,7 +49,6 @@ type AIMcell struct {
 	Volume                         float64      // [cubic meters]
 	Row                            int          // master cell index
 	Ci                             []float64    // concentrations at beginning of time step [μg/m3]
-	Cˣ, Cˣˣ                        []float64    // concentrations after first and second Runge-Kutta passes [μg/m3]
 	Cf                             []float64    // concentrations at end of time step [μg/m3]
 	emisFlux                       []float64    //  emissions [μg/m3/s]
 	West                           []*AIMcell   // Neighbors to the East
@@ -65,13 +62,13 @@ type AIMcell struct {
 	NorthFrac, SouthFrac           []float64    // Fraction of cell covered by each neighbor (adds up to 1).
 	AboveFrac, BelowFrac           []float64    // Fraction of cell covered by each neighbor (adds up to 1).
 	GroundLevelFrac                []float64    // Fraction of cell above to each ground level cell (adds up to 1).
-	iWest                          []int        // Row indexes of neighbors to the East
-	iEast                          []int        // Row indexes of neighbors to the West
-	iSouth                         []int        // Row indexes of neighbors to the South
-	iNorth                         []int        // Row indexes of neighbors to the north
-	iBelow                         []int        // Row indexes of neighbors below
-	iAbove                         []int        // Row indexes of neighbors above
-	iGroundLevel                   []int        // Row indexes of neighbors at ground level
+	IWest                          []int        // Row indexes of neighbors to the East
+	IEast                          []int        // Row indexes of neighbors to the West
+	ISouth                         []int        // Row indexes of neighbors to the South
+	INorth                         []int        // Row indexes of neighbors to the north
+	IBelow                         []int        // Row indexes of neighbors below
+	IAbove                         []int        // Row indexes of neighbors above
+	IGroundLevel                   []int        // Row indexes of neighbors at ground level
 	DxPlusHalf                     []float64    // Distance between centers of cell and East [m]
 	DxMinusHalf                    []float64    // Distance between centers of cell and West [m]
 	DyPlusHalf                     []float64    // Distance between centers of cell and North [m]
@@ -91,8 +88,6 @@ func (c *AIMcell) prepare() {
 	c.Volume = c.Dx * c.Dy * c.Dz
 	c.Ci = make([]float64, len(polNames))
 	c.Cf = make([]float64, len(polNames))
-	c.Cˣ = make([]float64, len(polNames))
-	c.Cˣˣ = make([]float64, len(polNames))
 	c.emisFlux = make([]float64, len(polNames))
 }
 
@@ -105,22 +100,12 @@ func (c *AIMcell) makecopy() *AIMcell {
 }
 
 // Initialize the model, where `filename` is the path to
-// the GeoJSON files with meteorology and background concentration data
+// the Gob files with meteorology and background concentration data
 // (where `[layer]` is a stand-in for the layer number),
 // `nLayers` is the number of vertical layers in the model,
 // and `httpPort` is the port number for hosting the html GUI.
 func InitAIMdata(filetemplate string, nLayers int, httpPort string) *AIMdata {
-	var err error
-	type dataHolder struct {
-		Type       string
-		Geometry   *geojson.Geometry
-		Properties *AIMcell
-	}
-	type dataHolderHolder struct {
-		Proj4, Type string
-		Features    []dataHolder
-	}
-	inputData := make([]*dataHolderHolder, nLayers)
+	inputData := make([][]*AIMcell, nLayers)
 	ncells := 0
 	d := new(AIMdata)
 	d.nLayers = nLayers
@@ -133,115 +118,102 @@ func InitAIMdata(filetemplate string, nLayers int, httpPort string) *AIMdata {
 		if err != nil {
 			panic(err)
 		}
-		buf, err := ioutil.ReadAll(f)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Println("buf", len(buf))
-		var dhh dataHolderHolder
-		err = json.Unmarshal(buf, &dhh)
-		inputData[k] = &dhh
+		g := gob.NewDecoder(f)
+		g.Decode(&inputData[k])
 		d.layerStart[k] = ncells
-		fmt.Println(dhh.Features[10].Type)
-		fmt.Println(len(dhh.Features))
-		//fmt.Println(dhh.Features[0].Properties.Row)
-		ncells += len(dhh.Features)
+		ncells += len(inputData[k])
 		d.layerEnd[k] = ncells
 		f.Close()
 	}
 	// set up data holders
 	d.Data = make([]*AIMcell, ncells)
 	for _, indata := range inputData {
-		for _, feature := range indata.Features {
-			fmt.Println(feature.Properties)
-			c := feature.Properties
+		for _, c := range indata {
 			c.prepare()
-			c.geom, err = geojson.FromGeoJSON(feature.Geometry)
-			if err != nil {
-				panic(err)
-			}
 			d.Data[c.Row] = c
 		}
 	}
-	d.westBoundary = make([]*AIMcell, 0)
-	d.eastBoundary = make([]*AIMcell, 0)
-	d.southBoundary = make([]*AIMcell, 0)
-	d.northBoundary = make([]*AIMcell, 0)
-	d.topBoundary = make([]*AIMcell, 0)
+	d.westBoundary = make([]*AIMcell, 0, 200)
+	d.eastBoundary = make([]*AIMcell, 0, 200)
+	d.southBoundary = make([]*AIMcell, 0, 200)
+	d.northBoundary = make([]*AIMcell, 0, 200)
+	d.topBoundary = make([]*AIMcell, 0, 200)
 	for _, cell := range d.Data {
 		// Link cells to neighbors and/or boundaries.
-		if len(cell.iWest) == 0 {
+		if len(cell.IWest) == 0 {
 			c := cell.makecopy()
 			cell.West = []*AIMcell{c}
 			d.westBoundary = append(d.westBoundary, c)
 		} else {
-			cell.West = make([]*AIMcell, len(cell.iWest))
-			for i, row := range cell.iWest {
+			cell.West = make([]*AIMcell, len(cell.IWest))
+			for i, row := range cell.IWest {
 				cell.West[i] = d.Data[row]
 			}
-			cell.iWest = nil
+			cell.IWest = nil
 		}
-		if len(cell.iEast) == 0 {
+		if len(cell.IEast) == 0 {
 			c := cell.makecopy()
 			cell.East = []*AIMcell{c}
 			d.eastBoundary = append(d.eastBoundary, c)
 		} else {
-			cell.East = make([]*AIMcell, len(cell.iEast))
-			for i, row := range cell.iEast {
+			cell.East = make([]*AIMcell, len(cell.IEast))
+			for i, row := range cell.IEast {
 				cell.East[i] = d.Data[row]
 			}
-			cell.iEast = nil
+			cell.IEast = nil
 		}
-		if len(cell.iSouth) == 0 {
+		if len(cell.ISouth) == 0 {
 			c := cell.makecopy()
 			cell.South = []*AIMcell{c}
 			d.southBoundary = append(d.southBoundary, c)
 		} else {
-			cell.South = make([]*AIMcell, len(cell.iSouth))
-			for i, row := range cell.iSouth {
+			cell.South = make([]*AIMcell, len(cell.ISouth))
+			for i, row := range cell.ISouth {
 				cell.South[i] = d.Data[row]
 			}
-			cell.iSouth = nil
+			cell.ISouth = nil
 		}
-		if len(cell.iNorth) == 0 {
+		if len(cell.INorth) == 0 {
 			c := cell.makecopy()
 			cell.North = []*AIMcell{c}
 			d.northBoundary = append(d.northBoundary, c)
 		} else {
-			cell.North = make([]*AIMcell, len(cell.iNorth))
-			for i, row := range cell.iNorth {
+			cell.North = make([]*AIMcell, len(cell.INorth))
+			for i, row := range cell.INorth {
 				cell.North[i] = d.Data[row]
 			}
-			cell.iNorth = nil
+			cell.INorth = nil
 		}
-		if len(cell.iAbove) == 0 {
+		if len(cell.IAbove) == 0 {
 			c := cell.makecopy()
 			cell.Above = []*AIMcell{c}
 			d.topBoundary = append(d.topBoundary, c)
 		} else {
-			cell.Above = make([]*AIMcell, len(cell.iAbove))
-			for i, row := range cell.iAbove {
+			cell.Above = make([]*AIMcell, len(cell.IAbove))
+			for i, row := range cell.IAbove {
 				cell.Above[i] = d.Data[row]
 			}
-			cell.iAbove = nil
+			cell.IAbove = nil
 		}
 		if cell.Layer != 0 {
-			cell.Below = make([]*AIMcell, len(cell.iBelow))
-			cell.GroundLevel = make([]*AIMcell, len(cell.iGroundLevel))
-			for i, row := range cell.iBelow {
+			cell.Below = make([]*AIMcell, len(cell.IBelow))
+			cell.GroundLevel = make([]*AIMcell, len(cell.IGroundLevel))
+			for i, row := range cell.IBelow {
 				cell.Below[i] = d.Data[row]
 			}
-			for i, row := range cell.iGroundLevel {
+			for i, row := range cell.IGroundLevel {
 				cell.GroundLevel[i] = d.Data[row]
 			}
-			cell.iBelow = nil
-			cell.iGroundLevel = nil
+			cell.IBelow = nil
+			cell.IGroundLevel = nil
 		} else { // assume bottom boundary is the same as lowest layer.
 			cell.Below = []*AIMcell{d.Data[cell.Row]}
 			cell.GroundLevel = []*AIMcell{d.Data[cell.Row]}
 		}
 		cell.neighborInfo()
 	}
+	d.setTstepCFL() // Set time step
+	//d.setTstepRuleOfThumb() // Set time step
 	go d.WebServer(httpPort)
 	return d
 }
@@ -316,31 +288,15 @@ func (c *AIMcell) addEmissionsFlux(d *AIMdata) {
 }
 
 //  Set the time step using the Courant–Friedrichs–Lewy (CFL) condition.
-func (d *AIMdata) setTstepCFL(nprocs int) {
-	const Cmax = 1.5 // From Wicker and Skamarock (2002) Table 1.
-	valChan := make(chan float64)
-	calcCFL := func(procNum int) {
-		var thisval, val float64
-		var c *AIMcell
-		for ii := procNum; ii < len(d.Data); ii += nprocs {
-			c = d.Data[ii]
-			thisval = max(c.UPlusSpeed/c.Dx, c.UMinusSpeed/c.Dx,
-				c.VPlusSpeed/c.Dy, c.VMinusSpeed/c.Dy,
-				c.WPlusSpeed/c.Dz, c.WMinusSpeed/c.Dz)
-			if thisval > val {
-				val = thisval
-			}
-		}
-		valChan <- val
-	}
-	for procNum := 0; procNum < nprocs; procNum++ {
-		go calcCFL(procNum)
-	}
+func (d *AIMdata) setTstepCFL() {
+	const Cmax = 1.
 	val := 0.
-	for i := 0; i < nprocs; i++ { // get max value from each processor
-		procval := <-valChan
-		if procval > val {
-			val = procval
+	for _, c := range d.Data {
+		thisval := max(c.UPlusSpeed/c.Dx, c.UMinusSpeed/c.Dx,
+			c.VPlusSpeed/c.Dy, c.VMinusSpeed/c.Dy,
+			c.WPlusSpeed/c.Dz, c.WMinusSpeed/c.Dz)
+		if thisval > val {
+			val = thisval
 		}
 	}
 	d.Dt = Cmax / math.Pow(3., 0.5) / val // seconds

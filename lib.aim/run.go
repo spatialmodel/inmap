@@ -95,18 +95,13 @@ func (d *AIMdata) Run(emissions map[string][]float64) (
 	// make list of science functions to run at each timestep
 	scienceFuncs := []func(c *AIMcell, d *AIMdata){
 		func(c *AIMcell, d *AIMdata) { c.addEmissionsFlux(d) },
-		func(c *AIMcell, d *AIMdata) { c.RK3advectionPass1(d) },
-		func(c *AIMcell, d *AIMdata) { c.RK3advectionPass2(d) },
-		func(c *AIMcell, d *AIMdata) { c.RK3advectionPass3(d) },
+		func(c *AIMcell, d *AIMdata) { c.UpwindAdvection(d.Dt) },
 		func(c *AIMcell, d *AIMdata) {
 			c.Mixing(d.Dt)
 			c.Chemistry(d)
 			c.DryDeposition(d)
 			c.WetDeposition(d.Dt)
 		}}
-
-	d.setTstepCFL(nprocs) // Set time step
-	//d.setTstepRuleOfThumb() // Set time step
 
 	for { // Run main calculation loop until pollutant concentrations stabilize
 
