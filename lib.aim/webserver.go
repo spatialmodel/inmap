@@ -3,9 +3,9 @@ package aim
 import (
 	"bitbucket.org/ctessum/gis"
 	"bitbucket.org/ctessum/webframework"
-	"bufio"
+	//	"bufio"
 	"fmt"
-	"github.com/twpayne/gogeom/geom"
+	//	"github.com/twpayne/gogeom/geom"
 	"net/http"
 	"strconv"
 	"strings"
@@ -26,14 +26,21 @@ func (d *AIMdata) WebServer(httpPort string) {
 
 var mapOptions = []string{"PrimaryPM2_5", "VOC", "SOA", "NH3", "pNH4", "SOx",
 	"pSO4", "NOx", "pNO3", "VOCemissions", "NOxemissions", "NH3emissions",
-	"SOxemissions", "PM2_5emissions", "uPlusSpeed", "uMinusSpeed",
-	"vPlusSpeed", "vMinusSpeed", "wPlusSpeed", "wMinusSpeed",
+	"SOxemissions", "PM2_5emissions", "UPlusSpeed", "UMinusSpeed",
+	"VPlusSpeed", "VMinusSpeed", "WPlusSpeed", "WMinusSpeed",
 	"Organicpartitioning", "Sulfurpartitioning", "Nitratepartitioning",
 	"Ammoniapartitioning", "Particlewetdeposition", "SO2wetdeposition",
-	"Non-SO2gaswetdeposition", "KxxWest", "KyySouth", "Kzz", "M2u", "M2d", "kPblTop"}
+	"Non-SO2gaswetdeposition", "Kyyxx", "Kzz", "M2u", "M2d", "PblTopLayer"}
 
 func reportHandler(w http.ResponseWriter, r *http.Request) {
-	webframework.RenderHeader(w, "AIM status", "")
+	const mapStyle = `
+<style>
+#mapdiv {
+	width: 450px;
+	height: 325px;
+}
+</style>`
+	webframework.RenderHeader(w, "AIM status", mapStyle)
 	webframework.RenderNav(w, "AIM", []string{"Home", "Processor", "Memory"},
 		[]string{"/", "/proc/", "/heap/"}, "Home", "")
 
@@ -43,7 +50,7 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 			<div class="span4">
 				<h5>Select variable</h5>
 				<form>
-					<select class="span4" id="mapvar" multiple="multiple" size=20 onchange=updateImage()>`
+					<select class="span4" id="mapvar" multiple="multiple" size=20 onchange=updateMap()>`
 	fmt.Fprintln(w, body1)
 	for i, option := range mapOptions {
 		if i == 0 {
@@ -75,7 +82,7 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 			<div class="span6 pagination-centered">
 				<h4 id="maptitle">PrimaryPM2_5 layer 0 status</h4>
 				<div class="row">
-					<img id=mapdiv src="map/PrimaryPM2_5/0" class="img-rounded">
+					<div id="mapdiv"></div>
 				</div>
 				<div class="row">
 					<embed id=legenddiv src="/legend/PrimaryPM2_5/0" type="image/svg+xml" />
@@ -85,65 +92,129 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 	</div>`
 	fmt.Fprintln(w, body3)
 
-	const mapJS = `<script>
-function updateImage() {
+	const mapJS = `
+<script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
+<script>
+function loadmap(mapvar,layer,id) {
+	var myMapOptions = {
+	   getTileUrl: function(coord, zoom) {
+	   return "/map/"+mapvar+"&"+layer+"&"+zoom+"&"+(coord.x)+"&"+(coord.y);
+	   },
+	tileSize: new google.maps.Size(256, 256),
+	isPng: true,
+	opacity: 1,
+	name: "custom"
+	};
+	var customMapType = new google.maps.ImageMapType(myMapOptions);
+
+	var labelTiles = {
+		getTileUrl: function(coord, zoom) {
+			return "http://mt0.google.com/vt/v=apt.116&hl=en-US&" +
+			"z=" + zoom + "&x=" + coord.x + "&y=" + coord.y + "&client=api";
+		},
+		tileSize: new google.maps.Size(256, 256),
+		isPng: true
+	};
+	var googleLabelLayer = new google.maps.ImageMapType(labelTiles);
+
+	var latlng = new google.maps.LatLng(40, -97);
+	var mapOptions = {
+		zoom: 4,
+		center: latlng,
+		mapTypeId: google.maps.MapTypeId.ROADMAP,
+		panControl: true,
+		zoomControl: true,
+		streetViewControl: false
+	}
+	var map = new google.maps.Map(document.getElementById(id), mapOptions);
+	map.overlayMapTypes.insertAt(0, customMapType);
+	map.overlayMapTypes.insertAt(1, googleLabelLayer);
+	return map
+}
+function updateMap() {
 	var mapvar=document.getElementById("mapvar").value;
 	var layer=document.getElementById("layer").value;
-	document.getElementById("mapdiv").src = "map/"+mapvar+"/"+layer;
+	loadmap(mapvar,layer,"mapdiv")
 	document.getElementById("maptitle").innerHTML = mapvar+" layer "+layer+" status";
 	var elem = document.getElementsByTagName("embed")[0],
 	copy = elem.cloneNode();
 	copy.src = "legend/"+mapvar+"/"+layer;
 	elem.parentNode.replaceChild(copy, elem);
 }
+google.maps.event.addDomListener(window, 'load', updateMap())
 </script>`
 
 	webframework.RenderFooter(w, mapJS)
 }
 
-func parseMapRequest(base string, r *http.Request) (name string, layer int, err error) {
-	var layer64 int64
-	request := strings.Split(r.URL.Path[len(base):], "/")
+func parseMapRequest(base string, r *http.Request) (name string,
+	layer, zoom, x, y int, err error) {
+	request := strings.Split(r.URL.Path[len(base):], "&")
 	name = request[0]
-	layer64, err = strconv.ParseInt(request[1], 10, 64)
-	layer = int(layer64)
+	layer, err = s2i(request[1])
+	if err != nil {
+		return
+	}
+	zoom, err = s2i(request[2])
+	if err != nil {
+		return
+	}
+	x, err = s2i(request[3])
+	if err != nil {
+		return
+	}
+	y, err = s2i(request[4])
+	if err != nil {
+		return
+	}
 	return
 }
 
+func s2i(s string) (int, error) {
+	i64, err := strconv.ParseInt(s, 10, 64)
+	return int(i64), err
+}
+
 func (d *AIMdata) mapHandler(w http.ResponseWriter, r *http.Request) {
-	name, layer, err := parseMapRequest("/map/", r)
+	name, layer, z, x, y, err := parseMapRequest("/map/", r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	vals := d.toArray(name, layer)
 	geometry := d.getGeometry(layer)
-	b := bufio.NewWriter(w)
-	err = CreateImage(b, geometry, vals)
+	m := gis.NewMapData(len(vals), "LinCutoff")
+	m.Cmap.AddArray(vals)
+	m.Cmap.Set()
+	m.Shapes = geometry
+	m.Data = vals
+	//b := bufio.NewWriter(w)
+	err = m.WriteGoogleMapTile(w, z, x, y)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	err = b.Flush()
+	//err = b.Flush()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
 
-// Creates a png image from an array
-func CreateImage(w *bufio.Writer, g []geom.T, vals []float64) error {
-	m := gis.NewMapData(len(vals), "LinCutoff")
-	m.Cmap.AddArray(vals)
-	m.Cmap.Set()
-	m.Shapes = g
-	m.Data = vals
-	return m.WriteGoogleMapTile(w, 0, 0, 0)
+func parseLegendRequest(base string, r *http.Request) (name string,
+	layer int, err error) {
+	request := strings.Split(r.URL.Path[len(base):], "/")
+	name = request[0]
+	layer, err = s2i(request[1])
+	if err != nil {
+		return
+	}
+	return
 }
 
 // Creates a legend and serves it.
 func (d *AIMdata) legendHandler(w http.ResponseWriter, r *http.Request) {
-	name, layer, err := parseMapRequest("/legend/", r)
+	name, layer, err := parseLegendRequest("/legend/", r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

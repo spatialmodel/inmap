@@ -54,6 +54,8 @@ var OutputNames = []string{"VOC", "SOA", "PrimaryPM2_5", "NH3", "pNH4",
 
 // Run air quality model. Emissions are assumed to be in units
 // of μg/s, and must only include the pollutants listed in "EmisNames".
+// Output is in the form of map[pollutant][layer][row]concentration,
+// in units of μg/m3.
 func (d *AIMdata) Run(emissions map[string][]float64) (
 	outputConc map[string][][]float64) {
 
@@ -95,8 +97,8 @@ func (d *AIMdata) Run(emissions map[string][]float64) (
 	// make list of science functions to run at each timestep
 	scienceFuncs := []func(c *AIMcell, d *AIMdata){
 		func(c *AIMcell, d *AIMdata) { c.addEmissionsFlux(d) },
-		func(c *AIMcell, d *AIMdata) { c.UpwindAdvection(d.Dt) },
 		func(c *AIMcell, d *AIMdata) {
+			c.UpwindAdvection(d.Dt)
 			c.Mixing(d.Dt)
 			c.Chemistry(d)
 			c.DryDeposition(d)
@@ -148,8 +150,8 @@ func (d *AIMdata) Run(emissions map[string][]float64) (
 	// Prepare output data
 	outputConc = make(map[string][][]float64)
 	for _, pol := range OutputNames {
-		outputConc[pol] = make([][]float64, d.nLayers)
-		for k := 0; k < d.nLayers; k++ {
+		outputConc[pol] = make([][]float64, d.Nlayers)
+		for k := 0; k < d.Nlayers; k++ {
 			if pol == "TotalPM2_5" {
 				outputConc[pol][k] = make([]float64, len(d.Data))
 				for _, subspecies := range []string{"PrimaryPM2_5", "SOA",

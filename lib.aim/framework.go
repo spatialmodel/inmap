@@ -13,9 +13,9 @@ import (
 type AIMdata struct {
 	Data          []*AIMcell // One data holder for each grid cell
 	Dt            float64    // seconds
-	nLayers       int        // number of model layers
-	layerStart    []int      // start index of each layer (inclusive)
-	layerEnd      []int      // end index of each layer (exclusive)
+	Nlayers       int        // number of model layers
+	LayerStart    []int      // start index of each layer (inclusive)
+	LayerEnd      []int      // end index of each layer (exclusive)
 	westBoundary  []*AIMcell // boundary cells
 	eastBoundary  []*AIMcell // boundary cells
 	northBoundary []*AIMcell // boundary cells
@@ -23,9 +23,13 @@ type AIMdata struct {
 	topBoundary   []*AIMcell // boundary cells; assume bottom boundary is the same as lowest layer
 }
 
+func init() {
+	gob.Register(geom.Polygon{})
+}
+
 // Data for a single grid cell
 type AIMcell struct {
-	geom                           geom.T       // Cell geometry
+	Geom                           geom.T       // Cell geometry
 	UPlusSpeed, UMinusSpeed        float64      // [m/s]
 	VPlusSpeed, VMinusSpeed        float64      // [m/s]
 	WPlusSpeed, WMinusSpeed        float64      // [m/s]
@@ -108,9 +112,9 @@ func InitAIMdata(filetemplate string, nLayers int, httpPort string) *AIMdata {
 	inputData := make([][]*AIMcell, nLayers)
 	ncells := 0
 	d := new(AIMdata)
-	d.nLayers = nLayers
-	d.layerStart = make([]int, nLayers)
-	d.layerEnd = make([]int, nLayers)
+	d.Nlayers = nLayers
+	d.LayerStart = make([]int, nLayers)
+	d.LayerEnd = make([]int, nLayers)
 	for k := 0; k < nLayers; k++ {
 		filename := strings.Replace(filetemplate, "[layer]",
 			fmt.Sprintf("%v", k), -1)
@@ -120,9 +124,9 @@ func InitAIMdata(filetemplate string, nLayers int, httpPort string) *AIMdata {
 		}
 		g := gob.NewDecoder(f)
 		g.Decode(&inputData[k])
-		d.layerStart[k] = ncells
+		d.LayerStart[k] = ncells
 		ncells += len(inputData[k])
-		d.layerEnd[k] = ncells
+		d.LayerEnd[k] = ncells
 		f.Close()
 	}
 	// set up data holders
@@ -313,8 +317,8 @@ func harmonicMean(a, b float64) float64 {
 
 // Convert the concentration data into a regular array
 func (d *AIMdata) toArray(pol string, layer int) []float64 {
-	o := make([]float64, d.layerEnd[layer]-d.layerStart[layer])
-	for i, c := range d.Data[d.layerStart[layer]:d.layerEnd[layer]] {
+	o := make([]float64, d.LayerEnd[layer]-d.LayerStart[layer])
+	for i, c := range d.Data[d.LayerStart[layer]:d.LayerEnd[layer]] {
 		c.lock.RLock()
 		switch pol {
 		case "VOC":
@@ -390,9 +394,9 @@ func (d *AIMdata) toArray(pol string, layer int) []float64 {
 }
 
 func (d *AIMdata) getGeometry(layer int) []geom.T {
-	o := make([]geom.T, d.layerEnd[layer]-d.layerStart[layer])
-	for i, c := range d.Data[d.layerStart[layer]:d.layerEnd[layer]] {
-		o[i] = c.geom
+	o := make([]geom.T, d.LayerEnd[layer]-d.LayerStart[layer])
+	for i, c := range d.Data[d.LayerStart[layer]:d.LayerEnd[layer]] {
+		o[i] = c.Geom
 	}
 	return o
 }

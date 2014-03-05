@@ -2,12 +2,13 @@ package main
 
 import (
 	"bitbucket.org/ctessum/aim/lib.aim"
-	"bitbucket.org/ctessum/sparse"
 	"bufio"
-	"code.google.com/p/lvd.go/cdf"
+	"encoding/csv"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/twpayne/gogeom/geom/encoding/geojson"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -19,11 +20,12 @@ import (
 var configFile *string = flag.String("config", "none", "Path to configuration file")
 
 type configData struct {
-	AIMdata              string // Path to location of baseline meteorology and pollutant data. Can include environment variables.
+	AIMdataTemplate      string // Path to location of baseline meteorology and pollutant data, where [layer] is a stand-in for the model layer number. The files should be in Gob format (http://golang.org/pkg/encoding/gob/). Can include environment variables.
+	NumLayers            int    // Number of vertical layers to use in the model
 	NumProcessors        int    // Number of processors to use for calculations
 	GroundLevelEmissions string // Path to ground level emissions file. Can include environment variables.
 	ElevatedEmissions    string // Path to elevated emissions file. Can include environment variables.
-	Output               string // Path to desired output file location. Can include environment variables.
+	OutputTemplate       string // Path to desired output file location, where [layer] is a stand-in for the model layer number. Can include environment variables.
 	HTTPport             string // Port for hosting web page.
 	// If HTTPport is `8080`, then the GUI would be viewed by visiting `localhost:8080` in a web browser.
 }
@@ -47,9 +49,9 @@ func main() {
 	runtime.GOMAXPROCS(config.NumProcessors)
 
 	fmt.Println("Reading input data...")
-	d := aim.InitAIMdata(config.AIMdata, config.HTTPport)
+	d := aim.InitAIMdata(config.AIMdataTemplate,
+		config.NumLayers, config.HTTPport)
 	fmt.Println("Reading plume rise information...")
-	p := aim.GetPlumeRiseInfo(config.AIMdata)
 
 	const (
 		height   = 75. * 0.3048             // m
@@ -58,23 +60,25 @@ func main() {
 		velocity = 61.94 * 1097. / 3600.    // m/hr
 	)
 
-	emissions := make(map[string]*sparse.DenseArray)
+	emissions := make(map[string][]float64)
 	if config.GroundLevelEmissions != "" {
-		emissions = getEmissionsNCF(config.GroundLevelEmissions, d)
+		emissions = getEmissionsCSV(config.GroundLevelEmissions, d)
 	}
 
 	if config.ElevatedEmissions != "" {
-		elevatedEmis := getEmissionsNCF(config.ElevatedEmissions, d)
+		elevatedEmis := getEmissionsCSV(config.ElevatedEmissions, d)
 		// apply plume rise
 		for pol, elev := range elevatedEmis {
 			if _, ok := emissions[pol]; !ok {
-				emissions[pol] = sparse.ZerosDense(d.Nz, d.Ny, d.Nx)
+				emissions[pol] = make([]float64, len(d.Data))
 			}
-			for j := 0; j < elev.Shape[1]; j++ {
-				for i := 0; i < elev.Shape[2]; i++ {
-					k := p.CalcPlumeRise(height, diam, temp, velocity, j, i)
-					emissions[pol].AddVal(elev.Get(0, j, i), k, j, i)
+			for i, val := range elev {
+				plumeRow, err := d.CalcPlumeRise(
+					height, diam, temp, velocity, i)
+				if err != nil {
+					panic(err)
 				}
+				emissions[pol][plumeRow] += val
 			}
 		}
 	}
@@ -82,7 +86,7 @@ func main() {
 	// Run model
 	finalConc := d.Run(emissions)
 
-	writeOutput(finalConc, d, config.Output)
+	writeOutput(finalConc, d, config.OutputTemplate)
 
 	fmt.Println("\n",
 		"------------------------------------\n",
@@ -90,44 +94,51 @@ func main() {
 		"------------------------------------\n")
 }
 
-// Get the emissions from a NetCDF file
-func getEmissionsNCF(filename string, d *aim.AIMdata) (
-	emissions map[string]*sparse.DenseArray) {
+// Get the emissions from a csv file.
+// Input units = tons/year; output units = μg/s
+func getEmissionsCSV(filename string, d *aim.AIMdata) (
+	emissions map[string][]float64) {
 
 	const massConv = 907184740000.       // μg per short ton
 	const timeConv = 3600. * 8760.       // seconds per year
 	const emisConv = massConv / timeConv // convert tons/year to μg/s
 
-	emissions = make(map[string]*sparse.DenseArray)
-	ff, err := os.Open(filename)
+	emissions = make(map[string][]float64)
+	f, err := os.Open(filename)
 	if err != nil {
 		panic(err)
 	}
-	f, err := cdf.Open(ff)
+	defer f.Close()
+	r := csv.NewReader(f)
+	vars, err := r.Read() // Pollutant names in the header
 	if err != nil {
+		if err == io.EOF {
+			return
+		}
 		panic(err)
 	}
-	defer ff.Close()
-	for _, Var := range f.Header.Variables() {
+	for _, Var := range vars {
 		if Var == "CO" || Var == "PM10" || Var == "CH4" {
 			continue
 		}
-		emissions[polTrans(Var)] = sparse.ZerosDense(d.Nz, d.Ny, d.Nx)
-		dims := f.Header.Lengths(Var)
-		nread := 1
-		for _, dim := range dims {
-			nread *= dim
-		}
-		r := f.Reader(Var, nil, nil)
-		buf := r.Zero(nread)
-		_, err = r.Read(buf)
+		emissions[polTrans(Var)] = make([]float64, len(d.Data))
+	}
+	row := 0
+	for {
+		record, err := r.Read()
 		if err != nil {
+			if err == io.EOF {
+				break
+			}
 			panic(err)
 		}
-		dat := buf.([]float32)
-		for i, val := range dat {
-			emissions[polTrans(Var)].Elements[i] = float64(val) * emisConv
+		for i, Var := range vars {
+			if Var == "CO" || Var == "PM10" || Var == "CH4" {
+				continue
+			}
+			emissions[polTrans(Var)][row] = s2f(record[i]) * emisConv
 		}
+		row++
 	}
 	return
 }
@@ -141,77 +152,59 @@ func polTrans(pol string) string {
 	}
 }
 
-// write data out to netcdf
-func writeOutput(finalConc map[string]*sparse.DenseArray, d *aim.AIMdata, outfile string) {
-	h := cdf.NewHeader(
-		[]string{"nx", "ny", "nz"},
-		[]int{d.Nx, d.Ny, d.Nz})
-	for pol, _ := range finalConc {
-		h.AddVariable(pol, []string{"nz", "ny", "nx"}, []float32{0})
-		h.AddAttribute(pol, "units", "ug m-3")
-	}
-	h.Define()
-	ff, err := os.Create(outfile)
-	if err != nil {
-		panic(err)
-	}
-	f, err := cdf.Create(ff, h) // writes the header to ff
-	if err != nil {
-		panic(err)
-	}
-	for pol, arr := range finalConc {
-		writeNCF(f, pol, arr)
-	}
-	ff.Close()
+type JsonHolder struct {
+	Type       string
+	Geometry   *geojson.Geometry
+	Properties map[string]float64
+}
+type JsonHolderHolder struct {
+	Proj4, Type string
+	Features    []*JsonHolder
 }
 
-func getEmissions(filename string, d *aim.AIMdata) (
-	emissions map[string]*sparse.DenseArray) {
-
-	const massConv = 907184740000.       // μg per short ton
-	const timeConv = 3600. * 8760.       // seconds per year
-	const emisConv = massConv / timeConv // convert tons/year to μg/s
-
-	emissions = make(map[string]*sparse.DenseArray)
-	emissions["VOC"] = sparse.ZerosDense(d.Nz, d.Ny, d.Nx)
-	emissions["PM2_5"] = sparse.ZerosDense(d.Nz, d.Ny, d.Nx)
-	emissions["NH3"] = sparse.ZerosDense(d.Nz, d.Ny, d.Nx)
-	emissions["SOx"] = sparse.ZerosDense(d.Nz, d.Ny, d.Nx)
-	emissions["NOx"] = sparse.ZerosDense(d.Nz, d.Ny, d.Nx)
-
-	f, err := os.Open(filename)
-	if err != nil {
-		panic(err)
-	}
-	scanner := bufio.NewScanner(f)
-	firstLine := true
-	polCols := make(map[string]int)
-	for scanner.Scan() {
-		line := strings.Split(scanner.Text(), ",")
-		if firstLine {
-			for i, pol := range line {
-				polCols[pol] = i
+// write data out to GeoJSON
+func writeOutput(finalConc map[string][][]float64, d *aim.AIMdata,
+	outFileTemplate string) {
+	var err error
+	// Initialize data holder
+	outData := make([]*JsonHolderHolder, d.Nlayers)
+	row := 0
+	for k := 0; k < d.Nlayers; k++ {
+		outData[k] = new(JsonHolderHolder)
+		outData[k].Type = "FeatureCollection"
+		outData[k].Features = make([]*JsonHolder, d.LayerEnd[k]-d.LayerStart[k])
+		for i := 0; i < len(outData[i].Features); i++ {
+			x := new(JsonHolder)
+			x.Type = "Feature"
+			x.Properties = make(map[string]float64)
+			x.Geometry, err = geojson.ToGeoJSON(d.Data[row].Geom)
+			if err != nil {
+				panic(err)
 			}
-			firstLine = false
-			continue
+			outData[k].Features[i] = x
+			row++
 		}
-		row, col := s2i(line[polCols["row"]])-1, s2i(line[polCols["col"]])-1
-		SOx := s2f(line[polCols["SOx"]])
-		VOC := s2f(line[polCols["VOC"]])
-		PM2_5 := s2f(line[polCols["PM2.5"]])
-		NH3 := s2f(line[polCols["NH3"]])
-		NOx := s2f(line[polCols["NOx"]])
-
-		emissions["SOx"].Set(SOx*emisConv, 0, row, col)
-		emissions["VOC"].Set(VOC*emisConv, 0, row, col)
-		emissions["PM2_5"].Set(PM2_5*emisConv, 0, row, col)
-		emissions["NH3"].Set(NH3*emisConv, 0, row, col)
-		emissions["NOx"].Set(NOx*emisConv, 0, row, col)
 	}
-	if err := scanner.Err(); err != nil {
-		panic(err)
+	for pol, polData := range finalConc {
+		for k, layerData := range polData {
+			for i, conc := range layerData {
+				outData[k].Features[i].Properties[pol] = conc
+			}
+		}
 	}
-	return
+	for k := 0; k < d.Nlayers; k++ {
+		filename := strings.Replace(outFileTemplate, "[layer]",
+			fmt.Sprintf("%v", k), -1)
+		f, err := os.Open(filename)
+		if err != nil {
+			panic(err)
+		}
+		e := json.NewEncoder(f)
+		if err := e.Encode(outData[k]); err != nil {
+			panic(err)
+		}
+		f.Close()
+	}
 }
 
 func s2i(s string) int {
@@ -227,20 +220,6 @@ func s2f(s string) float64 {
 		panic(err)
 	}
 	return f
-}
-
-func writeNCF(f *cdf.File, Var string, data *sparse.DenseArray) {
-	data32 := make([]float32, len(data.Elements))
-	for i, e := range data.Elements {
-		data32[i] = float32(e)
-	}
-	end := f.Header.Lengths(Var)
-	start := make([]int, len(end))
-	w := f.Writer(Var, start, end)
-	_, err := w.Write(data32)
-	if err != nil {
-		panic(err)
-	}
 }
 
 // Reads and parse a json configuration file.
@@ -276,17 +255,16 @@ func ReadConfigFile(filename string) (config *configData) {
 		os.Exit(1)
 	}
 
-	config.AIMdata = os.ExpandEnv(config.AIMdata)
+	config.AIMdataTemplate = os.ExpandEnv(config.AIMdataTemplate)
 	config.GroundLevelEmissions = os.ExpandEnv(config.GroundLevelEmissions)
 	config.ElevatedEmissions = os.ExpandEnv(config.ElevatedEmissions)
-	config.Output = os.ExpandEnv(config.Output)
+	config.OutputTemplate = os.ExpandEnv(config.OutputTemplate)
 
-	outdir := filepath.Dir(config.Output)
+	outdir := filepath.Dir(config.OutputTemplate)
 	err = os.MkdirAll(outdir, os.ModePerm)
 	if err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
-
 	return
 }
