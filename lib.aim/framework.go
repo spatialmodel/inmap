@@ -6,6 +6,7 @@ import (
 	"github.com/twpayne/gogeom/geom"
 	"math"
 	"os"
+	"runtime"
 	"strings"
 	"sync"
 )
@@ -110,24 +111,35 @@ func (c *AIMcell) makecopy() *AIMcell {
 // and `httpPort` is the port number for hosting the html GUI.
 func InitAIMdata(filetemplate string, nLayers int, httpPort string) *AIMdata {
 	inputData := make([][]*AIMcell, nLayers)
-	ncells := 0
 	d := new(AIMdata)
 	d.Nlayers = nLayers
 	d.LayerStart = make([]int, nLayers)
 	d.LayerEnd = make([]int, nLayers)
+	var wg sync.WaitGroup
+	wg.Add(nLayers)
 	for k := 0; k < nLayers; k++ {
-		filename := strings.Replace(filetemplate, "[layer]",
-			fmt.Sprintf("%v", k), -1)
-		f, err := os.Open(filename)
-		if err != nil {
-			panic(err)
-		}
-		g := gob.NewDecoder(f)
-		g.Decode(&inputData[k])
-		d.LayerStart[k] = ncells
+		go func(k int) {
+			filename := strings.Replace(filetemplate, "[layer]",
+				fmt.Sprintf("%v", k), -1)
+			f, err := os.Open(filename)
+			if err != nil {
+				panic(err)
+			}
+			g := gob.NewDecoder(f)
+			g.Decode(&inputData[k])
+			d.LayerStart[k] = 0
+			d.LayerEnd[k] = len(inputData[k])
+			f.Close()
+			wg.Done()
+		}(k)
+	}
+	wg.Wait()
+	ncells := 0
+	// Adjust so beginning of layer is at end of previous layer
+	for k := 0; k < nLayers; k++ {
+		d.LayerStart[k] += ncells
+		d.LayerEnd[k] += ncells
 		ncells += len(inputData[k])
-		d.LayerEnd[k] = ncells
-		f.Close()
 	}
 	// set up data holders
 	d.Data = make([]*AIMcell, ncells)
@@ -142,80 +154,89 @@ func InitAIMdata(filetemplate string, nLayers int, httpPort string) *AIMdata {
 	d.southBoundary = make([]*AIMcell, 0, 200)
 	d.northBoundary = make([]*AIMcell, 0, 200)
 	d.topBoundary = make([]*AIMcell, 0, 200)
-	for _, cell := range d.Data {
-		// Link cells to neighbors and/or boundaries.
-		if len(cell.IWest) == 0 {
-			c := cell.makecopy()
-			cell.West = []*AIMcell{c}
-			d.westBoundary = append(d.westBoundary, c)
-		} else {
-			cell.West = make([]*AIMcell, len(cell.IWest))
-			for i, row := range cell.IWest {
-				cell.West[i] = d.Data[row]
+	nprocs := runtime.GOMAXPROCS(0)
+	wg.Add(nprocs)
+	for procNum := 0; procNum < nprocs; procNum++ {
+		go func(procNum int) {
+			for ii := procNum; ii < len(d.Data); ii += nprocs {
+				cell := d.Data[ii]
+				// Link cells to neighbors and/or boundaries.
+				if len(cell.IWest) == 0 {
+					c := cell.makecopy()
+					cell.West = []*AIMcell{c}
+					d.westBoundary = append(d.westBoundary, c)
+				} else {
+					cell.West = make([]*AIMcell, len(cell.IWest))
+					for i, row := range cell.IWest {
+						cell.West[i] = d.Data[row]
+					}
+					cell.IWest = nil
+				}
+				if len(cell.IEast) == 0 {
+					c := cell.makecopy()
+					cell.East = []*AIMcell{c}
+					d.eastBoundary = append(d.eastBoundary, c)
+				} else {
+					cell.East = make([]*AIMcell, len(cell.IEast))
+					for i, row := range cell.IEast {
+						cell.East[i] = d.Data[row]
+					}
+					cell.IEast = nil
+				}
+				if len(cell.ISouth) == 0 {
+					c := cell.makecopy()
+					cell.South = []*AIMcell{c}
+					d.southBoundary = append(d.southBoundary, c)
+				} else {
+					cell.South = make([]*AIMcell, len(cell.ISouth))
+					for i, row := range cell.ISouth {
+						cell.South[i] = d.Data[row]
+					}
+					cell.ISouth = nil
+				}
+				if len(cell.INorth) == 0 {
+					c := cell.makecopy()
+					cell.North = []*AIMcell{c}
+					d.northBoundary = append(d.northBoundary, c)
+				} else {
+					cell.North = make([]*AIMcell, len(cell.INorth))
+					for i, row := range cell.INorth {
+						cell.North[i] = d.Data[row]
+					}
+					cell.INorth = nil
+				}
+				if len(cell.IAbove) == 0 {
+					c := cell.makecopy()
+					cell.Above = []*AIMcell{c}
+					d.topBoundary = append(d.topBoundary, c)
+				} else {
+					cell.Above = make([]*AIMcell, len(cell.IAbove))
+					for i, row := range cell.IAbove {
+						cell.Above[i] = d.Data[row]
+					}
+					cell.IAbove = nil
+				}
+				if cell.Layer != 0 {
+					cell.Below = make([]*AIMcell, len(cell.IBelow))
+					cell.GroundLevel = make([]*AIMcell, len(cell.IGroundLevel))
+					for i, row := range cell.IBelow {
+						cell.Below[i] = d.Data[row]
+					}
+					for i, row := range cell.IGroundLevel {
+						cell.GroundLevel[i] = d.Data[row]
+					}
+					cell.IBelow = nil
+					cell.IGroundLevel = nil
+				} else { // assume bottom boundary is the same as lowest layer.
+					cell.Below = []*AIMcell{d.Data[cell.Row]}
+					cell.GroundLevel = []*AIMcell{d.Data[cell.Row]}
+				}
+				cell.neighborInfo()
 			}
-			cell.IWest = nil
-		}
-		if len(cell.IEast) == 0 {
-			c := cell.makecopy()
-			cell.East = []*AIMcell{c}
-			d.eastBoundary = append(d.eastBoundary, c)
-		} else {
-			cell.East = make([]*AIMcell, len(cell.IEast))
-			for i, row := range cell.IEast {
-				cell.East[i] = d.Data[row]
-			}
-			cell.IEast = nil
-		}
-		if len(cell.ISouth) == 0 {
-			c := cell.makecopy()
-			cell.South = []*AIMcell{c}
-			d.southBoundary = append(d.southBoundary, c)
-		} else {
-			cell.South = make([]*AIMcell, len(cell.ISouth))
-			for i, row := range cell.ISouth {
-				cell.South[i] = d.Data[row]
-			}
-			cell.ISouth = nil
-		}
-		if len(cell.INorth) == 0 {
-			c := cell.makecopy()
-			cell.North = []*AIMcell{c}
-			d.northBoundary = append(d.northBoundary, c)
-		} else {
-			cell.North = make([]*AIMcell, len(cell.INorth))
-			for i, row := range cell.INorth {
-				cell.North[i] = d.Data[row]
-			}
-			cell.INorth = nil
-		}
-		if len(cell.IAbove) == 0 {
-			c := cell.makecopy()
-			cell.Above = []*AIMcell{c}
-			d.topBoundary = append(d.topBoundary, c)
-		} else {
-			cell.Above = make([]*AIMcell, len(cell.IAbove))
-			for i, row := range cell.IAbove {
-				cell.Above[i] = d.Data[row]
-			}
-			cell.IAbove = nil
-		}
-		if cell.Layer != 0 {
-			cell.Below = make([]*AIMcell, len(cell.IBelow))
-			cell.GroundLevel = make([]*AIMcell, len(cell.IGroundLevel))
-			for i, row := range cell.IBelow {
-				cell.Below[i] = d.Data[row]
-			}
-			for i, row := range cell.IGroundLevel {
-				cell.GroundLevel[i] = d.Data[row]
-			}
-			cell.IBelow = nil
-			cell.IGroundLevel = nil
-		} else { // assume bottom boundary is the same as lowest layer.
-			cell.Below = []*AIMcell{d.Data[cell.Row]}
-			cell.GroundLevel = []*AIMcell{d.Data[cell.Row]}
-		}
-		cell.neighborInfo()
+			wg.Done()
+		}(procNum)
 	}
+	wg.Wait()
 	d.setTstepCFL() // Set time step
 	//d.setTstepRuleOfThumb() // Set time step
 	go d.WebServer(httpPort)

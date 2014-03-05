@@ -173,7 +173,7 @@ func writeOutput(finalConc map[string][][]float64, d *aim.AIMdata,
 		outData[k] = new(JsonHolderHolder)
 		outData[k].Type = "FeatureCollection"
 		outData[k].Features = make([]*JsonHolder, d.LayerEnd[k]-d.LayerStart[k])
-		for i := 0; i < len(outData[i].Features); i++ {
+		for i := 0; i < len(outData[k].Features); i++ {
 			x := new(JsonHolder)
 			x.Type = "Feature"
 			x.Properties = make(map[string]float64)
@@ -195,7 +195,7 @@ func writeOutput(finalConc map[string][][]float64, d *aim.AIMdata,
 	for k := 0; k < d.Nlayers; k++ {
 		filename := strings.Replace(outFileTemplate, "[layer]",
 			fmt.Sprintf("%v", k), -1)
-		f, err := os.Open(filename)
+		f, err := os.Create(filename)
 		if err != nil {
 			panic(err)
 		}
@@ -259,6 +259,13 @@ func ReadConfigFile(filename string) (config *configData) {
 	config.GroundLevelEmissions = os.ExpandEnv(config.GroundLevelEmissions)
 	config.ElevatedEmissions = os.ExpandEnv(config.ElevatedEmissions)
 	config.OutputTemplate = os.ExpandEnv(config.OutputTemplate)
+
+	if config.OutputTemplate == "" {
+		fmt.Println("You need to specify an output template in the " +
+			"configuration file(for example: " +
+			"\"OutputTemplate\":\"output_[layer].geojson\"")
+		os.Exit(1)
+	}
 
 	outdir := filepath.Dir(config.OutputTemplate)
 	err = os.MkdirAll(outdir, os.ModePerm)

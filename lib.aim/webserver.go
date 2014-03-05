@@ -3,9 +3,8 @@ package aim
 import (
 	"bitbucket.org/ctessum/gis"
 	"bitbucket.org/ctessum/webframework"
-	//	"bufio"
 	"fmt"
-	//	"github.com/twpayne/gogeom/geom"
+	//"github.com/pmylund/go-cache"
 	"net/http"
 	"strconv"
 	"strings"
@@ -36,8 +35,8 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 	const mapStyle = `
 <style>
 #mapdiv {
-	width: 450px;
-	height: 325px;
+	width: 100%;
+	height: 400px;
 }
 </style>`
 	webframework.RenderHeader(w, "AIM status", mapStyle)
@@ -47,10 +46,10 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 	const body1 = `
 	<div class="container">
 		<div class="row">
-			<div class="span4">
+			<div class="span3">
 				<h5>Select variable</h5>
 				<form>
-					<select class="span4" id="mapvar" multiple="multiple" size=20 onchange=updateMap()>`
+					<select class="span3" id="mapvar" multiple="multiple" size=20 onchange=updateMap()>`
 	fmt.Fprintln(w, body1)
 	for i, option := range mapOptions {
 		if i == 0 {
@@ -66,7 +65,7 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 			<div class="span2">
 				<h5>Select layer</h5>
 				<form>
-					<select class="span1" id="layer" multiple="multiple" size=20 onchange=updateImage()>`
+					<select class="span1" id="layer" multiple="multiple" size=20 onchange=updateMap()>`
 	fmt.Fprintln(w, body2)
 	for k := 0; k < 27; k++ {
 		if k == 0 {
@@ -79,7 +78,7 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 					</select>
 				</form>
 			</div>
-			<div class="span6 pagination-centered">
+			<div class="span7 pagination-centered">
 				<h4 id="maptitle">PrimaryPM2_5 layer 0 status</h4>
 				<div class="row">
 					<div id="mapdiv"></div>
@@ -95,7 +94,8 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 	const mapJS = `
 <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
 <script>
-function loadmap(mapvar,layer,id) {
+var map;
+function tileOptions(mapvar,layer) {
 	var myMapOptions = {
 	   getTileUrl: function(coord, zoom) {
 	   return "/map/"+mapvar+"&"+layer+"&"+zoom+"&"+(coord.x)+"&"+(coord.y);
@@ -106,7 +106,10 @@ function loadmap(mapvar,layer,id) {
 	name: "custom"
 	};
 	var customMapType = new google.maps.ImageMapType(myMapOptions);
-
+	return customMapType;
+}
+function loadmap(mapvar,layer,id) {
+	var customMapType = tileOptions(mapvar,layer);
 	var labelTiles = {
 		getTileUrl: function(coord, zoom) {
 			return "http://mt0.google.com/vt/v=apt.116&hl=en-US&" +
@@ -126,22 +129,23 @@ function loadmap(mapvar,layer,id) {
 		zoomControl: true,
 		streetViewControl: false
 	}
-	var map = new google.maps.Map(document.getElementById(id), mapOptions);
+	map = new google.maps.Map(document.getElementById(id), mapOptions);
 	map.overlayMapTypes.insertAt(0, customMapType);
 	map.overlayMapTypes.insertAt(1, googleLabelLayer);
-	return map
 }
 function updateMap() {
 	var mapvar=document.getElementById("mapvar").value;
 	var layer=document.getElementById("layer").value;
-	loadmap(mapvar,layer,"mapdiv")
+	var customMapType = tileOptions(mapvar,layer);
+	map.overlayMapTypes.removeAt(0);
+	map.overlayMapTypes.insertAt(0, customMapType);
 	document.getElementById("maptitle").innerHTML = mapvar+" layer "+layer+" status";
 	var elem = document.getElementsByTagName("embed")[0],
 	copy = elem.cloneNode();
 	copy.src = "legend/"+mapvar+"/"+layer;
 	elem.parentNode.replaceChild(copy, elem);
 }
-google.maps.event.addDomListener(window, 'load', updateMap())
+google.maps.event.addDomListener(window, 'load', loadmap("PrimaryPM2_5",0,"mapdiv"))
 </script>`
 
 	webframework.RenderFooter(w, mapJS)
@@ -228,7 +232,7 @@ func (d *AIMdata) legendHandler(w http.ResponseWriter, r *http.Request) {
 	cmap.LegendHeight = 0.2
 	cmap.LineWidth = 0.2
 	cmap.FontSize = 3.5
-	err = cmap.Legend(w, "concentrations (μg/m3)")
+	err = cmap.Legend(w, "concentrations (μg/m³")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

@@ -28,7 +28,8 @@ const (
 	NtoNH4 = mwNH4 / mwN
 )
 
-const tolerance = 0.005   // tolerance for convergence
+//const tolerance = 0.005   // tolerance for convergence
+const tolerance = 0.5   // tolerance for convergence
 const checkPeriod = 3600. // seconds, how often to check for convergence
 const daysPerSecond = 1. / 3600. / 24.
 const topLayerToCalc = 28 // The top layer to do calculations for
@@ -153,7 +154,7 @@ func (d *AIMdata) Run(emissions map[string][]float64) (
 		outputConc[pol] = make([][]float64, d.Nlayers)
 		for k := 0; k < d.Nlayers; k++ {
 			if pol == "TotalPM2_5" {
-				outputConc[pol][k] = make([]float64, len(d.Data))
+				outputConc[pol][k] = make([]float64, d.LayerEnd[k]-d.LayerStart[k])
 				for _, subspecies := range []string{"PrimaryPM2_5", "SOA",
 					"pNH4", "pSO4", "pNO3"} {
 					for i, val := range outputConc[subspecies][k] {
