@@ -1,8 +1,9 @@
 {
-	"AIMdata":"/path/to/aimData.ncf",
+	"AIMdataTemplate":"/path/to/aimData_[layer].gob",
+	"NumLayers":27,
 	"NumProcessors":4,
-	"GroundLevelEmissions":"/path/to/groundLevelEmissions.ncf",
-	"ElevatedEmissions":"/path/to/elevatedEmissions.ncf",
-	"Output":"output.ncf",
+	"GroundLevelEmissions":"/path/to/groundLevelEmissions.csv",
+	"ElevatedEmissions":"/path/to/elevatedEmissions.csv",
+	"OutputTemplate":"output/output_[layer].geojson",
 	"HTTPport":"8080"
 }

@@ -123,7 +123,8 @@ func InitAIMdata(filetemplate string, nLayers int, httpPort string) *AIMdata {
 				fmt.Sprintf("%v", k), -1)
 			f, err := os.Open(filename)
 			if err != nil {
-				panic(err)
+				fmt.Println(err.Error())
+				os.Exit(1)
 			}
 			g := gob.NewDecoder(f)
 			g.Decode(&inputData[k])

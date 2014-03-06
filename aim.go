@@ -106,7 +106,8 @@ func getEmissionsCSV(filename string, d *aim.AIMdata) (
 	emissions = make(map[string][]float64)
 	f, err := os.Open(filename)
 	if err != nil {
-		panic(err)
+		fmt.Println(err.Error())
+		os.Exit(1)
 	}
 	defer f.Close()
 	r := csv.NewReader(f)
