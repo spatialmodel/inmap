@@ -29,7 +29,11 @@ var mapOptions = []string{"PrimaryPM2_5", "VOC", "SOA", "NH3", "pNH4", "SOx",
 	"VPlusSpeed", "VMinusSpeed", "WPlusSpeed", "WMinusSpeed",
 	"Organicpartitioning", "Sulfurpartitioning", "Nitratepartitioning",
 	"Ammoniapartitioning", "Particlewetdeposition", "SO2wetdeposition",
-	"Non-SO2gaswetdeposition", "Kyyxx", "Kzz", "M2u", "M2d", "PblTopLayer"}
+	"Non-SO2gaswetdeposition", "Kxxyy", "Kzz", "M2u", "M2d", "PblTopLayer",
+	"Total deaths", "White deaths", "Non-white deaths",
+	"High income deaths", "Low income deaths",
+	"High income white deaths", "Low income non-white deaths","Population",
+	"Baseline mortality rate"}
 
 func reportHandler(w http.ResponseWriter, r *http.Request) {
 	const mapStyle = `

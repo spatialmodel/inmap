@@ -4,6 +4,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"github.com/twpayne/gogeom/geom"
+	"bitbucket.org/ctessum/aqhealth"
 	"math"
 	"os"
 	"runtime"
@@ -31,6 +32,7 @@ func init() {
 // Data for a single grid cell
 type AIMcell struct {
 	Geom                           geom.T       // Cell geometry
+	WebMapGeom                     geom.T       // Cell geometry in web map (mercator) coordinate system
 	UPlusSpeed, UMinusSpeed        float64      // [m/s]
 	VPlusSpeed, VMinusSpeed        float64      // [m/s]
 	WPlusSpeed, WMinusSpeed        float64      // [m/s]
@@ -44,11 +46,14 @@ type AIMcell struct {
 	SO2oxidation                   float64      // SO2 oxidation to SO4 by HO and H2O2 [1/s]
 	Kzz                            float64      // Grid center vertical diffusivity after applying convective fraction [m2/s]
 	KzzAbove, KzzBelow             []float64    // horizontal diffusivity [m2/s] (staggered grid)
-	Kyyxx                          float64      // Grid center horizontal diffusivity [m2/s]
+	Kxxyy                          float64      // Grid center horizontal diffusivity [m2/s]
 	KyySouth, KyyNorth             []float64    // horizontal diffusivity [m2/s] (staggered grid)
 	KxxWest, KxxEast               []float64    // horizontal diffusivity at [m2/s] (staggered grid)
 	M2u                            float64      // ACM2 upward mixing (Pleim 2007) [1/s]
 	M2d                            float64      // ACM2 downward mixing (Pleim 2007) [1/s]
+	TotalPop, WhitePop             float64      // Population [people/grid cell]
+	TotalPoor, WhitePoor           float64      // Poor population [people/grid cell]
+	AllCauseMortality              float64      // Mortalities per 100,000 people per year
 	PblTopLayer                    float64      // k index of boundary layer top
 	Dx, Dy, Dz                     float64      // grid size [meters]
 	Volume                         float64      // [cubic meters]
@@ -99,7 +104,7 @@ func (c *AIMcell) prepare() {
 func (c *AIMcell) makecopy() *AIMcell {
 	c2 := new(AIMcell)
 	c2.Dx, c2.Dy, c2.Dz = c.Dx, c.Dy, c.Dz
-	c2.Kyyxx = c.Kyyxx
+	c2.Kxxyy = c.Kxxyy
 	c2.prepare()
 	return c2
 }
@@ -254,7 +259,7 @@ func (cell *AIMcell) neighborInfo() {
 	for i, c := range cell.East {
 		cell.DxPlusHalf[i] = (cell.Dx + c.Dx) / 2.
 		cell.EastFrac[i] = min(c.Dy/cell.Dy, 1.)
-		cell.KxxEast[i] = harmonicMean(cell.Kyyxx, c.Kyyxx)
+		cell.KxxEast[i] = harmonicMean(cell.Kxxyy, c.Kxxyy)
 	}
 	cell.DxMinusHalf = make([]float64, len(cell.West))
 	cell.WestFrac = make([]float64, len(cell.West))
@@ -262,7 +267,7 @@ func (cell *AIMcell) neighborInfo() {
 	for i, c := range cell.West {
 		cell.DxMinusHalf[i] = (cell.Dx + c.Dx) / 2.
 		cell.WestFrac[i] = min(c.Dy/cell.Dy, 1.)
-		cell.KxxWest[i] = harmonicMean(cell.Kyyxx, c.Kyyxx)
+		cell.KxxWest[i] = harmonicMean(cell.Kxxyy, c.Kxxyy)
 	}
 	cell.DyPlusHalf = make([]float64, len(cell.North))
 	cell.NorthFrac = make([]float64, len(cell.North))
@@ -270,7 +275,7 @@ func (cell *AIMcell) neighborInfo() {
 	for i, c := range cell.North {
 		cell.DyPlusHalf[i] = (cell.Dy + c.Dy) / 2.
 		cell.NorthFrac[i] = min(c.Dx/cell.Dx, 1.)
-		cell.KyyNorth[i] = harmonicMean(cell.Kyyxx, c.Kyyxx)
+		cell.KyyNorth[i] = harmonicMean(cell.Kxxyy, c.Kxxyy)
 	}
 	cell.DyMinusHalf = make([]float64, len(cell.South))
 	cell.SouthFrac = make([]float64, len(cell.South))
@@ -278,7 +283,7 @@ func (cell *AIMcell) neighborInfo() {
 	for i, c := range cell.South {
 		cell.DyMinusHalf[i] = (cell.Dy + c.Dy) / 2.
 		cell.SouthFrac[i] = min(c.Dx/cell.Dx, 1.)
-		cell.KyySouth[i] = harmonicMean(cell.Kyyxx, c.Kyyxx)
+		cell.KyySouth[i] = harmonicMean(cell.Kxxyy, c.Kxxyy)
 	}
 	cell.DzPlusHalf = make([]float64, len(cell.Above))
 	cell.AboveFrac = make([]float64, len(cell.Above))
@@ -349,6 +354,47 @@ func (d *AIMdata) toArray(pol string, layer int) []float64 {
 			o[i] = c.Cf[ipOrg]
 		case "PrimaryPM2_5":
 			o[i] = c.Cf[iPM2_5]
+		case "TotalPM2_5":
+			o[i] = c.Cf[iPM2_5] + c.Cf[ipOrg] + c.Cf[ipNH] + c.Cf[ipS] + c.Cf[ipNO]
+		case "Total deaths":
+			pm25 := c.Cf[iPM2_5] + c.Cf[ipOrg] + c.Cf[ipNH] + c.Cf[ipS] + c.Cf[ipNO]
+			rr := aqhealth.RRpm25Linear(pm25)
+			o[i] = aqhealth.Deaths(rr, c.TotalPop,
+				c.AllCauseMortality)
+		case "White deaths":
+			pm25 := c.Cf[iPM2_5] + c.Cf[ipOrg] + c.Cf[ipNH] + c.Cf[ipS] + c.Cf[ipNO]
+			rr := aqhealth.RRpm25Linear(pm25)
+			o[i] = aqhealth.Deaths(rr, c.WhitePop,
+				c.AllCauseMortality)
+		case "Non-white deaths":
+			pm25 := c.Cf[iPM2_5] + c.Cf[ipOrg] + c.Cf[ipNH] + c.Cf[ipS] + c.Cf[ipNO]
+			rr := aqhealth.RRpm25Linear(pm25)
+			o[i] = aqhealth.Deaths(rr, c.TotalPop-c.WhitePop,
+				c.AllCauseMortality)
+		case "High income deaths":
+			pm25 := c.Cf[iPM2_5] + c.Cf[ipOrg] + c.Cf[ipNH] + c.Cf[ipS] + c.Cf[ipNO]
+			rr := aqhealth.RRpm25Linear(pm25)
+			o[i] = aqhealth.Deaths(rr, c.TotalPop-c.TotalPoor,
+				c.AllCauseMortality)
+		case "Low income deaths":
+			pm25 := c.Cf[iPM2_5] + c.Cf[ipOrg] + c.Cf[ipNH] + c.Cf[ipS] + c.Cf[ipNO]
+			rr := aqhealth.RRpm25Linear(pm25)
+			o[i] = aqhealth.Deaths(rr, c.TotalPoor,
+				c.AllCauseMortality)
+		case "High income white deaths":
+			pm25 := c.Cf[iPM2_5] + c.Cf[ipOrg] + c.Cf[ipNH] + c.Cf[ipS] + c.Cf[ipNO]
+			rr := aqhealth.RRpm25Linear(pm25)
+			o[i] = aqhealth.Deaths(rr, c.WhitePop-c.WhitePoor,
+				c.AllCauseMortality)
+		case "Low income non-white deaths":
+			pm25 := c.Cf[iPM2_5] + c.Cf[ipOrg] + c.Cf[ipNH] + c.Cf[ipS] + c.Cf[ipNO]
+			rr := aqhealth.RRpm25Linear(pm25)
+			o[i] = aqhealth.Deaths(rr, c.TotalPoor-c.WhitePoor,
+				c.AllCauseMortality)
+		case "Population":
+			o[i] = c.TotalPop / c.Dx / c.Dy
+		case "Baseline mortality rate":
+			o[i] = c.AllCauseMortality
 		case "NH3":
 			o[i] = c.Cf[igNH] / NH3ToN
 		case "pNH4":
@@ -397,8 +443,8 @@ func (d *AIMdata) toArray(pol string, layer int) []float64 {
 			o[i] = c.SO2WetDep
 		case "Non-SO2gaswetdeposition":
 			o[i] = c.OtherGasWetDep
-		case "Kyyxx":
-			o[i] = c.Kyyxx
+		case "Kxxyy":
+			o[i] = c.Kxxyy
 		case "Kzz":
 			o[i] = c.Kzz
 		case "M2u":
@@ -418,7 +464,7 @@ func (d *AIMdata) toArray(pol string, layer int) []float64 {
 func (d *AIMdata) getGeometry(layer int) []geom.T {
 	o := make([]geom.T, d.LayerEnd[layer]-d.LayerStart[layer])
 	for i, c := range d.Data[d.LayerStart[layer]:d.LayerEnd[layer]] {
-		o[i] = c.Geom
+		o[i] = c.WebMapGeom
 	}
 	return o
 }

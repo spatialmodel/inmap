@@ -29,7 +29,7 @@ const (
 )
 
 //const tolerance = 0.005   // tolerance for convergence
-const tolerance = 0.5   // tolerance for convergence
+const tolerance = 0.5     // tolerance for convergence
 const checkPeriod = 3600. // seconds, how often to check for convergence
 const daysPerSecond = 1. / 3600. / 24.
 const topLayerToCalc = 28 // The top layer to do calculations for
@@ -50,8 +50,11 @@ const (
 )
 
 // These are the names of pollutants output by the model (μg/m3)
-var OutputNames = []string{"VOC", "SOA", "PrimaryPM2_5", "NH3", "pNH4",
-	"SOx", "pSO4", "NOx", "pNO3", "TotalPM2_5"}
+var OutputVariables = []string{"VOC", "SOA", "PrimaryPM2_5", "NH3", "pNH4",
+	"SOx", "pSO4", "NOx", "pNO3", "TotalPM2_5",
+	"Total deaths", "White deaths", "Non-white deaths",
+	"High income deaths", "Low income deaths",
+	"High income white deaths", "Low income non-white deaths"}
 
 // Run air quality model. Emissions are assumed to be in units
 // of μg/s, and must only include the pollutants listed in "EmisNames".
@@ -150,20 +153,10 @@ func (d *AIMdata) Run(emissions map[string][]float64) (
 	}
 	// Prepare output data
 	outputConc = make(map[string][][]float64)
-	for _, pol := range OutputNames {
-		outputConc[pol] = make([][]float64, d.Nlayers)
+	for _, name := range OutputVariables {
+		outputConc[name] = make([][]float64, d.Nlayers)
 		for k := 0; k < d.Nlayers; k++ {
-			if pol == "TotalPM2_5" {
-				outputConc[pol][k] = make([]float64, d.LayerEnd[k]-d.LayerStart[k])
-				for _, subspecies := range []string{"PrimaryPM2_5", "SOA",
-					"pNH4", "pSO4", "pNO3"} {
-					for i, val := range outputConc[subspecies][k] {
-						outputConc[pol][k][i] += val
-					}
-				}
-			} else {
-				outputConc[pol][k] = d.toArray(pol, k)
-			}
+			outputConc[name][k] = d.toArray(name, k)
 		}
 	}
 	return
