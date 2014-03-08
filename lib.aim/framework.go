@@ -1,10 +1,10 @@
 package aim
 
 import (
+	"bitbucket.org/ctessum/aqhealth"
 	"encoding/gob"
 	"fmt"
 	"github.com/twpayne/gogeom/geom"
-	"bitbucket.org/ctessum/aqhealth"
 	"math"
 	"os"
 	"runtime"
@@ -86,7 +86,6 @@ type AIMcell struct {
 	DzPlusHalf                     []float64    // Distance between centers of cell and Above [m]
 	DzMinusHalf                    []float64    // Distance between centers of cell and Below [m]
 	Layer                          int          // layer index of grid cell
-	LayerHeight                    float64      // heights at bottom edge of grid cell, m
 	Temperature                    float64      // Average temperature, K
 	WindSpeed                      float64      // RMS wind speed, [m/s]
 	S1                             float64      // stability parameter [?]

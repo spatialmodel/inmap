@@ -2,51 +2,39 @@ package main
 
 import (
 	"bitbucket.org/ctessum/gis"
+	"encoding/gob"
 	"encoding/json"
 	"fmt"
+	"github.com/ctessum/projgeom"
 	"github.com/dhconnelly/rtreego"
 	"github.com/lukeroth/gdal"
 	"github.com/paulsmith/gogeos/geos"
+	"github.com/pebbe/go-proj-4/proj"
 	"github.com/twpayne/gogeom/geom"
 	"github.com/twpayne/gogeom/geom/encoding/geojson"
 	"io"
 	"math"
 	"os"
 	"path/filepath"
+	"sort"
 )
 
-const (
-	variableGrid_x_o = -2736000. // lower left of grid, x
-	variableGrid_y_o = -2088000. // lower left of grid, y
-	variableGrid_dx  = 36000.    // m
-	variableGrid_dy  = 36000.    // m
-	ctmGrid_x_o      = -2736000. // lower left of grid, x
-	ctmGrid_y_o      = -2088000. // lower left of grid, y
-	ctmGrid_dx       = 12000.    // m
-	ctmGrid_dy       = 12000.    // m
-	ctmGrid_nx       = 444
-	ctmGrid_ny       = 336
-	proj             = "+proj=lcc +lat_1=33.000000 +lat_2=45.000000 +lat_0=40.000000 +lon_0=-97.000000 +x_0=0 +y_0=0 +a=6370997.000000 +b=6370997.000000 +to_meter=1"
-	popCutoff        = 50000 // people per grid cell
-	bboxOffset       = 1.    // A number significantly less than the smallest grid size but not small enough to be confused with zero.
-	censusDir        = "/home/marshall/tessumcm/src/bitbucket.org/ctessum/aim/wrf2aim/census2000"
-)
+const WebMapProj = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs"
 
-var (
-	xNests = []int{148, 3, 3, 4}
-	yNests = []int{112, 3, 3, 4}
-	//xNests = []int{10, 3, 3, 4}
-	//yNests = []int{10, 3, 3, 4}
-)
+func init() {
+	gob.Register(geom.Polygon{})
+}
 
 type gridCell struct {
 	ggeom                                            *geos.Geometry
-	geom                                             geom.T
+	Geom                                             geom.T
+	WebMapGeom                                       geom.T
 	bbox                                             *rtreego.Rect
 	Row, Col, Layer                                  int
 	Dx, Dy, Dz                                       float64
 	index                                            [][2]int
-	Totalpop, Whitepop, Totalpoor, Whitepoor         float64
+	TotalPop, WhitePop, TotalPoor, WhitePoor         float64
+	AllCauseMortality, RespiratoryMortality          float64 // mortalities per year per 100,000
 	IWest, IEast, INorth, ISouth, IAbove, IBelow     []int
 	IGroundLevel                                     []int
 	UPlusSpeed, UMinusSpeed, VPlusSpeed, VMinusSpeed float64
@@ -55,7 +43,7 @@ type gridCell struct {
 	NHPartitioning, FracAmmoniaPoor                  float64
 	SO2oxidation                                     float64
 	ParticleDryDep, SO2DryDep, NOxDryDep, NH3DryDep  float64
-	VOCDryDep, Kyyxx, LayerHeights                   float64
+	VOCDryDep, Kxxyy, LayerHeights                   float64
 	ParticleWetDep, SO2WetDep, OtherGasWetDep        float64
 	Kzz, M2u, M2d, PblTopLayer, Pblh, WindSpeed      float64
 	Temperature, S1, Sclass                          float64
@@ -67,58 +55,131 @@ func (c *gridCell) Bounds() *rtreego.Rect {
 
 func variableGrid(data map[string]dataHolder) {
 	sr := gdal.CreateSpatialReference("")
-	err := sr.FromProj4(proj)
+	err := sr.FromProj4(config.GridProj)
 	if err.Error() != "No Error" {
 		panic(err)
 	}
-	filePrefix := filepath.Join(outputDir, outputFilePrefix)
-	os.Remove(filePrefix + ".shp")
-	os.Remove(filePrefix + ".shx")
-	os.Remove(filePrefix + ".dbf")
-	os.Remove(filePrefix + ".prj")
-	fieldNames := []string{"row", "col",
-		"TotalPop", "WhitePop", "TotalPoor", "WhitePoor"}
-	shp, err := gis.CreateShapefile(outputDir, outputFilePrefix, sr,
-		gdal.GT_Polygon, fieldNames, 0, 0, 0., 0., 0., 0.)
-	if err != nil {
-		panic(err)
-	}
+	pblMax := data["PblTopLayer"].data.Max()
 	pop := loadPopulation(sr)
-
-	cellChan := make(chan *gridCell)
-	go createCells(xNests, yNests, nil, pop, cellChan)
-	cells := make([]*gridCell, 0, xNests[0]*yNests[0]*2)
-	cellTree := rtreego.NewTree(2, 25, 50)
-
-	id := 0
-	for cell := range cellChan {
-		cell.Row = id
-		cell.geom, err = gis.GEOStoGeom(cell.ggeom)
-		if err != nil {
-			panic(err)
-		}
-		cell.bbox, err = gis.GeomToRect(cell.geom)
-		if err != nil {
-			panic(err)
-		}
-		writeCell(shp, cell)
-		cells = append(cells, cell)
-		cellTree.Insert(cell)
-		id++
-	}
-	shp.Close()
-	getNeighbors(cells, cellTree)
+	mort := loadMortality(sr)
+	filePrefix := filepath.Join(config.OutputDir, config.OutputFilePrefix)
 	kmax := data["UPlusSpeed"].data.Shape[0]
+	var cellsBelow []*gridCell
+	var cellTreeBelow *rtreego.Rtree
+	var cellTreeGroundLevel *rtreego.Rtree
+	id := 0
 	for k := 0; k < kmax; k++ {
-		getData(cells, data, k, kmax)
-		writeJsonAndGob(cells, k)
+		os.Remove(fmt.Sprintf("%v_%v.shp", filePrefix, k))
+		os.Remove(fmt.Sprintf("%v_%v.shx", filePrefix, k))
+		os.Remove(fmt.Sprintf("%v_%v.dbf", filePrefix, k))
+		os.Remove(fmt.Sprintf("%v_%v.prj", filePrefix, k))
+		fieldNames := []string{"row", "col",
+			"TotalPop", "WhitePop", "TotalPoor", "WhitePoor",
+			"AllCause", "Respirator"}
+		shp, err := gis.CreateShapefile(config.OutputDir,
+			fmt.Sprintf("%v_%v", config.OutputFilePrefix, k), sr,
+			gdal.GT_Polygon, fieldNames, 0, 0, 0., 0., 0., 0., 0., 0.)
+		if err != nil {
+			panic(err)
+		}
+
+		cellChan := make(chan *gridCell)
+		if k < int(pblMax)+1 {
+			go createCells(config.Xnests, config.Ynests, nil, pop, mort, cellChan)
+		} else { // no nested grids above the boundary layer
+			go createCells(config.Xnests[0:1], config.Ynests[0:1],
+				nil, pop, mort, cellChan)
+		}
+		cells := make([]*gridCell, 0, config.Xnests[0]*config.Ynests[0]*2)
+		cellTree := rtreego.NewTree(2, 25, 50)
+
+		for cell := range cellChan {
+			cell.Geom, err = gis.GEOStoGeom(cell.ggeom)
+			if err != nil {
+				panic(err)
+			}
+			cell.bbox, err = gis.GeomToRect(cell.Geom)
+			if err != nil {
+				panic(err)
+			}
+			cells = append(cells, cell)
+			cellTree.Insert(cell)
+		}
+		sortCells(cells)
+		for _, cell := range cells {
+			cell.Row = id
+			writeCell(shp, cell)
+			id++
+		}
+		shp.Close()
+		getNeighborsHorizontal(cells, cellTree)
+		if k != 0 {
+			getNeighborsAbove(cellsBelow, cellTree)
+			getNeighborsBelow(cells, cellTreeBelow)
+			getNeighborsGroundLevel(cells, cellTreeGroundLevel)
+		} else {
+			cellTreeGroundLevel = cellTree
+		}
+		if k != 0 {
+			getData(cellsBelow, data, k-1)
+			writeJsonAndGob(cellsBelow, k-1)
+		}
+
+		if k == kmax-1 {
+			getData(cells, data, k)
+			writeJsonAndGob(cells, k)
+		}
+		cellsBelow = cells
+		cellTreeBelow = cellTree
 	}
 }
 
-func getNeighbors(cells []*gridCell, cellTree *rtreego.Rtree) {
+// sort the cells so that the order doesn't change between program runs.
+func sortCells(cells []*gridCell) {
+	sc := &cellsSorter{
+		cells: cells,
+	}
+	sort.Sort(sc)
+}
+
+type cellsSorter struct {
+	cells []*gridCell
+}
+
+// Len is part of sort.Interface.
+func (c *cellsSorter) Len() int {
+	return len(c.cells)
+}
+
+// Swap is part of sort.Interface.
+func (c *cellsSorter) Swap(i, j int) {
+	c.cells[i], c.cells[j] = c.cells[j], c.cells[i]
+}
+
+func (c *cellsSorter) Less(i, j int) bool {
+	iindex := c.cells[i].index
+	jindex := c.cells[j].index
+	for q, _ := range iindex {
+		if iindex[q][0] < jindex[q][0] {
+			return true
+		} else if iindex[q][0] > jindex[q][0] {
+			return false
+		}
+		if iindex[q][1] < jindex[q][1] {
+			return true
+		} else if iindex[q][1] > jindex[q][1] {
+			return false
+		}
+	}
+	panic("Problem sorting")
+	return false
+}
+
+func getNeighborsHorizontal(cells []*gridCell, cellTree *rtreego.Rtree) {
 	for _, cell := range cells {
 		b := geom.NewBounds()
-		b = cell.geom.Bounds(b)
+		b = cell.Geom.Bounds(b)
+		bboxOffset := config.BboxOffset
 		westbox := newRect(b.Min.X-2*bboxOffset, b.Min.Y+bboxOffset,
 			b.Min.X-bboxOffset, b.Max.Y-bboxOffset)
 		cell.IWest = getIndexes(cellTree, westbox)
@@ -126,11 +187,42 @@ func getNeighbors(cells []*gridCell, cellTree *rtreego.Rtree) {
 			b.Max.X+2*bboxOffset, b.Max.Y-bboxOffset)
 		cell.IEast = getIndexes(cellTree, eastbox)
 		southbox := newRect(b.Min.X+bboxOffset, b.Min.Y-2*bboxOffset,
-			b.Max.X-bboxOffset, b.Max.Y-bboxOffset)
+			b.Max.X-bboxOffset, b.Min.Y-bboxOffset)
 		cell.ISouth = getIndexes(cellTree, southbox)
 		northbox := newRect(b.Min.X+bboxOffset, b.Max.Y+bboxOffset,
 			b.Max.X-bboxOffset, b.Max.Y+2*bboxOffset)
 		cell.INorth = getIndexes(cellTree, northbox)
+	}
+}
+
+func getNeighborsAbove(cells []*gridCell, aboveCellTree *rtreego.Rtree) {
+	for _, cell := range cells {
+		b := geom.NewBounds()
+		b = cell.Geom.Bounds(b)
+		bboxOffset := config.BboxOffset
+		abovebox := newRect(b.Min.X+bboxOffset, b.Min.Y+bboxOffset,
+			b.Max.X-bboxOffset, b.Max.Y-bboxOffset)
+		cell.IAbove = getIndexes(aboveCellTree, abovebox)
+	}
+}
+func getNeighborsBelow(cells []*gridCell, belowCellTree *rtreego.Rtree) {
+	for _, cell := range cells {
+		b := geom.NewBounds()
+		b = cell.Geom.Bounds(b)
+		bboxOffset := config.BboxOffset
+		belowbox := newRect(b.Min.X+bboxOffset, b.Min.Y+bboxOffset,
+			b.Max.X-bboxOffset, b.Max.Y-bboxOffset)
+		cell.IBelow = getIndexes(belowCellTree, belowbox)
+	}
+}
+func getNeighborsGroundLevel(cells []*gridCell, groundlevelCellTree *rtreego.Rtree) {
+	for _, cell := range cells {
+		b := geom.NewBounds()
+		b = cell.Geom.Bounds(b)
+		bboxOffset := config.BboxOffset
+		groundlevelbox := newRect(b.Min.X+bboxOffset, b.Min.Y+bboxOffset,
+			b.Max.X-bboxOffset, b.Max.Y-bboxOffset)
+		cell.IGroundLevel = getIndexes(groundlevelCellTree, groundlevelbox)
 	}
 }
 
@@ -166,13 +258,13 @@ type JsonHolderHolder struct {
 func writeJsonAndGob(cells []*gridCell, k int) {
 	var err error
 	outData := new(JsonHolderHolder)
-	outData.Proj4 = proj
+	outData.Proj4 = config.GridProj
 	outData.Type = "FeatureCollection"
 	outData.Features = make([]*JsonHolder, len(cells))
 	for i, cell := range cells {
 		x := new(JsonHolder)
 		x.Type = "Feature"
-		x.Geometry, err = geojson.ToGeoJSON(cell.geom)
+		x.Geometry, err = geojson.ToGeoJSON(cell.Geom)
 		if err != nil {
 			panic(err)
 		}
@@ -183,8 +275,8 @@ func writeJsonAndGob(cells []*gridCell, k int) {
 	if err != nil {
 		panic(err)
 	}
-	fname := fmt.Sprintf("%v_%v.geojson", outputFilePrefix, k)
-	f, err := os.Create(filepath.Join(outputDir, fname))
+	fname := fmt.Sprintf("%v_%v.geojson", config.OutputFilePrefix, k)
+	f, err := os.Create(filepath.Join(config.OutputDir, fname))
 	if err != nil {
 		panic(err)
 	}
@@ -193,13 +285,31 @@ func writeJsonAndGob(cells []*gridCell, k int) {
 		panic(err)
 	}
 	f.Close()
-	fname := fmt.Sprintf("%v_%v.gob", outputFilePrefix, k)
-	f, err := os.Create(filepath.Join(outputDir, fname))
+
+	// Convert to google maps projection
+	src, err := proj.NewProj(config.GridProj)
+	if err != nil {
+		panic(err)
+	}
+	dst, err := proj.NewProj(WebMapProj)
+	if err != nil {
+		panic(err)
+	}
+	for _, cell := range cells {
+		cell.WebMapGeom, err = projgeom.Project(
+			cell.Geom, src, dst, false, false)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	fname = fmt.Sprintf("%v_%v.gob", config.OutputFilePrefix, k)
+	f, err = os.Create(filepath.Join(config.OutputDir, fname))
 	if err != nil {
 		panic(err)
 	}
 	g := gob.NewEncoder(f)
-	err = g.Encode(outData)
+	err = g.Encode(cells)
 	if err != nil {
 		panic(err)
 	}
@@ -207,20 +317,20 @@ func writeJsonAndGob(cells []*gridCell, k int) {
 }
 
 func createCells(localxNests, localyNests []int, index [][2]int,
-	pop *rtreego.Rtree, cellChan chan *gridCell) {
+	pop, mort *rtreego.Rtree, cellChan chan *gridCell) {
 	for j := 0; j < localyNests[0]; j++ {
 		for i := 0; i < localxNests[0]; i++ {
-			newIndex := make([][2]int, 0, len(xNests))
+			newIndex := make([][2]int, 0, len(config.Xnests))
 			for _, i := range index {
 				newIndex = append(newIndex, i)
 			}
 			newIndex = append(newIndex, [2]int{i, j})
-			cell := CreateCell(pop, newIndex)
-			if cell.Totalpop < popCutoff {
+			cell := CreateCell(pop, mort, newIndex)
+			if cell.TotalPop < config.PopCutoff {
 				cellChan <- cell
 			} else if len(localxNests) > 1 {
 				go createCells(localxNests[1:], localyNests[1:], newIndex,
-					pop, cellChan)
+					pop, mort, cellChan)
 			} else {
 				cellChan <- cell
 			}
@@ -233,22 +343,22 @@ func createCells(localxNests, localyNests []int, index [][2]int,
 	return
 }
 
-func CreateCell(pop *rtreego.Rtree, index [][2]int) (
+func CreateCell(pop, mort *rtreego.Rtree, index [][2]int) (
 	cell *gridCell) {
 	var err error
 	xResFac, yResFac := 1., 1.
-	l := variableGrid_x_o
-	b := variableGrid_y_o
+	l := config.VariableGrid_x_o
+	b := config.VariableGrid_y_o
 	for i, ii := range index {
 		if i > 0 {
-			xResFac *= float64(xNests[i])
-			yResFac *= float64(yNests[i])
+			xResFac *= float64(config.Xnests[i])
+			yResFac *= float64(config.Ynests[i])
 		}
-		l += float64(ii[0]) * variableGrid_dx / xResFac
-		b += float64(ii[1]) * variableGrid_dy / yResFac
+		l += float64(ii[0]) * config.VariableGrid_dx / xResFac
+		b += float64(ii[1]) * config.VariableGrid_dy / yResFac
 	}
-	r := l + variableGrid_dx/xResFac
-	u := b + variableGrid_dy/yResFac
+	r := l + config.VariableGrid_dx/xResFac
+	u := b + config.VariableGrid_dy/yResFac
 
 	cell = new(gridCell)
 	cell.index = index
@@ -279,7 +389,7 @@ func CreateCell(pop *rtreego.Rtree, index [][2]int) (
 			if err != nil {
 				panic(err)
 			}
-			area2, err := p.geom.Area()
+			area2, err := p.geom.Area() // we want to conserve the total population
 			if err != nil {
 				panic(err)
 			}
@@ -287,10 +397,36 @@ func CreateCell(pop *rtreego.Rtree, index [][2]int) (
 				panic("divide by zero")
 			}
 			areaFrac := area1 / area2
-			cell.Totalpop += p.totalpop * areaFrac
-			cell.Whitepop += p.whitepop * areaFrac
-			cell.Totalpoor += p.totalpoor * areaFrac
-			cell.Whitepoor += p.whitepoor * areaFrac
+			cell.TotalPop += p.totalpop * areaFrac
+			cell.WhitePop += p.whitepop * areaFrac
+			cell.TotalPoor += p.totalpoor * areaFrac
+			cell.WhitePoor += p.whitepoor * areaFrac
+		}
+	}
+	for mm, mInterface := range mort.SearchIntersect(cellBounds) {
+		m := mInterface.(*mortality)
+		intersects, err = cell.ggeom.Intersects(m.geom)
+		if err != nil {
+			fmt.Println("xxxxxxxx", mm)
+			panic(err)
+		}
+		if intersects {
+			intersection, err =
+				IntersectionFaultTolerant(cell.ggeom, m.geom)
+			area1, err := intersection.Area()
+			if err != nil {
+				panic(err)
+			}
+			area2, err := cell.ggeom.Area() // we want to conserve the average rate here, not the total
+			if err != nil {
+				panic(err)
+			}
+			if area2 == 0. {
+				panic("divide by zero")
+			}
+			areaFrac := area1 / area2
+			cell.AllCauseMortality += m.AllCause * areaFrac
+			cell.RespiratoryMortality += m.Respiratory * areaFrac
 		}
 	}
 	cell.Dx = r - l
@@ -300,10 +436,11 @@ func CreateCell(pop *rtreego.Rtree, index [][2]int) (
 }
 
 func writeCell(shp *gis.Shapefile, cell *gridCell) {
-	fieldIDs := []int{0, 1, 2, 3, 4, 5}
+	fieldIDs := []int{0, 1, 2, 3, 4, 5, 6, 7}
 	err := shp.WriteFeature(cell.Row, cell.ggeom, fieldIDs,
-		cell.Row, cell.Col, cell.Totalpop, cell.Whitepop,
-		cell.Totalpoor, cell.Whitepoor)
+		cell.Row, cell.Col, cell.TotalPop, cell.WhitePop,
+		cell.TotalPoor, cell.WhitePoor, cell.AllCauseMortality,
+		cell.RespiratoryMortality)
 	if err != nil {
 		panic(err)
 	}
@@ -319,9 +456,20 @@ func (p *population) Bounds() *rtreego.Rect {
 	return p.bounds
 }
 
-func loadPopulation(sr gdal.SpatialReference) (pop *rtreego.Rtree) {
+type mortality struct {
+	bounds                *rtreego.Rect
+	geom                  *geos.Geometry
+	AllCause, Respiratory float64 // Deaths per 100,000 people per year
+}
+
+func (m *mortality) Bounds() *rtreego.Rect {
+	return m.bounds
+}
+
+func loadPopulation(sr gdal.SpatialReference) (
+	pop *rtreego.Rtree) {
 	var err error
-	f := filepath.Join(censusDir, "Census2000.shp")
+	f := filepath.Join(config.CensusDir, config.CensusFile)
 	popshp, err := gis.OpenShapefile(f, true)
 	if err != nil {
 		panic(err)
@@ -395,53 +543,73 @@ func loadPopulation(sr gdal.SpatialReference) (pop *rtreego.Rtree) {
 	return
 }
 
-func getData(cells []*gridCell, data map[string]dataHolder, k, kmax int) {
+func loadMortality(sr gdal.SpatialReference) (
+	mort *rtreego.Rtree) {
+	var err error
+	f := filepath.Join(config.CensusDir, config.MortalityRateFile)
+	mortshp, err := gis.OpenShapefile(f, true)
+	if err != nil {
+		panic(err)
+	}
+	ct, err := gis.NewCoordinateTransform(mortshp.Sr, sr)
+	if err != nil {
+		panic(err)
+	}
+	iAllCause, err := mortshp.GetColumnIndex("AllCause")
+	if err != nil {
+		panic(err)
+	}
+	iRespiratory, err := mortshp.GetColumnIndex("Respirator")
+	if err != nil {
+		panic(err)
+	}
+
+	mort = rtreego.NewTree(2, 25, 50)
+	for {
+		g, fieldVals, err := mortshp.ReadNextFeature(
+			iAllCause, iRespiratory)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			panic(err)
+		}
+		m := new(mortality)
+		switch fieldVals[0].(type) {
+		case float64:
+			m.AllCause = fieldVals[0].(float64)
+			m.Respiratory = fieldVals[1].(float64)
+		case error:
+			if err != nil {
+				panic(err)
+			}
+		default:
+			panic("Unknown type")
+		}
+		if math.IsNaN(m.AllCause) || math.IsNaN(m.Respiratory) {
+			panic("NaN!")
+		}
+		g, err = ct.Reproject(g)
+		if err != nil {
+			panic(err)
+		}
+		m.bounds, err = gis.GeomToRect(g)
+		if err != nil {
+			panic(err)
+		}
+		m.geom, err = gis.GeomToGEOS(g)
+		if err != nil {
+			panic(err)
+		}
+		mort.Insert(m)
+	}
+	return
+}
+
+func getData(cells []*gridCell, data map[string]dataHolder, k int) {
 	ctmtree := makeCTMgrid()
 	for _, cell := range cells {
-		cell.UPlusSpeed = 0.
-		cell.UMinusSpeed = 0.
-		cell.VPlusSpeed = 0.
-		cell.VMinusSpeed = 0.
-		cell.WPlusSpeed = 0.
-		cell.WMinusSpeed = 0.
-		cell.OrgPartitioning = 0.
-		cell.NOPartitioning = 0.
-		cell.SPartitioning = 0.
-		cell.NHPartitioning = 0.
-		cell.FracAmmoniaPoor = 0.
-		cell.SO2oxidation = 0.
-		cell.ParticleDryDep = 0.
-		cell.SO2DryDep = 0.
-		cell.NOxDryDep = 0.
-		cell.NH3DryDep = 0.
-		cell.VOCDryDep = 0.
-		cell.Kyyxx = 0.
-		cell.LayerHeights = 0.
-		cell.Dz = 0.
-		cell.ParticleWetDep = 0.
-		cell.SO2WetDep = 0.
-		cell.OtherGasWetDep = 0.
-		cell.Kzz = 0.
-		cell.M2u = 0.
-		cell.M2d = 0.
-		cell.PblTopLayer = 0.
-		cell.Pblh = 0.
-		cell.WindSpeed = 0.
-		cell.Temperature = 0.
-		cell.S1 = 0.
-		cell.Sclass = 0.
-
 		cell.Layer = k
-		// Link with cells above and below.
-		if k != 0 {
-			cell.Row += len(cells)
-			cell.IBelow = []int{cell.Row - len(cells)}
-		}
-		cell.IGroundLevel = []int{cell.Row - k*len(cells)}
-		if k != kmax-1 {
-			cell.IAbove = []int{cell.Row + len(cells)}
-		}
-
 		ctmcells := ctmtree.SearchIntersect(cell.bbox)
 		ncells := float64(len(ctmcells))
 		if len(ctmcells) == 0. {
@@ -485,7 +653,7 @@ func getData(cells []*gridCell, data map[string]dataHolder, k, kmax int) {
 				ctmrow, ctmcol) / ncells
 			cell.VOCDryDep += data["VOCDryDep"].data.Get(
 				ctmrow, ctmcol) / ncells
-			cell.Kyyxx += data["Kyy"].data.Get(
+			cell.Kxxyy += data["Kxxyy"].data.Get(
 				k, ctmrow, ctmcol) / ncells
 			cell.LayerHeights += data["LayerHeights"].data.Get(
 				k, ctmrow, ctmcol) / ncells
@@ -523,12 +691,12 @@ func getData(cells []*gridCell, data map[string]dataHolder, k, kmax int) {
 func makeCTMgrid() *rtreego.Rtree {
 	var err error
 	tree := rtreego.NewTree(2, 25, 50)
-	for ix := 0; ix < ctmGrid_nx; ix++ {
-		for iy := 0; iy < ctmGrid_ny; iy++ {
+	for ix := 0; ix < config.CtmGrid_nx; ix++ {
+		for iy := 0; iy < config.CtmGrid_ny; iy++ {
 			cell := new(gridCellLight)
-			p := rtreego.Point{ctmGrid_x_o + ctmGrid_dx*float64(ix),
-				ctmGrid_y_o + ctmGrid_dy*float64(iy)}
-			lengths := []float64{ctmGrid_dx, ctmGrid_dy}
+			p := rtreego.Point{config.CtmGrid_x_o + config.CtmGrid_dx*float64(ix),
+				config.CtmGrid_y_o + config.CtmGrid_dy*float64(iy)}
+			lengths := []float64{config.CtmGrid_dx, config.CtmGrid_dy}
 			cell.bbox, err = rtreego.NewRect(p, lengths)
 			if err != nil {
 				panic(err)

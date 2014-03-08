@@ -19,7 +19,7 @@ const (
 
 func init() {
 	runtime.GOMAXPROCS(8)
-	d = InitAIMdata("../wrf2aim/aimData/aimData_[layer].gob", 27, "8080")
+	d = InitAIMdata("../wrf2aim/aimData_1km_50000/aimData_[layer].gob", 27, "8080")
 	d.Dt = Δt
 }
 

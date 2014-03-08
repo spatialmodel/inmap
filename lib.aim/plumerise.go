@@ -12,7 +12,7 @@ import (
 // grid cell, the upper cell is never smaller than the lower cell.
 func (d *AIMdata) CalcPlumeRise(stackHeight, stackDiam, stackTemp,
 	stackVel float64, row int) (plumeRow int, err error) {
-	layerHeights := make([]float64, d.Nlayers)
+	layerHeights := make([]float64, d.Nlayers+1)
 	temperature := make([]float64, d.Nlayers)
 	windSpeed := make([]float64, d.Nlayers)
 	sClass := make([]float64, d.Nlayers)
@@ -20,7 +20,7 @@ func (d *AIMdata) CalcPlumeRise(stackHeight, stackDiam, stackTemp,
 
 	cell := d.Data[row]
 	for i := 0; i < d.Nlayers; i++ {
-		layerHeights[i] = cell.LayerHeight
+		layerHeights[i+1] = layerHeights[i] + cell.Dz
 		windSpeed[i] = cell.WindSpeed
 		sClass[i] = cell.SClass
 		s1[i] = cell.S1

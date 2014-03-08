@@ -61,10 +61,20 @@ func main() {
 	)
 
 	emissions := make(map[string][]float64)
+	// Add in ground level emissions
 	if config.GroundLevelEmissions != "" {
-		emissions = getEmissionsCSV(config.GroundLevelEmissions, d)
+		groundLevelEmis := getEmissionsCSV(config.GroundLevelEmissions, d)
+		for pol, vals := range groundLevelEmis {
+			if _, ok := emissions[pol]; !ok {
+				emissions[pol] = make([]float64, len(d.Data))
+			}
+			for i, val := range vals {
+				emissions[pol][i] += val
+			}
+		}
 	}
 
+	// Add in elevated emissions
 	if config.ElevatedEmissions != "" {
 		elevatedEmis := getEmissionsCSV(config.ElevatedEmissions, d)
 		// apply plume rise
@@ -73,12 +83,14 @@ func main() {
 				emissions[pol] = make([]float64, len(d.Data))
 			}
 			for i, val := range elev {
-				plumeRow, err := d.CalcPlumeRise(
-					height, diam, temp, velocity, i)
-				if err != nil {
-					panic(err)
+				if val != 0. {
+					plumeRow, err := d.CalcPlumeRise(
+						height, diam, temp, velocity, i)
+					if err != nil {
+						panic(err)
+					}
+					emissions[pol][plumeRow] += val
 				}
-				emissions[pol][plumeRow] += val
 			}
 		}
 	}
@@ -122,7 +134,7 @@ func getEmissionsCSV(filename string, d *aim.AIMdata) (
 		if Var == "CO" || Var == "PM10" || Var == "CH4" {
 			continue
 		}
-		emissions[polTrans(Var)] = make([]float64, len(d.Data))
+		emissions[polTrans(Var)] = make([]float64, d.LayerEnd[0]-d.LayerStart[0])
 	}
 	row := 0
 	for {

@@ -28,8 +28,8 @@ const (
 	NtoNH4 = mwNH4 / mwN
 )
 
-//const tolerance = 0.005   // tolerance for convergence
-const tolerance = 0.5     // tolerance for convergence
+const tolerance = 0.005   // tolerance for convergence
+//const tolerance = 0.5     // tolerance for convergence
 const checkPeriod = 3600. // seconds, how often to check for convergence
 const daysPerSecond = 1. / 3600. / 24.
 const topLayerToCalc = 28 // The top layer to do calculations for

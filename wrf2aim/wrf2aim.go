@@ -6,9 +6,12 @@ import (
 	"bitbucket.org/ctessum/atmos/gocart"
 	"bitbucket.org/ctessum/atmos/seinfeld"
 	"bitbucket.org/ctessum/sparse"
+	"bufio"
 	"code.google.com/p/lvd.go/cdf"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"math"
 	"os"
 	"path/filepath"
@@ -19,17 +22,34 @@ import (
 	"time"
 )
 
-const (
-	// user settings
-	wrfout           = "/home/marshall/tessumcm/WRFchem_output/WRF.2005_nei.na12.chem.3.4/output/wrfout_d01_[DATE]"
-	outputDir        = "/home/marshall/tessumcm/src/bitbucket.org/ctessum/aim/wrf2aim/aimData"
-	outputFilePrefix = "aimData"
-	startDate        = "20050101"
-	endDate          = "20051231"
-	//endDate = "20050101"
-	nProcs = 16 // number of processors to use
+type ConfigInfo struct {
+	Wrfout            string  // Location of WRF output files. [DATE] is a wild card for the simulation date.
+	OutputDir         string  // Directory to put the output files in
+	OutputFilePrefix  string  // name for output files
+	StartDate         string  // Format = "YYYYMMDD"
+	EndDate           string  // Format = "YYYYMMDD"
+	Nprocs            int     // number of processors to use
+	VariableGrid_x_o  float64 // lower left of output grid, x
+	VariableGrid_y_o  float64 // lower left of output grid, y
+	VariableGrid_dx   float64 // m
+	VariableGrid_dy   float64 // m
+	Xnests            []int   // Nesting multiples in the X direction
+	Ynests            []int   // Nesting multiples in the Y direction
+	CtmGrid_x_o       float64 // lower left of Chemical Transport Model (CTM) grid, x
+	CtmGrid_y_o       float64 // lower left of grid, y
+	CtmGrid_dx        float64 // m
+	CtmGrid_dy        float64 // m
+	CtmGrid_nx        int
+	CtmGrid_ny        int
+	GridProj          string  // projection info for CTM grid; Proj4 format
+	PopCutoff         float64 // people per grid cell
+	BboxOffset        float64 // A number significantly less than the smallest grid size but not small enough to be confused with zero.
+	CensusDir         string  // directory holding census shapefile
+	CensusFile        string  // Name of census shapefile
+	MortalityRateFile string  // Name of the mortality rate shapefile
+}
 
-	// non-user settings
+const (
 	wrfFormat    = "2006-01-02_15_04_05"
 	inDateFormat = "20060102"
 	tolerance    = 1.e-10 // tolerance for comparing floats
@@ -47,10 +67,12 @@ const (
 )
 
 var (
-	start     time.Time
-	end       time.Time
-	current   time.Time
-	numTsteps float64
+	start      time.Time
+	end        time.Time
+	current    time.Time
+	numTsteps  float64
+	configFile *string = flag.String("config", "none", "Path to configuration file")
+	config             = new(ConfigInfo)
 )
 
 var (
@@ -85,18 +107,27 @@ var (
 
 func init() {
 	var err error
-	start, err = time.Parse(inDateFormat, startDate)
+
+	flag.Parse()
+	if *configFile == "" {
+		fmt.Println("Need to specify configuration file as in " +
+			"`aim -config=configFile.json`")
+		os.Exit(1)
+	}
+	ReadConfigFile(*configFile)
+
+	start, err = time.Parse(inDateFormat, config.StartDate)
 	if err != nil {
 		panic(err)
 	}
-	end, err = time.Parse(inDateFormat, endDate)
+	end, err = time.Parse(inDateFormat, config.EndDate)
 	if err != nil {
 		panic(err)
 	}
 	end = end.AddDate(0, 0, 1) // add 1 day to the end
 	numTsteps = end.Sub(start).Hours()
 
-	runtime.GOMAXPROCS(nProcs)
+	runtime.GOMAXPROCS(config.Nprocs)
 }
 
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
@@ -265,14 +296,14 @@ func main() {
 	NOxDryDep := <-Tchan
 	NH3DryDep := <-Tchan
 	VOCDryDep := <-Tchan
-	Kyy := <-Tchan
+	Kxxyy := <-Tchan
 	particleWetDep := <-qrainChan
 	SO2WetDep := <-qrainChan
 	otherGasWetDep := <-qrainChan
 	fracAmmoniaPoor := <-NH3chan2
 
 	// write out data to file
-	outputFile := filepath.Join(outputDir, outputFilePrefix+".ncf")
+	outputFile := filepath.Join(config.OutputDir, config.OutputFilePrefix+".ncf")
 	fmt.Printf("Writing out data to %v...\n", outputFile)
 	h := cdf.NewHeader(
 		[]string{"x", "y", "z", "zStagger"},
@@ -343,12 +374,12 @@ func main() {
 			"Dry deposition velocity for NH3", "m s-1", NH3DryDep},
 		"VOCDryDep": dataHolder{[]string{"y", "x"},
 			"Dry deposition velocity for VOCs", "m s-1", VOCDryDep},
-		"Kyy": dataHolder{[]string{"z", "y", "x"},
-			"Horizontal eddy diffusion coefficient", "m2 s-1", Kyy},
+		"Kxxyy": dataHolder{[]string{"z", "y", "x"},
+			"Horizontal eddy diffusion coefficient", "m2 s-1", Kxxyy},
 		"LayerHeights": dataHolder{[]string{"zStagger", "y", "x"},
 			"Height at edge of layer", "m", layerHeights},
 		"Dz": dataHolder{[]string{"z", "y", "x"},
-			"Height of each layer", "m", Dz},
+			"Vertical grid size", "m", Dz},
 		"ParticleWetDep": dataHolder{[]string{"z", "y", "x"},
 			"Wet deposition rate constant for fine particles",
 			"s-1", particleWetDep},
@@ -419,7 +450,7 @@ func iterateTimeSteps(msg string, funcs ...cdfReaderFunc) {
 	for now := start; now.Before(end); now = now.Add(delta) {
 		d := now.Format(wrfFormat)
 		fmt.Println(msg + d + "...")
-		file := strings.Replace(wrfout, "[DATE]", d, -1)
+		file := strings.Replace(config.Wrfout, "[DATE]", d, -1)
 		filechan <- file
 	}
 	close(filechan)
@@ -936,7 +967,7 @@ func StabilityMixingChemistry(LayerHeights, pblh *sparse.DenseArray,
 		qCloud := <-qCloudChan       // cloud water mixing ratio (kg/kg)
 		if T == nil {
 			// convert Kzz to unstaggered grid
-			KzzUnstaggered := sparse.ZerosDense(alt.Shape...)
+			KzzUnstaggered := sparse.ZerosDense(Temp.Shape...)
 			for j := 0; j < KzzUnstaggered.Shape[1]; j++ {
 				for i := 0; i < KzzUnstaggered.Shape[2]; i++ {
 					for k := 0; k < KzzUnstaggered.Shape[0]; k++ {
@@ -1118,4 +1149,43 @@ func minInt(vals ...int) int {
 // convert float to int (rounding)
 func f2i(f float64) int {
 	return int(f + 0.5)
+}
+
+// Reads and parse a json configuration file.
+func ReadConfigFile(filename string) {
+	// Open the configuration file
+	var (
+		file  *os.File
+		bytes []byte
+		err   error
+	)
+	file, err = os.Open(filename)
+	if err != nil {
+		fmt.Printf("The configuration file you have specified, %v, does not "+
+			"appear to exist. Please check the file name and location and "+
+			"try again.\n", filename)
+		os.Exit(1)
+	}
+	reader := bufio.NewReader(file)
+	bytes, err = ioutil.ReadAll(reader)
+	if err != nil {
+		panic(err)
+	}
+
+	err = json.Unmarshal(bytes, &config)
+	if err != nil {
+		fmt.Printf(
+			"There has been an error parsing the configuration file.\n"+
+				"Please ensure that the file is in valid JSON format\n"+
+				"(you can check for errors at http://jsonlint.com/)\n"+
+				"and try again!\n\n%v\n\n", err.Error())
+		os.Exit(1)
+	}
+
+	err = os.MkdirAll(config.OutputDir, os.ModePerm)
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+	return
 }
