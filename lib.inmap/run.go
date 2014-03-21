@@ -1,4 +1,4 @@
-package aim
+package inmap
 
 import (
 	"fmt"
@@ -60,7 +60,7 @@ var OutputVariables = []string{"VOC", "SOA", "PrimaryPM2_5", "NH3", "pNH4",
 // of μg/s, and must only include the pollutants listed in "EmisNames".
 // Output is in the form of map[pollutant][layer][row]concentration,
 // in units of μg/m3.
-func (d *AIMdata) Run(emissions map[string][]float64) (
+func (d *InMAPdata) Run(emissions map[string][]float64) (
 	outputConc map[string][][]float64) {
 
 	startTime := time.Now()
@@ -89,19 +89,19 @@ func (d *AIMdata) Run(emissions map[string][]float64) (
 	nDaysRun := 0.
 	timeSinceLastCheck := 0.
 	nprocs := runtime.GOMAXPROCS(0) // number of processors
-	funcChan := make([]chan func(*AIMcell, *AIMdata), nprocs)
+	funcChan := make([]chan func(*Cell, *InMAPdata), nprocs)
 	var wg sync.WaitGroup
 
 	for procNum := 0; procNum < nprocs; procNum++ {
-		funcChan[procNum] = make(chan func(*AIMcell, *AIMdata), 1)
+		funcChan[procNum] = make(chan func(*Cell, *InMAPdata), 1)
 		// Start thread for concurrent computations
 		go d.doScience(nprocs, procNum, funcChan[procNum], &wg)
 	}
 
 	// make list of science functions to run at each timestep
-	scienceFuncs := []func(c *AIMcell, d *AIMdata){
-		func(c *AIMcell, d *AIMdata) { c.addEmissionsFlux(d) },
-		func(c *AIMcell, d *AIMdata) {
+	scienceFuncs := []func(c *Cell, d *InMAPdata){
+		func(c *Cell, d *InMAPdata) { c.addEmissionsFlux(d) },
+		func(c *Cell, d *InMAPdata) {
 			c.UpwindAdvection(d.Dt)
 			c.Mixing(d.Dt)
 			c.Chemistry(d)
@@ -163,9 +163,9 @@ func (d *AIMdata) Run(emissions map[string][]float64) (
 }
 
 // Carry out the atmospheric chemistry and physics calculations
-func (d *AIMdata) doScience(nprocs, procNum int,
-	funcChan chan func(*AIMcell, *AIMdata), wg *sync.WaitGroup) {
-	var c *AIMcell
+func (d *InMAPdata) doScience(nprocs, procNum int,
+	funcChan chan func(*Cell, *InMAPdata), wg *sync.WaitGroup) {
+	var c *Cell
 	for f := range funcChan {
 		for ii := procNum; ii < len(d.Data); ii += nprocs {
 			c = d.Data[ii]
@@ -181,7 +181,7 @@ func (d *AIMdata) doScience(nprocs, procNum int,
 
 // Calculate emissions flux given emissions array in units of μg/s
 // and a scale for molecular mass conversion.
-func (d *AIMdata) addEmisFlux(arr []float64, scale float64, iPol int) {
+func (d *InMAPdata) addEmisFlux(arr []float64, scale float64, iPol int) {
 	for row, val := range arr {
 		fluxScale := 1. / d.Data[row].Dx / d.Data[row].Dy /
 			d.Data[row].Dz // μg/s /m/m/m = μg/m3/s

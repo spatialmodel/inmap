@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bitbucket.org/ctessum/aim/lib.aim"
+	"bitbucket.org/ctessum/inmap/lib.inmap"
 	"bufio"
 	"encoding/csv"
 	"encoding/json"
@@ -20,7 +20,7 @@ import (
 var configFile *string = flag.String("config", "none", "Path to configuration file")
 
 type configData struct {
-	AIMdataTemplate      string // Path to location of baseline meteorology and pollutant data, where [layer] is a stand-in for the model layer number. The files should be in Gob format (http://golang.org/pkg/encoding/gob/). Can include environment variables.
+	InMAPdataTemplate      string // Path to location of baseline meteorology and pollutant data, where [layer] is a stand-in for the model layer number. The files should be in Gob format (http://golang.org/pkg/encoding/gob/). Can include environment variables.
 	NumLayers            int    // Number of vertical layers to use in the model
 	NumProcessors        int    // Number of processors to use for calculations
 	GroundLevelEmissions string // Path to ground level emissions file. Can include environment variables.
@@ -49,7 +49,7 @@ func main() {
 	runtime.GOMAXPROCS(config.NumProcessors)
 
 	fmt.Println("Reading input data...")
-	d := aim.InitAIMdata(config.AIMdataTemplate,
+	d := inmap.InitInMAPdata(config.InMAPdataTemplate,
 		config.NumLayers, config.HTTPport)
 	fmt.Println("Reading plume rise information...")
 
@@ -102,13 +102,13 @@ func main() {
 
 	fmt.Println("\n",
 		"------------------------------------\n",
-		"           AIM Completed!\n",
+		"           InMAP Completed!\n",
 		"------------------------------------\n")
 }
 
 // Get the emissions from a csv file.
 // Input units = tons/year; output units = μg/s
-func getEmissionsCSV(filename string, d *aim.AIMdata) (
+func getEmissionsCSV(filename string, d *inmap.InMAPdata) (
 	emissions map[string][]float64) {
 
 	const massConv = 907184740000.       // μg per short ton
@@ -176,7 +176,7 @@ type JsonHolderHolder struct {
 }
 
 // write data out to GeoJSON
-func writeOutput(finalConc map[string][][]float64, d *aim.AIMdata,
+func writeOutput(finalConc map[string][][]float64, d *inmap.InMAPdata,
 	outFileTemplate string) {
 	var err error
 	// Initialize data holder
@@ -268,7 +268,7 @@ func ReadConfigFile(filename string) (config *configData) {
 		os.Exit(1)
 	}
 
-	config.AIMdataTemplate = os.ExpandEnv(config.AIMdataTemplate)
+	config.InMAPdataTemplate = os.ExpandEnv(config.InMAPdataTemplate)
 	config.GroundLevelEmissions = os.ExpandEnv(config.GroundLevelEmissions)
 	config.ElevatedEmissions = os.ExpandEnv(config.ElevatedEmissions)
 	config.OutputTemplate = os.ExpandEnv(config.OutputTemplate)

@@ -1,4 +1,4 @@
-package aim
+package inmap
 
 import (
 	"bitbucket.org/ctessum/aqhealth"
@@ -12,17 +12,17 @@ import (
 	"sync"
 )
 
-type AIMdata struct {
-	Data          []*AIMcell // One data holder for each grid cell
+type InMAPdata struct {
+	Data          []*Cell // One data holder for each grid cell
 	Dt            float64    // seconds
 	Nlayers       int        // number of model layers
 	LayerStart    []int      // start index of each layer (inclusive)
 	LayerEnd      []int      // end index of each layer (exclusive)
-	westBoundary  []*AIMcell // boundary cells
-	eastBoundary  []*AIMcell // boundary cells
-	northBoundary []*AIMcell // boundary cells
-	southBoundary []*AIMcell // boundary cells
-	topBoundary   []*AIMcell // boundary cells; assume bottom boundary is the same as lowest layer
+	westBoundary  []*Cell // boundary cells
+	eastBoundary  []*Cell // boundary cells
+	northBoundary []*Cell // boundary cells
+	southBoundary []*Cell // boundary cells
+	topBoundary   []*Cell // boundary cells; assume bottom boundary is the same as lowest layer
 }
 
 func init() {
@@ -30,7 +30,7 @@ func init() {
 }
 
 // Data for a single grid cell
-type AIMcell struct {
+type Cell struct {
 	Geom                           geom.T       // Cell geometry
 	WebMapGeom                     geom.T       // Cell geometry in web map (mercator) coordinate system
 	UPlusSpeed, UMinusSpeed        float64      // [m/s]
@@ -61,13 +61,13 @@ type AIMcell struct {
 	Ci                             []float64    // concentrations at beginning of time step [μg/m3]
 	Cf                             []float64    // concentrations at end of time step [μg/m3]
 	emisFlux                       []float64    //  emissions [μg/m3/s]
-	West                           []*AIMcell   // Neighbors to the East
-	East                           []*AIMcell   // Neighbors to the West
-	South                          []*AIMcell   // Neighbors to the South
-	North                          []*AIMcell   // Neighbors to the North
-	Below                          []*AIMcell   // Neighbors below
-	Above                          []*AIMcell   // Neighbors above
-	GroundLevel                    []*AIMcell   // Neighbors at ground level
+	West                           []*Cell   // Neighbors to the East
+	East                           []*Cell   // Neighbors to the West
+	South                          []*Cell   // Neighbors to the South
+	North                          []*Cell   // Neighbors to the North
+	Below                          []*Cell   // Neighbors below
+	Above                          []*Cell   // Neighbors above
+	GroundLevel                    []*Cell   // Neighbors at ground level
 	WestFrac, EastFrac             []float64    // Fraction of cell covered by each neighbor (adds up to 1).
 	NorthFrac, SouthFrac           []float64    // Fraction of cell covered by each neighbor (adds up to 1).
 	AboveFrac, BelowFrac           []float64    // Fraction of cell covered by each neighbor (adds up to 1).
@@ -93,15 +93,15 @@ type AIMcell struct {
 	lock                           sync.RWMutex // Avoid cell being written by one subroutine and read by another at the same time.
 }
 
-func (c *AIMcell) prepare() {
+func (c *Cell) prepare() {
 	c.Volume = c.Dx * c.Dy * c.Dz
 	c.Ci = make([]float64, len(polNames))
 	c.Cf = make([]float64, len(polNames))
 	c.emisFlux = make([]float64, len(polNames))
 }
 
-func (c *AIMcell) makecopy() *AIMcell {
-	c2 := new(AIMcell)
+func (c *Cell) makecopy() *Cell {
+	c2 := new(Cell)
 	c2.Dx, c2.Dy, c2.Dz = c.Dx, c.Dy, c.Dz
 	c2.Kxxyy = c.Kxxyy
 	c2.prepare()
@@ -113,9 +113,9 @@ func (c *AIMcell) makecopy() *AIMcell {
 // (where `[layer]` is a stand-in for the layer number),
 // `nLayers` is the number of vertical layers in the model,
 // and `httpPort` is the port number for hosting the html GUI.
-func InitAIMdata(filetemplate string, nLayers int, httpPort string) *AIMdata {
-	inputData := make([][]*AIMcell, nLayers)
-	d := new(AIMdata)
+func InitInMAPdata(filetemplate string, nLayers int, httpPort string) *InMAPdata {
+	inputData := make([][]*Cell, nLayers)
+	d := new(InMAPdata)
 	d.Nlayers = nLayers
 	d.LayerStart = make([]int, nLayers)
 	d.LayerEnd = make([]int, nLayers)
@@ -147,18 +147,18 @@ func InitAIMdata(filetemplate string, nLayers int, httpPort string) *AIMdata {
 		ncells += len(inputData[k])
 	}
 	// set up data holders
-	d.Data = make([]*AIMcell, ncells)
+	d.Data = make([]*Cell, ncells)
 	for _, indata := range inputData {
 		for _, c := range indata {
 			c.prepare()
 			d.Data[c.Row] = c
 		}
 	}
-	d.westBoundary = make([]*AIMcell, 0, 200)
-	d.eastBoundary = make([]*AIMcell, 0, 200)
-	d.southBoundary = make([]*AIMcell, 0, 200)
-	d.northBoundary = make([]*AIMcell, 0, 200)
-	d.topBoundary = make([]*AIMcell, 0, 200)
+	d.westBoundary = make([]*Cell, 0, 200)
+	d.eastBoundary = make([]*Cell, 0, 200)
+	d.southBoundary = make([]*Cell, 0, 200)
+	d.northBoundary = make([]*Cell, 0, 200)
+	d.topBoundary = make([]*Cell, 0, 200)
 	nprocs := runtime.GOMAXPROCS(0)
 	wg.Add(nprocs)
 	for procNum := 0; procNum < nprocs; procNum++ {
@@ -168,10 +168,10 @@ func InitAIMdata(filetemplate string, nLayers int, httpPort string) *AIMdata {
 				// Link cells to neighbors and/or boundaries.
 				if len(cell.IWest) == 0 {
 					c := cell.makecopy()
-					cell.West = []*AIMcell{c}
+					cell.West = []*Cell{c}
 					d.westBoundary = append(d.westBoundary, c)
 				} else {
-					cell.West = make([]*AIMcell, len(cell.IWest))
+					cell.West = make([]*Cell, len(cell.IWest))
 					for i, row := range cell.IWest {
 						cell.West[i] = d.Data[row]
 					}
@@ -179,10 +179,10 @@ func InitAIMdata(filetemplate string, nLayers int, httpPort string) *AIMdata {
 				}
 				if len(cell.IEast) == 0 {
 					c := cell.makecopy()
-					cell.East = []*AIMcell{c}
+					cell.East = []*Cell{c}
 					d.eastBoundary = append(d.eastBoundary, c)
 				} else {
-					cell.East = make([]*AIMcell, len(cell.IEast))
+					cell.East = make([]*Cell, len(cell.IEast))
 					for i, row := range cell.IEast {
 						cell.East[i] = d.Data[row]
 					}
@@ -190,10 +190,10 @@ func InitAIMdata(filetemplate string, nLayers int, httpPort string) *AIMdata {
 				}
 				if len(cell.ISouth) == 0 {
 					c := cell.makecopy()
-					cell.South = []*AIMcell{c}
+					cell.South = []*Cell{c}
 					d.southBoundary = append(d.southBoundary, c)
 				} else {
-					cell.South = make([]*AIMcell, len(cell.ISouth))
+					cell.South = make([]*Cell, len(cell.ISouth))
 					for i, row := range cell.ISouth {
 						cell.South[i] = d.Data[row]
 					}
@@ -201,10 +201,10 @@ func InitAIMdata(filetemplate string, nLayers int, httpPort string) *AIMdata {
 				}
 				if len(cell.INorth) == 0 {
 					c := cell.makecopy()
-					cell.North = []*AIMcell{c}
+					cell.North = []*Cell{c}
 					d.northBoundary = append(d.northBoundary, c)
 				} else {
-					cell.North = make([]*AIMcell, len(cell.INorth))
+					cell.North = make([]*Cell, len(cell.INorth))
 					for i, row := range cell.INorth {
 						cell.North[i] = d.Data[row]
 					}
@@ -212,18 +212,18 @@ func InitAIMdata(filetemplate string, nLayers int, httpPort string) *AIMdata {
 				}
 				if len(cell.IAbove) == 0 {
 					c := cell.makecopy()
-					cell.Above = []*AIMcell{c}
+					cell.Above = []*Cell{c}
 					d.topBoundary = append(d.topBoundary, c)
 				} else {
-					cell.Above = make([]*AIMcell, len(cell.IAbove))
+					cell.Above = make([]*Cell, len(cell.IAbove))
 					for i, row := range cell.IAbove {
 						cell.Above[i] = d.Data[row]
 					}
 					cell.IAbove = nil
 				}
 				if cell.Layer != 0 {
-					cell.Below = make([]*AIMcell, len(cell.IBelow))
-					cell.GroundLevel = make([]*AIMcell, len(cell.IGroundLevel))
+					cell.Below = make([]*Cell, len(cell.IBelow))
+					cell.GroundLevel = make([]*Cell, len(cell.IGroundLevel))
 					for i, row := range cell.IBelow {
 						cell.Below[i] = d.Data[row]
 					}
@@ -233,8 +233,8 @@ func InitAIMdata(filetemplate string, nLayers int, httpPort string) *AIMdata {
 					cell.IBelow = nil
 					cell.IGroundLevel = nil
 				} else { // assume bottom boundary is the same as lowest layer.
-					cell.Below = []*AIMcell{d.Data[cell.Row]}
-					cell.GroundLevel = []*AIMcell{d.Data[cell.Row]}
+					cell.Below = []*Cell{d.Data[cell.Row]}
+					cell.GroundLevel = []*Cell{d.Data[cell.Row]}
 				}
 				cell.neighborInfo()
 			}
@@ -251,7 +251,7 @@ func InitAIMdata(filetemplate string, nLayers int, httpPort string) *AIMdata {
 // Calculate center-to-center cell distance,
 // fractions of grid cell covered by each neighbor
 // and harmonic mean staggered-grid diffusivities.
-func (cell *AIMcell) neighborInfo() {
+func (cell *Cell) neighborInfo() {
 	cell.DxPlusHalf = make([]float64, len(cell.East))
 	cell.EastFrac = make([]float64, len(cell.East))
 	cell.KxxEast = make([]float64, len(cell.East))
@@ -310,7 +310,7 @@ func (cell *AIMcell) neighborInfo() {
 // set initial concentrations to final concentrations from previous
 // time step, and set old velocities to velocities from previous time
 // step.
-func (c *AIMcell) addEmissionsFlux(d *AIMdata) {
+func (c *Cell) addEmissionsFlux(d *InMAPdata) {
 	for i, _ := range polNames {
 		c.Cf[i] += c.emisFlux[i] * d.Dt
 		c.Ci[i] = c.Cf[i]
@@ -318,7 +318,7 @@ func (c *AIMcell) addEmissionsFlux(d *AIMdata) {
 }
 
 //  Set the time step using the Courant–Friedrichs–Lewy (CFL) condition.
-func (d *AIMdata) setTstepCFL() {
+func (d *InMAPdata) setTstepCFL() {
 	const Cmax = 1.
 	val := 0.
 	for _, c := range d.Data {
@@ -333,7 +333,7 @@ func (d *AIMdata) setTstepCFL() {
 }
 
 //  Set the time step using the WRF rule of thumb.
-func (d *AIMdata) setTstepRuleOfThumb() {
+func (d *InMAPdata) setTstepRuleOfThumb() {
 	d.Dt = d.Data[0].Dx / 1000. * 6
 }
 
@@ -342,7 +342,7 @@ func harmonicMean(a, b float64) float64 {
 }
 
 // Convert the concentration data into a regular array
-func (d *AIMdata) toArray(pol string, layer int) []float64 {
+func (d *InMAPdata) toArray(pol string, layer int) []float64 {
 	o := make([]float64, d.LayerEnd[layer]-d.LayerStart[layer])
 	for i, c := range d.Data[d.LayerStart[layer]:d.LayerEnd[layer]] {
 		c.lock.RLock()
@@ -460,7 +460,7 @@ func (d *AIMdata) toArray(pol string, layer int) []float64 {
 	return o
 }
 
-func (d *AIMdata) getGeometry(layer int) []geom.T {
+func (d *InMAPdata) getGeometry(layer int) []geom.T {
 	o := make([]geom.T, d.LayerEnd[layer]-d.LayerStart[layer])
 	for i, c := range d.Data[d.LayerStart[layer]:d.LayerEnd[layer]] {
 		o[i] = c.WebMapGeom

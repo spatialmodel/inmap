@@ -1,4 +1,4 @@
-package aim
+package inmap
 
 import (
 	"bitbucket.org/ctessum/gis"
@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-func (d *AIMdata) WebServer(httpPort string) {
+func (d *InMAPdata) WebServer(httpPort string) {
 	http.HandleFunc("/js/bootstrap.min.js", webframework.ServeJSmin)
 	http.HandleFunc("/css/bootstrap.min.css", webframework.ServeCSS)
 	http.HandleFunc("/css/bootstrap-responsive.min.css",
@@ -183,7 +183,7 @@ func s2i(s string) (int, error) {
 	return int(i64), err
 }
 
-func (d *AIMdata) mapHandler(w http.ResponseWriter, r *http.Request) {
+func (d *InMAPdata) mapHandler(w http.ResponseWriter, r *http.Request) {
 	name, layer, z, x, y, err := parseMapRequest("/map/", r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -221,7 +221,7 @@ func parseLegendRequest(base string, r *http.Request) (name string,
 }
 
 // Creates a legend and serves it.
-func (d *AIMdata) legendHandler(w http.ResponseWriter, r *http.Request) {
+func (d *InMAPdata) legendHandler(w http.ResponseWriter, r *http.Request) {
 	name, layer, err := parseLegendRequest("/legend/", r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

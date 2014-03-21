@@ -1,4 +1,4 @@
-package aim
+package inmap
 
 import (
 	"bitbucket.org/ctessum/atmos/plumerise"
@@ -10,7 +10,7 @@ import (
 // Returns the index of the cell the emissions should be added to.
 // This function assumes that when one grid cell is above another
 // grid cell, the upper cell is never smaller than the lower cell.
-func (d *AIMdata) CalcPlumeRise(stackHeight, stackDiam, stackTemp,
+func (d *InMAPdata) CalcPlumeRise(stackHeight, stackDiam, stackTemp,
 	stackVel float64, row int) (plumeRow int, err error) {
 	layerHeights := make([]float64, d.Nlayers+1)
 	temperature := make([]float64, d.Nlayers)

@@ -1,4 +1,4 @@
-package aim
+package inmap
 
 import (
 	//"fmt"
@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-var d *AIMdata
+var d *InMAPdata
 
 const (
 	testRow       = 25300 // somewhere in Chicago
@@ -19,7 +19,7 @@ const (
 
 func init() {
 	runtime.GOMAXPROCS(8)
-	d = InitAIMdata("../wrf2aim/aimData_1km_50000/aimData_[layer].gob", 27, "8080")
+	d = InitInMAPdata("../wrf2aim/aimData_1km_50000/aimData_[layer].gob", 27, "8080")
 	d.Dt = Δt
 }
 
@@ -265,7 +265,7 @@ func TestChemistry(t *testing.T) {
 	}
 }
 
-func chemPrint(t *testing.T, vals []float64, c *AIMcell) {
+func chemPrint(t *testing.T, vals []float64, c *Cell) {
 	for i, val2 := range c.Cf {
 		t.Logf("%v: initial=%.3g, final=%.3g\n", polNames[i], vals[i], val2)
 	}
