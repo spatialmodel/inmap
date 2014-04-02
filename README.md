@@ -33,7 +33,7 @@ This program should work on most types of computers. Refer [here](http://golang.
 
 3. Create your own emissions scenarios:
 
-	Emissions files are .csv files, where the rows correspond to the grid cells in [this](https://bitbucket.org/ctessum/inmap/downloads/gridShape_1km_50000.zip) shapefile, and the columns correspond to the names of emitted pollutants. Refer [here](src/default/lib.inmap/run.go#cl-38) for acceptable pollutant names. Emissions should be in units of short tons per year. Currently, the program accepts two emissions files: one for ground-level emissions and one for elevated emissions. The program currently assumes elevated emissions are emitted from stacks with the stack parameters shown [here](src/default/inmap.go#cl-56). 
+	Emissions files are .csv files, where the rows correspond to the grid cells in [this](https://bitbucket.org/ctessum/inmap/downloads/gridShape_1km_50000.zip) shapefile, and the columns correspond to the names of emitted pollutants. Refer [here](src/default/lib.inmap/run.go#cl-38) (the `EmisNames` variable) for acceptable pollutant names. Emissions should be in units of short tons per year. Currently, the program accepts two emissions files: one for ground-level emissions and one for elevated emissions. The program currently assumes elevated emissions are emitted from stacks with the stack parameters shown [here](src/default/inmap.go#cl-56). 
 
 	Emissions should be in units of short tons per year.
 
