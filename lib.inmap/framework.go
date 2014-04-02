@@ -14,10 +14,10 @@ import (
 
 type InMAPdata struct {
 	Data          []*Cell // One data holder for each grid cell
-	Dt            float64    // seconds
-	Nlayers       int        // number of model layers
-	LayerStart    []int      // start index of each layer (inclusive)
-	LayerEnd      []int      // end index of each layer (exclusive)
+	Dt            float64 // seconds
+	Nlayers       int     // number of model layers
+	LayerStart    []int   // start index of each layer (inclusive)
+	LayerEnd      []int   // end index of each layer (exclusive)
 	westBoundary  []*Cell // boundary cells
 	eastBoundary  []*Cell // boundary cells
 	northBoundary []*Cell // boundary cells
@@ -61,13 +61,13 @@ type Cell struct {
 	Ci                             []float64    // concentrations at beginning of time step [μg/m3]
 	Cf                             []float64    // concentrations at end of time step [μg/m3]
 	emisFlux                       []float64    //  emissions [μg/m3/s]
-	West                           []*Cell   // Neighbors to the East
-	East                           []*Cell   // Neighbors to the West
-	South                          []*Cell   // Neighbors to the South
-	North                          []*Cell   // Neighbors to the North
-	Below                          []*Cell   // Neighbors below
-	Above                          []*Cell   // Neighbors above
-	GroundLevel                    []*Cell   // Neighbors at ground level
+	West                           []*Cell      // Neighbors to the East
+	East                           []*Cell      // Neighbors to the West
+	South                          []*Cell      // Neighbors to the South
+	North                          []*Cell      // Neighbors to the North
+	Below                          []*Cell      // Neighbors below
+	Above                          []*Cell      // Neighbors above
+	GroundLevel                    []*Cell      // Neighbors at ground level
 	WestFrac, EastFrac             []float64    // Fraction of cell covered by each neighbor (adds up to 1).
 	NorthFrac, SouthFrac           []float64    // Fraction of cell covered by each neighbor (adds up to 1).
 	AboveFrac, BelowFrac           []float64    // Fraction of cell covered by each neighbor (adds up to 1).

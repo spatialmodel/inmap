@@ -20,7 +20,7 @@ import (
 var configFile *string = flag.String("config", "none", "Path to configuration file")
 
 type configData struct {
-	InMAPdataTemplate      string // Path to location of baseline meteorology and pollutant data, where [layer] is a stand-in for the model layer number. The files should be in Gob format (http://golang.org/pkg/encoding/gob/). Can include environment variables.
+	InMAPdataTemplate    string // Path to location of baseline meteorology and pollutant data, where [layer] is a stand-in for the model layer number. The files should be in Gob format (http://golang.org/pkg/encoding/gob/). Can include environment variables.
 	NumLayers            int    // Number of vertical layers to use in the model
 	NumProcessors        int    // Number of processors to use for calculations
 	GroundLevelEmissions string // Path to ground level emissions file. Can include environment variables.
