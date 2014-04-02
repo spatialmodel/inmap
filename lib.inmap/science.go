@@ -104,11 +104,9 @@ func (c *Cell) UpwindAdvection(Δt float64) {
 	}
 }
 
-// Calculates the secondary formation of PM2.5 based on the
-// chemical mechanisms from the COBRA model and APEEP models
-// (COBRA user manual appendix A; Muller and Mendelsohn 2006).
-// Changes have been made to adapt the equations from gaussian
-// plume model form to gridded model form.
+// Calculates the secondary formation of PM2.5.
+// Explicitely calculates formation of particulate sulfate
+// from gaseous and aqueous SO2.
 // Partitions organic matter ("gOrg" and "pOrg"), the
 // nitrogen in nitrate ("gNO and pNO"), and the nitrogen in ammonia ("gNH" and
 // "pNH) between gaseous and particulate phase
@@ -140,12 +138,6 @@ func (c *Cell) Chemistry(d *InMAPdata) {
 
 // Calculates particle removal by dry deposition
 func (c *Cell) DryDeposition(d *InMAPdata) {
-	const (
-		vNO2 = 0.01  // m/s; Muller and Mendelsohn Table 2
-		vSO2 = 0.005 // m/s; Muller and Mendelsohn Table 2
-		vVOC = 0.001 // m/s; Hauglustaine Table 2
-		vNH3 = 0.01  // m/s; Phillips abstract
-	)
 	if c.Layer == 0 {
 		fac := 1. / c.Dz * d.Dt
 		noxfac := 1 - c.NOxDryDep*fac
