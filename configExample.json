@@ -1,5 +1,5 @@
 {
-	"AIMdataTemplate":"/path/to/aimData_[layer].gob",
+	"InMAPdataTemplate":"/path/to/InMAPdata_[layer].gob",
 	"NumLayers":27,
 	"NumProcessors":4,
 	"GroundLevelEmissions":"/path/to/groundLevelEmissions.csv",
