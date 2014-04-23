@@ -1,7 +1,7 @@
 package inmap
 
 import (
-	"bitbucket.org/ctessum/gis"
+	"bitbucket.org/ctessum/carto"
 	"bitbucket.org/ctessum/webframework"
 	"fmt"
 	//"github.com/pmylund/go-cache"
@@ -191,7 +191,7 @@ func (d *InMAPdata) mapHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	vals := d.toArray(name, layer)
 	geometry := d.getGeometry(layer)
-	m := gis.NewMapData(len(vals), "LinCutoff")
+	m := carto.NewMapData(len(vals), "LinCutoff")
 	m.Cmap.AddArray(vals)
 	m.Cmap.Set()
 	m.Shapes = geometry
@@ -229,7 +229,7 @@ func (d *InMAPdata) legendHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "image/svg+xml")
 	vals := d.toArray(name, layer)
-	cmap := gis.NewColorMap("LinCutoff")
+	cmap := carto.NewColorMap("LinCutoff")
 	cmap.AddArray(vals)
 	cmap.Set()
 	cmap.LegendWidth = 2.1

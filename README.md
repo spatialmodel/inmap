@@ -12,11 +12,8 @@ This program should work on most types of computers. Refer [here](http://golang.
 
 3. Download and install the main program:
 
-		# download the main program
-		hg clone https://bitbucket.org/ctessum/inmap $GOPATH/src/bitbucket.org/ctessum/inmap
-		# download its (Go-language) dependencies and compile and install it.
 		go get bitbucket.org/ctessum/inmap
-	Normally we could skip the first command, but since the InMAP program is in a password protected repository, it needs to be downloaded separately. The Go language has an automatic system for finding and installing library dependencies; you may want to refer [here](http://golang.org/doc/code.html) to understand how it works.
+	The Go language has an automatic system for finding and installing library dependencies; you may want to refer [here](http://golang.org/doc/code.html) to understand how it works.
 
 ## Running InMAP
 
