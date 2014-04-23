@@ -8,7 +8,7 @@ This program should work on most types of computers. Refer [here](http://golang.
 
 1. Install the [Go compiler](http://golang.org/doc/install). Make sure you install the correct version (32 or 64 bit) for your system. Also make sure to set the [`$GOPATH`](http://golang.org/doc/code.html#GOPATH) environment variable to a different directory than the `$GOROOT` environment variable. It may be useful to go through one of the tutorials to make sure the compiler is correctly installed.
 
-2. Install the [git](http://git-scm.com/) and [mercurial](http://mercurial.selenic.com/) version control programs, if they are not already installed.
+2. Install the [git](http://git-scm.com/) and [mercurial](http://mercurial.selenic.com/) version control programs, if they are not already installed. If you are using a shared system or cluster, you may just need to load them with the commands `module load git` and `module load hg`.
 
 3. Download and install the main program:
 
