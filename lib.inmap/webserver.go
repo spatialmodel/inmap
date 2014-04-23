@@ -19,7 +19,7 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package inmap
 
 import (
-	"bitbucket.org/ctessum/carto"
+	"github.com/ctessum/carto"
 	"bitbucket.org/ctessum/webframework"
 	"fmt"
 	//"github.com/pmylund/go-cache"
