@@ -359,6 +359,11 @@ func harmonicMean(a, b float64) float64 {
 	return 2. * a * b / (a + b)
 }
 
+func (c *Cell) totalPM25() float64 {
+	return c.Cf[iPM2_5] + c.Cf[ipOrg] + c.Cf[ipNH]*NtoNH4 +
+		c.Cf[ipS]*StoSO4 + c.Cf[ipNO]*NtoNO3
+}
+
 // Convert the concentration data into a regular array
 func (d *InMAPdata) toArray(pol string, layer int) []float64 {
 	o := make([]float64, d.LayerEnd[layer]-d.LayerStart[layer])
@@ -372,40 +377,33 @@ func (d *InMAPdata) toArray(pol string, layer int) []float64 {
 		case "PrimaryPM2_5":
 			o[i] = c.Cf[iPM2_5]
 		case "TotalPM2_5":
-			o[i] = c.Cf[iPM2_5] + c.Cf[ipOrg] + c.Cf[ipNH] + c.Cf[ipS] + c.Cf[ipNO]
+			o[i] = c.totalPM25()
 		case "Total deaths":
-			pm25 := c.Cf[iPM2_5] + c.Cf[ipOrg] + c.Cf[ipNH] + c.Cf[ipS] + c.Cf[ipNO]
-			rr := aqhealth.RRpm25Linear(pm25)
+			rr := aqhealth.RRpm25Linear(c.totalPM25())
 			o[i] = aqhealth.Deaths(rr, c.TotalPop,
 				c.AllCauseMortality)
 		case "White deaths":
-			pm25 := c.Cf[iPM2_5] + c.Cf[ipOrg] + c.Cf[ipNH] + c.Cf[ipS] + c.Cf[ipNO]
-			rr := aqhealth.RRpm25Linear(pm25)
+			rr := aqhealth.RRpm25Linear(c.totalPM25())
 			o[i] = aqhealth.Deaths(rr, c.WhitePop,
 				c.AllCauseMortality)
 		case "Non-white deaths":
-			pm25 := c.Cf[iPM2_5] + c.Cf[ipOrg] + c.Cf[ipNH] + c.Cf[ipS] + c.Cf[ipNO]
-			rr := aqhealth.RRpm25Linear(pm25)
+			rr := aqhealth.RRpm25Linear(c.totalPM25())
 			o[i] = aqhealth.Deaths(rr, c.TotalPop-c.WhitePop,
 				c.AllCauseMortality)
 		case "High income deaths":
-			pm25 := c.Cf[iPM2_5] + c.Cf[ipOrg] + c.Cf[ipNH] + c.Cf[ipS] + c.Cf[ipNO]
-			rr := aqhealth.RRpm25Linear(pm25)
+			rr := aqhealth.RRpm25Linear(c.totalPM25())
 			o[i] = aqhealth.Deaths(rr, c.TotalPop-c.TotalPoor,
 				c.AllCauseMortality)
 		case "Low income deaths":
-			pm25 := c.Cf[iPM2_5] + c.Cf[ipOrg] + c.Cf[ipNH] + c.Cf[ipS] + c.Cf[ipNO]
-			rr := aqhealth.RRpm25Linear(pm25)
+			rr := aqhealth.RRpm25Linear(c.totalPM25())
 			o[i] = aqhealth.Deaths(rr, c.TotalPoor,
 				c.AllCauseMortality)
 		case "High income white deaths":
-			pm25 := c.Cf[iPM2_5] + c.Cf[ipOrg] + c.Cf[ipNH] + c.Cf[ipS] + c.Cf[ipNO]
-			rr := aqhealth.RRpm25Linear(pm25)
+			rr := aqhealth.RRpm25Linear(c.totalPM25())
 			o[i] = aqhealth.Deaths(rr, c.WhitePop-c.WhitePoor,
 				c.AllCauseMortality)
 		case "Low income non-white deaths":
-			pm25 := c.Cf[iPM2_5] + c.Cf[ipOrg] + c.Cf[ipNH] + c.Cf[ipS] + c.Cf[ipNO]
-			rr := aqhealth.RRpm25Linear(pm25)
+			rr := aqhealth.RRpm25Linear(c.totalPM25())
 			o[i] = aqhealth.Deaths(rr, c.TotalPoor-c.WhitePoor,
 				c.AllCauseMortality)
 		case "Population":
