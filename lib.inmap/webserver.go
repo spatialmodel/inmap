@@ -19,9 +19,9 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package inmap
 
 import (
-	"github.com/ctessum/carto"
 	"bitbucket.org/ctessum/webframework"
 	"fmt"
+	"github.com/ctessum/carto"
 	//"github.com/pmylund/go-cache"
 	"net/http"
 	"strconv"
@@ -41,7 +41,8 @@ func (d *InMAPdata) WebServer(httpPort string) {
 	http.ListenAndServe(":"+httpPort, nil)
 }
 
-var mapOptions = []string{"PrimaryPM2_5", "VOC", "SOA", "NH3", "pNH4", "SOx",
+var mapOptions = []string{"TotalPM2_5", "PrimaryPM2_5", "VOC", "SOA",
+	"NH3", "pNH4", "SOx",
 	"pSO4", "NOx", "pNO3", "VOCemissions", "NOxemissions", "NH3emissions",
 	"SOxemissions", "PM2_5emissions", "UPlusSpeed", "UMinusSpeed",
 	"VPlusSpeed", "VMinusSpeed", "WPlusSpeed", "WMinusSpeed",

@@ -911,13 +911,14 @@ var USGSz0 = []float64{.50, .1, .06, .1, 0.095, .20, .11,
 // boundary layer.
 // 3) SO2 oxidation to SO4 by HO (Stockwell 1997).
 // 4) Dry deposition velocity (gocart).
+// 5) Horizontal eddy diffusion coefficient (Kyy, [m2/s]) assumed to be the
+// same as vertical eddy diffusivity.
+//
 // Inputs are layer heights (m), friction velocity (ustar, m/s),
 // planetary boundary layer height (pblh, m), inverse density (m3/kg),
 // perturbation potential temperature (Temp,K), Pressure (Pb and P, Pa),
 // surface heat flux (W/m2), HO mixing ratio (ppmv), and USGS land use index
 // (luIndex).
-// 5) Horizontal eddy diffusion coefficient (Kyy, [m2/s]) assumed to be the
-// same as vertical eddy diffusivity.
 func StabilityMixingChemistry(LayerHeights, pblh *sparse.DenseArray,
 	ustarChan, altChan, Tchan, PBchan, Pchan, surfaceHeatFluxChan,
 	hoChan, h2o2Chan, luIndexChan,
