@@ -72,10 +72,11 @@ func main() {
 	fmt.Println("Reading plume rise information...")
 
 	const (
-		height   = 75. * 0.3048             // m
-		diam     = 11.28 * 0.3048           // m
+		ft2m     = 0.3048
+		height   = 75. * ft2m               // m
+		diam     = 11.28 * ft2m             // m
 		temp     = (377.-32)*5./9. + 273.15 // K
-		velocity = 61.94 * 1097. / 3600.    // m/hr
+		velocity = 61.94 * ft2m             // m/s
 	)
 
 	emissions := make(map[string][]float64)
