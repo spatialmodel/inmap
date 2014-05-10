@@ -59,7 +59,45 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 <style>
 #mapdiv {
 	width: 100%;
-	height: 400px;
+	height: 600px;
+	position: absolute;
+	top: 40px;
+	z-index: -2;
+}
+#legendholder {
+	position: fixed; 
+	bottom: 0; 
+	width: 630px; 
+	left: 50%; 
+	margin-left: -315px;
+	background:rgba(255,255,255,0.8);
+	border-radius:10px;
+	z-index: -1;
+}
+#titleholder {
+	position: fixed; 
+	top: 50px; 
+	width: 630px; 
+	left: 50%; 
+	margin-left: -315px;
+	background:rgba(255,255,255,0.8);
+	border-radius:10px;
+	z-index: -1;
+}
+#varholder {
+	position: fixed; 
+	left: 80px; 
+	top: 50px;
+	z-index: -1;
+}
+#layerholder {
+	position: fixed; 
+	left: 80px; 
+	top: 130px; 
+	z-index: -1;
+}
+#mapdiv img {
+	max-width: none;
 }
 </style>`
 	webframework.RenderHeader(w, "AIM status", mapStyle)
@@ -67,12 +105,14 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 		[]string{"/", "/proc/", "/heap/"}, "Home", "")
 
 	const body1 = `
-	<div class="container">
-		<div class="row">
-			<div class="span3">
-				<h5>Select variable</h5>
-				<form>
-					<select class="span3" id="mapvar" multiple="multiple" size=20 onchange=updateMap()>`
+	<div id="mapdiv"></div>
+	<div id="legendholder">
+		<embed id=legenddiv src="/legend/PrimaryPM2_5/0" type="image/svg+xml" />
+	</div>
+	<div id="varholder">
+		<h5>Select variable</h5>
+		<form>
+			<select class="span3" id="mapvar" onchange=updateMap()>`
 	fmt.Fprintln(w, body1)
 	for i, option := range mapOptions {
 		if i == 0 {
@@ -82,13 +122,13 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	const body2 = `
-					</select>
-				</form>
-			</div>
-			<div class="span2">
-				<h5>Select layer</h5>
-				<form>
-					<select class="span1" id="layer" multiple="multiple" size=20 onchange=updateMap()>`
+			</select>
+		</form>
+	</div>
+	<div id="layerholder">
+		<h5>Select layer</h5>
+		<form>
+			<select class="span1" id="layer" onchange=updateMap()>`
 	fmt.Fprintln(w, body2)
 	for k := 0; k < 27; k++ {
 		if k == 0 {
@@ -98,19 +138,11 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	const body3 = `
-					</select>
-				</form>
-			</div>
-			<div class="span7 pagination-centered">
-				<h4 id="maptitle">PrimaryPM2_5 layer 0 status</h4>
-				<div class="row">
-					<div id="mapdiv"></div>
-				</div>
-				<div class="row">
-					<embed id=legenddiv src="/legend/PrimaryPM2_5/0" type="image/svg+xml" />
-				</div>
-			</div>
-		</div>
+			</select>
+		</form>
+	</div>
+	<div id="titleholder">
+		<h4 id="maptitle" style="text-align:center">TotalPM2_5 layer 0 status</h4>
 	</div>`
 	fmt.Fprintln(w, body3)
 
@@ -132,6 +164,8 @@ function tileOptions(mapvar,layer) {
 	return customMapType;
 }
 function loadmap(mapvar,layer,id) {
+	var windowheight = $(window).height(); 
+	$('#mapdiv').css('height', windowheight-40);
 	var customMapType = tileOptions(mapvar,layer);
 	var labelTiles = {
 		getTileUrl: function(coord, zoom) {
@@ -145,7 +179,7 @@ function loadmap(mapvar,layer,id) {
 
 	var latlng = new google.maps.LatLng(40, -97);
 	var mapOptions = {
-		zoom: 4,
+		zoom: 5,
 		center: latlng,
 		mapTypeId: google.maps.MapTypeId.ROADMAP,
 		panControl: true,

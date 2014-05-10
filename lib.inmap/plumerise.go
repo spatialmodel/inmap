@@ -49,7 +49,12 @@ func (d *InMAPdata) CalcPlumeRise(stackHeight, stackDiam, stackTemp,
 		stackVel, layerHeights, temperature, windSpeed,
 		sClass, s1)
 	if err != nil {
-		return
+		if err == plumerise.AboveModelTop {
+			kPlume = d.Nlayers - 1
+			err = nil
+		} else {
+			return
+		}
 	}
 
 	plumeCell := d.Data[row]
