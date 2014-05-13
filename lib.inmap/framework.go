@@ -183,6 +183,18 @@ func InitInMAPdata(filetemplate string, nLayers int, httpPort string) *InMAPdata
 		go func(procNum int) {
 			for ii := procNum; ii < len(d.Data); ii += nprocs {
 				cell := d.Data[ii]
+
+
+
+
+				cell.UPlusSpeed *= 10.
+				cell.UMinusSpeed *= 10.
+				cell.VPlusSpeed *= 10.
+				cell.VMinusSpeed *= 10.
+				
+				
+				
+				
 				// Link cells to neighbors and/or boundaries.
 				if len(cell.IWest) == 0 {
 					c := cell.makecopy()
@@ -337,7 +349,8 @@ func (c *Cell) addEmissionsFlux(d *InMAPdata) {
 
 //  Set the time step using the Courant–Friedrichs–Lewy (CFL) condition.
 func (d *InMAPdata) setTstepCFL() {
-	const Cmax = 1.
+	//const Cmax = 1.
+	const Cmax = 0.75
 	val := 0.
 	for _, c := range d.Data {
 		thisval := max(c.UPlusSpeed/c.Dx, c.UMinusSpeed/c.Dx,
