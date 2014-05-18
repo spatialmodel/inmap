@@ -169,6 +169,11 @@ func InitInMAPdata(filetemplate string, nLayers int, httpPort string) *InMAPdata
 	for _, indata := range inputData {
 		for _, c := range indata {
 			c.prepare()
+
+				if c.Layer >= f2i(c.PblTopLayer) { // Convective mixing
+					c.Kzz = 100.
+				} ///////////////////////////////////////////////////////////////////////////////////////////
+
 			d.Data[c.Row] = c
 		}
 	}
@@ -183,18 +188,6 @@ func InitInMAPdata(filetemplate string, nLayers int, httpPort string) *InMAPdata
 		go func(procNum int) {
 			for ii := procNum; ii < len(d.Data); ii += nprocs {
 				cell := d.Data[ii]
-
-
-
-
-				cell.UPlusSpeed *= 10.
-				cell.UMinusSpeed *= 10.
-				cell.VPlusSpeed *= 10.
-				cell.VMinusSpeed *= 10.
-				
-				
-				
-				
 				// Link cells to neighbors and/or boundaries.
 				if len(cell.IWest) == 0 {
 					c := cell.makecopy()
@@ -349,8 +342,7 @@ func (c *Cell) addEmissionsFlux(d *InMAPdata) {
 
 //  Set the time step using the Courant–Friedrichs–Lewy (CFL) condition.
 func (d *InMAPdata) setTstepCFL() {
-	//const Cmax = 1.
-	const Cmax = 0.75
+	const Cmax = 1.
 	val := 0.
 	for _, c := range d.Data {
 		thisval := max(c.UPlusSpeed/c.Dx, c.UMinusSpeed/c.Dx,
@@ -381,110 +373,153 @@ func (c *Cell) totalPM25() float64 {
 func (d *InMAPdata) toArray(pol string, layer int) []float64 {
 	o := make([]float64, d.LayerEnd[layer]-d.LayerStart[layer])
 	for i, c := range d.Data[d.LayerStart[layer]:d.LayerEnd[layer]] {
-		c.lock.RLock()
-		switch pol {
-		case "VOC":
-			o[i] = c.Cf[igOrg]
-		case "SOA":
-			o[i] = c.Cf[ipOrg]
-		case "PrimaryPM2_5":
-			o[i] = c.Cf[iPM2_5]
-		case "TotalPM2_5":
-			o[i] = c.totalPM25()
-		case "Total deaths":
-			rr := aqhealth.RRpm25Linear(c.totalPM25())
-			o[i] = aqhealth.Deaths(rr, c.TotalPop,
-				c.AllCauseMortality)
-		case "White deaths":
-			rr := aqhealth.RRpm25Linear(c.totalPM25())
-			o[i] = aqhealth.Deaths(rr, c.WhitePop,
-				c.AllCauseMortality)
-		case "Non-white deaths":
-			rr := aqhealth.RRpm25Linear(c.totalPM25())
-			o[i] = aqhealth.Deaths(rr, c.TotalPop-c.WhitePop,
-				c.AllCauseMortality)
-		case "High income deaths":
-			rr := aqhealth.RRpm25Linear(c.totalPM25())
-			o[i] = aqhealth.Deaths(rr, c.TotalPop-c.TotalPoor,
-				c.AllCauseMortality)
-		case "Low income deaths":
-			rr := aqhealth.RRpm25Linear(c.totalPM25())
-			o[i] = aqhealth.Deaths(rr, c.TotalPoor,
-				c.AllCauseMortality)
-		case "High income white deaths":
-			rr := aqhealth.RRpm25Linear(c.totalPM25())
-			o[i] = aqhealth.Deaths(rr, c.WhitePop-c.WhitePoor,
-				c.AllCauseMortality)
-		case "Low income non-white deaths":
-			rr := aqhealth.RRpm25Linear(c.totalPM25())
-			o[i] = aqhealth.Deaths(rr, c.TotalPoor-c.WhitePoor,
-				c.AllCauseMortality)
-		case "Population":
-			o[i] = c.TotalPop / c.Dx / c.Dy
-		case "Baseline mortality rate":
-			o[i] = c.AllCauseMortality
-		case "NH3":
-			o[i] = c.Cf[igNH] / NH3ToN
-		case "pNH4":
-			o[i] = c.Cf[ipNH] * NtoNH4
-		case "SOx":
-			o[i] = c.Cf[igS] / SOxToS
-		case "pSO4":
-			o[i] = c.Cf[ipS] * StoSO4
-		case "NOx":
-			o[i] = c.Cf[igNO] / NOxToN
-		case "pNO3":
-			o[i] = c.Cf[ipNO] * NtoNO3
-		case "VOCemissions":
-			o[i] = c.emisFlux[igOrg]
-		case "NOxemissions":
-			o[i] = c.emisFlux[igNO]
-		case "NH3emissions":
-			o[i] = c.emisFlux[igNH]
-		case "SOxemissions":
-			o[i] = c.emisFlux[igS]
-		case "PM2_5emissions":
-			o[i] = c.emisFlux[iPM2_5]
-		case "UPlusSpeed":
-			o[i] = c.UPlusSpeed
-		case "UMinusSpeed":
-			o[i] = c.UMinusSpeed
-		case "VPlusSpeed":
-			o[i] = c.VPlusSpeed
-		case "VMinusSpeed":
-			o[i] = c.VMinusSpeed
-		case "WPlusSpeed":
-			o[i] = c.WPlusSpeed
-		case "WMinusSpeed":
-			o[i] = c.WMinusSpeed
-		case "Organicpartitioning":
-			o[i] = c.OrgPartitioning
-		case "Sulfurpartitioning":
-			o[i] = c.SPartitioning
-		case "Nitratepartitioning":
-			o[i] = c.NOPartitioning
-		case "Ammoniapartitioning":
-			o[i] = c.NHPartitioning
-		case "Particlewetdeposition":
-			o[i] = c.ParticleWetDep
-		case "SO2wetdeposition":
-			o[i] = c.SO2WetDep
-		case "Non-SO2gaswetdeposition":
-			o[i] = c.OtherGasWetDep
-		case "Kxxyy":
-			o[i] = c.Kxxyy
-		case "Kzz":
-			o[i] = c.Kzz
-		case "M2u":
-			o[i] = c.M2u
-		case "M2d":
-			o[i] = c.M2d
-		case "PblTopLayer":
-			o[i] = c.PblTopLayer
-		default:
-			panic(fmt.Sprintf("Unknown variable %v.", pol))
-		}
-		c.lock.RUnlock()
+		o[i] = c.getValue(pol)
+	}
+	return o
+}
+
+func (c *Cell) getValue(varName string) float64 {
+	var o float64
+	c.lock.RLock()
+	switch varName {
+	case "VOC":
+		o = c.Cf[igOrg]
+	case "SOA":
+		o = c.Cf[ipOrg]
+	case "PrimaryPM2_5":
+		o = c.Cf[iPM2_5]
+	case "TotalPM2_5":
+		o = c.totalPM25()
+	case "Total deaths":
+		rr := aqhealth.RRpm25Linear(c.totalPM25())
+		o = aqhealth.Deaths(rr, c.TotalPop,
+			c.AllCauseMortality)
+	case "White deaths":
+		rr := aqhealth.RRpm25Linear(c.totalPM25())
+		o = aqhealth.Deaths(rr, c.WhitePop,
+			c.AllCauseMortality)
+	case "Non-white deaths":
+		rr := aqhealth.RRpm25Linear(c.totalPM25())
+		o = aqhealth.Deaths(rr, c.TotalPop-c.WhitePop,
+			c.AllCauseMortality)
+	case "High income deaths":
+		rr := aqhealth.RRpm25Linear(c.totalPM25())
+		o = aqhealth.Deaths(rr, c.TotalPop-c.TotalPoor,
+			c.AllCauseMortality)
+	case "Low income deaths":
+		rr := aqhealth.RRpm25Linear(c.totalPM25())
+		o = aqhealth.Deaths(rr, c.TotalPoor,
+			c.AllCauseMortality)
+	case "High income white deaths":
+		rr := aqhealth.RRpm25Linear(c.totalPM25())
+		o = aqhealth.Deaths(rr, c.WhitePop-c.WhitePoor,
+			c.AllCauseMortality)
+	case "Low income non-white deaths":
+		rr := aqhealth.RRpm25Linear(c.totalPM25())
+		o = aqhealth.Deaths(rr, c.TotalPoor-c.WhitePoor,
+			c.AllCauseMortality)
+	case "Population":
+		o = c.TotalPop / c.Dx / c.Dy
+	case "Baseline mortality rate":
+		o = c.AllCauseMortality
+	case "NH3":
+		o = c.Cf[igNH] / NH3ToN
+	case "pNH4":
+		o = c.Cf[ipNH] * NtoNH4
+	case "SOx":
+		o = c.Cf[igS] / SOxToS
+	case "pSO4":
+		o = c.Cf[ipS] * StoSO4
+	case "NOx":
+		o = c.Cf[igNO] / NOxToN
+	case "pNO3":
+		o = c.Cf[ipNO] * NtoNO3
+	case "VOCemissions":
+		o = c.emisFlux[igOrg]
+	case "NOxemissions":
+		o = c.emisFlux[igNO]
+	case "NH3emissions":
+		o = c.emisFlux[igNH]
+	case "SOxemissions":
+		o = c.emisFlux[igS]
+	case "PM2_5emissions":
+		o = c.emisFlux[iPM2_5]
+	case "UPlusSpeed":
+		o = c.UPlusSpeed
+	case "UMinusSpeed":
+		o = c.UMinusSpeed
+	case "VPlusSpeed":
+		o = c.VPlusSpeed
+	case "VMinusSpeed":
+		o = c.VMinusSpeed
+	case "WPlusSpeed":
+		o = c.WPlusSpeed
+	case "WMinusSpeed":
+		o = c.WMinusSpeed
+	case "Organicpartitioning":
+		o = c.OrgPartitioning
+	case "Sulfurpartitioning":
+		o = c.SPartitioning
+	case "Nitratepartitioning":
+		o = c.NOPartitioning
+	case "Ammoniapartitioning":
+		o = c.NHPartitioning
+	case "Particlewetdeposition":
+		o = c.ParticleWetDep
+	case "SO2wetdeposition":
+		o = c.SO2WetDep
+	case "Non-SO2gaswetdeposition":
+		o = c.OtherGasWetDep
+	case "Kxxyy":
+		o = c.Kxxyy
+	case "Kzz":
+		o = c.Kzz
+	case "M2u":
+		o = c.M2u
+	case "M2d":
+		o = c.M2d
+	case "PblTopLayer":
+		o = c.PblTopLayer
+	default:
+		panic(fmt.Sprintf("Unknown variable %v.", varName))
+	}
+	c.lock.RUnlock()
+	return o
+}
+
+func (d *InMAPdata) getUnits(varName string) string {
+	var o string
+	switch varName {
+	case "VOC", "SOA", "PrimaryPM2_5", "TotalPM2_5",
+		"NH3", "pNH4", "SOx", "pSO4", "NOx", "pNO3":
+		o = "μg/m³"
+	case "Total deaths", "White deaths", "Non-white deaths",
+		"High income deaths", "Low income deaths", "High income white deaths",
+		"Low income non-white deaths":
+		o = "deaths/grid cell"
+	case "Population":
+		o = "people/m²"
+	case "Baseline mortality rate":
+		o = "deaths/year/100,000 people"
+	case "VOCemissions", "NOxemissions", "NH3emissions", "SOxemissions",
+		"PM2_5emissions":
+		o = "μg/m³/s"
+	case "UPlusSpeed", "UMinusSpeed", "VPlusSpeed", "VMinusSpeed",
+		"WPlusSpeed", "WMinusSpeed":
+		o = "m/s"
+	case "Organicpartitioning", "Sulfurpartitioning", "Nitratepartitioning",
+		"Ammoniapartitioning":
+		o = "gaseous fraction"
+	case "Particlewetdeposition", "SO2wetdeposition", "Non-SO2gaswetdeposition":
+		o = "1/s"
+	case "Kxxyy", "Kzz":
+		o = "m²/s"
+	case "M2u", "M2d":
+		o = "1/s"
+	case "PblTopLayer":
+		o = "index"
+	default:
+		panic(fmt.Sprintf("Unknown variable %v.", varName))
 	}
 	return o
 }

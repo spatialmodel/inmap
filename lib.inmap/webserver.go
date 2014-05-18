@@ -19,13 +19,20 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package inmap
 
 import (
-	"bitbucket.org/ctessum/webframework"
 	"fmt"
-	"github.com/ctessum/carto"
-	//"github.com/pmylund/go-cache"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"bitbucket.org/ctessum/webframework"
+	"code.google.com/p/plotinum/plot"
+	"code.google.com/p/plotinum/plotter"
+	"code.google.com/p/plotinum/plotutil"
+	"code.google.com/p/plotinum/vg"
+	"code.google.com/p/plotinum/vg/vgimg"
+	"github.com/ctessum/carto"
+	"github.com/ctessum/geomop"
+	"github.com/twpayne/gogeom/geom"
 )
 
 func (d *InMAPdata) WebServer(httpPort string) {
@@ -35,6 +42,7 @@ func (d *InMAPdata) WebServer(httpPort string) {
 		webframework.ServeCSSresponsive)
 	http.HandleFunc("/map/", d.mapHandler)
 	http.HandleFunc("/legend/", d.legendHandler)
+	http.HandleFunc("/verticalProfile/", d.verticalProfileHandler)
 	http.HandleFunc("/proc/", webframework.ProcessorProf)
 	http.HandleFunc("/heap/", webframework.HeapProf)
 	http.HandleFunc("/", reportHandler)
@@ -107,7 +115,7 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 	const body1 = `
 	<div id="mapdiv"></div>
 	<div id="legendholder">
-		<embed id=legenddiv src="/legend/PrimaryPM2_5/0" type="image/svg+xml" />
+		<embed id=legenddiv src="/legend/TotalPM2_5/0" type="image/svg+xml" />
 	</div>
 	<div id="varholder">
 		<h5>Select variable</h5>
@@ -150,10 +158,10 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
 <script>
 var map;
-function tileOptions(mapvar,layer) {
+function tileOptions(layer) {
 	var myMapOptions = {
 	   getTileUrl: function(coord, zoom) {
-	   return "/map/"+mapvar+"&"+layer+"&"+zoom+"&"+(coord.x)+"&"+(coord.y);
+	   return "/map/"+window.mapvar+"&"+layer+"&"+zoom+"&"+(coord.x)+"&"+(coord.y);
 	   },
 	tileSize: new google.maps.Size(256, 256),
 	isPng: true,
@@ -164,9 +172,10 @@ function tileOptions(mapvar,layer) {
 	return customMapType;
 }
 function loadmap(mapvar,layer,id) {
+	window.mapvar = mapvar
 	var windowheight = $(window).height(); 
 	$('#mapdiv').css('height', windowheight-40);
-	var customMapType = tileOptions(mapvar,layer);
+	var customMapType = tileOptions(layer);
 	var labelTiles = {
 		getTileUrl: function(coord, zoom) {
 			return "http://mt0.google.com/vt/v=apt.116&hl=en-US&" +
@@ -189,20 +198,30 @@ function loadmap(mapvar,layer,id) {
 	map = new google.maps.Map(document.getElementById(id), mapOptions);
 	map.overlayMapTypes.insertAt(0, customMapType);
 	map.overlayMapTypes.insertAt(1, googleLabelLayer);
+
+	google.maps.event.addListener(map, 'click', function(event) {
+		var infoString = '<img src=/verticalProfile/'+window.mapvar+'/'+
+			event.latLng.lng()+'/'+event.latLng.lat()+'>'
+		new google.maps.InfoWindow({
+			position: event.latLng,
+			content: infoString 
+		}).open(map);
+	});
 }
 function updateMap() {
-	var mapvar=document.getElementById("mapvar").value;
+	window.mapvar=document.getElementById("mapvar").value;
 	var layer=document.getElementById("layer").value;
-	var customMapType = tileOptions(mapvar,layer);
+	var customMapType = tileOptions(layer);
 	map.overlayMapTypes.removeAt(0);
 	map.overlayMapTypes.insertAt(0, customMapType);
-	document.getElementById("maptitle").innerHTML = mapvar+" layer "+layer+" status";
+	document.getElementById("maptitle").innerHTML = window.mapvar+
+		" layer "+layer+" status";
 	var elem = document.getElementsByTagName("embed")[0],
 	copy = elem.cloneNode();
-	copy.src = "legend/"+mapvar+"/"+layer;
+	copy.src = "legend/"+window.mapvar+"/"+layer;
 	elem.parentNode.replaceChild(copy, elem);
 }
-google.maps.event.addDomListener(window, 'load', loadmap("PrimaryPM2_5",0,"mapdiv"))
+google.maps.event.addDomListener(window, 'load', loadmap("TotalPM2_5",0,"mapdiv"))
 </script>`
 
 	webframework.RenderFooter(w, mapJS)
@@ -234,6 +253,11 @@ func parseMapRequest(base string, r *http.Request) (name string,
 func s2i(s string) (int, error) {
 	i64, err := strconv.ParseInt(s, 10, 64)
 	return int(i64), err
+}
+
+func s2f(s string) (float64, error) {
+	f, err := strconv.ParseFloat(s, 64)
+	return f, err
 }
 
 func (d *InMAPdata) mapHandler(w http.ResponseWriter, r *http.Request) {
@@ -289,9 +313,90 @@ func (d *InMAPdata) legendHandler(w http.ResponseWriter, r *http.Request) {
 	cmap.LegendHeight = 0.2
 	cmap.LineWidth = 0.2
 	cmap.FontSize = 3.5
-	err = cmap.Legend(w, "concentrations (μg/m³")
+	err = cmap.Legend(w, fmt.Sprintf("%v (%v)", name, d.getUnits(name)))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+}
+
+func parseVerticalProfileRequest(base string, r *http.Request) (name string,
+	lon, lat float64, err error) {
+	request := strings.Split(r.URL.Path[len(base):], "/")
+	name = request[0]
+	lon, err = s2f(request[1])
+	if err != nil {
+		return
+	}
+	lat, err = s2f(request[2])
+	if err != nil {
+		return
+	}
+	return
+}
+
+func (d *InMAPdata) verticalProfileHandler(w http.ResponseWriter,
+	r *http.Request) {
+	w.Header().Set("Content-Type", "image/png")
+	name, lon, lat, err := parseVerticalProfileRequest("/verticalProfile/", r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	height, vals := d.VerticalProfile(name, lon, lat)
+	p, err := plot.New()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	p.Title.Text = fmt.Sprintf("%v vertical\nprofile at (%.2f, %.2f)",
+		name, lon, lat)
+	//p.X.Label.Text = "Layer height (m)"
+	p.X.Label.Text = "Layer index"
+	p.Y.Label.Text = d.getUnits(name)
+	xy := make(plotter.XYs, len(height))
+	for i, h := range height {
+		xy[i].X = h
+		xy[i].Y = vals[i]
+	}
+	err = plotutil.AddLinePoints(p, xy)
+	p.Y.Min = 0.
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	ww, hh := vg.Inches(2), vg.Inches(1.5)
+	c := vgimg.PngCanvas{Canvas: vgimg.New(ww, hh)}
+	p.Draw(plot.MakeDrawArea(c))
+	_, err = c.WriteTo(w)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+// function VerticalProfile retrieves the vertical profile for a given
+// variable at a given location.
+func (d *InMAPdata) VerticalProfile(variable string, lon, lat float64) (
+	height, vals []float64) {
+	height = make([]float64, d.Nlayers)
+	vals = make([]float64, d.Nlayers)
+	x, y := carto.Degrees2meters(lon, lat)
+	loc := geom.Point{x, y}
+	for _, cell := range d.Data {
+		if geomop.Within(loc, cell.WebMapGeom) {
+			for i := 0; i < d.Nlayers; i++ {
+				vals[i] = cell.getValue(variable)
+				height[i] = float64(i)
+				//if i == 0 {
+				//	height[i] = cell.Dz / 2.
+				//} else {
+				//	height[i] = height[i-1] + cell.DzMinusHalf[0]
+				//}
+				cell = cell.Above[0]
+			}
+			return
+		}
+	}
+	return
 }

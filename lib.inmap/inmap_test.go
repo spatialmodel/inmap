@@ -37,7 +37,7 @@ const (
 
 func init() {
 	runtime.GOMAXPROCS(8)
-	d = InitInMAPdata("../wrf2aim/aimData_1km_50000/aimData_[layer].gob", 27, "8080")
+	d = InitInMAPdata("../wrf2inmap/inmapData_1km_50000/InMAPdata_[layer].gob", 27, "8080")
 	d.Dt = Δt
 }
 
@@ -151,8 +151,10 @@ func TestCellAlignment(t *testing.T) {
 					if b.Row == cell.Row {
 						pass = true
 						if different(a.KzzBelow[j], cell.KzzAbove[i]) {
-							t.Logf("Kzz doesn't match")
-							t.FailNow()
+							t.Logf("Kzz doesn't match above (layer=%v, "+
+								"KzzAbove=%v, KzzBelow=%v)", cell.Layer,
+								cell.KzzAbove[i], a.KzzBelow[j])
+							t.Fail()
 						}
 						if different(a.DzMinusHalf[j], cell.DzPlusHalf[i]) {
 							t.Logf("Dz doesn't match")
@@ -177,7 +179,7 @@ func TestCellAlignment(t *testing.T) {
 					if a.Row == cell.Row {
 						pass = true
 						if different(b.KzzAbove[j], cell.KzzBelow[i]) {
-							t.Logf("Kzz doesn't match")
+							t.Logf("Kzz doesn't match below")
 							t.FailNow()
 						}
 						if different(b.DzPlusHalf[j], cell.DzMinusHalf[i]) {
@@ -226,7 +228,7 @@ func TestCellAlignment(t *testing.T) {
 
 // Test whether the mixing mechanisms are properly conserving mass
 func TestMixing(t *testing.T) {
-	nsteps := 100
+	nsteps := 1000
 	for tt := 0; tt < nsteps; tt++ {
 		d.Data[testRow].Ci[0] += E / d.Data[testRow].Dz // ground level emissions
 		d.Data[testRow].Cf[0] += E / d.Data[testRow].Dz // ground level emissions
