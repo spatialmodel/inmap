@@ -228,7 +228,7 @@ func TestCellAlignment(t *testing.T) {
 
 // Test whether the mixing mechanisms are properly conserving mass
 func TestMixing(t *testing.T) {
-	nsteps := 1000
+	nsteps := 100
 	for tt := 0; tt < nsteps; tt++ {
 		d.Data[testRow].Ci[0] += E / d.Data[testRow].Dz // ground level emissions
 		d.Data[testRow].Cf[0] += E / d.Data[testRow].Dz // ground level emissions

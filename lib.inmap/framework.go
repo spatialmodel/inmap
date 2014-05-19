@@ -71,7 +71,7 @@ type Cell struct {
 	M2d                            float64      // ACM2 downward mixing (Pleim 2007) [1/s]
 	TotalPop, WhitePop             float64      // Population [people/grid cell]
 	TotalPoor, WhitePoor           float64      // Poor population [people/grid cell]
-	AllCauseMortality              float64      // Mortalities per 100,000 people per year
+	AllCauseMortality              float64      // Baseline mortalities per 100,000 people per year
 	PblTopLayer                    float64      // k index of boundary layer top
 	Dx, Dy, Dz                     float64      // grid size [meters]
 	Volume                         float64      // [cubic meters]
@@ -173,6 +173,12 @@ func InitInMAPdata(filetemplate string, nLayers int, httpPort string) *InMAPdata
 				if c.Layer >= f2i(c.PblTopLayer) { // Convective mixing
 					c.Kzz = 100.
 				} ///////////////////////////////////////////////////////////////////////////////////////////
+				c.UPlusSpeed *=2.
+				c.UMinusSpeed *=2.
+				c.VPlusSpeed *=2.
+				c.VMinusSpeed *=2.
+				c.WPlusSpeed *=2.
+				c.WMinusSpeed *=2.
 
 			d.Data[c.Row] = c
 		}
