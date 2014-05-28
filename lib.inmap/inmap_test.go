@@ -37,7 +37,7 @@ const (
 
 func init() {
 	runtime.GOMAXPROCS(8)
-	d = InitInMAPdata("../wrf2inmap/inmapData_1km_50000/InMAPdata_[layer].gob", 27, "8080")
+	d = InitInMAPdata("../wrf2inmap/inmapData_1km_50000/inmapData_[layer].gob", 27, "8080")
 	d.Dt = Δt
 }
 
@@ -222,6 +222,18 @@ func TestCellAlignment(t *testing.T) {
 					cell.Row, cell.Layer)
 				t.FailNow()
 			}
+		}
+	}
+}
+
+// Test whether convective mixing coeffecients are balanced in
+// a way that conserves mass
+func TestConvection(t *testing.T) {
+	for i, c := range d.Data {
+		val := c.M2u - c.M2d + c.Above[0].M2d*c.Above[0].Dz/c.Dz
+		if different(val, 0.) {
+			t.Log(i, val)
+			t.FailNow()
 		}
 	}
 }

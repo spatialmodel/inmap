@@ -25,14 +25,12 @@ package inmap
 func (c *Cell) Mixing(Δt float64) {
 	for ii, _ := range c.Cf {
 		// Pleim (2007) Equation 10.
-		if c.Layer < f2i(c.PblTopLayer) { // Convective mixing
-			for i, g := range c.GroundLevel { // Upward convection
-				c.Cf[ii] += g.M2u * g.Ci[ii] * Δt * c.GroundLevelFrac[i]
-			}
-			for i, a := range c.Above { // Balancing downward mixing
-				c.Cf[ii] += (a.M2d*a.Ci[ii]*a.Dz/c.Dz - c.M2d*c.Ci[ii]) *
-					Δt * c.AboveFrac[i]
-			}
+		for i, g := range c.GroundLevel { // Upward convection
+			c.Cf[ii] += c.M2u * g.Ci[ii] * Δt * c.GroundLevelFrac[i]
+		}
+		for i, a := range c.Above { // Balancing downward mixing
+			c.Cf[ii] += (a.M2d*a.Ci[ii]*a.Dz/c.Dz - c.M2d*c.Ci[ii]) *
+				Δt * c.AboveFrac[i]
 		}
 		for i, a := range c.Above { // Mixing with above
 			c.Cf[ii] += 1. / c.Dz * (c.KzzAbove[i] * (a.Ci[ii] - c.Ci[ii]) /
@@ -197,7 +195,7 @@ func f2i(f float64) int {
 }
 
 func max(vals ...float64) float64 {
-	m := 0.
+	m := vals[0]
 	for _, v := range vals {
 		if v > m {
 			m = v
@@ -211,4 +209,13 @@ func min(v1, v2 float64) float64 {
 	} else {
 		return v2
 	}
+}
+func amin(vals ...float64) float64 {
+	m := vals[0]
+	for _, v := range vals {
+		if v < m {
+			m = v
+		}
+	}
+	return m
 }

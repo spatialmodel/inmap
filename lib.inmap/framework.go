@@ -72,7 +72,6 @@ type Cell struct {
 	TotalPop, WhitePop             float64      // Population [people/grid cell]
 	TotalPoor, WhitePoor           float64      // Poor population [people/grid cell]
 	AllCauseMortality              float64      // Baseline mortalities per 100,000 people per year
-	PblTopLayer                    float64      // k index of boundary layer top
 	Dx, Dy, Dz                     float64      // grid size [meters]
 	Volume                         float64      // [cubic meters]
 	Row                            int          // master cell index
@@ -170,15 +169,16 @@ func InitInMAPdata(filetemplate string, nLayers int, httpPort string) *InMAPdata
 		for _, c := range indata {
 			c.prepare()
 
-				if c.Layer >= f2i(c.PblTopLayer) { // Convective mixing
-					c.Kzz = 100.
-				} ///////////////////////////////////////////////////////////////////////////////////////////
-				c.UPlusSpeed *=2.
-				c.UMinusSpeed *=2.
-				c.VPlusSpeed *=2.
-				c.VMinusSpeed *=2.
-				c.WPlusSpeed *=2.
-				c.WMinusSpeed *=2.
+			//if c.Layer >= f2i(c.PblTopLayer) { // Convective mixing
+			if c.Kzz < 5. {
+				c.Kzz = 5.
+			}
+			c.M2u *= 5.
+			c.M2d *= 5.
+			//} ///////////////////////////////////////////////////////////////////////////////////////////
+			//if c.Layer == 0 {
+			//	c.Kzz = 100.
+			//}
 
 			d.Data[c.Row] = c
 		}
@@ -346,19 +346,29 @@ func (c *Cell) addEmissionsFlux(d *InMAPdata) {
 	}
 }
 
-//  Set the time step using the Courant–Friedrichs–Lewy (CFL) condition.
+// Set the time step using the Courant–Friedrichs–Lewy (CFL) condition.
+// for advection or Von Neumann stability analysis
+// (http://en.wikipedia.org/wiki/Von_Neumann_stability_analysis) for
+// diffusion, whichever one yields a smaller time step.
 func (d *InMAPdata) setTstepCFL() {
 	const Cmax = 1.
-	val := 0.
-	for _, c := range d.Data {
-		thisval := max(c.UPlusSpeed/c.Dx, c.UMinusSpeed/c.Dx,
-			c.VPlusSpeed/c.Dy, c.VMinusSpeed/c.Dy,
-			c.WPlusSpeed/c.Dz, c.WMinusSpeed/c.Dz)
-		if thisval > val {
-			val = thisval
+	for i, c := range d.Data {
+		// Advection time step
+		dt1 := Cmax / math.Pow(3., 0.5) /
+			max(c.UPlusSpeed/c.Dx, c.UMinusSpeed/c.Dx,
+				c.VPlusSpeed/c.Dy, c.VMinusSpeed/c.Dy,
+				c.WPlusSpeed/c.Dz, c.WMinusSpeed/c.Dz)
+		// vertical diffusion time step
+		dt2 := Cmax * c.Dz * c.Dz / 2. / c.Kzz
+		// horizontal diffusion time step
+		dt3 := Cmax * c.Dx * c.Dx / 2. / c.Kxxyy
+		dt4 := Cmax * c.Dy * c.Dy / 2. / c.Kxxyy
+		if i == 0 {
+			d.Dt = amin(dt1, dt2, dt3, dt4) // seconds
+		} else {
+			d.Dt = amin(d.Dt, dt1, dt2, dt3, dt4) // seconds
 		}
 	}
-	d.Dt = Cmax / math.Pow(3., 0.5) / val // seconds
 }
 
 //  Set the time step using the WRF rule of thumb.
@@ -484,8 +494,6 @@ func (c *Cell) getValue(varName string) float64 {
 		o = c.M2u
 	case "M2d":
 		o = c.M2d
-	case "PblTopLayer":
-		o = c.PblTopLayer
 	default:
 		panic(fmt.Sprintf("Unknown variable %v.", varName))
 	}
