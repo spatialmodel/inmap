@@ -28,11 +28,11 @@ func (c *Cell) Mixing(Δt float64) {
 		for i, g := range c.GroundLevel { // Upward convection
 			c.Cf[ii] += c.M2u * g.Ci[ii] * Δt * c.GroundLevelFrac[i]
 		}
-		for i, a := range c.Above { // Balancing downward mixing
+		for i, a := range c.Above {
+			// Convection balancing downward mixing
 			c.Cf[ii] += (a.M2d*a.Ci[ii]*a.Dz/c.Dz - c.M2d*c.Ci[ii]) *
 				Δt * c.AboveFrac[i]
-		}
-		for i, a := range c.Above { // Mixing with above
+			// Mixing with above
 			c.Cf[ii] += 1. / c.Dz * (c.KzzAbove[i] * (a.Ci[ii] - c.Ci[ii]) /
 				c.DzPlusHalf[i]) * Δt * c.AboveFrac[i]
 		}
