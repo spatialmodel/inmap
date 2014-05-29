@@ -300,7 +300,7 @@ func getEmissionsCSV(filename string, d *inmap.InMAPdata) (
 	emissions = make(map[string][]float64)
 	f, err := os.Open(filename)
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Println("Problem opening emissions file: ",err.Error())
 		os.Exit(1)
 	}
 	defer f.Close()

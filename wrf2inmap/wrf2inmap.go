@@ -1,13 +1,7 @@
 package main
 
 import (
-	"bitbucket.org/ctessum/atmos/acm2"
-	"bitbucket.org/ctessum/atmos/emep"
-	"bitbucket.org/ctessum/atmos/gocart"
-	"bitbucket.org/ctessum/atmos/seinfeld"
-	"bitbucket.org/ctessum/sparse"
 	"bufio"
-	"code.google.com/p/lvd.go/cdf"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -20,6 +14,14 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"bitbucket.org/ctessum/atmos/acm2"
+	"bitbucket.org/ctessum/atmos/emep"
+	"bitbucket.org/ctessum/atmos/gocart"
+	"bitbucket.org/ctessum/atmos/seinfeld"
+	"bitbucket.org/ctessum/atmos/wesely1989"
+	"bitbucket.org/ctessum/sparse"
+	"code.google.com/p/lvd.go/cdf"
 )
 
 type ConfigInfo struct {
@@ -35,6 +37,7 @@ type ConfigInfo struct {
 	VariableGrid_dy   float64 // m
 	Xnests            []int   // Nesting multiples in the X direction
 	Ynests            []int   // Nesting multiples in the Y direction
+	HiResLayers       int     // number of layers to do in high resolution (layers above this will be lowest resolution.
 	CtmGrid_x_o       float64 // lower left of Chemical Transport Model (CTM) grid, x
 	CtmGrid_y_o       float64 // lower left of grid, y
 	CtmGrid_dx        float64 // m
@@ -91,9 +94,16 @@ var (
 		"asoa2j": 1, "asoa3i": 1, "asoa3j": 1, "asoa4i": 1, "asoa4j": 1,
 		"bsoa1i": 1, "bsoa1j": 1, "bsoa2i": 1, "bsoa2j": 1, "bsoa3i": 1,
 		"bsoa3j": 1, "bsoa4i": 1, "bsoa4j": 1}
-	// RACM NOx species and molecular weights, multiplyied by their
+	// VBS SOA species (biogenic only)
+	bSOA = map[string]float64{"bsoa1i": 1, "bsoa1j": 1, "bsoa2i": 1,
+		"bsoa2j": 1, "bsoa3i": 1, "bsoa3j": 1, "bsoa4i": 1, "bsoa4j": 1}
+	// RACM NOx species and molecular weights, multiplied by their
 	// nitrogen fractions
 	NOx = map[string]float64{"no": 30 * 30 / mwN, "no2": 46 * 46 / mwN}
+	// mass of N in NO
+	NO = map[string]float64{"no": 1.}
+	// mass of N in  NO2
+	NO2 = map[string]float64{"no2": 1.}
 	// MADE particulate NO species, nitrogen fraction
 	pNO = map[string]float64{"no3ai": mwNO3 / mwN, "no3aj": mwNO3 / mwN}
 	// RACM SOx species and molecular weights
@@ -103,6 +113,8 @@ var (
 	NH3 = map[string]float64{"nh3": 17.03056 * 17.03056 / mwN}
 	// MADE particulate ammonia species, nitrogen fraction
 	pNH = map[string]float64{"nh4ai": mwNH4 / mwN, "nh4aj": mwNH4 / mwN}
+
+	totalPM25 = map[string]float64{"PM2_5_DRY": 1.}
 )
 
 func init() {
@@ -204,10 +216,16 @@ func main() {
 	pNHchan := make(chan *sparse.DenseArray)
 	go calcPartitioning(NH3chan, pNHchan)
 
-	NH3chan2 := make(chan *sparse.DenseArray)
-	pNHchan2 := make(chan *sparse.DenseArray)
-	pSchan2 := make(chan *sparse.DenseArray)
-	go ammoniaStatus(NH3chan2, pNHchan2, pSchan2)
+	// calculate NO/NO2 partitioning
+	NOchan := make(chan *sparse.DenseArray)
+	NO2chan := make(chan *sparse.DenseArray)
+	go calcPartitioning(NOchan, NO2chan)
+
+	// Get bSOA and total PM2.5 averages for performance eval.
+	bSOAchan := make(chan *sparse.DenseArray)
+	go average(bSOAchan)
+	totalpm25Chan := make(chan *sparse.DenseArray)
+	go average(totalpm25Chan)
 
 	qrainChan := make(chan *sparse.DenseArray)
 	cloudFracChan := make(chan *sparse.DenseArray)
@@ -229,61 +247,62 @@ func main() {
 	ustarChan := make(chan *sparse.DenseArray)
 	altChanMixing := make(chan *sparse.DenseArray)
 	qCloudChan := make(chan *sparse.DenseArray)
-	go StabilityMixingChemistry(layerHeights, pblh, ustarChan, altChanMixing,
+	swDownChan := make(chan *sparse.DenseArray)
+	glwChan := make(chan *sparse.DenseArray)
+	qrainChan2 := make(chan *sparse.DenseArray)
+	pblhChan2 := make(chan *sparse.DenseArray)
+	go StabilityMixingChemistry(layerHeights, pblhChan2,
+		ustarChan, altChanMixing,
 		Tchan, PBchan, Pchan, surfaceHeatFluxChan, hoChan, h2o2Chan,
-		luIndexChan, qCloudChan)
+		luIndexChan, qCloudChan, swDownChan, glwChan, qrainChan2)
 
 	iterateTimeSteps("Reading data--pass 2: ",
 		readGasGroup(VOC, VOCchan), readParticleGroup(SOA, SOAchan),
 		readGasGroup(NOx, NOxchan), readParticleGroup(pNO, pNOchan),
-		readGasGroup(SOx, SOxchan), readParticleGroup(pS, pSchan, pSchan2),
-		readGasGroup(NH3, NH3chan, NH3chan2), readParticleGroup(pNH, pNHchan, pNHchan2),
+		readGasGroup(SOx, SOxchan), readParticleGroup(pS, pSchan),
+		readGasGroup(NH3, NH3chan), readParticleGroup(pNH, pNHchan),
+		readGasGroup(NO, NOchan), readGasGroup(NO2, NO2chan),
+		readParticleGroup(bSOA, bSOAchan),
+		readParticleGroup(totalPM25, totalpm25Chan),
 		readSingleVar("HFX", surfaceHeatFluxChan),
 		readSingleVar("UST", ustarChan),
+		readSingleVar("PBLH", pblhChan2),
 		readSingleVar("T", Tchan), readSingleVar("PB", PBchan),
 		readSingleVar("P", Pchan), readSingleVar("ho", hoChan),
 		readSingleVar("h2o2", h2o2Chan),
 		readSingleVar("LU_INDEX", luIndexChan),
-		readSingleVar("QRAIN", qrainChan),
+		readSingleVar("QRAIN", qrainChan, qrainChan2),
 		readSingleVar("CLDFRA", cloudFracChan),
 		readSingleVar("QCLOUD", qCloudChan),
-		readSingleVar("ALT", altChanWetDep, altChanMixing, altChan))
+		readSingleVar("ALT", altChanWetDep, altChanMixing, altChan),
+		readSingleVar("SWDOWN", swDownChan),
+		readSingleVar("GLW", glwChan))
 
+	// partitioning results
 	VOCchan <- nil
-	NOxchan <- nil
-	SOxchan <- nil
-	NH3chan <- nil
-	NH3chan2 <- nil
-	pNHchan2 <- nil
-	pSchan2 <- nil
-	Tchan <- nil
-	PBchan <- nil
-	Pchan <- nil
-	surfaceHeatFluxChan <- nil
-	hoChan <- nil
-	h2o2Chan <- nil
-	luIndexChan <- nil
-	ustarChan <- nil
-	qrainChan <- nil
-	cloudFracChan <- nil
-	altChanWetDep <- nil
-	altChanMixing <- nil
-	altChan <- nil
-	qCloudChan <- nil
-	alt := <-altChan
 	orgPartitioning := <-VOCchan
 	VOC := <-VOCchan
 	SOA := <-VOCchan
+	NOxchan <- nil
 	NOPartitioning := <-NOxchan
 	gNO := <-NOxchan
 	pNO := <-NOxchan
+	SOxchan <- nil
 	SPartitioning := <-SOxchan
 	gS := <-SOxchan
 	pS := <-SOxchan
+	NH3chan <- nil
 	NHPartitioning := <-NH3chan
 	gNH := <-NH3chan
 	pNH := <-NH3chan
-	pblTopLayer := <-Tchan
+
+	NOchan <- nil
+	NO_NO2partitioning := <-NOchan
+	<-NOchan
+	<-NOchan
+
+	// StabilityMixingChemistry results
+	Tchan <- nil
 	temperature := <-Tchan
 	S1 := <-Tchan
 	Sclass := <-Tchan
@@ -297,10 +316,24 @@ func main() {
 	NH3DryDep := <-Tchan
 	VOCDryDep := <-Tchan
 	Kxxyy := <-Tchan
+
+	// average biogenic SOA
+	bSOAchan <- nil
+	bsoa := <-bSOAchan
+
+	// average total pm2.5
+	totalpm25Chan <- nil
+	totalpm25 := <-totalpm25Chan
+
+	// average inverse density
+	altChan <- nil
+	alt := <-altChan
+
+	// wet deposition results
+	qrainChan <- nil
 	particleWetDep := <-qrainChan
 	SO2WetDep := <-qrainChan
 	otherGasWetDep := <-qrainChan
-	fracAmmoniaPoor := <-NH3chan2
 
 	// write out data to file
 	outputFile := filepath.Join(config.OutputDir, config.OutputFilePrefix+".ncf")
@@ -358,21 +391,21 @@ func main() {
 		"pNH": dataHolder{[]string{"z", "y", "x"},
 			"Average concentration of nitrogen fraction of particulate ammonium",
 			"ug m-3", pNH},
-		"FracAmmoniaPoor": dataHolder{[]string{"z", "y", "x"},
-			"Fraction of the time that aerosol chemistry is ammonia poor",
-			"fraction", fracAmmoniaPoor},
+		"NO_NO2partitioning": dataHolder{[]string{"z", "y", "x"},
+			"Mass fraction of N in NOx that exists as NO.", "fraction",
+			NO_NO2partitioning},
 		"SO2oxidation": dataHolder{[]string{"z", "y", "x"},
 			"Rate of SO2 oxidation to SO4 by hydroxyl radical and H2O2",
 			"s-1", SO2oxidation},
-		"ParticleDryDep": dataHolder{[]string{"y", "x"},
+		"ParticleDryDep": dataHolder{[]string{"z", "y", "x"},
 			"Dry deposition velocity for particles", "m s-1", particleDryDep},
-		"SO2DryDep": dataHolder{[]string{"y", "x"},
+		"SO2DryDep": dataHolder{[]string{"z", "y", "x"},
 			"Dry deposition velocity for SO2", "m s-1", SO2DryDep},
-		"NOxDryDep": dataHolder{[]string{"y", "x"},
+		"NOxDryDep": dataHolder{[]string{"z", "y", "x"},
 			"Dry deposition velocity for NOx", "m s-1", NOxDryDep},
-		"NH3DryDep": dataHolder{[]string{"y", "x"},
+		"NH3DryDep": dataHolder{[]string{"z", "y", "x"},
 			"Dry deposition velocity for NH3", "m s-1", NH3DryDep},
-		"VOCDryDep": dataHolder{[]string{"y", "x"},
+		"VOCDryDep": dataHolder{[]string{"z", "y", "x"},
 			"Dry deposition velocity for VOCs", "m s-1", VOCDryDep},
 		"Kxxyy": dataHolder{[]string{"z", "y", "x"},
 			"Horizontal eddy diffusion coefficient", "m2 s-1", Kxxyy},
@@ -389,12 +422,10 @@ func main() {
 			"Wet deposition rate constant for other gases", "s-1", otherGasWetDep},
 		"Kzz": dataHolder{[]string{"zStagger", "y", "x"},
 			"Vertical turbulent diffusivity", "m2 s-1", Kzz},
-		"M2u": dataHolder{[]string{"y", "x"},
+		"M2u": dataHolder{[]string{"z", "y", "x"},
 			"ACM2 nonlocal upward mixing {Pleim 2007}", "s-1", M2u},
 		"M2d": dataHolder{[]string{"z", "y", "x"},
 			"ACM2 nonlocal downward mixing {Pleim 2007}", "s-1", M2d},
-		"PblTopLayer": dataHolder{[]string{"y", "x"},
-			"Planetary boundary layer top grid index", "-", pblTopLayer},
 		"Pblh": dataHolder{[]string{"y", "x"},
 			"Planetary boundary layer height", "m", pblh},
 		"WindSpeed": dataHolder{[]string{"z", "y", "x"},
@@ -406,7 +437,11 @@ func main() {
 		"Sclass": dataHolder{[]string{"z", "y", "x"},
 			"Stability parameter", "0=Unstable; 1=Stable", Sclass},
 		"alt": dataHolder{[]string{"z", "y", "x"},
-			"Inverse density", "m3 kg-1", alt}}
+			"Inverse density", "m3 kg-1", alt},
+		"TotalPM25": dataHolder{[]string{"z", "y", "x"},
+			"Total PM2.5 concentration", "ug m-3", totalpm25},
+		"bSOA": dataHolder{[]string{"z", "y", "x"},
+			"Biogenic SOA concentration", "ug m-3", bsoa}}
 
 	for name, d := range data {
 		h.AddVariable(name, d.dims, []float32{0})
@@ -752,15 +787,15 @@ func calcWetDeposition(layerHeights *sparse.DenseArray, qrainChan,
 
 	firstData := true
 	for {
-		qrain := <-qrainChan         // mass frac
-		cloudFrac := <-cloudFracChan // frac
-		alt := <-altChan             // m3/kg
+		qrain := <-qrainChan // mass frac
 		if qrain == nil {
 			qrainChan <- arrayAverage(wdParticle)
 			qrainChan <- arrayAverage(wdSO2)
 			qrainChan <- arrayAverage(wdOtherGas)
 			return
 		}
+		cloudFrac := <-cloudFracChan // frac
+		alt := <-altChan             // m3/kg
 		if firstData {
 			wdParticle = sparse.ZerosDense(qrain.Shape...) // units = 1/s
 			wdSO2 = sparse.ZerosDense(qrain.Shape...)      // units = 1/s
@@ -902,6 +937,68 @@ var USGSz0 = []float64{.50, .1, .06, .1, 0.095, .20, .11,
 	.03, .035, .15, .50, .50, .50, .50, .35, 0.0001, .20, .40,
 	.01, .10, .30, .15, .075, 0.001, .01, .15, .01}
 
+// lookup table to go from USGS land classes to land classes for
+// particle dry deposition.
+var USGSseinfeld = []seinfeld.LandUseCategory{
+	seinfeld.Desert,    //'Urban and Built-Up Land'
+	seinfeld.Grass,     //'Dryland Cropland and Pasture'
+	seinfeld.Grass,     //'Irrigated Cropland and Pasture'
+	seinfeld.Grass,     //'Mixed Dryland/Irrigated Cropland and Pasture'
+	seinfeld.Grass,     //'Cropland/Grassland Mosaic'
+	seinfeld.Grass,     //'Cropland/Woodland Mosaic'
+	seinfeld.Grass,     //'Grassland'
+	seinfeld.Shrubs,    //'Shrubland'
+	seinfeld.Shrubs,    //'Mixed Shrubland/Grassland'
+	seinfeld.Grass,     //'Savanna'
+	seinfeld.Deciduous, //'Deciduous Broadleaf Forest'
+	seinfeld.Evergreen, //'Deciduous Needleleaf Forest'
+	seinfeld.Deciduous, //'Evergreen Broadleaf Forest'
+	seinfeld.Evergreen, //'Evergreen Needleleaf Forest'
+	seinfeld.Deciduous, //'Mixed Forest'
+	seinfeld.Desert,    //'Water Bodies'
+	seinfeld.Grass,     //'Herbaceous Wetland'
+	seinfeld.Deciduous, //'Wooded Wetland'
+	seinfeld.Desert,    //'Barren or Sparsely Vegetated'
+	seinfeld.Shrubs,    //'Herbaceous Tundra'
+	seinfeld.Deciduous, //'Wooded Tundra'
+	seinfeld.Shrubs,    //'Mixed Tundra'
+	seinfeld.Desert,    //'Bare Ground Tundra'
+	seinfeld.Desert,    //'Snow or Ice'
+	seinfeld.Desert,    //'Playa'
+	seinfeld.Desert,    //'Lava'
+	seinfeld.Desert}    //'White Sand'
+
+// lookup table to go from USGS land classes to land classes for
+// gas dry deposition.
+var USGSwesely = []wesely1989.LandUseCategory{
+	wesely1989.Urban,        //'Urban and Built-Up Land'
+	wesely1989.RangeAg,      //'Dryland Cropland and Pasture'
+	wesely1989.RangeAg,      //'Irrigated Cropland and Pasture'
+	wesely1989.RangeAg,      //'Mixed Dryland/Irrigated Cropland and Pasture'
+	wesely1989.RangeAg,      //'Cropland/Grassland Mosaic'
+	wesely1989.Agricultural, //'Cropland/Woodland Mosaic'
+	wesely1989.Range,        //'Grassland'
+	wesely1989.RockyShrubs,  //'Shrubland'
+	wesely1989.RangeAg,      //'Mixed Shrubland/Grassland'
+	wesely1989.Range,        //'Savanna'
+	wesely1989.Deciduous,    //'Deciduous Broadleaf Forest'
+	wesely1989.Coniferous,   //'Deciduous Needleleaf Forest'
+	wesely1989.Deciduous,    //'Evergreen Broadleaf Forest'
+	wesely1989.Coniferous,   //'Evergreen Needleleaf Forest'
+	wesely1989.MixedForest,  //'Mixed Forest'
+	wesely1989.Water,        //'Water Bodies'
+	wesely1989.Wetland,      //'Herbaceous Wetland'
+	wesely1989.Wetland,      //'Wooded Wetland'
+	wesely1989.Barren,       //'Barren or Sparsely Vegetated'
+	wesely1989.RockyShrubs,  //'Herbaceous Tundra'
+	wesely1989.MixedForest,  //'Wooded Tundra'
+	wesely1989.RockyShrubs,  //'Mixed Tundra'
+	wesely1989.Barren,       //'Bare Ground Tundra'
+	wesely1989.Barren,       //'Snow or Ice'
+	wesely1989.Barren,       //'Playa'
+	wesely1989.Barren,       //'Lava'
+	wesely1989.Barren}       //'White Sand'
+
 // Calculates:
 // 1) Stability parameters for use in plume rise calculation (ASME, 1973,
 // as described in Seinfeld and Pandis, 2006).
@@ -910,7 +1007,7 @@ var USGSz0 = []float64{.50, .1, .06, .1, 0.095, .20, .11,
 // and Pleim (2007) for grid cells within the planetary
 // boundary layer.
 // 3) SO2 oxidation to SO4 by HO (Stockwell 1997).
-// 4) Dry deposition velocity (gocart).
+// 4) Dry deposition velocity (gocart and Seinfed and Pandis (2006)).
 // 5) Horizontal eddy diffusion coefficient (Kyy, [m2/s]) assumed to be the
 // same as vertical eddy diffusivity.
 //
@@ -919,10 +1016,10 @@ var USGSz0 = []float64{.50, .1, .06, .1, 0.095, .20, .11,
 // perturbation potential temperature (Temp,K), Pressure (Pb and P, Pa),
 // surface heat flux (W/m2), HO mixing ratio (ppmv), and USGS land use index
 // (luIndex).
-func StabilityMixingChemistry(LayerHeights, pblh *sparse.DenseArray,
-	ustarChan, altChan, Tchan, PBchan, Pchan, surfaceHeatFluxChan,
+func StabilityMixingChemistry(LayerHeights *sparse.DenseArray,
+	pblhChan, ustarChan, altChan, Tchan, PBchan, Pchan, surfaceHeatFluxChan,
 	hoChan, h2o2Chan, luIndexChan,
-	qCloudChan chan *sparse.DenseArray) {
+	qCloudChan, swDownChan, glwChan, qrainChan chan *sparse.DenseArray) {
 	const (
 		po    = 101300. // Pa, reference pressure
 		kappa = 0.2854  // related to von karman's constant
@@ -942,31 +1039,31 @@ func StabilityMixingChemistry(LayerHeights, pblh *sparse.DenseArray,
 	var NH3DryDep *sparse.DenseArray
 	var VOCDryDep *sparse.DenseArray
 	var Kyy *sparse.DenseArray
-	// Get Layer index of PBL top (staggered)
-	pblTopLayer := sparse.ZerosDense(pblh.Shape...)
-	for j := 0; j < LayerHeights.Shape[1]; j++ {
-		for i := 0; i < LayerHeights.Shape[2]; i++ {
-			for k := 0; k < LayerHeights.Shape[0]; k++ {
-				if LayerHeights.Get(k, j, i) >= pblh.Get(j, i) {
-					pblTopLayer.Set(float64(k), j, i)
-					break
-				}
-			}
-		}
-	}
 	firstData := true
 	for {
-		T := <-Tchan                 // K
-		PB := <-PBchan               // Pa
-		P := <-Pchan                 // Pa
-		hfx := <-surfaceHeatFluxChan // W/m2
-		ho := <-hoChan               // ppmv
-		h2o2 := <-h2o2Chan           // ppmv
-		luIndex := <-luIndexChan     // land use index
-		ustar := <-ustarChan         // friction velocity (m/s)
-		alt := <-altChan             // inverse density (m3/kg)
-		qCloud := <-qCloudChan       // cloud water mixing ratio (kg/kg)
-		if T == nil {
+		T := <-Tchan  // K
+		if T == nil { // done reading data: return results
+			// Check for mass balance in convection coefficients
+			for k := 0; k < M2u.Shape[0]-2; k++ {
+				for j := 0; j < M2u.Shape[1]; j++ {
+					for i := 0; i < M2u.Shape[2]; i++ {
+						z := LayerHeights.Get(k, j, i)
+						zabove := LayerHeights.Get(k+1, j, i)
+						z2above := LayerHeights.Get(k+2, j, i)
+						Δzratio := (z2above-zabove)/(zabove - z)
+						m2u := M2u.Get(k, j, i)
+						val := m2u - M2d.Get(k, j, i) +
+							M2d.Get(k+1, j, i)*Δzratio
+						if math.Abs(val/m2u) > 1.e-8 {
+							panic(fmt.Errorf("M2u and M2d don't match: "+
+								"(k,j,i)=(%v,%v,%v); val=%v; m2u=%v; "+
+								"m2d=%v, m2dAbove=%v",
+								k, j, i, val, m2u, M2d.Get(k, j, i),
+								M2d.Get(k+1, j, i)))
+						}
+					}
+				}
+			}
 			// convert Kzz to unstaggered grid
 			KzzUnstaggered := sparse.ZerosDense(Temp.Shape...)
 			for j := 0; j < KzzUnstaggered.Shape[1]; j++ {
@@ -978,7 +1075,6 @@ func StabilityMixingChemistry(LayerHeights, pblh *sparse.DenseArray,
 					}
 				}
 			}
-			Tchan <- pblTopLayer
 			for _, arr := range []*sparse.DenseArray{Temp, S1, Sclass,
 				KzzUnstaggered, M2u, M2d, SO2oxidation, particleDryDep,
 				SO2DryDep, NOxDryDep, NH3DryDep, VOCDryDep, Kyy} {
@@ -986,20 +1082,33 @@ func StabilityMixingChemistry(LayerHeights, pblh *sparse.DenseArray,
 			}
 			return
 		}
+		PB := <-PBchan               // Pa
+		P := <-Pchan                 // Pa
+		hfx := <-surfaceHeatFluxChan // W/m2
+		ho := <-hoChan               // ppmv
+		h2o2 := <-h2o2Chan           // ppmv
+		luIndex := <-luIndexChan     // land use index
+		ustar := <-ustarChan         // friction velocity (m/s)
+		pblh := <-pblhChan           // current boundary layer height (m)
+		alt := <-altChan             // inverse density (m3/kg)
+		qCloud := <-qCloudChan       // cloud water mixing ratio (kg/kg)
+		swDown := <-swDownChan       // Downwelling short wave at ground level (W/m2)
+		glw := <-glwChan             // Downwelling long wave at ground level (W/m2)
+		qrain := <-qrainChan         // mass fraction rain
 		if firstData {
 			Temp = sparse.ZerosDense(T.Shape...) // units = K
 			S1 = sparse.ZerosDense(T.Shape...)
 			Sclass = sparse.ZerosDense(T.Shape...)
-			Kzz = sparse.ZerosDense(LayerHeights.Shape...)    // units = m2/s
-			M2u = sparse.ZerosDense(pblh.Shape...)            // units = 1/s
-			M2d = sparse.ZerosDense(T.Shape...)               // units = 1/s
-			SO2oxidation = sparse.ZerosDense(T.Shape...)      // units = 1/s
-			particleDryDep = sparse.ZerosDense(pblh.Shape...) // units = m/s
-			SO2DryDep = sparse.ZerosDense(pblh.Shape...)      // units = m/s
-			NOxDryDep = sparse.ZerosDense(pblh.Shape...)      // units = m/s
-			NH3DryDep = sparse.ZerosDense(pblh.Shape...)      // units = m/s
-			VOCDryDep = sparse.ZerosDense(pblh.Shape...)      // units = m/s
-			Kyy = sparse.ZerosDense(LayerHeights.Shape...)    // units = m2/s
+			Kzz = sparse.ZerosDense(LayerHeights.Shape...) // units = m2/s
+			M2u = sparse.ZerosDense(T.Shape...)            // units = 1/s
+			M2d = sparse.ZerosDense(T.Shape...)            // units = 1/s
+			SO2oxidation = sparse.ZerosDense(T.Shape...)   // units = 1/s
+			particleDryDep = sparse.ZerosDense(T.Shape...) // units = m/s
+			SO2DryDep = sparse.ZerosDense(T.Shape...)      // units = m/s
+			NOxDryDep = sparse.ZerosDense(T.Shape...)      // units = m/s
+			NH3DryDep = sparse.ZerosDense(T.Shape...)      // units = m/s
+			VOCDryDep = sparse.ZerosDense(T.Shape...)      // units = m/s
+			Kyy = sparse.ZerosDense(T.Shape...)            // units = m2/s
 			firstData = false
 		}
 		type empty struct{}
@@ -1007,7 +1116,14 @@ func StabilityMixingChemistry(LayerHeights, pblh *sparse.DenseArray,
 		for j := 0; j < T.Shape[1]; j++ {
 			go func(j int) { // concurrent processing
 				for i := 0; i < T.Shape[2]; i++ {
-					kPblTop := f2i(pblTopLayer.Get(j, i))
+					// Get Layer index of PBL top (staggered)
+					var kPblTop int
+					for k := 0; k < LayerHeights.Shape[0]; k++ {
+						if LayerHeights.Get(k, j, i) >= pblh.Get(j, i) {
+							kPblTop = k
+							break
+						}
+					}
 					// Calculate boundary layer average temperature (K)
 					To := 0.
 					for k := 0; k < LayerHeights.Shape[0]; k++ {
@@ -1026,29 +1142,67 @@ func StabilityMixingChemistry(LayerHeights, pblh *sparse.DenseArray,
 					fconv := acm2.ConvectiveFraction(L, h)
 					m2u := acm2.M2u(LayerHeights.Get(1, j, i),
 						LayerHeights.Get(2, j, i), h, L, u, fconv)
-					M2u.AddVal(m2u, j, i)
 
 					// Calculate dry deposition
+					p := (P.Get(0, j, i) + PB.Get(0, j, i)) // Pressure [Pa]
+					////z: [m] surface layer; assumed to be 10% of boundary layer.
+					//z := h / 10.
+					// z: [m] surface layer; assumed to be top of first model layer.
+					z := LayerHeights.Get(1, j, i)
+					lu := f2i(luIndex.Get(j, i))
 					gocartObk := gocart.ObhukovLen(hflux, ρ, To, u)
-					p := (P.Get(0, j, i) + PB.Get(0, j, i))
-					zo := USGSz0[f2i(luIndex.Get(j, i))]
-					const rParticle = 0.15e-6 // [m], Seinfeld & Pandis fig 8.11
-					const ρparticle = 1830.   // [kg/m3] Jacobson (2005) Ex. 13.5
+					zo := USGSz0[lu]         // roughness length [m]
+					const dParticle = 0.3e-6 // [m], Seinfeld & Pandis fig 8.11
+					const ρparticle = 1830.  // [kg/m3] Jacobson (2005) Ex. 13.5
+					const Θsurface = 0.      // surface slope [rad]; Assume surface is flat.
+
+					// This is not the best way to tell what season it is.
+					//var iSeasonP seinfeld.SeasonalCategory // for particles
+					var iSeasonG wesely1989.SeasonCategory // for gases
+					switch {
+					case To > 273.+20.:
+						//iSeasonP = seinfeld.Midsummer
+						iSeasonG = wesely1989.Midsummer
+					case To <= 273.+20 && To > 273.+10.:
+						//iSeasonP = seinfeld.Autumn
+						iSeasonG = wesely1989.Autumn
+					case To <= 273.+10 && To > 273.+0.:
+						//iSeasonP = seinfeld.LateAutumn
+						iSeasonG = wesely1989.LateAutumn
+					default:
+						//iSeasonP = seinfeld.Winter
+						iSeasonG = wesely1989.Winter
+					}
+					const dew = false // don't know if there's dew.
+					rain := qrain.Get(0, j, i) > 1.e-6
+
+					G := swDown.Get(j, i) + glw.Get(j, i) // irradiation [W/m2]
 					particleDryDep.AddVal(
 						gocart.ParticleDryDep(gocartObk, u, To, h,
-							zo, rParticle, ρparticle, p), j, i)
+							zo, dParticle/2., ρparticle, p), 0, j, i)
+					//seinfeld.DryDepParticle(z, zo, u, L, dParticle,
+					//	To, p, ρparticle,
+					//	ρ, iSeasonP, USGSseinfeld[lu]), j, i)
 					SO2DryDep.AddVal(
-						gocart.GasDryDep(gocartObk, u, h,
-							zo, gocart.DratioForRb["SO2"]), j, i)
+						seinfeld.DryDepGas(z, zo, u, L, To, ρ,
+							G, Θsurface,
+							wesely1989.So2Data, iSeasonG,
+							USGSwesely[lu], rain, dew, true, false), 0, j, i)
 					NOxDryDep.AddVal(
-						gocart.GasDryDep(gocartObk, u, h,
-							zo, gocart.DratioForRb["NOx"]), j, i)
+						seinfeld.DryDepGas(z, zo, u, L, To, ρ,
+							G, Θsurface,
+							wesely1989.No2Data, iSeasonG,
+							USGSwesely[lu], rain, dew, false, false), 0, j, i)
 					NH3DryDep.AddVal(
-						gocart.GasDryDep(gocartObk, u, h,
-							zo, gocart.DratioForRb["NH3"]), j, i)
+						seinfeld.DryDepGas(z, zo, u, L, To, ρ,
+							G, Θsurface,
+							wesely1989.Nh3Data, iSeasonG,
+							USGSwesely[lu], rain, dew, false, false), 0, j, i)
 					VOCDryDep.AddVal(
-						gocart.GasDryDep(gocartObk, u, h,
-							zo, gocart.DratioForRb["HCHO"]), j, i)
+						seinfeld.DryDepGas(z, zo, u, L, To, ρ,
+							G, Θsurface,
+							wesely1989.OraData, iSeasonG,
+							USGSwesely[lu], rain, dew, false, false), 0, j, i)
 
 					for k := 0; k < T.Shape[0]; k++ {
 						Tval := T.Get(k, j, i)
@@ -1087,7 +1241,7 @@ func StabilityMixingChemistry(LayerHeights, pblh *sparse.DenseArray,
 						Δz := zabove - z
 
 						const freeAtmKzz = 3. // [m2 s-1]
-						if k >= kPblTop-1 {   // free atmosphere (unstaggered grid)
+						if k >= kPblTop {   // free atmosphere (unstaggered grid)
 							Kzz.AddVal(freeAtmKzz, k, j, i)
 							Kyy.AddVal(freeAtmKzz, k, j, i)
 							if k == T.Shape[0]-1 { // Top Layer
@@ -1096,8 +1250,17 @@ func StabilityMixingChemistry(LayerHeights, pblh *sparse.DenseArray,
 						} else { // Boundary layer (unstaggered grid)
 							Kzz.AddVal(acm2.Kzz(z, h, L, u, fconv), k, j, i)
 							M2d.AddVal(acm2.M2d(m2u, z, Δz, h), k, j, i)
+							M2u.AddVal(m2u, k, j, i)
 							kmyy := acm2.CalculateKm(zcenter, h, L, u)
 							Kyy.AddVal(kmyy, k, j, i)
+
+							//////////////////////////
+	//						m2d := acm2.M2d(m2u, z, Δz, h)
+	//					z2 := LayerHeights.Get(k+1, j, i)
+	//					Δz2 := LayerHeights.Get(k+1, j, i) - z2
+	//						m2d2 := acm2.M2d(m2u, z2, Δz2, h)
+
+							/////////////////////////
 						}
 
 						// Gas phase sulfur chemistry
@@ -1126,6 +1289,25 @@ func StabilityMixingChemistry(LayerHeights, pblh *sparse.DenseArray,
 						}
 						SO2oxidation.AddVal(kSO2, k, j, i) // 1/s
 					}
+
+			// Check for mass balance in convection coefficients
+			for k := 0; k < M2u.Shape[0]-2; k++ {
+						z := LayerHeights.Get(k, j, i)
+						zabove := LayerHeights.Get(k+1, j, i)
+						z2above := LayerHeights.Get(k+2, j, i)
+						Δzratio := (z2above-zabove)/(zabove - z)
+						m2u := M2u.Get(k, j, i)
+						val := m2u - M2d.Get(k, j, i) +
+							M2d.Get(k+1, j, i)*Δzratio
+						if math.Abs(val/m2u) > 1.e-8 {
+							panic(fmt.Errorf("M2u and M2d don't match: "+
+								"(k,j,i)=(%v,%v,%v); val=%v; m2u=%v; "+
+								"m2d=%v, m2dAbove=%v; kpbl=%v",
+								k, j, i, val, m2u, M2d.Get(k, j, i),
+								M2d.Get(k+1, j, i),kPblTop))
+						}
+			}
+
 				}
 				sem <- empty{}
 			}(j)

@@ -231,8 +231,8 @@ func TestCellAlignment(t *testing.T) {
 func TestConvection(t *testing.T) {
 	for i, c := range d.Data {
 		val := c.M2u - c.M2d + c.Above[0].M2d*c.Above[0].Dz/c.Dz
-		if different(val, 0.) {
-			t.Log(i, val)
+		if different(val/c.M2u, 0.) {
+			t.Log(i, c.Layer, val/c.M2u, c.M2u, c.M2d, c.Above[0].M2d)
 			t.FailNow()
 		}
 	}

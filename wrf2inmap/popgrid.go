@@ -1,22 +1,24 @@
 package main
 
 import (
-	"bitbucket.org/ctessum/gis"
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
-	"github.com/ctessum/projgeom"
-	"github.com/dhconnelly/rtreego"
-	"github.com/lukeroth/gdal"
-	"github.com/paulsmith/gogeos/geos"
-	"github.com/pebbe/go-proj-4/proj"
-	"github.com/twpayne/gogeom/geom"
-	"github.com/twpayne/gogeom/geom/encoding/geojson"
 	"io"
 	"math"
 	"os"
 	"path/filepath"
 	"sort"
+
+	"bitbucket.org/ctessum/gis"
+	"bitbucket.org/ctessum/gisconversions"
+	"github.com/ctessum/geomop"
+	"github.com/ctessum/projgeom"
+	"github.com/dhconnelly/rtreego"
+	"github.com/lukeroth/gdal"
+	"github.com/pebbe/go-proj-4/proj"
+	"github.com/twpayne/gogeom/geom"
+	"github.com/twpayne/gogeom/geom/encoding/geojson"
 )
 
 const WebMapProj = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs"
@@ -26,7 +28,6 @@ func init() {
 }
 
 type gridCell struct {
-	ggeom                                            *geos.Geometry
 	Geom                                             geom.T
 	WebMapGeom                                       geom.T
 	bbox                                             *rtreego.Rect
@@ -40,12 +41,12 @@ type gridCell struct {
 	UPlusSpeed, UMinusSpeed, VPlusSpeed, VMinusSpeed float64
 	WPlusSpeed, WMinusSpeed                          float64
 	OrgPartitioning, NOPartitioning, SPartitioning   float64
-	NHPartitioning, FracAmmoniaPoor                  float64
+	NHPartitioning                                   float64
 	SO2oxidation                                     float64
 	ParticleDryDep, SO2DryDep, NOxDryDep, NH3DryDep  float64
 	VOCDryDep, Kxxyy, LayerHeights                   float64
 	ParticleWetDep, SO2WetDep, OtherGasWetDep        float64
-	Kzz, M2u, M2d, PblTopLayer, Pblh, WindSpeed      float64
+	Kzz, M2u, M2d, WindSpeed                         float64
 	Temperature, S1, Sclass                          float64
 }
 
@@ -59,7 +60,6 @@ func variableGrid(data map[string]dataHolder) {
 	if err.Error() != "No Error" {
 		panic(err)
 	}
-	pblMax := data["PblTopLayer"].data.Max()
 	pop := loadPopulation(sr)
 	mort := loadMortality(sr)
 	filePrefix := filepath.Join(config.OutputDir, config.OutputFilePrefix)
@@ -84,7 +84,7 @@ func variableGrid(data map[string]dataHolder) {
 		}
 
 		cellChan := make(chan *gridCell)
-		if k < int(pblMax)+1 {
+		if k < config.HiResLayers {
 			go createCells(config.Xnests, config.Ynests, nil, pop, mort, cellChan)
 		} else { // no nested grids above the boundary layer
 			go createCells(config.Xnests[0:1], config.Ynests[0:1],
@@ -94,11 +94,7 @@ func variableGrid(data map[string]dataHolder) {
 		cellTree := rtreego.NewTree(2, 25, 50)
 
 		for cell := range cellChan {
-			cell.Geom, err = gis.GEOStoGeom(cell.ggeom)
-			if err != nil {
-				panic(err)
-			}
-			cell.bbox, err = gis.GeomToRect(cell.Geom)
+			cell.bbox, err = gisconversions.GeomToRect(cell.Geom)
 			if err != nil {
 				panic(err)
 			}
@@ -363,71 +359,41 @@ func CreateCell(pop, mort *rtreego.Rtree, index [][2]int) (
 	cell = new(gridCell)
 	cell.index = index
 	// Polygon must go counter-clockwise
-	wkt := fmt.Sprintf("POLYGON ((%v %v, %v %v, %v %v, %v %v, %v %v))",
-		l, b, r, b, r, u, l, u, l, b)
-	cell.ggeom, err = geos.FromWKT(wkt)
+	cell.Geom = geom.Polygon{[][]geom.Point{{{l, b}, {r, b}, {r, u}, {l, u}, {l, b}}}}
+	cellBounds, err := gisconversions.GeomToRect(cell.Geom)
 	if err != nil {
 		panic(err)
 	}
-	cellBounds, err := gis.GeosToRect(cell.ggeom)
-	if err != nil {
-		panic(err)
-	}
-	var intersection *geos.Geometry
-	var intersects bool
-	for pp, pInterface := range pop.SearchIntersect(cellBounds) {
+	for _, pInterface := range pop.SearchIntersect(cellBounds) {
 		p := pInterface.(*population)
-		intersects, err = cell.ggeom.Intersects(p.geom)
+		intersection := geomop.Construct(
+			cell.Geom, p.Geom, geomop.INTERSECTION)
+		area1 := geomop.Area(intersection)
+		area2 := geomop.Area(p.Geom) // we want to conserve the total population
 		if err != nil {
-			fmt.Println("xxxxxxxx", pp)
 			panic(err)
 		}
-		if intersects {
-			intersection, err =
-				IntersectionFaultTolerant(cell.ggeom, p.geom)
-			area1, err := intersection.Area()
-			if err != nil {
-				panic(err)
-			}
-			area2, err := p.geom.Area() // we want to conserve the total population
-			if err != nil {
-				panic(err)
-			}
-			if area2 == 0. {
-				panic("divide by zero")
-			}
-			areaFrac := area1 / area2
-			cell.TotalPop += p.totalpop * areaFrac
-			cell.WhitePop += p.whitepop * areaFrac
-			cell.TotalPoor += p.totalpoor * areaFrac
-			cell.WhitePoor += p.whitepoor * areaFrac
+		if area2 == 0. {
+			panic("divide by zero")
 		}
+		areaFrac := area1 / area2
+		cell.TotalPop += p.totalpop * areaFrac
+		cell.WhitePop += p.whitepop * areaFrac
+		cell.TotalPoor += p.totalpoor * areaFrac
+		cell.WhitePoor += p.whitepoor * areaFrac
 	}
-	for mm, mInterface := range mort.SearchIntersect(cellBounds) {
+	for _, mInterface := range mort.SearchIntersect(cellBounds) {
 		m := mInterface.(*mortality)
-		intersects, err = cell.ggeom.Intersects(m.geom)
-		if err != nil {
-			fmt.Println("xxxxxxxx", mm)
-			panic(err)
+		intersection := geomop.Construct(
+			cell.Geom, m.Geom, geomop.INTERSECTION)
+		area1 := geomop.Area(intersection)
+		area2 := geomop.Area(cell.Geom) // we want to conserve the average rate here, not the total
+		if area2 == 0. {
+			panic("divide by zero")
 		}
-		if intersects {
-			intersection, err =
-				IntersectionFaultTolerant(cell.ggeom, m.geom)
-			area1, err := intersection.Area()
-			if err != nil {
-				panic(err)
-			}
-			area2, err := cell.ggeom.Area() // we want to conserve the average rate here, not the total
-			if err != nil {
-				panic(err)
-			}
-			if area2 == 0. {
-				panic("divide by zero")
-			}
-			areaFrac := area1 / area2
-			cell.AllCauseMortality += m.AllCause * areaFrac
-			cell.RespiratoryMortality += m.Respiratory * areaFrac
-		}
+		areaFrac := area1 / area2
+		cell.AllCauseMortality += m.AllCause * areaFrac
+		cell.RespiratoryMortality += m.Respiratory * areaFrac
 	}
 	cell.Dx = r - l
 	cell.Dy = u - b
@@ -437,7 +403,7 @@ func CreateCell(pop, mort *rtreego.Rtree, index [][2]int) (
 
 func writeCell(shp *gis.Shapefile, cell *gridCell) {
 	fieldIDs := []int{0, 1, 2, 3, 4, 5, 6, 7}
-	err := shp.WriteFeature(cell.Row, cell.ggeom, fieldIDs,
+	err := shp.WriteFeature(cell.Row, cell.Geom, fieldIDs,
 		cell.Row, cell.Col, cell.TotalPop, cell.WhitePop,
 		cell.TotalPoor, cell.WhitePoor, cell.AllCauseMortality,
 		cell.RespiratoryMortality)
@@ -448,7 +414,7 @@ func writeCell(shp *gis.Shapefile, cell *gridCell) {
 
 type population struct {
 	bounds                                   *rtreego.Rect
-	geom                                     *geos.Geometry
+	Geom                                     geom.T
 	totalpop, whitepop, totalpoor, whitepoor float64
 }
 
@@ -458,7 +424,7 @@ func (p *population) Bounds() *rtreego.Rect {
 
 type mortality struct {
 	bounds                *rtreego.Rect
-	geom                  *geos.Geometry
+	Geom                  geom.T
 	AllCause, Respiratory float64 // Deaths per 100,000 people per year
 }
 
@@ -474,7 +440,7 @@ func loadPopulation(sr gdal.SpatialReference) (
 	if err != nil {
 		panic(err)
 	}
-	ct, err := gis.NewCoordinateTransform(popshp.Sr, sr)
+	ct, err := gisconversions.NewCoordinateTransform(popshp.Sr, sr)
 	if err != nil {
 		panic(err)
 	}
@@ -526,15 +492,11 @@ func loadPopulation(sr gdal.SpatialReference) (
 		if p.totalpop == 0. {
 			continue
 		}
-		g, err = ct.Reproject(g)
+		p.Geom, err = ct.Reproject(g)
 		if err != nil {
 			panic(err)
 		}
-		p.bounds, err = gis.GeomToRect(g)
-		if err != nil {
-			panic(err)
-		}
-		p.geom, err = gis.GeomToGEOS(g)
+		p.bounds, err = gisconversions.GeomToRect(p.Geom)
 		if err != nil {
 			panic(err)
 		}
@@ -551,7 +513,7 @@ func loadMortality(sr gdal.SpatialReference) (
 	if err != nil {
 		panic(err)
 	}
-	ct, err := gis.NewCoordinateTransform(mortshp.Sr, sr)
+	ct, err := gisconversions.NewCoordinateTransform(mortshp.Sr, sr)
 	if err != nil {
 		panic(err)
 	}
@@ -589,15 +551,11 @@ func loadMortality(sr gdal.SpatialReference) (
 		if math.IsNaN(m.AllCause) || math.IsNaN(m.Respiratory) {
 			panic("NaN!")
 		}
-		g, err = ct.Reproject(g)
+		m.Geom, err = ct.Reproject(g)
 		if err != nil {
 			panic(err)
 		}
-		m.bounds, err = gis.GeomToRect(g)
-		if err != nil {
-			panic(err)
-		}
-		m.geom, err = gis.GeomToGEOS(g)
+		m.bounds, err = gisconversions.GeomToRect(m.Geom)
 		if err != nil {
 			panic(err)
 		}
@@ -639,20 +597,18 @@ func getData(cells []*gridCell, data map[string]dataHolder, k int) {
 				k, ctmrow, ctmcol) / ncells
 			cell.NHPartitioning += data["NHPartitioning"].data.Get(
 				k, ctmrow, ctmcol) / ncells
-			cell.FracAmmoniaPoor += data["FracAmmoniaPoor"].data.Get(
-				k, ctmrow, ctmcol) / ncells
 			cell.SO2oxidation += data["SO2oxidation"].data.Get(
 				k, ctmrow, ctmcol) / ncells
 			cell.ParticleDryDep += data["ParticleDryDep"].data.Get(
-				ctmrow, ctmcol) / ncells
+				k, ctmrow, ctmcol) / ncells
 			cell.SO2DryDep += data["SO2DryDep"].data.Get(
-				ctmrow, ctmcol) / ncells
+				k, ctmrow, ctmcol) / ncells
 			cell.NOxDryDep += data["NOxDryDep"].data.Get(
-				ctmrow, ctmcol) / ncells
+				k, ctmrow, ctmcol) / ncells
 			cell.NH3DryDep += data["NH3DryDep"].data.Get(
-				ctmrow, ctmcol) / ncells
+				k, ctmrow, ctmcol) / ncells
 			cell.VOCDryDep += data["VOCDryDep"].data.Get(
-				ctmrow, ctmcol) / ncells
+				k, ctmrow, ctmcol) / ncells
 			cell.Kxxyy += data["Kxxyy"].data.Get(
 				k, ctmrow, ctmcol) / ncells
 			cell.LayerHeights += data["LayerHeights"].data.Get(
@@ -668,13 +624,9 @@ func getData(cells []*gridCell, data map[string]dataHolder, k int) {
 			cell.Kzz += data["Kzz"].data.Get(
 				k, ctmrow, ctmcol) / ncells
 			cell.M2u += data["M2u"].data.Get(
-				ctmrow, ctmcol) / ncells
+				k, ctmrow, ctmcol) / ncells
 			cell.M2d += data["M2d"].data.Get(
 				k, ctmrow, ctmcol) / ncells
-			cell.PblTopLayer += data["PblTopLayer"].data.Get(
-				ctmrow, ctmcol) / ncells
-			cell.Pblh += data["Pblh"].data.Get(
-				ctmrow, ctmcol) / ncells
 			cell.WindSpeed += data["WindSpeed"].data.Get(
 				k, ctmrow, ctmcol) / ncells
 			cell.Temperature += data["Temperature"].data.Get(
@@ -716,25 +668,4 @@ type gridCellLight struct {
 
 func (c *gridCellLight) Bounds() *rtreego.Rect {
 	return c.bbox
-}
-
-func IntersectionFaultTolerant(g1, g2 *geos.Geometry) (g3 *geos.Geometry,
-	err error) {
-	var buf1, buf2 *geos.Geometry
-	g3, err = g1.Intersection(g2)
-	if err != nil { // If there is a problem, try a 0 buffer
-		buf1, err = g1.Buffer(0.)
-		if err != nil {
-			return
-		}
-		buf2, err = g2.Buffer(0.)
-		if err != nil {
-			return
-		}
-		g3, err = buf1.Intersection(buf2)
-		if err != nil {
-			return
-		}
-	}
-	return
 }

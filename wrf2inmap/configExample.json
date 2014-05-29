@@ -12,6 +12,7 @@
 	"VariableGrid_dy": 36000,
 	"Xnests": [148, 3, 3, 4],
 	"Ynests": [112, 3, 3, 4],
+	"HiResLayers":8,
 	"CtmGrid_x_o": -2736000,
 	"CtmGrid_y_o": -2088000,
 	"CtmGrid_dx": 12000,

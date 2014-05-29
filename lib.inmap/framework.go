@@ -144,7 +144,7 @@ func InitInMAPdata(filetemplate string, nLayers int, httpPort string) *InMAPdata
 				fmt.Sprintf("%v", k), -1)
 			f, err := os.Open(filename)
 			if err != nil {
-				fmt.Println(err.Error())
+				fmt.Println("Problem opening InMAP data file:", err.Error())
 				os.Exit(1)
 			}
 			g := gob.NewDecoder(f)
@@ -168,18 +168,6 @@ func InitInMAPdata(filetemplate string, nLayers int, httpPort string) *InMAPdata
 	for _, indata := range inputData {
 		for _, c := range indata {
 			c.prepare()
-
-			//if c.Layer >= f2i(c.PblTopLayer) { // Convective mixing
-			if c.Kzz < 5. {
-				c.Kzz = 5.
-			}
-			c.M2u *= 5.
-			c.M2d *= 5.
-			//} ///////////////////////////////////////////////////////////////////////////////////////////
-			//if c.Layer == 0 {
-			//	c.Kzz = 100.
-			//}
-
 			d.Data[c.Row] = c
 		}
 	}
