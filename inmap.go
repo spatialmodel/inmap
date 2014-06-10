@@ -263,6 +263,14 @@ func main() {
 		}
 	}
 
+	for pol, arr := range emissions {
+		sum := 0.
+		for _, val := range arr {
+			sum += val
+		}
+		fmt.Printf("%v, %g ug/s\n", pol, sum)
+	}
+
 	// Run model
 	finalConc := d.Run(emissions)
 
@@ -300,7 +308,7 @@ func getEmissionsCSV(filename string, d *inmap.InMAPdata) (
 	emissions = make(map[string][]float64)
 	f, err := os.Open(filename)
 	if err != nil {
-		fmt.Println("Problem opening emissions file: ",err.Error())
+		fmt.Println("Problem opening emissions file: ", err.Error())
 		os.Exit(1)
 	}
 	defer f.Close()

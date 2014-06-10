@@ -168,12 +168,6 @@ func InitInMAPdata(filetemplate string, nLayers int, httpPort string) *InMAPdata
 	for _, indata := range inputData {
 		for _, c := range indata {
 			c.prepare()
-
-
-			c.Kzz *= 10.
-			c.M2u *= 10.
-			c.M2d *= 10.
-
 			d.Data[c.Row] = c
 		}
 	}

@@ -1050,7 +1050,7 @@ func StabilityMixingChemistry(LayerHeights *sparse.DenseArray,
 						z := LayerHeights.Get(k, j, i)
 						zabove := LayerHeights.Get(k+1, j, i)
 						z2above := LayerHeights.Get(k+2, j, i)
-						Δzratio := (z2above-zabove)/(zabove - z)
+						Δzratio := (z2above - zabove) / (zabove - z)
 						m2u := M2u.Get(k, j, i)
 						val := m2u - M2d.Get(k, j, i) +
 							M2d.Get(k+1, j, i)*Δzratio
@@ -1145,10 +1145,10 @@ func StabilityMixingChemistry(LayerHeights *sparse.DenseArray,
 
 					// Calculate dry deposition
 					p := (P.Get(0, j, i) + PB.Get(0, j, i)) // Pressure [Pa]
-					////z: [m] surface layer; assumed to be 10% of boundary layer.
-					//z := h / 10.
+					//z: [m] surface layer; assumed to be 10% of boundary layer.
+					z := h / 10.
 					// z: [m] surface layer; assumed to be top of first model layer.
-					z := LayerHeights.Get(1, j, i)
+					//z := LayerHeights.Get(1, j, i)
 					lu := f2i(luIndex.Get(j, i))
 					gocartObk := gocart.ObhukovLen(hflux, ρ, To, u)
 					zo := USGSz0[lu]         // roughness length [m]
@@ -1182,7 +1182,7 @@ func StabilityMixingChemistry(LayerHeights *sparse.DenseArray,
 							zo, dParticle/2., ρparticle, p), 0, j, i)
 					//seinfeld.DryDepParticle(z, zo, u, L, dParticle,
 					//	To, p, ρparticle,
-					//	ρ, iSeasonP, USGSseinfeld[lu]), j, i)
+					//	ρ, iSeasonP, USGSseinfeld[lu]), 0, j, i)
 					SO2DryDep.AddVal(
 						seinfeld.DryDepGas(z, zo, u, L, To, ρ,
 							G, Θsurface,
@@ -1241,7 +1241,7 @@ func StabilityMixingChemistry(LayerHeights *sparse.DenseArray,
 						Δz := zabove - z
 
 						const freeAtmKzz = 3. // [m2 s-1]
-						if k >= kPblTop {   // free atmosphere (unstaggered grid)
+						if k >= kPblTop {     // free atmosphere (unstaggered grid)
 							Kzz.AddVal(freeAtmKzz, k, j, i)
 							Kyy.AddVal(freeAtmKzz, k, j, i)
 							if k == T.Shape[0]-1 { // Top Layer
@@ -1255,10 +1255,10 @@ func StabilityMixingChemistry(LayerHeights *sparse.DenseArray,
 							Kyy.AddVal(kmyy, k, j, i)
 
 							//////////////////////////
-	//						m2d := acm2.M2d(m2u, z, Δz, h)
-	//					z2 := LayerHeights.Get(k+1, j, i)
-	//					Δz2 := LayerHeights.Get(k+1, j, i) - z2
-	//						m2d2 := acm2.M2d(m2u, z2, Δz2, h)
+							//						m2d := acm2.M2d(m2u, z, Δz, h)
+							//					z2 := LayerHeights.Get(k+1, j, i)
+							//					Δz2 := LayerHeights.Get(k+1, j, i) - z2
+							//						m2d2 := acm2.M2d(m2u, z2, Δz2, h)
 
 							/////////////////////////
 						}
@@ -1290,12 +1290,12 @@ func StabilityMixingChemistry(LayerHeights *sparse.DenseArray,
 						SO2oxidation.AddVal(kSO2, k, j, i) // 1/s
 					}
 
-			// Check for mass balance in convection coefficients
-			for k := 0; k < M2u.Shape[0]-2; k++ {
+					// Check for mass balance in convection coefficients
+					for k := 0; k < M2u.Shape[0]-2; k++ {
 						z := LayerHeights.Get(k, j, i)
 						zabove := LayerHeights.Get(k+1, j, i)
 						z2above := LayerHeights.Get(k+2, j, i)
-						Δzratio := (z2above-zabove)/(zabove - z)
+						Δzratio := (z2above - zabove) / (zabove - z)
 						m2u := M2u.Get(k, j, i)
 						val := m2u - M2d.Get(k, j, i) +
 							M2d.Get(k+1, j, i)*Δzratio
@@ -1304,9 +1304,9 @@ func StabilityMixingChemistry(LayerHeights *sparse.DenseArray,
 								"(k,j,i)=(%v,%v,%v); val=%v; m2u=%v; "+
 								"m2d=%v, m2dAbove=%v; kpbl=%v",
 								k, j, i, val, m2u, M2d.Get(k, j, i),
-								M2d.Get(k+1, j, i),kPblTop))
+								M2d.Get(k+1, j, i), kPblTop))
 						}
-			}
+					}
 
 				}
 				sem <- empty{}
