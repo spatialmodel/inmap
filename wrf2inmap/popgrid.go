@@ -444,19 +444,19 @@ func loadPopulation(sr gdal.SpatialReference) (
 	if err != nil {
 		panic(err)
 	}
-	iTotalPop, err := popshp.GetColumnIndex("TOTALPOP")
+	iTotalPop, err := popshp.GetColumnIndex("TotalPop")
 	if err != nil {
 		panic(err)
 	}
-	iWhitePop, err := popshp.GetColumnIndex("WHITEPOP")
+	iWhitePop, err := popshp.GetColumnIndex("TotalWhite")
 	if err != nil {
 		panic(err)
 	}
-	iTotalPoor, err := popshp.GetColumnIndex("TOTALPOOR")
+	iTotalPoor, err := popshp.GetColumnIndex("TotalPoor")
 	if err != nil {
 		panic(err)
 	}
-	iWhitePoor, err := popshp.GetColumnIndex("WHITEPOOR")
+	iWhitePoor, err := popshp.GetColumnIndex("WhitePoor")
 	if err != nil {
 		panic(err)
 	}
@@ -478,6 +478,16 @@ func loadPopulation(sr gdal.SpatialReference) (
 			p.whitepop = fieldVals[1].(float64)
 			p.totalpoor = fieldVals[2].(float64)
 			p.whitepoor = fieldVals[3].(float64)
+		case float32:
+			p.totalpop = float64(fieldVals[0].(float32))
+			p.whitepop = float64(fieldVals[1].(float32))
+			p.totalpoor = float64(fieldVals[2].(float32))
+			p.whitepoor = float64(fieldVals[3].(float32))
+		case int:
+			p.totalpop = float64(fieldVals[0].(int))
+			p.whitepop = float64(fieldVals[1].(int))
+			p.totalpoor = float64(fieldVals[2].(int))
+			p.whitepoor = float64(fieldVals[3].(int))
 		case error:
 			if err != nil {
 				panic(err)
