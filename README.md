@@ -1,6 +1,6 @@
 # (In)tervention (M)odel for (A)ir (P)ollution
 
-This program is still being developed and tested. As such, features and functionality may change without warning. Please do not distribute the program in its current form or assume any results that it gives are correct.
+This program is still being developed and tested. As such, features and functionality may change without warning.
 
 ## Installation
 
