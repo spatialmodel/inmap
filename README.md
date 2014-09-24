@@ -6,7 +6,7 @@ This program is still being developed and tested. As such, features and function
 
 InMAP is a multi-scale emissions-to-health impact model for fine particulate matter (PM<sub>2.5</sub>) that mechanistically evaluates air quality and health benefits of perturbations to baseline emissions. The main simplification of InMAP compared to a comprehensive chemical transport model is that it does so on an annual-average basis rather than the highly time-resolved performance of a full CTM. The model incorporates annual-average parameters (e.g. transport, deposition, and reaction rates) from the WRF/Chem chemical transport model. Grid-cell size varies as shown in Figure 1, ranging from smaller grid cells in urban areas to larger grid cells in rural areas; any grid cell above a specified population threshold is subdivided until no grid larger than 1 km has >10,000 people. This variable resolution grid is used to simulate population exposures to PM<sub>2.5</sub> with high spatial resolution while minimizing computational expense.
 
-![alt tag](src/grid.png)
+![alt tag](grid.png)
 Figure 1: InMAP spatial discretization of the model domain into variable resolution grid cells. Left panel: full domain; right panel: a small section of the domain centered on the city of Los Angeles.
 
 ## Installation
@@ -28,7 +28,7 @@ This program should work on most types of computers. Refer [here](http://golang.
 
 1. Download the general input files (`InMAPData`) from and example emissions files from [here](https://bitbucket.org/ctessum/inmap/downloads/). For the InMAPData files, there are several options of computational grids varying numbers of high- and low-resolution grid cells. The example emissions data is a scenario where all of the pollutant emissions in the U.S., southern Canada, and Northern Mexico increase by 1% over their 2005 levels.
 
-1. Make a copy of the [configuration file template](src/configExample.json) and edit it so that the `InMAPdataTemplate` and `EmissionsShapefiles` variables point to the locations where you downloaded the general input and emissions files to, and so the `OutputTemplate` variable points to the desired location for the output files. The wildcard `[layer]` is a place holder for the vertical layer number. (Input and output data are separated into individual files by model layer). Refer directly to the source code ([here](src/inmap.go#cl-22)) for information about other configuration options.
+1. Make a copy of the [configuration file template](configExample.json) and edit it so that the `InMAPdataTemplate` and `EmissionsShapefiles` variables point to the locations where you downloaded the general input and emissions files to, and so the `OutputTemplate` variable points to the desired location for the output files. The wildcard `[layer]` is a place holder for the vertical layer number. (Input and output data are separated into individual files by model layer). Refer directly to the source code ([here](inmap.go#cl-22)) for information about other configuration options.
 
 2. Run the program:
 
