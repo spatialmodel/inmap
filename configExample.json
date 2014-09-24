@@ -2,8 +2,10 @@
 	"InMAPdataTemplate":"/path/to/InMAPdata_[layer].gob",
 	"NumLayers":27,
 	"NumProcessors":4,
-	"GroundLevelEmissions":"/path/to/groundLevelEmissions.csv",
-	"ElevatedEmissions":"/path/to/elevatedEmissions.csv",
+	"EmissionsShapefiles":[
+		"file1",
+		"file2"
+	],
 	"OutputTemplate":"output/output_[layer].geojson",
 	"HTTPport":"8080"
 }

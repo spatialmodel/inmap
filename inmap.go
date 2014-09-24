@@ -57,7 +57,6 @@ type configData struct {
 	// to the InMAP computational grid, but the mapping projection of the
 	// shapefile must be the same as the projection InMAP uses.
 	// Can include environment variables.
-	// The file names should not include the ".shp" extension.
 	OutputTemplate string // Path to desired output file location, where [layer] is a stand-in for the model layer number. Can include environment variables.
 	HTTPport       string // Port for hosting web page.
 	// If HTTPport is `8080`, then the GUI would be viewed by visiting `localhost:8080` in a web browser.
@@ -144,6 +143,7 @@ func main() {
 	emisTree := rtreego.NewTree(25, 50)
 	for _, fname := range config.EmissionsShapefiles {
 		fmt.Println("Loading emissions shapefile:\n", fname)
+		fname = strings.Replace(fname, ".shp", "")
 		f1, err := os.Open(fname + ".shp")
 		if err != nil {
 			panic(err)
