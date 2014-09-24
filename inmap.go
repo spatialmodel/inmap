@@ -143,7 +143,7 @@ func main() {
 	emisTree := rtreego.NewTree(25, 50)
 	for _, fname := range config.EmissionsShapefiles {
 		fmt.Println("Loading emissions shapefile:\n", fname)
-		fname = strings.Replace(fname, ".shp", "")
+		fname = strings.Replace(fname, ".shp", "",-1)
 		f1, err := os.Open(fname + ".shp")
 		if err != nil {
 			panic(err)
