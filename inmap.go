@@ -32,7 +32,7 @@ import (
 	"strconv"
 	"strings"
 
-	"bitbucket.org/ctessum/inmap/lib.inmap"
+	"github.com/ctessum/inmap/lib.inmap"
 	"github.com/ctessum/geom2rtree"
 	"github.com/ctessum/geomop"
 	"github.com/ctessum/shapefile"
