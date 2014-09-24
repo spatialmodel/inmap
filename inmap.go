@@ -36,7 +36,7 @@ import (
 	"github.com/ctessum/geom2rtree"
 	"github.com/ctessum/geomop"
 	"github.com/ctessum/shapefile"
-	"github.com/dhconnelly/rtreego"
+	"github.com/patrick-higgins/rtreego"
 	"github.com/twpayne/gogeom/geom"
 	"github.com/twpayne/gogeom/geom/encoding/geojson"
 )
@@ -141,7 +141,7 @@ func main() {
 
 	// Add in emissions shapefiles
 	// Load emissions into rtree for fast searching
-	emisTree := rtreego.NewTree(2, 25, 50)
+	emisTree := rtreego.NewTree(25, 50)
 	for _, fname := range config.EmissionsShapefiles {
 		fmt.Println("Loading emissions shapefile:\n", fname)
 		f1, err := os.Open(fname + ".shp")
