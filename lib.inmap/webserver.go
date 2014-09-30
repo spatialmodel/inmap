@@ -268,7 +268,7 @@ func (d *InMAPdata) mapHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	vals := d.toArray(name, layer)
 	geometry := d.getGeometry(layer)
-	m := carto.NewMapData(len(vals), "LinCutoff")
+	m := carto.NewMapData(len(vals), carto.LinCutoff)
 	m.Cmap.AddArray(vals)
 	m.Cmap.Set()
 	m.Shapes = geometry
@@ -306,7 +306,7 @@ func (d *InMAPdata) legendHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "image/svg+xml")
 	vals := d.toArray(name, layer)
-	cmap := carto.NewColorMap("LinCutoff")
+	cmap := carto.NewColorMap(carto.LinCutoff)
 	cmap.AddArray(vals)
 	cmap.Set()
 	cmap.LegendWidth = 2.1

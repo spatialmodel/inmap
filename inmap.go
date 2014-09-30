@@ -33,7 +33,7 @@ import (
 	"strings"
 
 	"bitbucket.org/ctessum/inmap/lib.inmap"
-	"github.com/ctessum/geom2rtree"
+	"github.com/ctessum/geomconv"
 	"github.com/ctessum/geomop"
 	"github.com/ctessum/shapefile"
 	"github.com/patrick-higgins/rtreego"
@@ -198,7 +198,7 @@ func main() {
 			if iii, ok := dbf.FieldIndicies["velocity"]; ok {
 				e.velocity = fields[iii].(float64) // stack velocity [m/s]
 			}
-			e.bounds, err = geom2rtree.GeomToRect(e.g)
+			e.bounds, err = geomconv.GeomToRect(e.g)
 			if err != nil {
 				panic(err)
 			}
@@ -212,7 +212,7 @@ func main() {
 	// allocate emissions to appropriate grid cells
 	for i := d.LayerStart[0]; i < d.LayerEnd[0]; i++ {
 		cell := d.Data[i]
-		bounds, err := geom2rtree.GeomToRect(cell.Geom)
+		bounds, err := geomconv.GeomToRect(cell.Geom)
 		if err != nil {
 			panic(err)
 		}
