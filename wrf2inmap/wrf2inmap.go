@@ -25,31 +25,34 @@ import (
 )
 
 type ConfigInfo struct {
-	Wrfout            string  // Location of WRF output files. [DATE] is a wild card for the simulation date.
-	OutputDir         string  // Directory to put the output files in
-	OutputFilePrefix  string  // name for output files
-	StartDate         string  // Format = "YYYYMMDD"
-	EndDate           string  // Format = "YYYYMMDD"
-	Nprocs            int     // number of processors to use
-	VariableGrid_x_o  float64 // lower left of output grid, x
-	VariableGrid_y_o  float64 // lower left of output grid, y
-	VariableGrid_dx   float64 // m
-	VariableGrid_dy   float64 // m
-	Xnests            []int   // Nesting multiples in the X direction
-	Ynests            []int   // Nesting multiples in the Y direction
-	HiResLayers       int     // number of layers to do in high resolution (layers above this will be lowest resolution.
-	CtmGrid_x_o       float64 // lower left of Chemical Transport Model (CTM) grid, x
-	CtmGrid_y_o       float64 // lower left of grid, y
-	CtmGrid_dx        float64 // m
-	CtmGrid_dy        float64 // m
-	CtmGrid_nx        int
-	CtmGrid_ny        int
-	GridProj          string  // projection info for CTM grid; Proj4 format
-	PopCutoff         float64 // people per grid cell
-	BboxOffset        float64 // A number significantly less than the smallest grid size but not small enough to be confused with zero.
-	CensusDir         string  // directory holding census shapefile
-	CensusFile        string  // Name of census shapefile
-	MortalityRateFile string  // Name of the mortality rate shapefile
+	Wrfout              string  // Location of WRF output files. [DATE] is a wild card for the simulation date.
+	OutputDir           string  // Directory to put the output files in
+	OutputFilePrefix    string  // name for output files
+	StartDate           string  // Format = "YYYYMMDD"
+	EndDate             string  // Format = "YYYYMMDD"
+	Nprocs              int     // number of processors to use
+	VariableGrid_x_o    float64 // lower left of output grid, x
+	VariableGrid_y_o    float64 // lower left of output grid, y
+	VariableGrid_dx     float64 // m
+	VariableGrid_dy     float64 // m
+	Xnests              []int   // Nesting multiples in the X direction
+	Ynests              []int   // Nesting multiples in the Y direction
+	HiResLayers         int     // number of layers to do in high resolution (layers above this will be lowest resolution.
+	CtmGrid_x_o         float64 // lower left of Chemical Transport Model (CTM) grid, x
+	CtmGrid_y_o         float64 // lower left of grid, y
+	CtmGrid_dx          float64 // m
+	CtmGrid_dy          float64 // m
+	CtmGrid_nx          int
+	CtmGrid_ny          int
+	GridProj            string   // projection info for CTM grid; Proj4 format
+	PopDensityCutoff    float64  // limit for people per unit area in the grid cell
+	PopCutoff           float64  // limit for total number of people in the grid cell
+	BboxOffset          float64  // A number significantly less than the smallest grid size but not small enough to be confused with zero.
+	CensusFile          string   // Path to census shapefile
+	CensusPopColumns    []string // Shapefile fields containing populations for multiple demographics
+	PopGridColumn       string   // Name of field in shapefile to be used for determining variable grid resolution
+	MortalityRateFile   string   // Path to the mortality rate shapefile
+	MortalityRateColumn string   // Name of field in mortality rate shapefiel containing the mortality rate.
 }
 
 const (
@@ -80,20 +83,19 @@ var (
 
 var (
 	// RACM VOC species and molecular weights (g/mol);
+	// Only includes anthropogenic precursors to SOA from
+	// anthropogenic (aSOA) and biogenic (bSOA) sources as
+	// an Ahmadov et al. (2012)
 	// assume condensable vapor from SOA has molar mass of 70
-	VOC = map[string]float64{"eth": 30, "hc3": 44, "hc5": 72, "hc8": 114,
-		"ete": 28, "olt": 42, "oli": 68, "dien": 54, "iso": 68, "api": 136,
-		"lim": 136, "tol": 92, "xyl": 106, "csl": 108, "hcho": 30, "ald": 44,
-		"ket": 72, "gly": 58, "mgly": 72, "dcb": 87, "macr": 70, "udd": 119,
-		"hket": 74, "onit": 119, "pan": 121, "tpan": 147, "op1": 48, "op2": 62,
-		"paa": 76, "ora1": 46, "ora2": 60, "cvasoa1": 70, "cvasoa2": 70,
-		"cvasoa3": 70, "cvasoa4": 70, "cvbsoa1": 70, "cvbsoa2": 70,
+	aVOC = map[string]float64{"hc5": 72, "hc8": 114,
+		"olt": 42, "oli": 68, "tol": 92, "xyl": 106, "csl": 108,
+		"cvasoa1": 70, "cvasoa2": 70, "cvasoa3": 70, "cvasoa4": 70}
+	bVOC = map[string]float64{"iso": 68, "api": 136, "sesq": 84.2,
+		"lim": 136, "cvbsoa1": 70, "cvbsoa2": 70,
 		"cvbsoa3": 70, "cvbsoa4": 70}
-	// VBS SOA species (both anthropogenic and biogenic)
-	SOA = map[string]float64{"asoa1i": 1, "asoa1j": 1, "asoa2i": 1,
-		"asoa2j": 1, "asoa3i": 1, "asoa3j": 1, "asoa4i": 1, "asoa4j": 1,
-		"bsoa1i": 1, "bsoa1j": 1, "bsoa2i": 1, "bsoa2j": 1, "bsoa3i": 1,
-		"bsoa3j": 1, "bsoa4i": 1, "bsoa4j": 1}
+	// VBS SOA species (anthropogenic only)
+	aSOA = map[string]float64{"asoa1i": 1, "asoa1j": 1, "asoa2i": 1,
+		"asoa2j": 1, "asoa3i": 1, "asoa3j": 1, "asoa4i": 1, "asoa4j": 1}
 	// VBS SOA species (biogenic only)
 	bSOA = map[string]float64{"bsoa1i": 1, "bsoa1j": 1, "bsoa2i": 1,
 		"bsoa2j": 1, "bsoa3i": 1, "bsoa3j": 1, "bsoa4i": 1, "bsoa4j": 1}
@@ -203,9 +205,12 @@ func main() {
 	layerHeights, Dz := calcLayerHeights(ph, phb)
 
 	// calculate gas/particle partitioning
-	VOCchan := make(chan *sparse.DenseArray)
-	SOAchan := make(chan *sparse.DenseArray)
-	go calcPartitioning(VOCchan, SOAchan)
+	aVOCchan := make(chan *sparse.DenseArray)
+	aSOAchan := make(chan *sparse.DenseArray)
+	go calcPartitioning(aVOCchan, aSOAchan)
+	bVOCchan := make(chan *sparse.DenseArray)
+	bSOAchan := make(chan *sparse.DenseArray)
+	go calcPartitioning(bVOCchan, bSOAchan)
 	NOxchan := make(chan *sparse.DenseArray)
 	pNOchan := make(chan *sparse.DenseArray)
 	go calcPartitioning(NOxchan, pNOchan)
@@ -221,9 +226,7 @@ func main() {
 	NO2chan := make(chan *sparse.DenseArray)
 	go calcPartitioning(NOchan, NO2chan)
 
-	// Get bSOA and total PM2.5 averages for performance eval.
-	bSOAchan := make(chan *sparse.DenseArray)
-	go average(bSOAchan)
+	// Get total PM2.5 averages for performance eval.
 	totalpm25Chan := make(chan *sparse.DenseArray)
 	go average(totalpm25Chan)
 
@@ -257,7 +260,8 @@ func main() {
 		luIndexChan, qCloudChan, swDownChan, glwChan, qrainChan2)
 
 	iterateTimeSteps("Reading data--pass 2: ",
-		readGasGroup(VOC, VOCchan), readParticleGroup(SOA, SOAchan),
+		readGasGroup(aVOC, aVOCchan), readParticleGroup(aSOA, aSOAchan),
+		readGasGroup(bVOC, bVOCchan), readParticleGroup(bSOA, bSOAchan),
 		readGasGroup(NOx, NOxchan), readParticleGroup(pNO, pNOchan),
 		readGasGroup(SOx, SOxchan), readParticleGroup(pS, pSchan),
 		readGasGroup(NH3, NH3chan), readParticleGroup(pNH, pNHchan),
@@ -279,10 +283,14 @@ func main() {
 		readSingleVar("GLW", glwChan))
 
 	// partitioning results
-	VOCchan <- nil
-	orgPartitioning := <-VOCchan
-	VOC := <-VOCchan
-	SOA := <-VOCchan
+	aVOCchan <- nil
+	aOrgPartitioning := <-aVOCchan
+	aVOC := <-aVOCchan
+	aSOA := <-aVOCchan
+	bVOCchan <- nil
+	bOrgPartitioning := <-bVOCchan
+	bVOC := <-bVOCchan
+	bSOA := <-bVOCchan
 	NOxchan <- nil
 	NOPartitioning := <-NOxchan
 	gNO := <-NOxchan
@@ -316,10 +324,6 @@ func main() {
 	NH3DryDep := <-Tchan
 	VOCDryDep := <-Tchan
 	Kxxyy := <-Tchan
-
-	// average biogenic SOA
-	bSOAchan <- nil
-	bsoa := <-bSOAchan
 
 	// average total pm2.5
 	totalpm25Chan <- nil
@@ -357,13 +361,20 @@ func main() {
 			"Average speed of wind going in +W direction", "m/s", wPlusSpeed},
 		"WMinusSpeed": dataHolder{[]string{"z", "y", "x"},
 			"Average speed of wind going in -W direction", "m/s", wMinusSpeed},
-		"OrgPartitioning": dataHolder{[]string{"z", "y", "x"},
-			"Mass fraction of organic matter in gas {vs. particle} phase",
-			"fraction", orgPartitioning},
-		"VOC": dataHolder{[]string{"z", "y", "x"},
-			"Average VOC concentration", "ug m-3", VOC},
-		"SOA": dataHolder{[]string{"z", "y", "x"},
-			"Average secondary organic aerosol concentration", "ug m-3", SOA},
+		"aOrgPartitioning": dataHolder{[]string{"z", "y", "x"},
+			"Mass fraction of anthropogenic organic matter in gas {vs. particle} phase",
+			"fraction", aOrgPartitioning},
+		"aVOC": dataHolder{[]string{"z", "y", "x"},
+			"Average anthropogenic VOC concentration", "ug m-3", aVOC},
+		"aSOA": dataHolder{[]string{"z", "y", "x"},
+			"Average antrhopogenic secondary organic aerosol concentration", "ug m-3", aSOA},
+		"bOrgPartitioning": dataHolder{[]string{"z", "y", "x"},
+			"Mass fraction of biogenic organic matter in gas {vs. particle} phase",
+			"fraction", bOrgPartitioning},
+		"bVOC": dataHolder{[]string{"z", "y", "x"},
+			"Average biogenic VOC concentration", "ug m-3", bVOC},
+		"bSOA": dataHolder{[]string{"z", "y", "x"},
+			"Average biogenic secondary organic aerosol concentration", "ug m-3", bSOA},
 		"NOPartitioning": dataHolder{[]string{"z", "y", "x"},
 			"Mass fraction of N from NOx in gas {vs. particle} phase", "fraction",
 			NOPartitioning},
@@ -439,9 +450,7 @@ func main() {
 		"alt": dataHolder{[]string{"z", "y", "x"},
 			"Inverse density", "m3 kg-1", alt},
 		"TotalPM25": dataHolder{[]string{"z", "y", "x"},
-			"Total PM2.5 concentration", "ug m-3", totalpm25},
-		"bSOA": dataHolder{[]string{"z", "y", "x"},
-			"Biogenic SOA concentration", "ug m-3", bsoa}}
+			"Total PM2.5 concentration", "ug m-3", totalpm25}}
 
 	for name, d := range data {
 		h.AddVariable(name, d.dims, []float32{0})
