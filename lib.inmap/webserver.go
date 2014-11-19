@@ -384,7 +384,11 @@ func (d *InMAPdata) VerticalProfile(variable string, lon, lat float64) (
 	x, y := carto.Degrees2meters(lon, lat)
 	loc := geom.Point{x, y}
 	for _, cell := range d.Data {
-		if geomop.Within(loc, cell.WebMapGeom) {
+		in, err := geomop.Within(loc, cell.WebMapGeom)
+		if err != nil {
+			panic(err)
+		}
+		if in {
 			for i := 0; i < d.Nlayers; i++ {
 				vals[i] = cell.getValue(variable)
 				height[i] = float64(i)

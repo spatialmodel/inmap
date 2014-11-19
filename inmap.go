@@ -221,13 +221,17 @@ func main() {
 			var intersection geom.T
 			switch e.g.(type) {
 			case geom.Point:
-				if geomop.Within(e.g, cell.Geom) {
+				in, err := geomop.Within(e.g, cell.Geom)
+				if err != nil {
+					panic(err)
+				}
+				if in {
 					intersection = e.g
 				} else {
 					continue
 				}
 			default:
-				intersection = geomop.Construct(e.g, cell.Geom,
+				intersection, err = geomop.Construct(e.g, cell.Geom,
 					geomop.INTERSECTION)
 				if err != nil {
 					panic(err)
