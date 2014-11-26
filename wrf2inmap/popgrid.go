@@ -50,7 +50,7 @@ type gridCell struct {
 	Temperature, S1, Sclass                          float64
 }
 
-func (c *gridCell) Bounds() *rtreego.Rect {
+func (c gridCell) Bounds() *rtreego.Rect {
 	return c.bbox
 }
 
@@ -60,11 +60,14 @@ func variableGrid(data map[string]dataHolder) {
 	if err.Error() != "No Error" {
 		panic(err)
 	}
+	fmt.Println("Loading population")
 	pop := loadPopulation(sr)
+	fmt.Println("Loading mortality")
 	mort := loadMortality(sr)
+	fmt.Println("Loaded mortality")
 	filePrefix := filepath.Join(config.OutputDir, config.OutputFilePrefix)
 	kmax := data["UPlusSpeed"].data.Shape[0]
-	var cellsBelow []*gridCell
+	var cellsBelow []gridCell
 	var cellTreeBelow *rtreego.Rtree
 	var cellTreeGroundLevel *rtreego.Rtree
 	id := 0
@@ -89,11 +92,11 @@ func variableGrid(data map[string]dataHolder) {
 			panic(err)
 		}
 
-		var cells []*gridCell
+		var cells []gridCell
 		if k < config.HiResLayers {
-			cells, _ = createCells(config.Xnests, config.Ynests, nil, pop, mort)
+			cells = createCells(config.Xnests, config.Ynests, nil, pop, mort)
 		} else { // no nested grids above the boundary layer
-			cells, _ = createCells(config.Xnests[0:1], config.Ynests[0:1],
+			cells = createCells(config.Xnests[0:1], config.Ynests[0:1],
 				nil, pop, mort)
 		}
 		cellTree := rtreego.NewTree(2, 25, 50)
@@ -136,7 +139,7 @@ func variableGrid(data map[string]dataHolder) {
 }
 
 // sort the cells so that the order doesn't change between program runs.
-func sortCells(cells []*gridCell) {
+func sortCells(cells []gridCell) {
 	sc := &cellsSorter{
 		cells: cells,
 	}
@@ -144,7 +147,7 @@ func sortCells(cells []*gridCell) {
 }
 
 type cellsSorter struct {
-	cells []*gridCell
+	cells []gridCell
 }
 
 // Len is part of sort.Interface.
@@ -172,11 +175,12 @@ func (c *cellsSorter) Less(i, j int) bool {
 			return false
 		}
 	}
-	panic("Problem sorting")
+	panic(fmt.Errorf("Problem sorting: iindex: %v, jindex: %v",
+		iindex, jindex))
 	return false
 }
 
-func getNeighborsHorizontal(cells []*gridCell, cellTree *rtreego.Rtree) {
+func getNeighborsHorizontal(cells []gridCell, cellTree *rtreego.Rtree) {
 	for _, cell := range cells {
 		b := geom.NewBounds()
 		b = cell.Geom.Bounds(b)
@@ -196,7 +200,7 @@ func getNeighborsHorizontal(cells []*gridCell, cellTree *rtreego.Rtree) {
 	}
 }
 
-func getNeighborsAbove(cells []*gridCell, aboveCellTree *rtreego.Rtree) {
+func getNeighborsAbove(cells []gridCell, aboveCellTree *rtreego.Rtree) {
 	for _, cell := range cells {
 		b := geom.NewBounds()
 		b = cell.Geom.Bounds(b)
@@ -206,7 +210,7 @@ func getNeighborsAbove(cells []*gridCell, aboveCellTree *rtreego.Rtree) {
 		cell.IAbove = getIndexes(aboveCellTree, abovebox)
 	}
 }
-func getNeighborsBelow(cells []*gridCell, belowCellTree *rtreego.Rtree) {
+func getNeighborsBelow(cells []gridCell, belowCellTree *rtreego.Rtree) {
 	for _, cell := range cells {
 		b := geom.NewBounds()
 		b = cell.Geom.Bounds(b)
@@ -216,7 +220,7 @@ func getNeighborsBelow(cells []*gridCell, belowCellTree *rtreego.Rtree) {
 		cell.IBelow = getIndexes(belowCellTree, belowbox)
 	}
 }
-func getNeighborsGroundLevel(cells []*gridCell, groundlevelCellTree *rtreego.Rtree) {
+func getNeighborsGroundLevel(cells []gridCell, groundlevelCellTree *rtreego.Rtree) {
 	for _, cell := range cells {
 		b := geom.NewBounds()
 		b = cell.Geom.Bounds(b)
@@ -231,7 +235,7 @@ func getIndexes(cellTree *rtreego.Rtree, box *rtreego.Rect) []int {
 	x := cellTree.SearchIntersect(box)
 	indexes := make([]int, len(x))
 	for i, xx := range x {
-		indexes[i] = xx.(*gridCell).Row
+		indexes[i] = xx.(gridCell).Row
 	}
 	return indexes
 }
@@ -249,14 +253,14 @@ func newRect(xmin, ymin, xmax, ymax float64) *rtreego.Rect {
 type JsonHolder struct {
 	Type       string
 	Geometry   *geojson.Geometry
-	Properties *gridCell
+	Properties gridCell
 }
 type JsonHolderHolder struct {
 	Proj4, Type string
 	Features    []*JsonHolder
 }
 
-func writeJsonAndGob(cells []*gridCell, k int) {
+func writeJsonAndGob(cells []gridCell, k int) {
 	var err error
 	outData := new(JsonHolderHolder)
 	outData.Proj4 = config.GridProj
@@ -323,19 +327,28 @@ func writeJsonAndGob(cells []*gridCell, k int) {
 }
 
 // Cycle through all of the indicies in the given nest.
-// For each index first recursively create all of the grid cells for
+// For each index first recursively create the grid
+// cell in the current nest and all of the grid cells for
 // all of the nests inside of this one using the same rules
-// described here. If all the gridcells in all of the
-// nests inside of this one are below the population threshold,
-// then discard the inner nests and create a grid cell in the given
-// nest. If at least one of the grid cells in the inner nests is
+// described here. If the current grid cell and
+// all the gridcells in all of the
+// nests inside of this one are below the population thresholds
+// (for both total population and population density),
+// then discard the inner nests and keep the grid cell in the current
+// nest. If the current nest grid cell or at least one of the grid cells
+// in the inner nests is
 // above the population threshold, then keep the grid cells from
-// the inner nests and don't create a grid cell for the current nest.
+// the inner nests and discard the grid cell in the current nest.
 func createCells(localxNests, localyNests []int, index [][2]int,
-	pop, mort *rtreego.Rtree) ([]*gridCell, bool) {
+	pop, mort *rtreego.Rtree) []gridCell {
 
-	cells := make([]*gridCell, 0)
-	allCellsBelowCutoff := true
+	var nextNestCells []gridCell
+	var cell, tempCell gridCell
+	arrayCap := 0
+	for ii := 0; ii < len(localyNests); ii++ {
+		arrayCap += localyNests[ii] * localxNests[ii]
+	}
+	cells := make([]gridCell, 0, arrayCap)
 	// Iterate through indices and send them to the concurrent cell generator
 	for j := 0; j < localyNests[0]; j++ {
 		for i := 0; i < localxNests[0]; i++ {
@@ -344,53 +357,68 @@ func createCells(localxNests, localyNests []int, index [][2]int,
 				newIndex = append(newIndex, i)
 			}
 			newIndex = append(newIndex, [2]int{i, j})
+			// Create the cell in this nest
+			cell = CreateCell(pop, mort, newIndex)
 			if len(localxNests) > 1 {
 				// If this isn't the innermost nest, recursively create all of
 				// the cells in all the nests inside of this one.
-				nextNestCells, allNextNestCellsBelowCutoff :=
-					createCells(localxNests[1:],
-						localyNests[1:], newIndex, pop, mort)
-				// If all of the cells in the next nest are below the
-				// population cutoffs (for both density and total population),
-				// then create the cell in this
-				// nest and add it to the array of cells to keep. Discard
-				// the cells in the next nest.
-				if allNextNestCellsBelowCutoff {
-					cell := CreateCell(pop, mort, newIndex)
-					cellPop := cell.PopData[config.PopGridColumn]
-					cells = append(cells, cell)
-					if cellPop/cell.Dx/cell.Dy > config.PopDensityCutoff ||
-						cellPop > config.PopCutoff {
-						allCellsBelowCutoff = false
-					}
-				} else {
-					// If at least one of the cells in the inner nests is
-					// above the population cutoffs, then keep the grid
-					// cells from the inner nests and don't create a grid
-					// cell for the current nest.
-					cells = append(cells, nextNestCells...)
-					// Since at least one of the next nest cells is above
-					// the cutoff, so is the current one.
-					allCellsBelowCutoff = false
-				}
-			} else {
-				// If this is the innermost nest, just create the cell
-				// and add it to the array of cells to keep.
-				cell := CreateCell(pop, mort, newIndex)
+				nextNestCells = createCells(localxNests[1:],
+					localyNests[1:], newIndex, pop, mort)
+
+				// Check whether the cell in this nest and all cells in the
+				// inner nests are below the population cutoffs.
+				allCellsBelowCutoff := true
 				cellPop := cell.PopData[config.PopGridColumn]
-				cells = append(cells, cell)
 				if cellPop/cell.Dx/cell.Dy > config.PopDensityCutoff ||
 					cellPop > config.PopCutoff {
 					allCellsBelowCutoff = false
 				}
+				for _, tempCell = range nextNestCells {
+					cellPop := tempCell.PopData[config.PopGridColumn]
+					if cellPop/tempCell.Dx/tempCell.Dy > config.PopDensityCutoff ||
+						cellPop > config.PopCutoff {
+						allCellsBelowCutoff = false
+					}
+				}
+				// If all of the cells in this nest and the next nests are below the
+				// population cutoffs (for both density and total population),
+				// then add the cell in this nest to the array of cells to keep. Discard
+				// the cells in the next nest.
+				if allCellsBelowCutoff {
+					cells = append(cells, cell)
+				} else {
+					// If at least one of the cells in this nest or the inner nests is
+					// above the population cutoffs, then keep the grid
+					// cells from the inner nests and discard grid
+					// cell for the current nest.
+					cells = append(cells, nextNestCells...)
+				}
+			} else {
+				// If this is the innermost nest, just add the
+				// current cell to the array of cells to keep.
+				cells = append(cells, cell)
 			}
 		}
 	}
-	return cells, allCellsBelowCutoff
+	return cells
 }
 
-func CreateCell(pop, mort *rtreego.Rtree, index [][2]int) (
-	cell *gridCell) {
+var cellCache map[string]gridCell
+
+func init() {
+	cellCache = make(map[string]gridCell)
+}
+
+func CreateCell(pop, mort *rtreego.Rtree, index [][2]int) gridCell {
+	// first, see if the cell is already in the cache.
+	cacheKey := ""
+	for _, v := range index {
+		cacheKey += fmt.Sprintf("(%v,%v)", v[0], v[1])
+	}
+	if tempCell, ok := cellCache[cacheKey]; ok {
+		cell := tempCell
+		return cell
+	}
 	var err error
 	xResFac, yResFac := 1., 1.
 	l := config.VariableGrid_x_o
@@ -406,7 +434,7 @@ func CreateCell(pop, mort *rtreego.Rtree, index [][2]int) (
 	r := l + config.VariableGrid_dx/xResFac
 	u := b + config.VariableGrid_dy/yResFac
 
-	cell = new(gridCell)
+	var cell gridCell
 	cell.PopData = make(map[string]float64)
 	cell.index = index
 	// Polygon must go counter-clockwise
@@ -447,10 +475,13 @@ func CreateCell(pop, mort *rtreego.Rtree, index [][2]int) (
 	cell.Dx = r - l
 	cell.Dy = u - b
 	// fmt.Println(index, cell.TotalPop, cell.Dx, cell.Dy)
-	return
+	// store a copy of the cell in the cache for later use.
+	tempCell := cell
+	cellCache[cacheKey] = tempCell
+	return cell
 }
 
-func writeCell(shp *gis.Shapefile, cell *gridCell) {
+func writeCell(shp *gis.Shapefile, cell gridCell) {
 	fieldIDs := []int{0, 1}
 	outData := make([]interface{}, len(config.CensusPopColumns)+3)
 	outData[0] = cell.Row
@@ -460,7 +491,7 @@ func writeCell(shp *gis.Shapefile, cell *gridCell) {
 		outData[i+2] = cell.PopData[col]
 	}
 	fieldIDs = append(fieldIDs, fieldIDs[len(fieldIDs)-1]+1)
-	outData = append(outData, cell.MortalityRate)
+	outData[len(config.CensusPopColumns)+2] = cell.MortalityRate
 	err := shp.WriteFeature(cell.Row, cell.Geom, fieldIDs, outData...)
 	if err != nil {
 		panic(err)
@@ -604,7 +635,7 @@ func loadMortality(sr gdal.SpatialReference) (
 	return
 }
 
-func getData(cells []*gridCell, data map[string]dataHolder, k int) {
+func getData(cells []gridCell, data map[string]dataHolder, k int) {
 	ctmtree := makeCTMgrid()
 	for _, cell := range cells {
 		cell.Layer = k

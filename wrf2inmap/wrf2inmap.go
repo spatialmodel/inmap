@@ -266,7 +266,6 @@ func main() {
 		readGasGroup(SOx, SOxchan), readParticleGroup(pS, pSchan),
 		readGasGroup(NH3, NH3chan), readParticleGroup(pNH, pNHchan),
 		readGasGroup(NO, NOchan), readGasGroup(NO2, NO2chan),
-		readParticleGroup(bSOA, bSOAchan),
 		readParticleGroup(totalPM25, totalpm25Chan),
 		readSingleVar("HFX", surfaceHeatFluxChan),
 		readSingleVar("UST", ustarChan),
