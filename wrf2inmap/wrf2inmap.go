@@ -5,12 +5,14 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"log"
 	"io/ioutil"
 	"math"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"path/filepath"
 	"runtime"
-	"runtime/pprof"
 	"strings"
 	"sync"
 	"time"
@@ -144,19 +146,12 @@ func init() {
 	runtime.GOMAXPROCS(config.Nprocs)
 }
 
-var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
-
 func main() {
 
 	flag.Parse()
-	if *cpuprofile != "" {
-		f, err := os.Create(*cpuprofile)
-		if err != nil {
-			panic(err)
-		}
-		pprof.StartCPUProfile(f)
-		defer pprof.StopCPUProfile()
-	}
+	go func() {
+		http.ListenAndServe("localhost:6060", nil)
+	}()
 
 	// calculate wind speed and direction
 	windDirectionChanU := make(chan *sparse.DenseArray)
@@ -492,7 +487,7 @@ func iterateTimeSteps(msg string, funcs ...cdfReaderFunc) {
 	delta, _ := time.ParseDuration("24h")
 	for now := start; now.Before(end); now = now.Add(delta) {
 		d := now.Format(wrfFormat)
-		fmt.Println(msg + d + "...")
+		log.Println(msg + d + "...")
 		file := strings.Replace(config.Wrfout, "[DATE]", d, -1)
 		filechan <- file
 	}
@@ -641,7 +636,7 @@ func calcPartitioning(gaschan, particlechan chan *sparse.DenseArray) {
 		gasdata := <-gaschan
 		if gasdata == nil {
 			partitioning := sparse.ZerosDense(gas.Shape...)
-			fmt.Println("Calculating partitioning...")
+			log.Println("Calculating partitioning...")
 			for i, gasval := range gas.Elements {
 				particleval := particle.Elements[i]
 				partitioning.Elements[i] = gasval / (gasval + particleval)

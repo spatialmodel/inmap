@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"math"
 	"os"
 	"path/filepath"
@@ -54,25 +55,38 @@ func (c gridCell) Bounds() *rtreego.Rect {
 	return c.bbox
 }
 
+func (c *gridCell) copyCell() *gridCell {
+	o := new(gridCell)
+	o.Geom = c.Geom
+	o.WebMapGeom = c.WebMapGeom
+	o.PopData = make(map[string]float64)
+	for key, val := range c.PopData {
+		o.PopData[key] = val
+	}
+	o.MortalityRate = c.MortalityRate
+	o.index = c.index
+	return o
+}
+
 func variableGrid(data map[string]dataHolder) {
 	sr := gdal.CreateSpatialReference("")
 	err := sr.FromProj4(config.GridProj)
 	if err.Error() != "No Error" {
 		panic(err)
 	}
-	fmt.Println("Loading population")
+	log.Println("Loading population")
 	pop := loadPopulation(sr)
-	fmt.Println("Loading mortality")
+	log.Println("Loading mortality")
 	mort := loadMortality(sr)
-	fmt.Println("Loaded mortality")
+	log.Println("Loaded mortality")
 	filePrefix := filepath.Join(config.OutputDir, config.OutputFilePrefix)
 	kmax := data["UPlusSpeed"].data.Shape[0]
-	var cellsBelow []gridCell
+	var cellsBelow []*gridCell
 	var cellTreeBelow *rtreego.Rtree
 	var cellTreeGroundLevel *rtreego.Rtree
 	id := 0
 	for k := 0; k < kmax; k++ {
-		fmt.Println("Creating variable grid for layer ", k)
+		log.Println("Creating variable grid for layer ", k)
 		os.Remove(fmt.Sprintf("%v_%v.shp", filePrefix, k))
 		os.Remove(fmt.Sprintf("%v_%v.shx", filePrefix, k))
 		os.Remove(fmt.Sprintf("%v_%v.dbf", filePrefix, k))
@@ -92,7 +106,7 @@ func variableGrid(data map[string]dataHolder) {
 			panic(err)
 		}
 
-		var cells []gridCell
+		var cells []*gridCell
 		if k < config.HiResLayers {
 			cells = createCells(config.Xnests, config.Ynests, nil, pop, mort)
 		} else { // no nested grids above the boundary layer
@@ -134,12 +148,12 @@ func variableGrid(data map[string]dataHolder) {
 		}
 		cellsBelow = cells
 		cellTreeBelow = cellTree
-		fmt.Println("Created variable grid for layer ", k)
+		log.Println("Created variable grid for layer ", k)
 	}
 }
 
 // sort the cells so that the order doesn't change between program runs.
-func sortCells(cells []gridCell) {
+func sortCells(cells []*gridCell) {
 	sc := &cellsSorter{
 		cells: cells,
 	}
@@ -147,7 +161,7 @@ func sortCells(cells []gridCell) {
 }
 
 type cellsSorter struct {
-	cells []gridCell
+	cells []*gridCell
 }
 
 // Len is part of sort.Interface.
@@ -180,7 +194,7 @@ func (c *cellsSorter) Less(i, j int) bool {
 	return false
 }
 
-func getNeighborsHorizontal(cells []gridCell, cellTree *rtreego.Rtree) {
+func getNeighborsHorizontal(cells []*gridCell, cellTree *rtreego.Rtree) {
 	for _, cell := range cells {
 		b := geom.NewBounds()
 		b = cell.Geom.Bounds(b)
@@ -200,7 +214,7 @@ func getNeighborsHorizontal(cells []gridCell, cellTree *rtreego.Rtree) {
 	}
 }
 
-func getNeighborsAbove(cells []gridCell, aboveCellTree *rtreego.Rtree) {
+func getNeighborsAbove(cells []*gridCell, aboveCellTree *rtreego.Rtree) {
 	for _, cell := range cells {
 		b := geom.NewBounds()
 		b = cell.Geom.Bounds(b)
@@ -210,7 +224,7 @@ func getNeighborsAbove(cells []gridCell, aboveCellTree *rtreego.Rtree) {
 		cell.IAbove = getIndexes(aboveCellTree, abovebox)
 	}
 }
-func getNeighborsBelow(cells []gridCell, belowCellTree *rtreego.Rtree) {
+func getNeighborsBelow(cells []*gridCell, belowCellTree *rtreego.Rtree) {
 	for _, cell := range cells {
 		b := geom.NewBounds()
 		b = cell.Geom.Bounds(b)
@@ -220,7 +234,7 @@ func getNeighborsBelow(cells []gridCell, belowCellTree *rtreego.Rtree) {
 		cell.IBelow = getIndexes(belowCellTree, belowbox)
 	}
 }
-func getNeighborsGroundLevel(cells []gridCell, groundlevelCellTree *rtreego.Rtree) {
+func getNeighborsGroundLevel(cells []*gridCell, groundlevelCellTree *rtreego.Rtree) {
 	for _, cell := range cells {
 		b := geom.NewBounds()
 		b = cell.Geom.Bounds(b)
@@ -235,7 +249,7 @@ func getIndexes(cellTree *rtreego.Rtree, box *rtreego.Rect) []int {
 	x := cellTree.SearchIntersect(box)
 	indexes := make([]int, len(x))
 	for i, xx := range x {
-		indexes[i] = xx.(gridCell).Row
+		indexes[i] = xx.(*gridCell).Row
 	}
 	return indexes
 }
@@ -253,14 +267,14 @@ func newRect(xmin, ymin, xmax, ymax float64) *rtreego.Rect {
 type JsonHolder struct {
 	Type       string
 	Geometry   *geojson.Geometry
-	Properties gridCell
+	Properties *gridCell
 }
 type JsonHolderHolder struct {
 	Proj4, Type string
 	Features    []*JsonHolder
 }
 
-func writeJsonAndGob(cells []gridCell, k int) {
+func writeJsonAndGob(cells []*gridCell, k int) {
 	var err error
 	outData := new(JsonHolderHolder)
 	outData.Proj4 = config.GridProj
@@ -340,15 +354,15 @@ func writeJsonAndGob(cells []gridCell, k int) {
 // above the population threshold, then keep the grid cells from
 // the inner nests and discard the grid cell in the current nest.
 func createCells(localxNests, localyNests []int, index [][2]int,
-	pop, mort *rtreego.Rtree) []gridCell {
+	pop, mort *rtreego.Rtree) []*gridCell {
 
-	var nextNestCells []gridCell
-	var cell, tempCell gridCell
+	var nextNestCells []*gridCell
+	var cell, tempCell *gridCell
 	arrayCap := 0
 	for ii := 0; ii < len(localyNests); ii++ {
 		arrayCap += localyNests[ii] * localxNests[ii]
 	}
-	cells := make([]gridCell, 0, arrayCap)
+	cells := make([]*gridCell, 0, arrayCap)
 	// Iterate through indices and send them to the concurrent cell generator
 	for j := 0; j < localyNests[0]; j++ {
 		for i := 0; i < localxNests[0]; i++ {
@@ -403,21 +417,20 @@ func createCells(localxNests, localyNests []int, index [][2]int,
 	return cells
 }
 
-var cellCache map[string]gridCell
+var cellCache map[string]*gridCell
 
 func init() {
-	cellCache = make(map[string]gridCell)
+	cellCache = make(map[string]*gridCell)
 }
 
-func CreateCell(pop, mort *rtreego.Rtree, index [][2]int) gridCell {
+func CreateCell(pop, mort *rtreego.Rtree, index [][2]int) *gridCell {
 	// first, see if the cell is already in the cache.
 	cacheKey := ""
 	for _, v := range index {
 		cacheKey += fmt.Sprintf("(%v,%v)", v[0], v[1])
 	}
 	if tempCell, ok := cellCache[cacheKey]; ok {
-		cell := tempCell
-		return cell
+		return tempCell.copyCell()
 	}
 	var err error
 	xResFac, yResFac := 1., 1.
@@ -434,19 +447,22 @@ func CreateCell(pop, mort *rtreego.Rtree, index [][2]int) gridCell {
 	r := l + config.VariableGrid_dx/xResFac
 	u := b + config.VariableGrid_dy/yResFac
 
-	var cell gridCell
+	cell := new(gridCell)
 	cell.PopData = make(map[string]float64)
 	cell.index = index
 	// Polygon must go counter-clockwise
 	cell.Geom = geom.Polygon{[][]geom.Point{{{l, b}, {r, b}, {r, u}, {l, u}, {l, b}}}}
-	cellBounds, err := gisconversions.GeomToRect(cell.Geom)
+	bbox, err := gisconversions.GeomToRect(cell.Geom)
 	if err != nil {
 		panic(err)
 	}
-	for _, pInterface := range pop.SearchIntersect(cellBounds) {
+	for _, pInterface := range pop.SearchIntersect(bbox) {
 		p := pInterface.(*population)
-		intersection := geomop.Construct(
+		intersection, err := geomop.Construct(
 			cell.Geom, p.Geom, geomop.INTERSECTION)
+		if err != nil {
+			panic(err)
+		}
 		area1 := geomop.Area(intersection)
 		area2 := geomop.Area(p.Geom) // we want to conserve the total population
 		if err != nil {
@@ -460,10 +476,13 @@ func CreateCell(pop, mort *rtreego.Rtree, index [][2]int) gridCell {
 			cell.PopData[popType] += pop * areaFrac
 		}
 	}
-	for _, mInterface := range mort.SearchIntersect(cellBounds) {
+	for _, mInterface := range mort.SearchIntersect(bbox) {
 		m := mInterface.(*mortality)
-		intersection := geomop.Construct(
+		intersection, err := geomop.Construct(
 			cell.Geom, m.Geom, geomop.INTERSECTION)
+		if err != nil {
+			panic(err)
+		}
 		area1 := geomop.Area(intersection)
 		area2 := geomop.Area(cell.Geom) // we want to conserve the average rate here, not the total
 		if area2 == 0. {
@@ -476,12 +495,11 @@ func CreateCell(pop, mort *rtreego.Rtree, index [][2]int) gridCell {
 	cell.Dy = u - b
 	// fmt.Println(index, cell.TotalPop, cell.Dx, cell.Dy)
 	// store a copy of the cell in the cache for later use.
-	tempCell := cell
-	cellCache[cacheKey] = tempCell
+	cellCache[cacheKey] = cell.copyCell()
 	return cell
 }
 
-func writeCell(shp *gis.Shapefile, cell gridCell) {
+func writeCell(shp *gis.Shapefile, cell *gridCell) {
 	fieldIDs := []int{0, 1}
 	outData := make([]interface{}, len(config.CensusPopColumns)+3)
 	outData[0] = cell.Row
@@ -635,13 +653,16 @@ func loadMortality(sr gdal.SpatialReference) (
 	return
 }
 
-func getData(cells []gridCell, data map[string]dataHolder, k int) {
+func getData(cells []*gridCell, data map[string]dataHolder, k int) {
 	ctmtree := makeCTMgrid()
 	for _, cell := range cells {
 		cell.Layer = k
 		ctmcells := ctmtree.SearchIntersect(cell.bbox)
 		ncells := float64(len(ctmcells))
 		if len(ctmcells) == 0. {
+			fmt.Println("bbox", cell.bbox)
+			fmt.Println("geom", cell.Geom)
+			fmt.Println("index", cell.index)
 			panic("No matching cells!")
 		}
 		for _, c := range ctmcells {

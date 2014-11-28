@@ -137,8 +137,8 @@ func (c *Cell) Chemistry(d *InMAPdata) {
 
 	// VOC/SOA partitioning
 	totalOrg := c.Cf[igOrg] + c.Cf[ipOrg]
-	c.Cf[igOrg] = totalOrg * c.OrgPartitioning
-	c.Cf[ipOrg] = totalOrg * (1 - c.OrgPartitioning)
+	c.Cf[igOrg] = totalOrg * c.AOrgPartitioning
+	c.Cf[ipOrg] = totalOrg * (1 - c.AOrgPartitioning)
 
 	// NH3 / NH4 partitioning
 	totalNH := c.Cf[igNH] + c.Cf[ipNH]
