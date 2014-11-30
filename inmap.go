@@ -72,11 +72,12 @@ func main() {
 	config := ReadConfigFile(*configFile)
 
 	fmt.Println("\n",
-		"-------------------------------------\n",
-		"             Welcome!\n",
-		"  (A)irshed (I)ntervention (M)odel\n",
-		"   Copyright 2013 Chris Tessum\n",
-		"-------------------------------------\n")
+		"------------------------------------------------\n",
+		"                    Welcome!\n",
+		"  (In)tervention (M)odel for (A)ir (P)ollution  \n",
+		"               Copyright 2013-2014              \n",
+		"     Regents of the University of Minnesota     \n",
+		"------------------------------------------------\n")
 
 	runtime.GOMAXPROCS(config.NumProcessors)
 
