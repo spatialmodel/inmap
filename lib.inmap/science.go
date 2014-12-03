@@ -110,13 +110,15 @@ func (c *Cell) belowAboveFlux(ii int) float64 {
 	return flux
 }
 
+const advectionFactor = 2.
+
 // Calculates advection in the cell based
 // on the upwind differences scheme.
 func (c *Cell) UpwindAdvection(Δt float64) {
 	for ii, _ := range c.Cf {
-		c.Cf[ii] += c.westEastFlux(ii) / c.Dx * Δt
-		c.Cf[ii] += c.southNorthFlux(ii) / c.Dy * Δt
-		c.Cf[ii] += c.belowAboveFlux(ii) / c.Dz * Δt
+		c.Cf[ii] += c.westEastFlux(ii) / c.Dx * Δt * advectionFactor
+		c.Cf[ii] += c.southNorthFlux(ii) / c.Dy * Δt * advectionFactor
+		c.Cf[ii] += c.belowAboveFlux(ii) / c.Dz * Δt * advectionFactor
 	}
 }
 

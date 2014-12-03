@@ -69,10 +69,10 @@ const (
 
 // These are the names of pollutants output by the model (μg/m3)
 var OutputVariables = []string{"VOC", "SOA", "PrimaryPM2_5", "NH3", "pNH4",
-	"SOx", "pSO4", "NOx", "pNO3", "TotalPM2_5",
-	"Total deaths", "White deaths", "Non-white deaths",
-	"High income deaths", "Low income deaths",
-	"High income white deaths", "Low income non-white deaths"}
+	"SOx", "pSO4", "NOx", "pNO3", "TotalPM2_5"}//,
+	//"Total deaths", "White deaths", "Non-white deaths",
+	//"High income deaths", "Low income deaths",
+	//"High income white deaths", "Low income non-white deaths"}
 
 // Run air quality model. Emissions are assumed to be in units
 // of μg/s, and must only include the pollutants listed in "EmisNames".

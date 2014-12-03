@@ -65,6 +65,9 @@ func (c *gridCell) copyCell() *gridCell {
 	}
 	o.MortalityRate = c.MortalityRate
 	o.index = c.index
+	o.Dx, o.Dy = c.Dx, c.Dy
+	o.bbox = c.bbox
+	o.MortalityRate = c.MortalityRate
 	return o
 }
 
@@ -116,10 +119,6 @@ func variableGrid(data map[string]dataHolder) {
 		cellTree := rtreego.NewTree(2, 25, 50)
 
 		for _, cell := range cells {
-			cell.bbox, err = gisconversions.GeomToRect(cell.Geom)
-			if err != nil {
-				panic(err)
-			}
 			cellTree.Insert(cell)
 		}
 		sortCells(cells)
@@ -452,11 +451,11 @@ func CreateCell(pop, mort *rtreego.Rtree, index [][2]int) *gridCell {
 	cell.index = index
 	// Polygon must go counter-clockwise
 	cell.Geom = geom.Polygon{[][]geom.Point{{{l, b}, {r, b}, {r, u}, {l, u}, {l, b}}}}
-	bbox, err := gisconversions.GeomToRect(cell.Geom)
+	cell.bbox, err = gisconversions.GeomToRect(cell.Geom)
 	if err != nil {
 		panic(err)
 	}
-	for _, pInterface := range pop.SearchIntersect(bbox) {
+	for _, pInterface := range pop.SearchIntersect(cell.bbox) {
 		p := pInterface.(*population)
 		intersection, err := geomop.Construct(
 			cell.Geom, p.Geom, geomop.INTERSECTION)
@@ -476,7 +475,7 @@ func CreateCell(pop, mort *rtreego.Rtree, index [][2]int) *gridCell {
 			cell.PopData[popType] += pop * areaFrac
 		}
 	}
-	for _, mInterface := range mort.SearchIntersect(bbox) {
+	for _, mInterface := range mort.SearchIntersect(cell.bbox) {
 		m := mInterface.(*mortality)
 		intersection, err := geomop.Construct(
 			cell.Geom, m.Geom, geomop.INTERSECTION)
