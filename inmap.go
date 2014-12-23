@@ -43,6 +43,8 @@ import (
 
 var configFile *string = flag.String("config", "none", "Path to configuration file")
 
+const version = "0.1.0"
+
 type configData struct {
 	InMAPdataTemplate    string   // Path to location of baseline meteorology and pollutant data, where [layer] is a stand-in for the model layer number. The files should be in Gob format (http://golang.org/pkg/encoding/gob/). Can include environment variables.
 	NumLayers            int      // Number of vertical layers to use in the model
@@ -75,6 +77,7 @@ func main() {
 		"------------------------------------------------\n",
 		"                    Welcome!\n",
 		"  (In)tervention (M)odel for (A)ir (P)ollution  \n",
+		"                Version "+version+"             \n",
 		"               Copyright 2013-2014              \n",
 		"     Regents of the University of Minnesota     \n",
 		"------------------------------------------------\n")
