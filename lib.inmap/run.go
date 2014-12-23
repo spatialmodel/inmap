@@ -69,10 +69,10 @@ const (
 
 // These are the names of pollutants output by the model (μg/m3)
 var OutputVariables = []string{"VOC", "SOA", "PrimaryPM2_5", "NH3", "pNH4",
-	"SOx", "pSO4", "NOx", "pNO3", "TotalPM2_5"}//,
-	//"Total deaths", "White deaths", "Non-white deaths",
-	//"High income deaths", "Low income deaths",
-	//"High income white deaths", "Low income non-white deaths"}
+	"SOx", "pSO4", "NOx", "pNO3", "TotalPM2_5"} //,
+//"Total deaths", "White deaths", "Non-white deaths",
+//"High income deaths", "Low income deaths",
+//"High income white deaths", "Low income non-white deaths"}
 
 // Run air quality model. Emissions are assumed to be in units
 // of μg/s, and must only include the pollutants listed in "EmisNames".
@@ -141,7 +141,7 @@ func (d *InMAPdata) Run(emissions map[string][]float64) (
 		// do some things while waiting for the science to finish
 		iteration++
 		nDaysRun += d.Dt * daysPerSecond
-		fmt.Printf("马上。。。Iteration %-4d  walltime=%6.3gh  Δwalltime=%4.2gs  "+
+		fmt.Printf("Iteration %-4d  walltime=%6.3gh  Δwalltime=%4.2gs  "+
 			"timestep=%2.0fs  day=%.3g\n",
 			iteration, time.Since(startTime).Hours(),
 			time.Since(timeStepTime).Seconds(), d.Dt, nDaysRun)
@@ -152,19 +152,21 @@ func (d *InMAPdata) Run(emissions map[string][]float64) (
 		if timeSinceLastCheck >= checkPeriod {
 			wg.Wait() // Wait for the science to finish, only when we need to check
 			// for convergence.
-			timeToQuit := true
+			//timeToQuit := true
 			timeSinceLastCheck = 0.
 			for ii, pol := range polNames {
 				var sum float64
 				for _, c := range d.Data {
 					sum += c.Cf[ii]
 				}
-				if !checkConvergence(sum, oldSum[ii], pol) {
-					timeToQuit = false
-				}
+				//if !checkConvergence(sum, oldSum[ii], pol) {
+				//timeToQuit = false
+				//}
+				checkConvergence(sum, oldSum[ii], pol)
 				oldSum[ii] = sum
 			}
-			if timeToQuit {
+			if iteration > 10000 {
+				//if timeToQuit {
 				break // leave calculation loop because we're finished
 			}
 		}
