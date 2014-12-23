@@ -66,7 +66,7 @@ func main() {
 	flag.Parse()
 	if *configFile == "" {
 		fmt.Println("Need to specify configuration file as in " +
-			"`aim -config=configFile.json`")
+			"`inmap -config=configFile.json`")
 		os.Exit(1)
 	}
 	config := ReadConfigFile(*configFile)
@@ -84,7 +84,6 @@ func main() {
 	fmt.Println("Reading input data...")
 	d := inmap.InitInMAPdata(config.InMAPdataTemplate,
 		config.NumLayers, config.HTTPport)
-	fmt.Println("Reading plume rise information...")
 
 	const (
 		ft2m     = 0.3048
@@ -250,7 +249,7 @@ func main() {
 			case geom.Point:
 				weightFactor = 1.
 			default:
-				panic(geomop.NewError(intersection))
+				panic(geomop.UnsupportedGeometryError{intersection})
 			}
 			var plumeRow int
 			if e.height > 0. { // calculate plume rise
