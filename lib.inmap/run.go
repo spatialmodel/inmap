@@ -81,6 +81,12 @@ var OutputVariables = []string{"VOC", "SOA", "PrimaryPM2_5", "NH3", "pNH4",
 func (d *InMAPdata) Run(emissions map[string][]float64) (
 	outputConc map[string][][]float64) {
 
+	for _, c := range d.Data {
+		c.Ci = make([]float64, len(polNames))
+		c.Cf = make([]float64, len(polNames))
+		c.emisFlux = make([]float64, len(polNames))
+	}
+
 	startTime := time.Now()
 	timeStepTime := time.Now()
 
