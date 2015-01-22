@@ -60,6 +60,7 @@ type configData struct {
 	// shapefile must be the same as the projection InMAP uses.
 	// Can include environment variables.
 	OutputTemplate string // Path to desired output file location, where [layer] is a stand-in for the model layer number. Can include environment variables.
+	OutputAllLayers bool // If true, output data for all model layers. If false, only output the lowest layer.
 	HTTPport       string // Port for hosting web page.
 	// If HTTPport is `8080`, then the GUI would be viewed by visiting `localhost:8080` in a web browser.
 }
@@ -279,7 +280,7 @@ func main() {
 	}
 
 	// Run model
-	finalConc := d.Run(emissions)
+	finalConc := d.Run(emissions, config.OutputAllLayers)
 
 	writeOutput(finalConc, d, config.OutputTemplate)
 
