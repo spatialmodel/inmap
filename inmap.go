@@ -20,11 +20,9 @@ package main
 
 import (
 	"bufio"
-	"encoding/csv"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -49,8 +47,6 @@ type configData struct {
 	InMAPdataTemplate    string   // Path to location of baseline meteorology and pollutant data, where [layer] is a stand-in for the model layer number. The files should be in Gob format (http://golang.org/pkg/encoding/gob/). Can include environment variables.
 	NumLayers            int      // Number of vertical layers to use in the model
 	NumProcessors        int      // Number of processors to use for calculations
-	GroundLevelEmissions string   // Path to ground level emissions csv file. Can include environment variables.
-	ElevatedEmissions    string   // Path to elevated emissions csv file. Can include environment variables.
 	EmissionsShapefiles  []string // Paths to emissions shapefiles.
 	// Can be elevated or ground level; elevated files need to have columns
 	// labeled "height", "diam", "temp", and "velocity" containing stack
@@ -89,56 +85,10 @@ func main() {
 	d := inmap.InitInMAPdata(config.InMAPdataTemplate,
 		config.NumLayers, config.HTTPport)
 
-	const (
-		ft2m     = 0.3048
-		height   = 75. * ft2m               // m
-		diam     = 11.28 * ft2m             // m
-		temp     = (377.-32)*5./9. + 273.15 // K
-		velocity = 61.94 * ft2m             // m/s
-	)
-
 	emissions := make(map[string][]float64)
 	for _, pol := range inmap.EmisNames {
 		if _, ok := emissions[pol]; !ok {
 			emissions[pol] = make([]float64, len(d.Data))
-		}
-	}
-
-	// Add in ground level emissions
-	if config.GroundLevelEmissions != "" {
-		fmt.Println("Loading ground level emissions file:\n",
-			config.GroundLevelEmissions)
-		groundLevelEmis := getEmissionsCSV(config.GroundLevelEmissions, d)
-		for pol, vals := range groundLevelEmis {
-			if _, ok := emissions[pol]; !ok {
-				emissions[pol] = make([]float64, len(d.Data))
-			}
-			for i, val := range vals {
-				emissions[pol][i] += val
-			}
-		}
-	}
-
-	// Add in elevated emissions
-	if config.ElevatedEmissions != "" {
-		fmt.Println("Loading elevated emissions file:\n",
-			config.ElevatedEmissions)
-		elevatedEmis := getEmissionsCSV(config.ElevatedEmissions, d)
-		// apply plume rise
-		for pol, elev := range elevatedEmis {
-			if _, ok := emissions[pol]; !ok {
-				emissions[pol] = make([]float64, len(d.Data))
-			}
-			for i, val := range elev {
-				if val != 0. {
-					plumeRow, err := d.CalcPlumeRise(
-						height, diam, temp, velocity, i)
-					if err != nil {
-						panic(err)
-					}
-					emissions[pol][plumeRow] += val
-				}
-			}
 		}
 	}
 
@@ -304,65 +254,6 @@ func (e emisRecord) Bounds() *rtreego.Rect {
 	return e.bounds
 }
 
-// Get the emissions from a csv file.
-// Input units = tons/year; output units = μg/s
-func getEmissionsCSV(filename string, d *inmap.InMAPdata) (
-	emissions map[string][]float64) {
-
-	const massConv = 907184740000.       // μg per short ton
-	const timeConv = 3600. * 8760.       // seconds per year
-	const emisConv = massConv / timeConv // convert tons/year to μg/s
-
-	emissions = make(map[string][]float64)
-	f, err := os.Open(filename)
-	if err != nil {
-		fmt.Println("Problem opening emissions file: ", err.Error())
-		os.Exit(1)
-	}
-	defer f.Close()
-	r := csv.NewReader(f)
-	vars, err := r.Read() // Pollutant names in the header
-	if err != nil {
-		if err == io.EOF {
-			return
-		}
-		panic(err)
-	}
-	for _, Var := range vars {
-		if Var == "CO" || Var == "PM10" || Var == "CH4" {
-			continue
-		}
-		emissions[polTrans(Var)] = make([]float64, d.LayerEnd[0]-d.LayerStart[0])
-	}
-	row := 0
-	for {
-		record, err := r.Read()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			panic(err)
-		}
-		for i, Var := range vars {
-			if Var == "CO" || Var == "PM10" || Var == "CH4" {
-				continue
-			}
-			emissions[polTrans(Var)][row] = s2f(record[i]) * emisConv
-		}
-		row++
-	}
-	return
-}
-
-func polTrans(pol string) string {
-	switch pol {
-	case "PM2.5":
-		return "PM2_5"
-	default:
-		return pol
-	}
-}
-
 type JsonHolder struct {
 	Type       string
 	Geometry   *geojson.Geometry
@@ -467,8 +358,6 @@ func ReadConfigFile(filename string) (config *configData) {
 	}
 
 	config.InMAPdataTemplate = os.ExpandEnv(config.InMAPdataTemplate)
-	config.GroundLevelEmissions = os.ExpandEnv(config.GroundLevelEmissions)
-	config.ElevatedEmissions = os.ExpandEnv(config.ElevatedEmissions)
 	config.OutputTemplate = os.ExpandEnv(config.OutputTemplate)
 
 	for i := 0; i < len(config.EmissionsShapefiles); i++ {
