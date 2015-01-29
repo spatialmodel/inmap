@@ -267,7 +267,7 @@ func (d *InMAPdata) mapHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	vals := d.toArray(name, layer)
-	geometry := d.getGeometry(layer)
+	geometry := d.GetGeometry(layer)
 	m := carto.NewMapData(len(vals), carto.LinCutoff)
 	m.Cmap.AddArray(vals)
 	m.Cmap.Set()

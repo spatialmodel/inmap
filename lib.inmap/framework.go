@@ -263,7 +263,9 @@ func InitInMAPdata(filetemplate string, nLayers int, httpPort string) *InMAPdata
 	wg.Wait()
 	d.setTstepCFL() // Set time step
 	//d.setTstepRuleOfThumb() // Set time step
-	go d.WebServer(httpPort)
+	if httpPort != "" {
+		go d.WebServer(httpPort)
+	}
 	return d
 }
 
@@ -530,7 +532,7 @@ func (d *InMAPdata) getUnits(varName string) string {
 	return o
 }
 
-func (d *InMAPdata) getGeometry(layer int) []geom.T {
+func (d *InMAPdata) GetGeometry(layer int) []geom.T {
 	o := make([]geom.T, d.LayerEnd[layer]-d.LayerStart[layer])
 	for i, c := range d.Data[d.LayerStart[layer]:d.LayerEnd[layer]] {
 		o[i] = c.WebMapGeom
