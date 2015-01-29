@@ -122,6 +122,8 @@ func (c *Cell) UpwindAdvection(Δt float64) {
 	}
 }
 
+const ammoniaFactor = 4.
+
 // Calculates the secondary formation of PM2.5.
 // Explicitely calculates formation of particulate sulfate
 // from gaseous and aqueous SO2.
@@ -134,24 +136,33 @@ func (c *Cell) Chemistry(d *InMAPdata) {
 	// All SO4 forms particles, so sulfur particle formation is limited by the
 	// SO2 -> SO4 reaction.
 	ΔS := c.SO2oxidation * c.Cf[igS] * d.Dt
-	c.Cf[igS] -= ΔS
 	c.Cf[ipS] += ΔS
-
-	// VOC/SOA partitioning
-	totalOrg := c.Cf[igOrg] + c.Cf[ipOrg]
-	c.Cf[igOrg] = totalOrg * c.AOrgPartitioning
-	c.Cf[ipOrg] = totalOrg * (1 - c.AOrgPartitioning)
+	c.Cf[igS] -= ΔS
 
 	// NH3 / NH4 partitioning
+	// Assume that NH4 formation (but not evaporation)
+	// is limited by SO4 formation.
 	totalNH := c.Cf[igNH] + c.Cf[ipNH]
-	c.Cf[igNH] = totalNH * c.NHPartitioning
-	c.Cf[ipNH] = totalNH * (1 - c.NHPartitioning)
+	// Caclulate difference from equilibrium particulate NH conc.
+	eqNHpDistance := totalNH*c.NHPartitioning - c.Cf[ipNH]
+	if eqNHpDistance > 0. { // particles will form
+		ΔNH := min(max(ammoniaFactor*ΔS*mwN/mwS, 0.), eqNHpDistance)
+		c.Cf[ipNH] += ΔNH
+		c.Cf[igNH] -= ΔNH
+	} else {
+		c.Cf[ipNH] += eqNHpDistance
+		c.Cf[igNH] -= eqNHpDistance
+	}
 
 	// NOx / pN0 partitioning
 	totalNO := c.Cf[igNO] + c.Cf[ipNO]
-	c.Cf[igNO] = totalNO * c.NOPartitioning
-	c.Cf[ipNO] = totalNO * (1 - c.NOPartitioning)
+	c.Cf[ipNO] = totalNO * c.NOPartitioning
+	c.Cf[igNO] = totalNO * (1 - c.NOPartitioning)
 
+	// VOC/SOA partitioning
+	totalOrg := c.Cf[igOrg] + c.Cf[ipOrg]
+	c.Cf[ipOrg] = totalOrg * c.AOrgPartitioning
+	c.Cf[igOrg] = totalOrg * (1 - c.AOrgPartitioning)
 }
 
 // Calculates particle removal by dry deposition

@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"log"
 	"io/ioutil"
+	"log"
 	"math"
 	"net/http"
 	_ "net/http/pprof"
@@ -356,21 +356,21 @@ func main() {
 		"WMinusSpeed": dataHolder{[]string{"z", "y", "x"},
 			"Average speed of wind going in -W direction", "m/s", wMinusSpeed},
 		"aOrgPartitioning": dataHolder{[]string{"z", "y", "x"},
-			"Mass fraction of anthropogenic organic matter in gas {vs. particle} phase",
+			"Mass fraction of anthropogenic organic matter in particle {vs. gas} phase",
 			"fraction", aOrgPartitioning},
 		"aVOC": dataHolder{[]string{"z", "y", "x"},
 			"Average anthropogenic VOC concentration", "ug m-3", aVOC},
 		"aSOA": dataHolder{[]string{"z", "y", "x"},
-			"Average antrhopogenic secondary organic aerosol concentration", "ug m-3", aSOA},
+			"Average anthropogenic secondary organic aerosol concentration", "ug m-3", aSOA},
 		"bOrgPartitioning": dataHolder{[]string{"z", "y", "x"},
-			"Mass fraction of biogenic organic matter in gas {vs. particle} phase",
+			"Mass fraction of biogenic organic matter in particle {vs. gas} phase",
 			"fraction", bOrgPartitioning},
 		"bVOC": dataHolder{[]string{"z", "y", "x"},
 			"Average biogenic VOC concentration", "ug m-3", bVOC},
 		"bSOA": dataHolder{[]string{"z", "y", "x"},
 			"Average biogenic secondary organic aerosol concentration", "ug m-3", bSOA},
 		"NOPartitioning": dataHolder{[]string{"z", "y", "x"},
-			"Mass fraction of N from NOx in gas {vs. particle} phase", "fraction",
+			"Mass fraction of N from NOx in particle {vs. gas} phase", "fraction",
 			NOPartitioning},
 		"gNO": dataHolder{[]string{"z", "y", "x"},
 			"Average concentration of nitrogen fraction of gaseous NOx", "ug m-3",
@@ -379,7 +379,7 @@ func main() {
 			"Average concentration of nitrogen fraction of particulate NO3",
 			"ug m-3", pNO},
 		"SPartitioning": dataHolder{[]string{"z", "y", "x"},
-			"Mass fraction of S from SOx in gas {vs. particle} phase", "fraction",
+			"Mass fraction of S from SOx in particle {vs. gas} phase", "fraction",
 			SPartitioning},
 		"gS": dataHolder{[]string{"z", "y", "x"},
 			"Average concentration of sulfur fraction of gaseous SOx", "ug m-3",
@@ -388,7 +388,7 @@ func main() {
 			"Average concentration of sulfur fraction of particulate sulfate",
 			"ug m-3", pS},
 		"NHPartitioning": dataHolder{[]string{"z", "y", "x"},
-			"Mass fraction of N from NH3 in gas {vs. particle} phase", "fraction",
+			"Mass fraction of N from NH3 in particle {vs. gas} phase", "fraction",
 			NHPartitioning},
 		"gNH": dataHolder{[]string{"z", "y", "x"},
 			"Average concentration of nitrogen fraction of gaseous ammonia",
@@ -629,33 +629,76 @@ func writeNCF(f *cdf.File, Var string, data *sparse.DenseArray) {
 	}
 }
 
+//func calcPartitioning(gaschan, particlechan chan *sparse.DenseArray) {
+//	var gas, particle *sparse.DenseArray
+//	firstData := true
+//	for {
+//		gasdata := <-gaschan
+//		if gasdata == nil {
+//			partitioning := sparse.ZerosDense(gas.Shape...)
+//			log.Println("Calculating partitioning...")
+//			for i, gasval := range gas.Elements {
+//				particleval := particle.Elements[i]
+//				partitioning.Elements[i] = gasval / (gasval + particleval)
+//				gas.Elements[i] /= numTsteps
+//				particle.Elements[i] /= numTsteps
+//			}
+//			gaschan <- partitioning
+//			gaschan <- gas
+//			gaschan <- particle
+//			return
+//		}
+//		particledata := <-particlechan
+//		if firstData {
+//			gas = sparse.ZerosDense(gasdata.Shape...)
+//			particle = sparse.ZerosDense(particledata.Shape...)
+//			firstData = false
+//		}
+//		gas.AddDense(gasdata)
+//		particle.AddDense(particledata)
+//	}
+//}
+
+// Calculate marginal partitioning
 func calcPartitioning(gaschan, particlechan chan *sparse.DenseArray) {
-	var gas, particle *sparse.DenseArray
+	var gas, particle, oldgas, oldparticle, partitioning *sparse.DenseArray
 	firstData := true
 	for {
 		gasdata := <-gaschan
 		if gasdata == nil {
-			partitioning := sparse.ZerosDense(gas.Shape...)
-			log.Println("Calculating partitioning...")
-			for i, gasval := range gas.Elements {
-				particleval := particle.Elements[i]
-				partitioning.Elements[i] = gasval / (gasval + particleval)
-				gas.Elements[i] /= numTsteps
-				particle.Elements[i] /= numTsteps
-			}
-			gaschan <- partitioning
-			gaschan <- gas
-			gaschan <- particle
+			// Divide the arrays by the total number of timesteps and return.
+			gaschan <- arrayAverage(partitioning)
+			gaschan <- arrayAverage(gas)
+			gaschan <- arrayAverage(particle)
 			return
 		}
 		particledata := <-particlechan
 		if firstData {
+			// In the first time step, just copy the arrays to the
+			// old arrays; don't do any calculations.
+			partitioning = sparse.ZerosDense(gasdata.Shape...)
 			gas = sparse.ZerosDense(gasdata.Shape...)
-			particle = sparse.ZerosDense(particledata.Shape...)
+			particle = sparse.ZerosDense(gasdata.Shape...)
+			oldgas = gasdata.Copy()
+			oldparticle = particledata.Copy()
 			firstData = false
+			continue
 		}
 		gas.AddDense(gasdata)
 		particle.AddDense(particledata)
+		for i, particleval := range particledata.Elements {
+			particlechange := particleval - oldparticle.Elements[i]
+			totalchange := particlechange + (gasdata.Elements[i] -
+				oldgas.Elements[i])
+			// Calculate the marginal partitioning coefficient, which is the
+			// change in particle concentration divided by the change in overall
+			// concentration. Force the coefficient to be between zero and
+			// one.
+			partitioning.Elements[i] +=
+				math.Min(math.Max(particlechange/totalchange, 0), 1)
+		}
+		oldgas = gasdata.Copy()
+		oldparticle = particledata.Copy()
 	}
 }
 

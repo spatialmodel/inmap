@@ -23,11 +23,12 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"reflect"
 	"runtime"
 	"strings"
 	"sync"
 
-	//"bitbucket.org/ctessum/aqhealth"
+	"bitbucket.org/ctessum/aqhealth"
 	"github.com/twpayne/gogeom/geom"
 )
 
@@ -50,66 +51,72 @@ func init() {
 
 // Data for a single grid cell
 type Cell struct {
-	Geom                           geom.T             // Cell geometry
-	WebMapGeom                     geom.T             // Cell geometry in web map (mercator) coordinate system
-	UPlusSpeed, UMinusSpeed        float64            // [m/s]
-	VPlusSpeed, VMinusSpeed        float64            // [m/s]
-	WPlusSpeed, WMinusSpeed        float64            // [m/s]
-	AOrgPartitioning               float64            // gaseous fraction
-	BOrgPartitioning               float64            // gaseous fraction
-	SPartitioning                  float64            // gaseous fraction
-	NOPartitioning, NHPartitioning float64            // gaseous fraction
-	ParticleWetDep, SO2WetDep      float64            // wet deposition rate [1/s]
-	OtherGasWetDep                 float64            // wet deposition rate [1/s]
-	ParticleDryDep, NH3DryDep      float64            // Dry deposition velocities [m/s]
-	SO2DryDep, VOCDryDep           float64            // Dry deposition velocities [m/s]
-	NOxDryDep                      float64            // Dry deposition velocities [m/s]
-	SO2oxidation                   float64            // SO2 oxidation to SO4 by HO and H2O2 [1/s]
-	Kzz                            float64            // Grid center vertical diffusivity after applying convective fraction [m2/s]
-	KzzAbove, KzzBelow             []float64          // horizontal diffusivity [m2/s] (staggered grid)
-	Kxxyy                          float64            // Grid center horizontal diffusivity [m2/s]
-	KyySouth, KyyNorth             []float64          // horizontal diffusivity [m2/s] (staggered grid)
-	KxxWest, KxxEast               []float64          // horizontal diffusivity at [m2/s] (staggered grid)
-	M2u                            float64            // ACM2 upward mixing (Pleim 2007) [1/s]
-	M2d                            float64            // ACM2 downward mixing (Pleim 2007) [1/s]
-	PopData                        map[string]float64 // Population for multiple demographics [people/grid cell]
-	AllCauseMortality              float64            // Baseline mortalities per 100,000 people per year
-	Dx, Dy, Dz                     float64            // grid size [meters]
-	Volume                         float64            // [cubic meters]
-	Row                            int                // master cell index
-	Ci                             []float64          // concentrations at beginning of time step [μg/m3]
-	Cf                             []float64          // concentrations at end of time step [μg/m3]
-	emisFlux                       []float64          //  emissions [μg/m3/s]
-	West                           []*Cell            // Neighbors to the East
-	East                           []*Cell            // Neighbors to the West
-	South                          []*Cell            // Neighbors to the South
-	North                          []*Cell            // Neighbors to the North
-	Below                          []*Cell            // Neighbors below
-	Above                          []*Cell            // Neighbors above
-	GroundLevel                    []*Cell            // Neighbors at ground level
-	WestFrac, EastFrac             []float64          // Fraction of cell covered by each neighbor (adds up to 1).
-	NorthFrac, SouthFrac           []float64          // Fraction of cell covered by each neighbor (adds up to 1).
-	AboveFrac, BelowFrac           []float64          // Fraction of cell covered by each neighbor (adds up to 1).
-	GroundLevelFrac                []float64          // Fraction of cell above to each ground level cell (adds up to 1).
-	IWest                          []int              // Row indexes of neighbors to the East
-	IEast                          []int              // Row indexes of neighbors to the West
-	ISouth                         []int              // Row indexes of neighbors to the South
-	INorth                         []int              // Row indexes of neighbors to the north
-	IBelow                         []int              // Row indexes of neighbors below
-	IAbove                         []int              // Row indexes of neighbors above
-	IGroundLevel                   []int              // Row indexes of neighbors at ground level
-	DxPlusHalf                     []float64          // Distance between centers of cell and East [m]
-	DxMinusHalf                    []float64          // Distance between centers of cell and West [m]
-	DyPlusHalf                     []float64          // Distance between centers of cell and North [m]
-	DyMinusHalf                    []float64          // Distance between centers of cell and South [m]
-	DzPlusHalf                     []float64          // Distance between centers of cell and Above [m]
-	DzMinusHalf                    []float64          // Distance between centers of cell and Below [m]
-	Layer                          int                // layer index of grid cell
-	Temperature                    float64            // Average temperature, K
-	WindSpeed                      float64            // RMS wind speed, [m/s]
-	S1                             float64            // stability parameter [?]
-	SClass                         float64            // stability class: "0=Unstable; 1=Stable
-	lock                           sync.RWMutex       // Avoid cell being written by one subroutine and read by another at the same time.
+	Geom                    geom.T             // Cell geometry
+	WebMapGeom              geom.T             // Cell geometry in web map (mercator) coordinate system
+	UPlusSpeed              float64            `desc:"Westerly wind speed" units:"m/s"`
+	UMinusSpeed             float64            `desc:"Easterly wind speed" units:"m/s"`
+	VPlusSpeed              float64            `desc:"Southerly wind speed" units:"m/s"`
+	VMinusSpeed             float64            `desc:"Northerly wind speed" units:"m/s"`
+	WPlusSpeed, WMinusSpeed float64            `desc:"Upwardly wind speed" units:"m/s"`
+	AOrgPartitioning        float64            `desc:"Organic particle partitioning" units:"fraction particles"`
+	BOrgPartitioning        float64            // particle fraction
+	SPartitioning           float64            `desc:"Sulfur particle partitioning" units:"fraction particles"`
+	NOPartitioning          float64            `desc:"Nitrate particle partitioning" units:"fraction particles"`
+	NHPartitioning          float64            `desc:"Ammonium particle partitioning" units:"fraction particles"`
+	ParticleWetDep          float64            `desc:"Particle wet deposition" units:"1/s"`
+	SO2WetDep               float64            `desc:"SO2 wet deposition" units:"1/s"`
+	OtherGasWetDep          float64            `desc:"Wet deposition: other gases" units:"1/s"`
+	ParticleDryDep          float64            `desc:"Particle dry deposition" units:"m/s"`
+	NH3DryDep               float64            `desc:"Ammonia dry deposition" units:"m/s"`
+	SO2DryDep               float64            `desc:"SO2 dry deposition" units:"m/s"`
+	VOCDryDep               float64            `desc:"VOC dry deposition" units:"m/s"`
+	NOxDryDep               float64            `desc:"NOx dry deposition" units:"m/s"`
+	SO2oxidation            float64            `desc:"SO2 oxidation to SO4 by HO and H2O2" units:"1/s"`
+	Kzz                     float64            `desc:"Grid center vertical diffusivity after applying convective fraction" units:"m²/s"`
+	KzzAbove, KzzBelow      []float64          // horizontal diffusivity [m2/s] (staggered grid)
+	Kxxyy                   float64            `desc:"Grid center horizontal diffusivity" units:"m²/s"`
+	KyySouth, KyyNorth      []float64          // horizontal diffusivity [m2/s] (staggered grid)
+	KxxWest, KxxEast        []float64          // horizontal diffusivity at [m2/s] (staggered grid)
+	M2u                     float64            `desc:"ACM2 upward mixing (Pleim 2007)" units:"1/s"`
+	M2d                     float64            `desc:"ACM2 downward mixing (Pleim 2007)" units:"1/s"`
+	PopData                 map[string]float64 // Population for multiple demographics [people/grid cell]
+	AllCauseMortality       float64            `desc:"Baseline mortalities rate" units:"Deaths per 100,000 people per year"`
+	Dx, Dy, Dz              float64            // grid size [meters]
+	Volume                  float64            `desc:"Cell volume" units:"m³"`
+	Row                     int                // master cell index
+	Ci                      []float64          // concentrations at beginning of time step [μg/m³]
+	Cf                      []float64          // concentrations at end of time step [μg/m³]
+	emisFlux                []float64          // emissions [μg/m³/s]
+	West                    []*Cell            // Neighbors to the East
+	East                    []*Cell            // Neighbors to the West
+	South                   []*Cell            // Neighbors to the South
+	North                   []*Cell            // Neighbors to the North
+	Below                   []*Cell            // Neighbors below
+	Above                   []*Cell            // Neighbors above
+	GroundLevel             []*Cell            // Neighbors at ground level
+	WestFrac, EastFrac      []float64          // Fraction of cell covered by each neighbor (adds up to 1).
+	NorthFrac, SouthFrac    []float64          // Fraction of cell covered by each neighbor (adds up to 1).
+	AboveFrac, BelowFrac    []float64          // Fraction of cell covered by each neighbor (adds up to 1).
+	GroundLevelFrac         []float64          // Fraction of cell above to each ground level cell (adds up to 1).
+	IWest                   []int              // Row indexes of neighbors to the East
+	IEast                   []int              // Row indexes of neighbors to the West
+	ISouth                  []int              // Row indexes of neighbors to the South
+	INorth                  []int              // Row indexes of neighbors to the north
+	IBelow                  []int              // Row indexes of neighbors below
+	IAbove                  []int              // Row indexes of neighbors above
+	IGroundLevel            []int              // Row indexes of neighbors at ground level
+	DxPlusHalf              []float64          // Distance between centers of cell and East [m]
+	DxMinusHalf             []float64          // Distance between centers of cell and West [m]
+	DyPlusHalf              []float64          // Distance between centers of cell and North [m]
+	DyMinusHalf             []float64          // Distance between centers of cell and South [m]
+	DzPlusHalf              []float64          // Distance between centers of cell and Above [m]
+	DzMinusHalf             []float64          // Distance between centers of cell and Below [m]
+	Layer                   int                // layer index of grid cell
+	Temperature             float64            `desc:"Average temperature" units:"K"`
+	WindSpeed               float64            `desc:"RMS wind speed" units:"m/s"`
+	S1                      float64            `desc:"Stability parameter" units:"?"`
+	SClass                  float64            `desc:"Stability class" units:"0=Unstable; 1=Stable"`
+	lock                    sync.RWMutex       // Avoid cell being written by one subroutine and read by another at the same time.
 }
 
 func (c *Cell) prepare() {
@@ -361,6 +368,7 @@ func (d *InMAPdata) setTstepCFL() {
 			d.Dt = amin(d.Dt, dt1, dt2, dt3, dt4) // seconds
 		}
 	}
+	d.Dt /= advectionFactor
 }
 
 //  Set the time step using the WRF rule of thumb.
@@ -372,11 +380,6 @@ func harmonicMean(a, b float64) float64 {
 	return 2. * a * b / (a + b)
 }
 
-func (c *Cell) totalPM25() float64 {
-	return c.Cf[iPM2_5] + c.Cf[ipOrg] + c.Cf[ipNH]*NtoNH4 +
-		c.Cf[ipS]*StoSO4 + c.Cf[ipNO]*NtoNO3
-}
-
 // Convert the concentration data into a regular array
 func (d *InMAPdata) toArray(pol string, layer int) []float64 {
 	o := make([]float64, d.LayerEnd[layer]-d.LayerStart[layer])
@@ -386,150 +389,56 @@ func (d *InMAPdata) toArray(pol string, layer int) []float64 {
 	return o
 }
 
+// Get the value in the current cell of the specified variable.
 func (c *Cell) getValue(varName string) float64 {
-	var o float64
 	c.lock.RLock()
-	switch varName {
-	case "VOC":
-		o = c.Cf[igOrg]
-	case "SOA":
-		o = c.Cf[ipOrg]
-	case "PrimaryPM2_5":
-		o = c.Cf[iPM2_5]
-	case "TotalPM2_5":
-		o = c.totalPM25()
-		//	case "Total deaths":
-		//		rr := aqhealth.RRpm25Linear(c.totalPM25())
-		//		o = aqhealth.Deaths(rr, c.TotalPop,
-		//			c.AllCauseMortality)
-		//	case "White deaths":
-		//		rr := aqhealth.RRpm25Linear(c.totalPM25())
-		//		o = aqhealth.Deaths(rr, c.WhitePop,
-		//			c.AllCauseMortality)
-		//	case "Non-white deaths":
-		//		rr := aqhealth.RRpm25Linear(c.totalPM25())
-		//		o = aqhealth.Deaths(rr, c.TotalPop-c.WhitePop,
-		//			c.AllCauseMortality)
-		//	case "High income deaths":
-		//		rr := aqhealth.RRpm25Linear(c.totalPM25())
-		//		o = aqhealth.Deaths(rr, c.TotalPop-c.TotalPoor,
-		//			c.AllCauseMortality)
-		//	case "Low income deaths":
-		//		rr := aqhealth.RRpm25Linear(c.totalPM25())
-		//		o = aqhealth.Deaths(rr, c.TotalPoor,
-		//			c.AllCauseMortality)
-		//	case "High income white deaths":
-		//		rr := aqhealth.RRpm25Linear(c.totalPM25())
-		//		o = aqhealth.Deaths(rr, c.WhitePop-c.WhitePoor,
-		//			c.AllCauseMortality)
-		//	case "Low income non-white deaths":
-		//		rr := aqhealth.RRpm25Linear(c.totalPM25())
-		//		o = aqhealth.Deaths(rr, c.TotalPoor-c.WhitePoor,
-		//			c.AllCauseMortality)
-		//	case "Population":
-		//		o = c.TotalPop / c.Dx / c.Dy
-	case "Baseline mortality rate":
-		o = c.AllCauseMortality
-	case "NH3":
-		o = c.Cf[igNH] / NH3ToN
-	case "pNH4":
-		o = c.Cf[ipNH] * NtoNH4
-	case "SOx":
-		o = c.Cf[igS] / SOxToS
-	case "pSO4":
-		o = c.Cf[ipS] * StoSO4
-	case "NOx":
-		o = c.Cf[igNO] / NOxToN
-	case "pNO3":
-		o = c.Cf[ipNO] * NtoNO3
-	case "VOCemissions":
-		o = c.emisFlux[igOrg]
-	case "NOxemissions":
-		o = c.emisFlux[igNO]
-	case "NH3emissions":
-		o = c.emisFlux[igNH]
-	case "SOxemissions":
-		o = c.emisFlux[igS]
-	case "PM2_5emissions":
-		o = c.emisFlux[iPM2_5]
-	case "UPlusSpeed":
-		o = c.UPlusSpeed
-	case "UMinusSpeed":
-		o = c.UMinusSpeed
-	case "VPlusSpeed":
-		o = c.VPlusSpeed
-	case "VMinusSpeed":
-		o = c.VMinusSpeed
-	case "WPlusSpeed":
-		o = c.WPlusSpeed
-	case "WMinusSpeed":
-		o = c.WMinusSpeed
-	case "AOrganicpartitioning":
-		o = c.AOrgPartitioning
-	case "BOrganicpartitioning":
-		o = c.BOrgPartitioning
-	case "Sulfurpartitioning":
-		o = c.SPartitioning
-	case "Nitratepartitioning":
-		o = c.NOPartitioning
-	case "Ammoniapartitioning":
-		o = c.NHPartitioning
-	case "Particlewetdeposition":
-		o = c.ParticleWetDep
-	case "SO2wetdeposition":
-		o = c.SO2WetDep
-	case "Non-SO2gaswetdeposition":
-		o = c.OtherGasWetDep
-	case "Kxxyy":
-		o = c.Kxxyy
-	case "Kzz":
-		o = c.Kzz
-	case "M2u":
-		o = c.M2u
-	case "M2d":
-		o = c.M2d
-	default:
-		panic(fmt.Sprintf("Unknown variable %v.", varName))
+	defer c.lock.RUnlock()
+
+	if index, ok := emisLabels[varName]; ok { // Emissions
+		return c.emisFlux[index]
+
+	} else if polConv, ok := polLabels[varName]; ok { // Concentrations
+		var o float64
+		for i, ii := range polConv.index {
+			o += c.Cf[ii] * polConv.conversion[i]
+		}
+		return o
+
+	} else if _, ok := popNames[varName]; ok { // Population
+		return c.PopData[varName] / c.Dx / c.Dy // divide by cell area
+
+	} else if _, ok := popNames[strings.Replace(varName, " deaths", "", 1)]; ok {
+		// Mortalities
+		v := strings.Replace(varName, " deaths", "", 1)
+		rr := aqhealth.RRpm25Linear(c.getValue("TotalPM2_5"))
+		return aqhealth.Deaths(rr, c.PopData[v], c.AllCauseMortality)
+
+	} else { // Everything else
+		val := reflect.Indirect(reflect.ValueOf(c))
+		return val.FieldByName(varName).Float()
 	}
-	c.lock.RUnlock()
-	return o
 }
 
+// Get the units of a variable
 func (d *InMAPdata) getUnits(varName string) string {
-	var o string
-	switch varName {
-	case "VOC", "SOA", "PrimaryPM2_5", "TotalPM2_5",
-		"NH3", "pNH4", "SOx", "pSO4", "NOx", "pNO3":
-		o = "μg/m³"
-	case "Total deaths", "White deaths", "Non-white deaths",
-		"High income deaths", "Low income deaths", "High income white deaths",
-		"Low income non-white deaths":
-		o = "deaths/grid cell"
-	case "Population":
-		o = "people/m²"
-	case "Baseline mortality rate":
-		o = "deaths/year/100,000 people"
-	case "VOCemissions", "NOxemissions", "NH3emissions", "SOxemissions",
-		"PM2_5emissions":
-		o = "μg/m³/s"
-	case "UPlusSpeed", "UMinusSpeed", "VPlusSpeed", "VMinusSpeed",
-		"WPlusSpeed", "WMinusSpeed":
-		o = "m/s"
-	case "Organicpartitioning", "Sulfurpartitioning", "Nitratepartitioning",
-		"Ammoniapartitioning":
-		o = "gaseous fraction"
-	case "Particlewetdeposition", "SO2wetdeposition", "Non-SO2gaswetdeposition":
-		o = "1/s"
-	case "Kxxyy", "Kzz":
-		o = "m²/s"
-	case "M2u", "M2d":
-		o = "1/s"
-	case "PblTopLayer":
-		o = "index"
-	default:
-		panic(fmt.Sprintf("Unknown variable %v.", varName))
+	if _, ok := emisLabels[varName]; ok { // Emissions
+		return "μg/m³/s"
+	} else if _, ok := polLabels[varName]; ok { // Concentrations
+		return "μg/m³"
+	} else if _, ok := popNames[varName]; ok { // Population
+		return "people/m²"
+	} else if _, ok := popNames[strings.Replace(varName, " deaths", "", 1)]; ok {
+		// Mortalities
+		return "deaths/grid cell"
+	} else { // Everything else
+		t := reflect.TypeOf(*d.Data[0])
+		ftype, ok := t.FieldByName(varName)
+		if ok {
+			return ftype.Tag.Get("units")
+		} else {
+			panic(fmt.Sprintf("Unknown variable %v.", varName))
+		}
 	}
-	return o
 }
 
 func (d *InMAPdata) GetGeometry(layer int) []geom.T {
