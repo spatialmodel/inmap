@@ -33,16 +33,23 @@ import (
 )
 
 type InMAPdata struct {
-	Data          []*Cell // One data holder for each grid cell
-	Dt            float64 // seconds
-	Nlayers       int     // number of model layers
+	Data    []*Cell // One data holder for each grid cell
+	Dt      float64 // seconds
+	Nlayers int     // number of model layers
+
+	// Number of iterations to calculate. If < 1,
+	// calculate convergence automatically.
+	NumIterations int
+
 	LayerStart    []int   // start index of each layer (inclusive)
 	LayerEnd      []int   // end index of each layer (exclusive)
 	westBoundary  []*Cell // boundary cells
 	eastBoundary  []*Cell // boundary cells
 	northBoundary []*Cell // boundary cells
 	southBoundary []*Cell // boundary cells
-	topBoundary   []*Cell // boundary cells; assume bottom boundary is the same as lowest layer
+
+	// boundary cells; assume bottom boundary is the same as lowest layer
+	topBoundary []*Cell
 }
 
 func init() {
@@ -80,7 +87,7 @@ type Cell struct {
 	M2u                     float64            `desc:"ACM2 upward mixing (Pleim 2007)" units:"1/s"`
 	M2d                     float64            `desc:"ACM2 downward mixing (Pleim 2007)" units:"1/s"`
 	PopData                 map[string]float64 // Population for multiple demographics [people/grid cell]
-	AllCauseMortality       float64            `desc:"Baseline mortalities rate" units:"Deaths per 100,000 people per year"`
+	MortalityRate           float64            `desc:"Baseline mortalities rate" units:"Deaths per 100,000 people per year"`
 	Dx, Dy, Dz              float64            // grid size [meters]
 	Volume                  float64            `desc:"Cell volume" units:"m³"`
 	Row                     int                // master cell index
@@ -116,7 +123,7 @@ type Cell struct {
 	WindSpeed               float64            `desc:"RMS wind speed" units:"m/s"`
 	S1                      float64            `desc:"Stability parameter" units:"?"`
 	SClass                  float64            `desc:"Stability class" units:"0=Unstable; 1=Stable"`
-	lock                    sync.RWMutex       // Avoid cell being written by one subroutine and read by another at the same time.
+	sync.RWMutex                               // Avoid cell being written by one subroutine and read by another at the same time.
 }
 
 func (c *Cell) prepare() {
@@ -138,10 +145,15 @@ func (c *Cell) makecopy() *Cell {
 // the Gob files with meteorology and background concentration data
 // (where `[layer]` is a stand-in for the layer number),
 // `nLayers` is the number of vertical layers in the model,
-// and `httpPort` is the port number for hosting the html GUI.
-func InitInMAPdata(filetemplate string, nLayers int, httpPort string) *InMAPdata {
+// `numIterations` is the number of iterations to calculate
+// (if `numIterations` < 1, convergence is calculated automatically),
+// and `httpPort` is the port number for hosting the html GUI
+// (if `httpPort` is "", then the GUI doesn't run).
+func InitInMAPdata(filetemplate string, nLayers int, numIterations int,
+	httpPort string) *InMAPdata {
 	inputData := make([][]*Cell, nLayers)
 	d := new(InMAPdata)
+	d.NumIterations = numIterations
 	d.Nlayers = nLayers
 	d.LayerStart = make([]int, nLayers)
 	d.LayerEnd = make([]int, nLayers)
@@ -384,16 +396,15 @@ func harmonicMean(a, b float64) float64 {
 func (d *InMAPdata) toArray(pol string, layer int) []float64 {
 	o := make([]float64, d.LayerEnd[layer]-d.LayerStart[layer])
 	for i, c := range d.Data[d.LayerStart[layer]:d.LayerEnd[layer]] {
+		c.RLock()
 		o[i] = c.getValue(pol)
+		c.RUnlock()
 	}
 	return o
 }
 
 // Get the value in the current cell of the specified variable.
 func (c *Cell) getValue(varName string) float64 {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
-
 	if index, ok := emisLabels[varName]; ok { // Emissions
 		return c.emisFlux[index]
 
@@ -411,7 +422,7 @@ func (c *Cell) getValue(varName string) float64 {
 		// Mortalities
 		v := strings.Replace(varName, " deaths", "", 1)
 		rr := aqhealth.RRpm25Linear(c.getValue("TotalPM2_5"))
-		return aqhealth.Deaths(rr, c.PopData[v], c.AllCauseMortality)
+		return aqhealth.Deaths(rr, c.PopData[v], c.MortalityRate)
 
 	} else { // Everything else
 		val := reflect.Indirect(reflect.ValueOf(c))

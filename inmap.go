@@ -44,10 +44,16 @@ var configFile *string = flag.String("config", "none", "Path to configuration fi
 const version = "0.1.0"
 
 type configData struct {
-	InMAPdataTemplate    string   // Path to location of baseline meteorology and pollutant data, where [layer] is a stand-in for the model layer number. The files should be in Gob format (http://golang.org/pkg/encoding/gob/). Can include environment variables.
-	NumLayers            int      // Number of vertical layers to use in the model
-	NumProcessors        int      // Number of processors to use for calculations
-	EmissionsShapefiles  []string // Paths to emissions shapefiles.
+	// Path to location of baseline meteorology and pollutant data,
+	// where [layer] is a stand-in for the model layer number. The files
+	// should be in Gob format (http://golang.org/pkg/encoding/gob/).
+	// Can include environment variables.
+	InMAPdataTemplate string
+
+	NumLayers     int // Number of vertical layers to use in the model
+	NumProcessors int // Number of processors to use for calculations
+
+	// Paths to emissions shapefiles.
 	// Can be elevated or ground level; elevated files need to have columns
 	// labeled "height", "diam", "temp", and "velocity" containing stack
 	// information in units of m, m, K, and m/s, respectively.
@@ -55,10 +61,24 @@ type configData struct {
 	// to the InMAP computational grid, but the mapping projection of the
 	// shapefile must be the same as the projection InMAP uses.
 	// Can include environment variables.
-	OutputTemplate string // Path to desired output file location, where [layer] is a stand-in for the model layer number. Can include environment variables.
-	OutputAllLayers bool // If true, output data for all model layers. If false, only output the lowest layer.
-	HTTPport       string // Port for hosting web page.
-	// If HTTPport is `8080`, then the GUI would be viewed by visiting `localhost:8080` in a web browser.
+	EmissionsShapefiles []string
+
+	// Path to desired output file location, where [layer] is a stand-in
+	// for the model layer number. Can include environment variables.
+	OutputTemplate string
+
+	// If true, output data for all model layers. If false, only output
+	// the lowest layer.
+	OutputAllLayers bool
+
+	// Number of iterations to calculate. If < 1, convergence
+	// is automatically calculated.
+	NumIterations int
+
+	// Port for hosting web page. If HTTPport is `8080`, then the GUI
+	// would be viewed by visiting `localhost:8080` in a web browser.
+	// If HTTPport is "", then the web server doesn't run.
+	HTTPport string
 }
 
 func main() {
@@ -83,7 +103,7 @@ func main() {
 
 	fmt.Println("Reading input data...")
 	d := inmap.InitInMAPdata(config.InMAPdataTemplate,
-		config.NumLayers, config.HTTPport)
+		config.NumLayers, config.NumIterations, config.HTTPport)
 
 	emissions := make(map[string][]float64)
 	for _, pol := range inmap.EmisNames {
@@ -232,7 +252,7 @@ func main() {
 	// Run model
 	finalConc := d.Run(emissions, config.OutputAllLayers)
 
-	writeOutput(finalConc, d, config.OutputTemplate)
+	writeOutput(finalConc, d, config.OutputTemplate, config.OutputAllLayers)
 
 	fmt.Println("\n",
 		"------------------------------------\n",
@@ -266,12 +286,18 @@ type JsonHolderHolder struct {
 
 // write data out to GeoJSON
 func writeOutput(finalConc map[string][][]float64, d *inmap.InMAPdata,
-	outFileTemplate string) {
+	outFileTemplate string, writeAllLayers bool) {
 	var err error
 	// Initialize data holder
 	outData := make([]*JsonHolderHolder, d.Nlayers)
 	row := 0
-	for k := 0; k < d.Nlayers; k++ {
+	var nlayers int
+	if writeAllLayers {
+		nlayers = d.Nlayers
+	} else {
+		nlayers = 1
+	}
+	for k := 0; k < nlayers; k++ {
 		outData[k] = new(JsonHolderHolder)
 		outData[k].Type = "FeatureCollection"
 		outData[k].Features = make([]*JsonHolder, d.LayerEnd[k]-d.LayerStart[k])
@@ -294,7 +320,7 @@ func writeOutput(finalConc map[string][][]float64, d *inmap.InMAPdata,
 			}
 		}
 	}
-	for k := 0; k < d.Nlayers; k++ {
+	for k := 0; k < nlayers; k++ {
 		filename := strings.Replace(outFileTemplate, "[layer]",
 			fmt.Sprintf("%v", k), -1)
 		f, err := os.Create(filename)

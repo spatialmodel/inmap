@@ -66,7 +66,7 @@ func (d *InMAPdata) WebServer(httpPort string) {
 				mapDescriptions = append(mapDescriptions, pop)
 				mapOptions[pop] = pop
 				mapDescriptions = append(mapDescriptions, pop+" deaths")
-				mapOptions[pop] = pop + " deaths"
+				mapOptions[pop+" deaths"] = pop + " deaths"
 			}
 			break
 		}
@@ -77,8 +77,8 @@ func (d *InMAPdata) WebServer(httpPort string) {
 		v := f.Name
 		desc := f.Tag.Get("desc")
 		if desc != "" {
-		mapDescriptions = append(mapDescriptions, desc)
-		mapOptions[desc] = v
+			mapDescriptions = append(mapDescriptions, desc)
+			mapOptions[desc] = v
 		}
 	}
 
@@ -141,8 +141,8 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 	max-width: none;
 }
 </style>`
-	webframework.RenderHeader(w, "AIM status", mapStyle)
-	webframework.RenderNav(w, "AIM", []string{"Home", "Processor", "Memory"},
+	webframework.RenderHeader(w, "InMAP status", mapStyle)
+	webframework.RenderNav(w, "InMAP", []string{"Home", "Processor", "Memory"},
 		[]string{"/", "/proc/", "/heap/"}, "Home", "")
 
 	const body1 = `
@@ -157,7 +157,7 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, body1)
 	for i, desc := range mapDescriptions {
 		if i == 0 {
-			fmt.Fprintf(w, "<option value='%v' SELECTED>%v</option>", 	mapOptions[desc], desc)
+			fmt.Fprintf(w, "<option value='%v' SELECTED>%v</option>", mapOptions[desc], desc)
 		} else {
 			fmt.Fprintf(w, "<option value='%v'>%v</option>", mapOptions[desc], desc)
 		}

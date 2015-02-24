@@ -96,6 +96,8 @@ var polLabels = map[string]polConv{
 // of μg/s, and must only include the pollutants listed in "EmisNames".
 // Output is in the form of map[pollutant][layer][row]concentration,
 // in units of μg/m3.
+// If `outputAllLayers` is true, write all of the vertical layers to the
+// output, otherwise only output the ground-level layer.
 func (d *InMAPdata) Run(emissions map[string][]float64, outputAllLayers bool) (
 	outputConc map[string][][]float64) {
 
@@ -172,25 +174,32 @@ func (d *InMAPdata) Run(emissions map[string][]float64, outputAllLayers bool) (
 		timeStepTime = time.Now()
 		timeSinceLastCheck += d.Dt
 
-		// Occasionally, check to see if the pollutant concentrations have converged
-		if timeSinceLastCheck >= checkPeriod {
+		// If NumIterations has been set, used it to determine when to
+		// stop the model
+		if d.NumIterations > 0 {
+			if iteration >= d.NumIterations {
+				wg.Wait() // Wait for the science to finish
+				break     // finished
+			}
+			// Otherwise, occasionally check to see if the pollutant
+			// concentrations have converged
+		} else if timeSinceLastCheck >= checkPeriod {
 			wg.Wait() // Wait for the science to finish, only when we need to check
 			// for convergence.
-			//timeToQuit := true
+			timeToQuit := true
 			timeSinceLastCheck = 0.
 			for ii, pol := range polNames {
 				var sum float64
 				for _, c := range d.Data {
 					sum += c.Cf[ii]
 				}
-				//if !checkConvergence(sum, oldSum[ii], pol) {
-				//timeToQuit = false
-				//}
+				if !checkConvergence(sum, oldSum[ii], pol) {
+					timeToQuit = false
+				}
 				checkConvergence(sum, oldSum[ii], pol)
 				oldSum[ii] = sum
 			}
-			if iteration > 10000 {
-				//if timeToQuit {
+			if timeToQuit {
 				break // leave calculation loop because we're finished
 			}
 		}
@@ -202,14 +211,14 @@ func (d *InMAPdata) Run(emissions map[string][]float64, outputAllLayers bool) (
 		outputVariables = append(outputVariables, pol)
 	}
 	for pop, _ := range popNames {
-		outputVariables = append(mapDescriptions, pop, pop+" deaths")
+		outputVariables = append(outputVariables, pop, pop+" deaths")
 	}
-	outputVariables = append(outputVariables, "AllCauseMortality")
+	outputVariables = append(outputVariables, "MortalityRate")
 	var outputLay int
 	if outputAllLayers {
-	outputLay = d.Nlayers
-	} else { 
-	outputLay = 1
+		outputLay = d.Nlayers
+	} else {
+		outputLay = 1
 	}
 	for _, name := range outputVariables {
 		outputConc[name] = make([][]float64, d.Nlayers)
@@ -227,11 +236,11 @@ func (d *InMAPdata) doScience(nprocs, procNum int,
 	for f := range funcChan {
 		for ii := procNum; ii < len(d.Data); ii += nprocs {
 			c = d.Data[ii]
-			c.lock.Lock() // Lock the cell to avoid race conditions
+			c.Lock() // Lock the cell to avoid race conditions
 			if c.Layer <= topLayerToCalc {
 				f(c, d) // run function
 			}
-			c.lock.Unlock() // Unlock the cell: we're done editing it
+			c.Unlock() // Unlock the cell: we're done editing it
 		}
 		wg.Done()
 	}
