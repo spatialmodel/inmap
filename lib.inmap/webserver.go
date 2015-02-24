@@ -50,18 +50,18 @@ func (d *InMAPdata) WebServer(httpPort string) {
 	// First, set up the options of variables to make maps of
 	mapOptions = make(map[string]string)
 	mapDescriptions = make([]string, 0)
-	for pol, _ := range polLabels { // Concentrations
+	for pol := range polLabels { // Concentrations
 		mapOptions[pol] = pol
 		mapDescriptions = append(mapDescriptions, pol)
 	}
-	for emis, _ := range emisLabels { // Emissions
+	for emis := range emisLabels { // Emissions
 		mapDescriptions = append(mapDescriptions, emis)
 		mapOptions[emis] = emis
 	}
 	popNames = make(map[string]string)
 	for _, c := range d.Data { // Population and mortalities
 		if len(c.PopData) != 0 {
-			for pop, _ := range c.PopData {
+			for pop := range c.PopData {
 				popNames[pop] = ""
 				mapDescriptions = append(mapDescriptions, pop)
 				mapOptions[pop] = pop
@@ -408,7 +408,7 @@ func (d *InMAPdata) verticalProfileHandler(w http.ResponseWriter,
 	}
 }
 
-// function VerticalProfile retrieves the vertical profile for a given
+// VerticalProfile retrieves the vertical profile for a given
 // variable at a given location.
 func (d *InMAPdata) VerticalProfile(variable string, lon, lat float64) (
 	height, vals []float64) {

@@ -392,7 +392,7 @@ func harmonicMean(a, b float64) float64 {
 	return 2. * a * b / (a + b)
 }
 
-// Convert the concentration data into a regular array
+// Convert cell data into a regular array
 func (d *InMAPdata) toArray(pol string, layer int) []float64 {
 	o := make([]float64, d.LayerEnd[layer]-d.LayerStart[layer])
 	for i, c := range d.Data[d.LayerStart[layer]:d.LayerEnd[layer]] {

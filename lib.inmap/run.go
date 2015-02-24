@@ -59,19 +59,25 @@ var emisLabels = map[string]int{"VOC Emissions": igOrg,
 	"NOx emissions":   igNO,
 	"NH3 emissions":   igNH,
 	"SOx emissions":   igS,
-	"PM2.5 emissions": iPM2_5}
+	"PM2.5 emissions": iPM2_5,
+}
 
 // These are the names of pollutants within the model
 var polNames = []string{"gOrg", "pOrg", // gaseous and particulate organic matter
 	"PM2_5",      // PM2.5
 	"gNH", "pNH", // gaseous and particulate N in ammonia
 	"gS", "pS", // gaseous and particulate S in sulfur
-	"gNO", "pNO"} // gaseous and particulate N in nitrate
+	"gNO", "pNO", // gaseous and particulate N in nitrate
+}
 
 // Indicies of individual pollutants in arrays.
 const (
 	igOrg, ipOrg, iPM2_5, igNH, ipNH, igS, ipS, igNO, ipNO = 0, 1, 2, 3, 4, 5, 6, 7, 8
 )
+
+// map relating emissions to the associated PM2.5 concentrations
+var gasParticleMap = map[int]int{igOrg: ipOrg,
+	igNO: ipNO, igNH: ipNH, igS: ipS, iPM2_5: iPM2_5}
 
 type polConv struct {
 	index      []int     // index in concentration array
@@ -90,7 +96,8 @@ var polLabels = map[string]polConv{
 	"SOx":          polConv{[]int{igS}, []float64{1. / SOxToS}},
 	"pSO4":         polConv{[]int{ipS}, []float64{StoSO4}},
 	"NOx":          polConv{[]int{igNO}, []float64{1. / NOxToN}},
-	"pNO3":         polConv{[]int{ipNO}, []float64{NtoNO3}}}
+	"pNO3":         polConv{[]int{ipNO}, []float64{NtoNO3}},
+}
 
 // Run air quality model. Emissions are assumed to be in units
 // of μg/s, and must only include the pollutants listed in "EmisNames".

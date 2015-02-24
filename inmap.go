@@ -27,8 +27,10 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/ctessum/geomconv"
 	"github.com/ctessum/geomop"
@@ -253,6 +255,29 @@ func main() {
 	finalConc := d.Run(emissions, config.OutputAllLayers)
 
 	writeOutput(finalConc, d, config.OutputTemplate, config.OutputAllLayers)
+
+	fmt.Println("\nIntake fraction results:")
+	breathingRate := 15. // [m³/day]
+	iF := d.IntakeFraction(breathingRate)
+	// Write iF to stdout
+	w := tabwriter.NewWriter(os.Stdout, 0, 8, 1, '\t', 0)
+	popList := make([]string, 0)
+	for _, m := range iF {
+		for p := range m {
+			popList = append(popList, p)
+		}
+		break
+	}
+	sort.Strings(popList)
+	fmt.Fprintln(w, strings.Join(append([]string{"pol"}, popList...), "\t"))
+	for pol, m := range iF {
+		temp := make([]string, len(popList))
+		for i, pop := range popList {
+			temp[i] = fmt.Sprintf("%.3g", m[pop])
+		}
+		fmt.Fprintln(w, strings.Join(append([]string{pol}, temp...), "\t"))
+	}
+	w.Flush()
 
 	fmt.Println("\n",
 		"------------------------------------\n",
