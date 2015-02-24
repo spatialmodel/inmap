@@ -9,7 +9,6 @@ package inmap
 func (d *InMAPdata) IntakeFraction(
 	breathingRate float64) map[string]map[string]float64 {
 
-	const secondsPerYear float64 = 60 * 60 * 8760
 	Qb := breathingRate / (24 * 60 * 60) // [m³/s]
 
 	iF := make(map[string]map[string]float64)
