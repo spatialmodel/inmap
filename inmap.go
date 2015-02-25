@@ -24,6 +24,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -36,9 +37,9 @@ import (
 	"github.com/ctessum/geomop"
 	"github.com/ctessum/inmap/lib.inmap"
 	"github.com/ctessum/shapefile"
+	"github.com/jonas-p/go-shp"
 	"github.com/patrick-higgins/rtreego"
 	"github.com/twpayne/gogeom/geom"
-	"github.com/twpayne/gogeom/geom/encoding/geojson"
 )
 
 var configFile *string = flag.String("config", "none", "Path to configuration file")
@@ -299,63 +300,67 @@ func (e emisRecord) Bounds() *rtreego.Rect {
 	return e.bounds
 }
 
-type JsonHolder struct {
-	Type       string
-	Geometry   *geojson.Geometry
-	Properties map[string]float64
-}
-type JsonHolderHolder struct {
-	Proj4, Type string
-	Features    []*JsonHolder
-}
-
-// write data out to GeoJSON
-func writeOutput(finalConc map[string][][]float64, d *inmap.InMAPdata,
+// write data out to shapefile
+func writeOutput(results map[string][][]float64, d *inmap.InMAPdata,
 	outFileTemplate string, writeAllLayers bool) {
-	var err error
-	// Initialize data holder
-	outData := make([]*JsonHolderHolder, d.Nlayers)
-	row := 0
+
+	// Projection definition. This may need to be changed for a different
+	// spatial domain.
+	const proj4 = `PROJCS["Lambert_Conformal_Conic",GEOGCS["GCS_unnamed ellipse",DATUM["D_unknown",SPHEROID["Unknown",6370997,0]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],PROJECTION["Lambert_Conformal_Conic"],PARAMETER["standard_parallel_1",33],PARAMETER["standard_parallel_2",45],PARAMETER["latitude_of_origin",40],PARAMETER["central_meridian",-97],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]`
+
+	vars := make([]string, 0, len(results))
+	for v := range results {
+		vars = append(vars, v)
+	}
+	sort.Strings(vars)
+	fields := make([]shp.Field, len(vars))
+	for i, v := range vars {
+		fields[i] = shp.FloatField(v, 14, 8)
+	}
+
 	var nlayers int
 	if writeAllLayers {
 		nlayers = d.Nlayers
 	} else {
 		nlayers = 1
 	}
+	row := 0
 	for k := 0; k < nlayers; k++ {
-		outData[k] = new(JsonHolderHolder)
-		outData[k].Type = "FeatureCollection"
-		outData[k].Features = make([]*JsonHolder, d.LayerEnd[k]-d.LayerStart[k])
-		for i := 0; i < len(outData[k].Features); i++ {
-			x := new(JsonHolder)
-			x.Type = "Feature"
-			x.Properties = make(map[string]float64)
-			x.Geometry, err = geojson.ToGeoJSON(d.Data[row].Geom)
+
+		filename := strings.Replace(outFileTemplate, "[layer]",
+			fmt.Sprintf("%v", k), -1)
+		// remove extension and replace it with .shp
+		extIndex := strings.LastIndex(filename, ".")
+		if extIndex == -1 {
+			extIndex = len(filename)
+		}
+		filename = filename[0:extIndex] + ".shp"
+		shape, err := shp.Create(filename, shp.POLYGON)
+		if err != nil {
+			log.Fatal(err)
+		}
+		shape.SetFields(fields)
+
+		numRowsInLayer := len(results[vars[0]][k])
+		for i := 0; i < numRowsInLayer; i++ {
+			s, err := geomconv.Geom2Shp(d.Data[row].Geom)
 			if err != nil {
 				panic(err)
 			}
-			outData[k].Features[i] = x
+			shape.Write(s)
+			for j, v := range vars {
+				shape.WriteAttribute(i, j, results[v][k][i])
+			}
 			row++
 		}
-	}
-	for pol, polData := range finalConc {
-		for k, layerData := range polData {
-			for i, conc := range layerData {
-				outData[k].Features[i].Properties[pol] = conc
-			}
-		}
-	}
-	for k := 0; k < nlayers; k++ {
-		filename := strings.Replace(outFileTemplate, "[layer]",
-			fmt.Sprintf("%v", k), -1)
-		f, err := os.Create(filename)
+		shape.Close()
+
+		// Create .prj file
+		f, err := os.Create(filename[0:extIndex] + ".prj")
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
-		e := json.NewEncoder(f)
-		if err := e.Encode(outData[k]); err != nil {
-			panic(err)
-		}
+		fmt.Fprint(f, proj4)
 		f.Close()
 	}
 }
