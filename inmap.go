@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -149,7 +150,8 @@ func main() {
 		fname = strings.Replace(fname, ".shp", "", -1)
 		f1, err := os.Open(fname + ".shp")
 		if err != nil {
-			panic(err)
+			//panic(err)
+			continue
 		}
 		shp, err := shapefile.OpenShapefile(f1)
 		if err != nil {
@@ -184,6 +186,9 @@ func main() {
 					switch fields[iii].(type) {
 					case float64:
 						e.emis[ii] += fields[iii].(float64) * emisConv
+						if math.IsNaN(e.emis[ii]) {
+							e.emis[ii] = 0.
+						}
 					case int:
 						e.emis[ii] += float64(fields[iii].(int)) * emisConv
 					}
@@ -191,15 +196,27 @@ func main() {
 			}
 			if iii, ok := dbf.FieldIndicies["height"]; ok {
 				e.height = fields[iii].(float64) // stack height [m]
+				if math.IsNaN(e.height) {
+					e.height = 0.
+				}
 			}
 			if iii, ok := dbf.FieldIndicies["diam"]; ok {
 				e.diam = fields[iii].(float64) // stack diameter [m]
+				if math.IsNaN(e.diam) {
+					e.diam = 0.
+				}
 			}
 			if iii, ok := dbf.FieldIndicies["temp"]; ok {
 				e.temp = fields[iii].(float64) // stack temperature [K]
+				if math.IsNaN(e.temp) {
+					e.temp = 0.
+				}
 			}
 			if iii, ok := dbf.FieldIndicies["velocity"]; ok {
 				e.velocity = fields[iii].(float64) // stack velocity [m/s]
+				if math.IsNaN(e.velocity) {
+					e.velocity = 0.
+				}
 			}
 			e.bounds, err = geomconv.GeomToRect(e.g)
 			if err != nil {
