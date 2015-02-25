@@ -17,4 +17,3 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 package inmap
-

@@ -21,6 +21,7 @@ package inmap
 import (
 	"fmt"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -35,7 +36,52 @@ import (
 	"github.com/twpayne/gogeom/geom"
 )
 
+//  Descriptions of web server map variables
+var mapDescriptions []string
+
+// Variable names that go along with descriptions (map[description]variable)
+var mapOptions map[string]string
+
+// Names of population types.
+var popNames map[string]string
+
 func (d *InMAPdata) WebServer(httpPort string) {
+
+	// First, set up the options of variables to make maps of
+	mapOptions = make(map[string]string)
+	mapDescriptions = make([]string, 0)
+	for pol := range polLabels { // Concentrations
+		mapOptions[pol] = pol
+		mapDescriptions = append(mapDescriptions, pol)
+	}
+	for emis := range emisLabels { // Emissions
+		mapDescriptions = append(mapDescriptions, emis)
+		mapOptions[emis] = emis
+	}
+	popNames = make(map[string]string)
+	for _, c := range d.Data { // Population and mortalities
+		if len(c.PopData) != 0 {
+			for pop := range c.PopData {
+				popNames[pop] = ""
+				mapDescriptions = append(mapDescriptions, pop)
+				mapOptions[pop] = pop
+				mapDescriptions = append(mapDescriptions, pop+" deaths")
+				mapOptions[pop+" deaths"] = pop + " deaths"
+			}
+			break
+		}
+	}
+	t := reflect.TypeOf(*d.Data[0]) // Everything else
+	for i := 0; i < t.NumField(); i++ {
+		f := t.Field(i)
+		v := f.Name
+		desc := f.Tag.Get("desc")
+		if desc != "" {
+			mapDescriptions = append(mapDescriptions, desc)
+			mapOptions[desc] = v
+		}
+	}
+
 	http.HandleFunc("/js/bootstrap.min.js", webframework.ServeJSmin)
 	http.HandleFunc("/css/bootstrap.min.css", webframework.ServeCSS)
 	http.HandleFunc("/css/bootstrap-responsive.min.css",
@@ -48,19 +94,6 @@ func (d *InMAPdata) WebServer(httpPort string) {
 	http.HandleFunc("/", reportHandler)
 	http.ListenAndServe(":"+httpPort, nil)
 }
-
-var mapOptions = []string{"TotalPM2_5", "PrimaryPM2_5", "VOC", "SOA",
-	"NH3", "pNH4", "SOx",
-	"pSO4", "NOx", "pNO3", "VOCemissions", "NOxemissions", "NH3emissions",
-	"SOxemissions", "PM2_5emissions", "UPlusSpeed", "UMinusSpeed",
-	"VPlusSpeed", "VMinusSpeed", "WPlusSpeed", "WMinusSpeed",
-	"Organicpartitioning", "Sulfurpartitioning", "Nitratepartitioning",
-	"Ammoniapartitioning", "Particlewetdeposition", "SO2wetdeposition",
-	"Non-SO2gaswetdeposition", "Kxxyy", "Kzz", "M2u", "M2d",
-	"Total deaths", "White deaths", "Non-white deaths",
-	"High income deaths", "Low income deaths",
-	"High income white deaths", "Low income non-white deaths", "Population",
-	"Baseline mortality rate"}
 
 func reportHandler(w http.ResponseWriter, r *http.Request) {
 	const mapStyle = `
@@ -108,8 +141,8 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 	max-width: none;
 }
 </style>`
-	webframework.RenderHeader(w, "AIM status", mapStyle)
-	webframework.RenderNav(w, "AIM", []string{"Home", "Processor", "Memory"},
+	webframework.RenderHeader(w, "InMAP status", mapStyle)
+	webframework.RenderNav(w, "InMAP", []string{"Home", "Processor", "Memory"},
 		[]string{"/", "/proc/", "/heap/"}, "Home", "")
 
 	const body1 = `
@@ -122,11 +155,11 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 		<form>
 			<select class="span3" id="mapvar" onchange=updateMap()>`
 	fmt.Fprintln(w, body1)
-	for i, option := range mapOptions {
+	for i, desc := range mapDescriptions {
 		if i == 0 {
-			fmt.Fprintf(w, "<option SELECTED>%v</option>", option)
+			fmt.Fprintf(w, "<option value='%v' SELECTED>%v</option>", mapOptions[desc], desc)
 		} else {
-			fmt.Fprintf(w, "<option>%v</option>", option)
+			fmt.Fprintf(w, "<option value='%v'>%v</option>", mapOptions[desc], desc)
 		}
 	}
 	const body2 = `
@@ -267,7 +300,7 @@ func (d *InMAPdata) mapHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	vals := d.toArray(name, layer)
-	geometry := d.getGeometry(layer)
+	geometry := d.GetGeometry(layer)
 	m := carto.NewMapData(len(vals), carto.LinCutoff)
 	m.Cmap.AddArray(vals)
 	m.Cmap.Set()
@@ -375,7 +408,7 @@ func (d *InMAPdata) verticalProfileHandler(w http.ResponseWriter,
 	}
 }
 
-// function VerticalProfile retrieves the vertical profile for a given
+// VerticalProfile retrieves the vertical profile for a given
 // variable at a given location.
 func (d *InMAPdata) VerticalProfile(variable string, lon, lat float64) (
 	height, vals []float64) {

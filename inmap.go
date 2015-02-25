@@ -20,26 +20,27 @@ package main
 
 import (
 	"bufio"
-	"encoding/csv"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"io/ioutil"
+	"log"
 	"math"
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/ctessum/geomconv"
 	"github.com/ctessum/geomop"
 	"github.com/ctessum/inmap/lib.inmap"
 	"github.com/ctessum/shapefile"
+	"github.com/jonas-p/go-shp"
 	"github.com/patrick-higgins/rtreego"
 	"github.com/twpayne/gogeom/geom"
-	"github.com/twpayne/gogeom/geom/encoding/geojson"
 )
 
 var configFile *string = flag.String("config", "none", "Path to configuration file")
@@ -47,12 +48,16 @@ var configFile *string = flag.String("config", "none", "Path to configuration fi
 const version = "0.1.0"
 
 type configData struct {
-	InMAPdataTemplate    string   // Path to location of baseline meteorology and pollutant data, where [layer] is a stand-in for the model layer number. The files should be in Gob format (http://golang.org/pkg/encoding/gob/). Can include environment variables.
-	NumLayers            int      // Number of vertical layers to use in the model
-	NumProcessors        int      // Number of processors to use for calculations
-	GroundLevelEmissions string   // Path to ground level emissions csv file. Can include environment variables.
-	ElevatedEmissions    string   // Path to elevated emissions csv file. Can include environment variables.
-	EmissionsShapefiles  []string // Paths to emissions shapefiles.
+	// Path to location of baseline meteorology and pollutant data,
+	// where [layer] is a stand-in for the model layer number. The files
+	// should be in Gob format (http://golang.org/pkg/encoding/gob/).
+	// Can include environment variables.
+	InMAPdataTemplate string
+
+	NumLayers     int // Number of vertical layers to use in the model
+	NumProcessors int // Number of processors to use for calculations
+
+	// Paths to emissions shapefiles.
 	// Can be elevated or ground level; elevated files need to have columns
 	// labeled "height", "diam", "temp", and "velocity" containing stack
 	// information in units of m, m, K, and m/s, respectively.
@@ -60,9 +65,24 @@ type configData struct {
 	// to the InMAP computational grid, but the mapping projection of the
 	// shapefile must be the same as the projection InMAP uses.
 	// Can include environment variables.
-	OutputTemplate string // Path to desired output file location, where [layer] is a stand-in for the model layer number. Can include environment variables.
-	HTTPport       string // Port for hosting web page.
-	// If HTTPport is `8080`, then the GUI would be viewed by visiting `localhost:8080` in a web browser.
+	EmissionsShapefiles []string
+
+	// Path to desired output file location, where [layer] is a stand-in
+	// for the model layer number. Can include environment variables.
+	OutputTemplate string
+
+	// If true, output data for all model layers. If false, only output
+	// the lowest layer.
+	OutputAllLayers bool
+
+	// Number of iterations to calculate. If < 1, convergence
+	// is automatically calculated.
+	NumIterations int
+
+	// Port for hosting web page. If HTTPport is `8080`, then the GUI
+	// would be viewed by visiting `localhost:8080` in a web browser.
+	// If HTTPport is "", then the web server doesn't run.
+	HTTPport string
 }
 
 func main() {
@@ -87,58 +107,12 @@ func main() {
 
 	fmt.Println("Reading input data...")
 	d := inmap.InitInMAPdata(config.InMAPdataTemplate,
-		config.NumLayers, config.HTTPport)
-
-	const (
-		ft2m     = 0.3048
-		height   = 75. * ft2m               // m
-		diam     = 11.28 * ft2m             // m
-		temp     = (377.-32)*5./9. + 273.15 // K
-		velocity = 61.94 * ft2m             // m/s
-	)
+		config.NumLayers, config.NumIterations, config.HTTPport)
 
 	emissions := make(map[string][]float64)
 	for _, pol := range inmap.EmisNames {
 		if _, ok := emissions[pol]; !ok {
 			emissions[pol] = make([]float64, len(d.Data))
-		}
-	}
-
-	// Add in ground level emissions
-	if config.GroundLevelEmissions != "" {
-		fmt.Println("Loading ground level emissions file:\n",
-			config.GroundLevelEmissions)
-		groundLevelEmis := getEmissionsCSV(config.GroundLevelEmissions, d)
-		for pol, vals := range groundLevelEmis {
-			if _, ok := emissions[pol]; !ok {
-				emissions[pol] = make([]float64, len(d.Data))
-			}
-			for i, val := range vals {
-				emissions[pol][i] += val
-			}
-		}
-	}
-
-	// Add in elevated emissions
-	if config.ElevatedEmissions != "" {
-		fmt.Println("Loading elevated emissions file:\n",
-			config.ElevatedEmissions)
-		elevatedEmis := getEmissionsCSV(config.ElevatedEmissions, d)
-		// apply plume rise
-		for pol, elev := range elevatedEmis {
-			if _, ok := emissions[pol]; !ok {
-				emissions[pol] = make([]float64, len(d.Data))
-			}
-			for i, val := range elev {
-				if val != 0. {
-					plumeRow, err := d.CalcPlumeRise(
-						height, diam, temp, velocity, i)
-					if err != nil {
-						panic(err)
-					}
-					emissions[pol][plumeRow] += val
-				}
-			}
 		}
 	}
 
@@ -296,9 +270,32 @@ func main() {
 	}
 
 	// Run model
-	finalConc := d.Run(emissions)
+	finalConc := d.Run(emissions, config.OutputAllLayers)
 
-	writeOutput(finalConc, d, config.OutputTemplate)
+	writeOutput(finalConc, d, config.OutputTemplate, config.OutputAllLayers)
+
+	fmt.Println("\nIntake fraction results:")
+	breathingRate := 15. // [m³/day]
+	iF := d.IntakeFraction(breathingRate)
+	// Write iF to stdout
+	w := tabwriter.NewWriter(os.Stdout, 0, 8, 1, '\t', 0)
+	popList := make([]string, 0)
+	for _, m := range iF {
+		for p := range m {
+			popList = append(popList, p)
+		}
+		break
+	}
+	sort.Strings(popList)
+	fmt.Fprintln(w, strings.Join(append([]string{"pol"}, popList...), "\t"))
+	for pol, m := range iF {
+		temp := make([]string, len(popList))
+		for i, pop := range popList {
+			temp[i] = fmt.Sprintf("%.3g", m[pop])
+		}
+		fmt.Fprintln(w, strings.Join(append([]string{pol}, temp...), "\t"))
+	}
+	w.Flush()
 
 	fmt.Println("\n",
 		"------------------------------------\n",
@@ -320,116 +317,67 @@ func (e emisRecord) Bounds() *rtreego.Rect {
 	return e.bounds
 }
 
-// Get the emissions from a csv file.
-// Input units = tons/year; output units = μg/s
-func getEmissionsCSV(filename string, d *inmap.InMAPdata) (
-	emissions map[string][]float64) {
+// write data out to shapefile
+func writeOutput(results map[string][][]float64, d *inmap.InMAPdata,
+	outFileTemplate string, writeAllLayers bool) {
 
-	const massConv = 907184740000.       // μg per short ton
-	const timeConv = 3600. * 8760.       // seconds per year
-	const emisConv = massConv / timeConv // convert tons/year to μg/s
+	// Projection definition. This may need to be changed for a different
+	// spatial domain.
+	const proj4 = `PROJCS["Lambert_Conformal_Conic",GEOGCS["GCS_unnamed ellipse",DATUM["D_unknown",SPHEROID["Unknown",6370997,0]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],PROJECTION["Lambert_Conformal_Conic"],PARAMETER["standard_parallel_1",33],PARAMETER["standard_parallel_2",45],PARAMETER["latitude_of_origin",40],PARAMETER["central_meridian",-97],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]`
 
-	emissions = make(map[string][]float64)
-	f, err := os.Open(filename)
-	if err != nil {
-		fmt.Println("Problem opening emissions file: ", err.Error())
-		os.Exit(1)
+	vars := make([]string, 0, len(results))
+	for v := range results {
+		vars = append(vars, v)
 	}
-	defer f.Close()
-	r := csv.NewReader(f)
-	vars, err := r.Read() // Pollutant names in the header
-	if err != nil {
-		if err == io.EOF {
-			return
-		}
-		panic(err)
+	sort.Strings(vars)
+	fields := make([]shp.Field, len(vars))
+	for i, v := range vars {
+		fields[i] = shp.FloatField(v, 14, 8)
 	}
-	for _, Var := range vars {
-		if Var == "CO" || Var == "PM10" || Var == "CH4" {
-			continue
-		}
-		emissions[polTrans(Var)] = make([]float64, d.LayerEnd[0]-d.LayerStart[0])
+
+	var nlayers int
+	if writeAllLayers {
+		nlayers = d.Nlayers
+	} else {
+		nlayers = 1
 	}
 	row := 0
-	for {
-		record, err := r.Read()
+	for k := 0; k < nlayers; k++ {
+
+		filename := strings.Replace(outFileTemplate, "[layer]",
+			fmt.Sprintf("%v", k), -1)
+		// remove extension and replace it with .shp
+		extIndex := strings.LastIndex(filename, ".")
+		if extIndex == -1 {
+			extIndex = len(filename)
+		}
+		filename = filename[0:extIndex] + ".shp"
+		shape, err := shp.Create(filename, shp.POLYGON)
 		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			panic(err)
+			log.Fatal(err)
 		}
-		for i, Var := range vars {
-			if Var == "CO" || Var == "PM10" || Var == "CH4" {
-				continue
-			}
-			emissions[polTrans(Var)][row] = s2f(record[i]) * emisConv
-		}
-		row++
-	}
-	return
-}
+		shape.SetFields(fields)
 
-func polTrans(pol string) string {
-	switch pol {
-	case "PM2.5":
-		return "PM2_5"
-	default:
-		return pol
-	}
-}
-
-type JsonHolder struct {
-	Type       string
-	Geometry   *geojson.Geometry
-	Properties map[string]float64
-}
-type JsonHolderHolder struct {
-	Proj4, Type string
-	Features    []*JsonHolder
-}
-
-// write data out to GeoJSON
-func writeOutput(finalConc map[string][][]float64, d *inmap.InMAPdata,
-	outFileTemplate string) {
-	var err error
-	// Initialize data holder
-	outData := make([]*JsonHolderHolder, d.Nlayers)
-	row := 0
-	for k := 0; k < d.Nlayers; k++ {
-		outData[k] = new(JsonHolderHolder)
-		outData[k].Type = "FeatureCollection"
-		outData[k].Features = make([]*JsonHolder, d.LayerEnd[k]-d.LayerStart[k])
-		for i := 0; i < len(outData[k].Features); i++ {
-			x := new(JsonHolder)
-			x.Type = "Feature"
-			x.Properties = make(map[string]float64)
-			x.Geometry, err = geojson.ToGeoJSON(d.Data[row].Geom)
+		numRowsInLayer := len(results[vars[0]][k])
+		for i := 0; i < numRowsInLayer; i++ {
+			s, err := geomconv.Geom2Shp(d.Data[row].Geom)
 			if err != nil {
 				panic(err)
 			}
-			outData[k].Features[i] = x
+			shape.Write(s)
+			for j, v := range vars {
+				shape.WriteAttribute(i, j, results[v][k][i])
+			}
 			row++
 		}
-	}
-	for pol, polData := range finalConc {
-		for k, layerData := range polData {
-			for i, conc := range layerData {
-				outData[k].Features[i].Properties[pol] = conc
-			}
-		}
-	}
-	for k := 0; k < d.Nlayers; k++ {
-		filename := strings.Replace(outFileTemplate, "[layer]",
-			fmt.Sprintf("%v", k), -1)
-		f, err := os.Create(filename)
+		shape.Close()
+
+		// Create .prj file
+		f, err := os.Create(filename[0:extIndex] + ".prj")
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
-		e := json.NewEncoder(f)
-		if err := e.Encode(outData[k]); err != nil {
-			panic(err)
-		}
+		fmt.Fprint(f, proj4)
 		f.Close()
 	}
 }
@@ -483,8 +431,6 @@ func ReadConfigFile(filename string) (config *configData) {
 	}
 
 	config.InMAPdataTemplate = os.ExpandEnv(config.InMAPdataTemplate)
-	config.GroundLevelEmissions = os.ExpandEnv(config.GroundLevelEmissions)
-	config.ElevatedEmissions = os.ExpandEnv(config.ElevatedEmissions)
 	config.OutputTemplate = os.ExpandEnv(config.OutputTemplate)
 
 	for i := 0; i < len(config.EmissionsShapefiles); i++ {

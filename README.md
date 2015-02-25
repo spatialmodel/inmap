@@ -1,5 +1,7 @@
 # (In)tervention (M)odel for (A)ir (P)ollution
 
+[![GoDoc](http://godoc.org/github.com/ctessum/inmap/lib.inmap?status.svg)](http://godoc.org/github.com/ctessum/inmap/lib.inmap)
+
 This program is still being developed and tested. As such, features and functionality may change without warning.
 
 ## About InMAP
@@ -35,7 +37,7 @@ This program should work on most types of computers. Refer [here](http://golang.
 		inmap -config=/path/to/configfile.json 
 	While the program is running, you can open a web browser and navigate to `localhost:8080` to view status and diagnostic information.
 
-3. View the output program output. The output files are in [GeoJSON](http://en.wikipedia.org/wiki/GeoJSON) format which can be viewed in GIS programs including [QGIS](http://www.qgis.org/). Output from each model layer is put into a separate file. Layer 0 is the one closest to the ground and will probably be of the most interest.
+3. View the output program output. The output files are in [shapefile](http://en.wikipedia.org/wiki/Shapefile) format which can be viewed in most GIS programs. One free GIS program is [QGIS](http://www.qgis.org/). Output from each model layer is put into a separate file. Layer 0 is the one closest to the ground and will probably be of the most interest. By default, the InMAP only outputs results from layer zero, but this can be changed using the configuration file.
 
 3. Create your own emissions scenarios:
 

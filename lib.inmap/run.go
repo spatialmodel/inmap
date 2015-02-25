@@ -52,33 +52,60 @@ const checkPeriod = 3600. // seconds, how often to check for convergence
 const daysPerSecond = 1. / 3600. / 24.
 const topLayerToCalc = 28 // The top layer to do calculations for
 
-// These are the names of pollutants accepted as emissions (μg/s)
+// These are the names of pollutants accepted as emissions [μg/s]
 var EmisNames = []string{"VOC", "NOx", "NH3", "SOx", "PM2_5"}
+
+var emisLabels = map[string]int{"VOC Emissions": igOrg,
+	"NOx emissions":   igNO,
+	"NH3 emissions":   igNH,
+	"SOx emissions":   igS,
+	"PM2.5 emissions": iPM2_5,
+}
 
 // These are the names of pollutants within the model
 var polNames = []string{"gOrg", "pOrg", // gaseous and particulate organic matter
 	"PM2_5",      // PM2.5
 	"gNH", "pNH", // gaseous and particulate N in ammonia
 	"gS", "pS", // gaseous and particulate S in sulfur
-	"gNO", "pNO"} // gaseous and particulate N in nitrate
+	"gNO", "pNO", // gaseous and particulate N in nitrate
+}
 
 // Indicies of individual pollutants in arrays.
 const (
 	igOrg, ipOrg, iPM2_5, igNH, ipNH, igS, ipS, igNO, ipNO = 0, 1, 2, 3, 4, 5, 6, 7, 8
 )
 
-// These are the names of pollutants output by the model (μg/m3)
-var OutputVariables = []string{"VOC", "SOA", "PrimaryPM2_5", "NH3", "pNH4",
-	"SOx", "pSO4", "NOx", "pNO3", "TotalPM2_5"} //,
-//"Total deaths", "White deaths", "Non-white deaths",
-//"High income deaths", "Low income deaths",
-//"High income white deaths", "Low income non-white deaths"}
+// map relating emissions to the associated PM2.5 concentrations
+var gasParticleMap = map[int]int{igOrg: ipOrg,
+	igNO: ipNO, igNH: ipNH, igS: ipS, iPM2_5: iPM2_5}
+
+type polConv struct {
+	index      []int     // index in concentration array
+	conversion []float64 // conversion from N to NH4, S to SO4, etc...
+}
+
+// Labels and conversions for pollutants.
+var polLabels = map[string]polConv{
+	"TotalPM2_5": polConv{[]int{iPM2_5, ipOrg, ipNH, ipS, ipNO},
+		[]float64{1, 1, 1, NtoNH4, StoSO4, NtoNO3}},
+	"VOC":          polConv{[]int{igOrg}, []float64{1.}},
+	"SOA":          polConv{[]int{ipOrg}, []float64{1.}},
+	"PrimaryPM2_5": polConv{[]int{iPM2_5}, []float64{1.}},
+	"NH3":          polConv{[]int{igNH}, []float64{1. / NH3ToN}},
+	"pNH4":         polConv{[]int{ipNH}, []float64{NtoNH4}},
+	"SOx":          polConv{[]int{igS}, []float64{1. / SOxToS}},
+	"pSO4":         polConv{[]int{ipS}, []float64{StoSO4}},
+	"NOx":          polConv{[]int{igNO}, []float64{1. / NOxToN}},
+	"pNO3":         polConv{[]int{ipNO}, []float64{NtoNO3}},
+}
 
 // Run air quality model. Emissions are assumed to be in units
 // of μg/s, and must only include the pollutants listed in "EmisNames".
 // Output is in the form of map[pollutant][layer][row]concentration,
 // in units of μg/m3.
-func (d *InMAPdata) Run(emissions map[string][]float64) (
+// If `outputAllLayers` is true, write all of the vertical layers to the
+// output, otherwise only output the ground-level layer.
+func (d *InMAPdata) Run(emissions map[string][]float64, outputAllLayers bool) (
 	outputConc map[string][][]float64) {
 
 	for _, c := range d.Data {
@@ -154,34 +181,55 @@ func (d *InMAPdata) Run(emissions map[string][]float64) (
 		timeStepTime = time.Now()
 		timeSinceLastCheck += d.Dt
 
-		// Occasionally, check to see if the pollutant concentrations have converged
-		if timeSinceLastCheck >= checkPeriod {
+		// If NumIterations has been set, used it to determine when to
+		// stop the model
+		if d.NumIterations > 0 {
+			if iteration >= d.NumIterations {
+				wg.Wait() // Wait for the science to finish
+				break     // finished
+			}
+			// Otherwise, occasionally check to see if the pollutant
+			// concentrations have converged
+		} else if timeSinceLastCheck >= checkPeriod {
 			wg.Wait() // Wait for the science to finish, only when we need to check
 			// for convergence.
-			//timeToQuit := true
+			timeToQuit := true
 			timeSinceLastCheck = 0.
 			for ii, pol := range polNames {
 				var sum float64
 				for _, c := range d.Data {
 					sum += c.Cf[ii]
 				}
-				//if !checkConvergence(sum, oldSum[ii], pol) {
-				//timeToQuit = false
-				//}
+				if !checkConvergence(sum, oldSum[ii], pol) {
+					timeToQuit = false
+				}
 				checkConvergence(sum, oldSum[ii], pol)
 				oldSum[ii] = sum
 			}
-			if iteration > 10000 {
-				//if timeToQuit {
+			if timeToQuit {
 				break // leave calculation loop because we're finished
 			}
 		}
 	}
 	// Prepare output data
 	outputConc = make(map[string][][]float64)
-	for _, name := range OutputVariables {
+	outputVariables := make([]string, 0)
+	for pol, _ := range polLabels {
+		outputVariables = append(outputVariables, pol)
+	}
+	for pop, _ := range popNames {
+		outputVariables = append(outputVariables, pop, pop+" deaths")
+	}
+	outputVariables = append(outputVariables, "MortalityRate")
+	var outputLay int
+	if outputAllLayers {
+		outputLay = d.Nlayers
+	} else {
+		outputLay = 1
+	}
+	for _, name := range outputVariables {
 		outputConc[name] = make([][]float64, d.Nlayers)
-		for k := 0; k < d.Nlayers; k++ {
+		for k := 0; k < outputLay; k++ {
 			outputConc[name][k] = d.toArray(name, k)
 		}
 	}
@@ -195,11 +243,11 @@ func (d *InMAPdata) doScience(nprocs, procNum int,
 	for f := range funcChan {
 		for ii := procNum; ii < len(d.Data); ii += nprocs {
 			c = d.Data[ii]
-			c.lock.Lock() // Lock the cell to avoid race conditions
+			c.Lock() // Lock the cell to avoid race conditions
 			if c.Layer <= topLayerToCalc {
 				f(c, d) // run function
 			}
-			c.lock.Unlock() // Unlock the cell: we're done editing it
+			c.Unlock() // Unlock the cell: we're done editing it
 		}
 		wg.Done()
 	}
