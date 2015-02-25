@@ -52,7 +52,7 @@ const checkPeriod = 3600. // seconds, how often to check for convergence
 const daysPerSecond = 1. / 3600. / 24.
 const topLayerToCalc = 28 // The top layer to do calculations for
 
-// These are the names of pollutants accepted as emissions (μg/s)
+// These are the names of pollutants accepted as emissions [μg/s]
 var EmisNames = []string{"VOC", "NOx", "NH3", "SOx", "PM2_5"}
 
 var emisLabels = map[string]int{"VOC Emissions": igOrg,
