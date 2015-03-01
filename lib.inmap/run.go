@@ -87,7 +87,7 @@ type polConv struct {
 // Labels and conversions for pollutants.
 var polLabels = map[string]polConv{
 	"TotalPM2_5": polConv{[]int{iPM2_5, ipOrg, ipNH, ipS, ipNO},
-		[]float64{1, 1, 1, NtoNH4, StoSO4, NtoNO3}},
+		[]float64{1, 1, NtoNH4, StoSO4, NtoNO3}},
 	"VOC":          polConv{[]int{igOrg}, []float64{1.}},
 	"SOA":          polConv{[]int{ipOrg}, []float64{1.}},
 	"PrimaryPM2_5": polConv{[]int{iPM2_5}, []float64{1.}},
