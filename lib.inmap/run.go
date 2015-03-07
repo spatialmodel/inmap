@@ -203,7 +203,6 @@ func (d *InMAPdata) Run(emissions map[string][]float64, outputAllLayers bool) (
 				if !checkConvergence(sum, oldSum[ii], pol) {
 					timeToQuit = false
 				}
-				checkConvergence(sum, oldSum[ii], pol)
 				oldSum[ii] = sum
 			}
 			if timeToQuit {
