@@ -26,6 +26,7 @@ import (
 	"code.google.com/p/lvd.go/cdf"
 )
 
+// ConfigInfo holds the configuration information for the program run.
 type ConfigInfo struct {
 	Wrfout              string  // Location of WRF output files. [DATE] is a wild card for the simulation date.
 	OutputDir           string  // Directory to put the output files in

@@ -32,6 +32,7 @@ import (
 	"github.com/twpayne/gogeom/geom"
 )
 
+// InMAPdata is holds the current state of the model.
 type InMAPdata struct {
 	Data    []*Cell // One data holder for each grid cell
 	Dt      float64 // seconds
@@ -56,7 +57,7 @@ func init() {
 	gob.Register(geom.Polygon{})
 }
 
-// Data for a single grid cell
+// Cell holds the state of a single grid cell.
 type Cell struct {
 	Geom                    geom.T             // Cell geometry
 	WebMapGeom              geom.T             // Cell geometry in web map (mercator) coordinate system
@@ -141,7 +142,7 @@ func (c *Cell) makecopy() *Cell {
 	return c2
 }
 
-// Initialize the model, where `filename` is the path to
+// InitInMAPdata initializes the model, where `filename` is the path to
 // the Gob files with meteorology and background concentration data
 // (where `[layer]` is a stand-in for the layer number),
 // `nLayers` is the number of vertical layers in the model,
@@ -351,7 +352,7 @@ func (cell *Cell) neighborInfo() {
 // time step, and set old velocities to velocities from previous time
 // step.
 func (c *Cell) addEmissionsFlux(d *InMAPdata) {
-	for i, _ := range polNames {
+	for i := range polNames {
 		c.Cf[i] += c.emisFlux[i] * d.Dt
 		c.Ci[i] = c.Cf[i]
 	}
@@ -446,12 +447,12 @@ func (d *InMAPdata) getUnits(varName string) string {
 		ftype, ok := t.FieldByName(varName)
 		if ok {
 			return ftype.Tag.Get("units")
-		} else {
-			panic(fmt.Sprintf("Unknown variable %v.", varName))
 		}
+		panic(fmt.Sprintf("Unknown variable %v.", varName))
 	}
 }
 
+// GetGeometry returns the cell geometry for the given layer.
 func (d *InMAPdata) GetGeometry(layer int) []geom.T {
 	o := make([]geom.T, d.LayerEnd[layer]-d.LayerStart[layer])
 	for i, c := range d.Data[d.LayerStart[layer]:d.LayerEnd[layer]] {

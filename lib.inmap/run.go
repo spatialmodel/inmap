@@ -37,6 +37,7 @@ const (
 	mwS   = 32.0655
 	mwSO2 = 64.0644
 	mwSO4 = 96.0632
+
 	// ratios
 	NOxToN = mwN / mwNOx
 	NtoNO3 = mwNO3 / mwN
@@ -212,11 +213,11 @@ func (d *InMAPdata) Run(emissions map[string][]float64, outputAllLayers bool) (
 	}
 	// Prepare output data
 	outputConc = make(map[string][][]float64)
-	outputVariables := make([]string, 0)
-	for pol, _ := range polLabels {
+	var outputVariables []string
+	for pol := range polLabels {
 		outputVariables = append(outputVariables, pol)
 	}
-	for pop, _ := range popNames {
+	for pop := range popNames {
 		outputVariables = append(outputVariables, pop, pop+" deaths")
 	}
 	outputVariables = append(outputVariables, "MortalityRate")
@@ -269,7 +270,6 @@ func checkConvergence(newSum, oldSum float64, Var string) bool {
 		Var, bias*100)
 	if math.Abs(bias) > tolerance || math.IsInf(bias, 0) {
 		return false
-	} else {
-		return true
 	}
+	return true
 }

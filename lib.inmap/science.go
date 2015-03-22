@@ -18,12 +18,12 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 
 package inmap
 
-// Calculate vertical mixing based on Pleim (2007), which is
+// Mixing calculates vertical mixing based on Pleim (2007), which is
 // combined local-nonlocal closure scheme, for
 // boundary layer and based on Wilson (2004) for above the boundary layer.
 // Also calculate horizontal mixing.
 func (c *Cell) Mixing(Δt float64) {
-	for ii, _ := range c.Cf {
+	for ii := range c.Cf {
 		// Pleim (2007) Equation 10.
 		for i, g := range c.GroundLevel { // Upward convection
 			c.Cf[ii] += c.M2u * g.Ci[ii] * Δt * c.GroundLevelFrac[i]
@@ -112,10 +112,10 @@ func (c *Cell) belowAboveFlux(ii int) float64 {
 
 const advectionFactor = 2.
 
-// Calculates advection in the cell based
+// UpwindAdvection calculates advection in the cell based
 // on the upwind differences scheme.
 func (c *Cell) UpwindAdvection(Δt float64) {
-	for ii, _ := range c.Cf {
+	for ii := range c.Cf {
 		c.Cf[ii] += c.westEastFlux(ii) / c.Dx * Δt * advectionFactor
 		c.Cf[ii] += c.southNorthFlux(ii) / c.Dy * Δt * advectionFactor
 		c.Cf[ii] += c.belowAboveFlux(ii) / c.Dz * Δt * advectionFactor
@@ -124,7 +124,7 @@ func (c *Cell) UpwindAdvection(Δt float64) {
 
 const ammoniaFactor = 4.
 
-// Calculates the secondary formation of PM2.5.
+// Chemistry calculates the secondary formation of PM2.5.
 // Explicitely calculates formation of particulate sulfate
 // from gaseous and aqueous SO2.
 // Partitions organic matter ("gOrg" and "pOrg"), the
@@ -165,7 +165,7 @@ func (c *Cell) Chemistry(d *InMAPdata) {
 	c.Cf[igOrg] = totalOrg * (1 - c.AOrgPartitioning)
 }
 
-// Calculates particle removal by dry deposition
+// DryDeposition calculates particle removal by dry deposition
 func (c *Cell) DryDeposition(d *InMAPdata) {
 	if c.Layer == 0 {
 		fac := 1. / c.Dz * d.Dt
@@ -186,7 +186,7 @@ func (c *Cell) DryDeposition(d *InMAPdata) {
 	}
 }
 
-// Calculates particle removal by wet deposition
+// WetDeposition calculates particle removal by wet deposition
 func (c *Cell) WetDeposition(Δt float64) {
 	particleFrac := 1. - c.ParticleWetDep*Δt
 	SO2Frac := 1. - c.SO2WetDep*Δt
@@ -219,9 +219,8 @@ func max(vals ...float64) float64 {
 func min(v1, v2 float64) float64 {
 	if v1 < v2 {
 		return v1
-	} else {
-		return v2
 	}
+	return v2
 }
 func amin(vals ...float64) float64 {
 	m := vals[0]

@@ -45,6 +45,7 @@ var mapOptions map[string]string
 // Names of population types.
 var popNames map[string]string
 
+// WebServer provides a HTML user interface for the model.
 func (d *InMAPdata) WebServer(httpPort string) {
 
 	// First, set up the options of variables to make maps of

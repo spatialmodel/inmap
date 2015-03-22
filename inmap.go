@@ -43,7 +43,7 @@ import (
 	"github.com/twpayne/gogeom/geom"
 )
 
-var configFile *string = flag.String("config", "none", "Path to configuration file")
+var configFile = flag.String("config", "none", "Path to configuration file")
 
 const version = "0.1.0"
 
@@ -279,7 +279,7 @@ func main() {
 	iF := d.IntakeFraction(breathingRate)
 	// Write iF to stdout
 	w := tabwriter.NewWriter(os.Stdout, 0, 8, 1, '\t', 0)
-	popList := make([]string, 0)
+	var popList []string
 	for _, m := range iF {
 		for p := range m {
 			popList = append(popList, p)
@@ -397,9 +397,9 @@ func s2f(s string) float64 {
 	return f
 }
 
-// Reads and parse a json configuration file.
+// ReadConfigFile reads and parses a json configuration file.
 // See below for the required variables.
-func ReadConfigFile(filename string) (config *configData) {
+func readConfigFile(filename string) (config *configData) {
 	// Open the configuration file
 	var (
 		file  *os.File
