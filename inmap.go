@@ -92,7 +92,7 @@ func main() {
 			"`inmap -config=configFile.json`")
 		os.Exit(1)
 	}
-	config := ReadConfigFile(*configFile)
+	config := readConfigFile(*configFile)
 
 	fmt.Println("\n",
 		"------------------------------------------------\n",
@@ -397,7 +397,7 @@ func s2f(s string) float64 {
 	return f
 }
 
-// ReadConfigFile reads and parses a json configuration file.
+// readConfigFile reads and parses a json configuration file.
 // See below for the required variables.
 func readConfigFile(filename string) (config *configData) {
 	// Open the configuration file
