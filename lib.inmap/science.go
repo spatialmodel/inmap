@@ -140,16 +140,19 @@ func (c *Cell) Chemistry(d *InMAPdata) {
 	c.Cf[igS] -= ΔS
 
 	// NH3 / NH4 partitioning
-	// Assume that NH4 formation (but not evaporation)
-	// is limited by SO4 formation.
 	totalNH := c.Cf[igNH] + c.Cf[ipNH]
 	// Caclulate difference from equilibrium particulate NH conc.
 	eqNHpDistance := totalNH*c.NHPartitioning - c.Cf[ipNH]
-	if eqNHpDistance > 0. { // particles will form
+	if c.Cf[igS] != 0 && eqNHpDistance > 0. { // particles will form
+		// If ΔSOx is present and pNH4 concentration is below
+		// equilibrium, assume that pNH4 formation
+		// is limited by SO4 formation.
 		ΔNH := min(max(ammoniaFactor*ΔS*mwN/mwS, 0.), eqNHpDistance)
 		c.Cf[ipNH] += ΔNH
 		c.Cf[igNH] -= ΔNH
 	} else {
+		// If pNH4 concentration is above equilibrium or if there is
+		// no change in SOx present, assume instantaneous equilibration.
 		c.Cf[ipNH] += eqNHpDistance
 		c.Cf[igNH] -= eqNHpDistance
 	}
