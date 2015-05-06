@@ -249,7 +249,7 @@ func InitInMAPdata(filetemplate string, nLayers int, numIterations int,
 					}
 					cell.INorth = nil
 				}
-				if len(cell.IAbove) == 0 {
+				if len(cell.IAbove) == 0 || cell.Layer == nLayers-1 {
 					c := cell.makecopy()
 					cell.Above = []*Cell{c}
 					d.topBoundary = append(d.topBoundary, c)
