@@ -19,25 +19,28 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package inmap
 
 import (
-	//"fmt"
+	"fmt"
 	"math"
 	"math/rand"
 	"runtime"
 	"testing"
+	"time"
 )
 
 var d *InMAPdata
 
 const (
-	testRow       = 25300 // somewhere in Chicago
-	testTolerance = 1e-8
-	Δt            = 6.   // seconds
-	E             = 0.01 // emissions
+	testRow          = 25300 // somewhere in Chicago
+	testTolerance    = 1e-4
+	Δt               = 6.   // seconds
+	E                = 0.01 // emissions
+	numRunIterations = 100  // number of iterations for Run to run
 )
 
 func init() {
 	runtime.GOMAXPROCS(8)
-	d = InitInMAPdata("/media/chris/data1/inmapData/inmapData_48_24_12_4_2_1_40000/inmapData_[layer].gob", 27, -1, "8080")
+	//d = InitInMAPdata("/media/chris/data1/inmapData/inmapData_48_24_12_4_2_1_40000/inmapData_[layer].gob", 27, numRunIterations, "8080")
+	d = InitInMAPdata("/home/marshall/tessumcm/inmapData/inmapData_48_24_12_4_2_1_40000/inmapData_[layer].gob", 27, numRunIterations, "8080")
 	d.Dt = Δt
 }
 
@@ -228,11 +231,11 @@ func TestCellAlignment(t *testing.T) {
 
 // Test whether convective mixing coeffecients are balanced in
 // a way that conserves mass
-func TestConvection(t *testing.T) {
+func TestConvectiveMixing(t *testing.T) {
 	for i, c := range d.Data {
 		val := c.M2u - c.M2d + c.Above[0].M2d*c.Above[0].Dz/c.Dz
-		if different(val/c.M2u, 0.) {
-			t.Log(i, c.Layer, val/c.M2u, c.M2u, c.M2d, c.Above[0].M2d)
+		if absDifferent(val, 0) {
+			t.Log(i, c.Layer, val, c.M2u, c.M2d, c.Above[0].M2d)
 			t.FailNow()
 		}
 	}
@@ -334,10 +337,44 @@ func TestAdvection(t *testing.T) {
 	}
 }
 
-func different(a, b float64) bool {
-	if math.Abs(a-b)/math.Abs(b) > testTolerance {
-		return true
-	} else {
-		return false
+func BenchmarkRun(b *testing.B) {
+	var timing []time.Duration
+	var procs = []int{1, 2, 4, 8, 16, 24, 36, 48}
+	for _, nprocs := range procs {
+		runtime.GOMAXPROCS(nprocs)
+		emissions := make(map[string][]float64)
+		emissions["SOx"] = make([]float64, len(d.Data))
+		emissions["SOx"][25000] = 100.
+		var results []float64
+		start := time.Now()
+		results = d.Run(emissions, false)["TotalPop deaths"][0]
+		timing = append(timing, time.Since(start))
+		totald := 0.
+		for _, v := range results {
+			totald += v
+		}
+		const expectedDeaths = 7.191501683235596e-10
+		if different(totald+1, expectedDeaths+1) {
+			b.Errorf("Deaths (%v) doesn't equal %v", totald, expectedDeaths)
+		}
 	}
+	for i, p := range procs {
+		fmt.Printf("For %v procs\ttime = %v\tscale eff = %.3g\n",
+			p, timing[i], timing[0].Seconds()/
+				timing[i].Seconds()/float64(p))
+	}
+}
+
+func different(a, b float64) bool {
+	if 2*math.Abs(a-b)/math.Abs(a+b) > testTolerance {
+		return true
+	}
+	return false
+}
+
+func absDifferent(a, b float64) bool {
+	if math.Abs(a-b) > testTolerance {
+		return true
+	}
+	return false
 }

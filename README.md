@@ -1,4 +1,5 @@
-# (In)tervention (M)odel for (A)ir (P)ollution
+# (In)tervention (M)odel for (A)ir (P)ollution [![Build Status](https://travis-ci.org/ctessum/inmap.svg?branch=master)](https://travis-ci.org/ctessum/inmap) [![Coverage Status](https://img.shields.io/coveralls/ctessum/inmap.svg)](https://coveralls.io/r/ctessum/inmap) [![GoDoc](https://godoc.org/github.com/ctessum/inmap?status.svg)](https://godoc.org/github.com/ctessum/inmap)
+
 
 [![GoDoc](http://godoc.org/github.com/ctessum/inmap/lib.inmap?status.svg)](http://godoc.org/github.com/ctessum/inmap/lib.inmap)
 
