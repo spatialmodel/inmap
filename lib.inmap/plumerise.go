@@ -33,6 +33,9 @@ func (d *InMAPdata) CalcPlumeRise(stackHeight, stackDiam, stackTemp,
 	layerHeights := make([]float64, d.Nlayers+1)
 	temperature := make([]float64, d.Nlayers)
 	windSpeed := make([]float64, d.Nlayers)
+	windSpeedInverse := make([]float64, d.Nlayers)
+	windSpeedMinusThird := make([]float64, d.Nlayers)
+	windSpeedMinusOnePointFour := make([]float64, d.Nlayers)
 	sClass := make([]float64, d.Nlayers)
 	s1 := make([]float64, d.Nlayers)
 
@@ -40,14 +43,18 @@ func (d *InMAPdata) CalcPlumeRise(stackHeight, stackDiam, stackTemp,
 	for i := 0; i < d.Nlayers; i++ {
 		layerHeights[i+1] = layerHeights[i] + cell.Dz
 		windSpeed[i] = cell.WindSpeed
+		windSpeedInverse[i] = cell.WindSpeedInverse
+		windSpeedMinusThird[i] = cell.WindSpeedMinusThird
+		windSpeedMinusOnePointFour[i] = cell.WindSpeedMinusOnePointFour
 		sClass[i] = cell.SClass
 		s1[i] = cell.S1
 		cell = cell.Above[0]
 	}
 	var kPlume int
-	kPlume, err = plumerise.PlumeRiseASME(stackHeight, stackDiam, stackTemp,
-		stackVel, layerHeights, temperature, windSpeed,
-		sClass, s1)
+	kPlume, err = plumerise.PlumeRiseASMEPrecomputed(stackHeight, stackDiam,
+		stackTemp, stackVel, layerHeights, temperature, windSpeed,
+		sClass, s1, windSpeedMinusOnePointFour, windSpeedMinusThird,
+		windSpeedInverse)
 	if err != nil {
 		if err == plumerise.AboveModelTop {
 			kPlume = d.Nlayers - 1

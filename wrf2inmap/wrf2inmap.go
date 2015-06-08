@@ -197,6 +197,9 @@ func main() {
 	ph := <-phChan
 	phb := <-phbChan
 	windSpeed := <-uAvgChan
+	windSpeedInverse := <-uAvgChan
+	windSpeedMinusThird := <-uAvgChan
+	windSpeedMinusOnePointFour := <-uAvgChan
 
 	layerHeights, Dz := calcLayerHeights(ph, phb)
 
@@ -307,8 +310,8 @@ func main() {
 	// StabilityMixingChemistry results
 	Tchan <- nil
 	temperature := <-Tchan
-	S1 := <-Tchan
 	Sclass := <-Tchan
+	S1 := <-Tchan
 	Kzz := <-Tchan
 	M2u := <-Tchan
 	M2d := <-Tchan
@@ -436,6 +439,12 @@ func main() {
 			"Planetary boundary layer height", "m", pblh},
 		"WindSpeed": dataHolder{[]string{"z", "y", "x"},
 			"RMS wind speed", "m s-1", windSpeed},
+		"WindSpeedInverse": dataHolder{[]string{"z", "y", "x"},
+			"RMS wind speed^(-1)", "(m s-1)^(-1)", windSpeedInverse},
+		"WindSpeedMinusThird": dataHolder{[]string{"z", "y", "x"},
+			"RMS wind speed^(-1/3)", "(m s-1)^(-1/3)", windSpeedMinusThird},
+		"WindSpeedMinusOnePointFour": dataHolder{[]string{"z", "y", "x"},
+			"RMS wind speed^(-1.4)", "(m s-1)^(-1.4)", windSpeedMinusOnePointFour},
 		"Temperature": dataHolder{[]string{"z", "y", "x"},
 			"Average Temperature", "K", temperature},
 		"S1": dataHolder{[]string{"z", "y", "x"},
@@ -532,6 +541,7 @@ type cdfFile struct {
 	ncfLock sync.Mutex
 }
 
+// read a variable out of a netcdf file.
 func readNCF(pol string, f *cdfFile, hour int) (data *sparse.DenseArray) {
 	dims := f.f.Header.Lengths(pol)
 	if len(dims) == 0 {
@@ -559,6 +569,8 @@ func readNCF(pol string, f *cdfFile, hour int) (data *sparse.DenseArray) {
 	return
 }
 
+// readSingleVar creates a function that reads a single variable
+// out of a netcdf file.
 func readSingleVar(Var string,
 	datachans ...chan *sparse.DenseArray) cdfReaderFunc {
 	return func(f *cdfFile, hour int, wg *sync.WaitGroup) {
@@ -935,6 +947,9 @@ func arrayAverage(s *sparse.DenseArray) *sparse.DenseArray {
 // Calculate RMS wind speed
 func windSpeed(uChan, vChan, wChan chan *sparse.DenseArray) {
 	var speed *sparse.DenseArray
+	var speedInverse *sparse.DenseArray
+	var speedMinusThird *sparse.DenseArray
+	var speedMinusOnePointFour *sparse.DenseArray
 	firstData := true
 	var dims []int
 	for {
@@ -942,10 +957,16 @@ func windSpeed(uChan, vChan, wChan chan *sparse.DenseArray) {
 		v := <-vChan
 		w := <-wChan
 		if u == nil {
-			for i, val := range speed.Elements {
-				speed.Elements[i] = val / numTsteps
+			for i := range speed.Elements {
+				speed.Elements[i] /= numTsteps
+				speedInverse.Elements[i] /= numTsteps
+				speedMinusThird.Elements[i] /= numTsteps
+				speedMinusOnePointFour.Elements[i] /= numTsteps
 			}
 			uChan <- speed
+			uChan <- speedInverse
+			uChan <- speedMinusThird
+			uChan <- speedMinusOnePointFour
 			return
 		}
 		if firstData {
@@ -957,6 +978,9 @@ func windSpeed(uChan, vChan, wChan chan *sparse.DenseArray) {
 				dims[i] = minInt(ulen, vlen, wlen)
 			}
 			speed = sparse.ZerosDense(dims...)
+			speedInverse = sparse.ZerosDense(dims...)
+			speedMinusThird = sparse.ZerosDense(dims...)
+			speedMinusOnePointFour = sparse.ZerosDense(dims...)
 			firstData = false
 		}
 		for k := 0; k < dims[0]; k++ {
@@ -971,6 +995,9 @@ func windSpeed(uChan, vChan, wChan chan *sparse.DenseArray) {
 					s := math.Pow(math.Pow(ucenter, 2.)+
 						math.Pow(vcenter, 2.)+math.Pow(wcenter, 2.), 0.5)
 					speed.AddVal(s, k, j, i)
+					speedInverse.AddVal(1./s, k, j, i)
+					speedMinusThird.AddVal(math.Pow(s, -1./3.), k, j, i)
+					speedMinusOnePointFour.AddVal(math.Pow(s, -1.4), k, j, i)
 				}
 			}
 		}
@@ -1122,9 +1149,9 @@ func StabilityMixingChemistry(LayerHeights *sparse.DenseArray,
 					}
 				}
 			}
-			for _, arr := range []*sparse.DenseArray{Temp, S1, Sclass,
-				KzzUnstaggered, M2u, M2d, SO2oxidation, particleDryDep,
-				SO2DryDep, NOxDryDep, NH3DryDep, VOCDryDep, Kyy} {
+			for _, arr := range []*sparse.DenseArray{Temp,
+				Sclass, S1, KzzUnstaggered, M2u, M2d, SO2oxidation,
+				particleDryDep, SO2DryDep, NOxDryDep, NH3DryDep, VOCDryDep, Kyy} {
 				Tchan <- arrayAverage(arr)
 			}
 			return

@@ -59,72 +59,75 @@ func init() {
 
 // Cell holds the state of a single grid cell.
 type Cell struct {
-	Geom                    geom.T             // Cell geometry
-	WebMapGeom              geom.T             // Cell geometry in web map (mercator) coordinate system
-	UPlusSpeed              float64            `desc:"Westerly wind speed" units:"m/s"`
-	UMinusSpeed             float64            `desc:"Easterly wind speed" units:"m/s"`
-	VPlusSpeed              float64            `desc:"Southerly wind speed" units:"m/s"`
-	VMinusSpeed             float64            `desc:"Northerly wind speed" units:"m/s"`
-	WPlusSpeed, WMinusSpeed float64            `desc:"Upwardly wind speed" units:"m/s"`
-	AOrgPartitioning        float64            `desc:"Organic particle partitioning" units:"fraction particles"`
-	BOrgPartitioning        float64            // particle fraction
-	SPartitioning           float64            `desc:"Sulfur particle partitioning" units:"fraction particles"`
-	NOPartitioning          float64            `desc:"Nitrate particle partitioning" units:"fraction particles"`
-	NHPartitioning          float64            `desc:"Ammonium particle partitioning" units:"fraction particles"`
-	ParticleWetDep          float64            `desc:"Particle wet deposition" units:"1/s"`
-	SO2WetDep               float64            `desc:"SO2 wet deposition" units:"1/s"`
-	OtherGasWetDep          float64            `desc:"Wet deposition: other gases" units:"1/s"`
-	ParticleDryDep          float64            `desc:"Particle dry deposition" units:"m/s"`
-	NH3DryDep               float64            `desc:"Ammonia dry deposition" units:"m/s"`
-	SO2DryDep               float64            `desc:"SO2 dry deposition" units:"m/s"`
-	VOCDryDep               float64            `desc:"VOC dry deposition" units:"m/s"`
-	NOxDryDep               float64            `desc:"NOx dry deposition" units:"m/s"`
-	SO2oxidation            float64            `desc:"SO2 oxidation to SO4 by HO and H2O2" units:"1/s"`
-	Kzz                     float64            `desc:"Grid center vertical diffusivity after applying convective fraction" units:"m²/s"`
-	KzzAbove, KzzBelow      []float64          // horizontal diffusivity [m2/s] (staggered grid)
-	Kxxyy                   float64            `desc:"Grid center horizontal diffusivity" units:"m²/s"`
-	KyySouth, KyyNorth      []float64          // horizontal diffusivity [m2/s] (staggered grid)
-	KxxWest, KxxEast        []float64          // horizontal diffusivity at [m2/s] (staggered grid)
-	M2u                     float64            `desc:"ACM2 upward mixing (Pleim 2007)" units:"1/s"`
-	M2d                     float64            `desc:"ACM2 downward mixing (Pleim 2007)" units:"1/s"`
-	PopData                 map[string]float64 // Population for multiple demographics [people/grid cell]
-	MortalityRate           float64            `desc:"Baseline mortalities rate" units:"Deaths per 100,000 people per year"`
-	Dx, Dy, Dz              float64            // grid size [meters]
-	Volume                  float64            `desc:"Cell volume" units:"m³"`
-	Row                     int                // master cell index
-	Ci                      []float64          // concentrations at beginning of time step [μg/m³]
-	Cf                      []float64          // concentrations at end of time step [μg/m³]
-	emisFlux                []float64          // emissions [μg/m³/s]
-	West                    []*Cell            // Neighbors to the East
-	East                    []*Cell            // Neighbors to the West
-	South                   []*Cell            // Neighbors to the South
-	North                   []*Cell            // Neighbors to the North
-	Below                   []*Cell            // Neighbors below
-	Above                   []*Cell            // Neighbors above
-	GroundLevel             []*Cell            // Neighbors at ground level
-	WestFrac, EastFrac      []float64          // Fraction of cell covered by each neighbor (adds up to 1).
-	NorthFrac, SouthFrac    []float64          // Fraction of cell covered by each neighbor (adds up to 1).
-	AboveFrac, BelowFrac    []float64          // Fraction of cell covered by each neighbor (adds up to 1).
-	GroundLevelFrac         []float64          // Fraction of cell above to each ground level cell (adds up to 1).
-	IWest                   []int              // Row indexes of neighbors to the East
-	IEast                   []int              // Row indexes of neighbors to the West
-	ISouth                  []int              // Row indexes of neighbors to the South
-	INorth                  []int              // Row indexes of neighbors to the north
-	IBelow                  []int              // Row indexes of neighbors below
-	IAbove                  []int              // Row indexes of neighbors above
-	IGroundLevel            []int              // Row indexes of neighbors at ground level
-	DxPlusHalf              []float64          // Distance between centers of cell and East [m]
-	DxMinusHalf             []float64          // Distance between centers of cell and West [m]
-	DyPlusHalf              []float64          // Distance between centers of cell and North [m]
-	DyMinusHalf             []float64          // Distance between centers of cell and South [m]
-	DzPlusHalf              []float64          // Distance between centers of cell and Above [m]
-	DzMinusHalf             []float64          // Distance between centers of cell and Below [m]
-	Layer                   int                // layer index of grid cell
-	Temperature             float64            `desc:"Average temperature" units:"K"`
-	WindSpeed               float64            `desc:"RMS wind speed" units:"m/s"`
-	S1                      float64            `desc:"Stability parameter" units:"?"`
-	SClass                  float64            `desc:"Stability class" units:"0=Unstable; 1=Stable"`
-	sync.RWMutex                               // Avoid cell being written by one subroutine and read by another at the same time.
+	Geom                       geom.T             // Cell geometry
+	WebMapGeom                 geom.T             // Cell geometry in web map (mercator) coordinate system
+	UPlusSpeed                 float64            `desc:"Westerly wind speed" units:"m/s"`
+	UMinusSpeed                float64            `desc:"Easterly wind speed" units:"m/s"`
+	VPlusSpeed                 float64            `desc:"Southerly wind speed" units:"m/s"`
+	VMinusSpeed                float64            `desc:"Northerly wind speed" units:"m/s"`
+	WPlusSpeed, WMinusSpeed    float64            `desc:"Upwardly wind speed" units:"m/s"`
+	AOrgPartitioning           float64            `desc:"Organic particle partitioning" units:"fraction particles"`
+	BOrgPartitioning           float64            // particle fraction
+	SPartitioning              float64            `desc:"Sulfur particle partitioning" units:"fraction particles"`
+	NOPartitioning             float64            `desc:"Nitrate particle partitioning" units:"fraction particles"`
+	NHPartitioning             float64            `desc:"Ammonium particle partitioning" units:"fraction particles"`
+	ParticleWetDep             float64            `desc:"Particle wet deposition" units:"1/s"`
+	SO2WetDep                  float64            `desc:"SO2 wet deposition" units:"1/s"`
+	OtherGasWetDep             float64            `desc:"Wet deposition: other gases" units:"1/s"`
+	ParticleDryDep             float64            `desc:"Particle dry deposition" units:"m/s"`
+	NH3DryDep                  float64            `desc:"Ammonia dry deposition" units:"m/s"`
+	SO2DryDep                  float64            `desc:"SO2 dry deposition" units:"m/s"`
+	VOCDryDep                  float64            `desc:"VOC dry deposition" units:"m/s"`
+	NOxDryDep                  float64            `desc:"NOx dry deposition" units:"m/s"`
+	SO2oxidation               float64            `desc:"SO2 oxidation to SO4 by HO and H2O2" units:"1/s"`
+	Kzz                        float64            `desc:"Grid center vertical diffusivity after applying convective fraction" units:"m²/s"`
+	KzzAbove, KzzBelow         []float64          // horizontal diffusivity [m2/s] (staggered grid)
+	Kxxyy                      float64            `desc:"Grid center horizontal diffusivity" units:"m²/s"`
+	KyySouth, KyyNorth         []float64          // horizontal diffusivity [m2/s] (staggered grid)
+	KxxWest, KxxEast           []float64          // horizontal diffusivity at [m2/s] (staggered grid)
+	M2u                        float64            `desc:"ACM2 upward mixing (Pleim 2007)" units:"1/s"`
+	M2d                        float64            `desc:"ACM2 downward mixing (Pleim 2007)" units:"1/s"`
+	PopData                    map[string]float64 // Population for multiple demographics [people/grid cell]
+	MortalityRate              float64            `desc:"Baseline mortalities rate" units:"Deaths per 100,000 people per year"`
+	Dx, Dy, Dz                 float64            // grid size [meters]
+	Volume                     float64            `desc:"Cell volume" units:"m³"`
+	Row                        int                // master cell index
+	Ci                         []float64          // concentrations at beginning of time step [μg/m³]
+	Cf                         []float64          // concentrations at end of time step [μg/m³]
+	emisFlux                   []float64          // emissions [μg/m³/s]
+	West                       []*Cell            // Neighbors to the East
+	East                       []*Cell            // Neighbors to the West
+	South                      []*Cell            // Neighbors to the South
+	North                      []*Cell            // Neighbors to the North
+	Below                      []*Cell            // Neighbors below
+	Above                      []*Cell            // Neighbors above
+	GroundLevel                []*Cell            // Neighbors at ground level
+	WestFrac, EastFrac         []float64          // Fraction of cell covered by each neighbor (adds up to 1).
+	NorthFrac, SouthFrac       []float64          // Fraction of cell covered by each neighbor (adds up to 1).
+	AboveFrac, BelowFrac       []float64          // Fraction of cell covered by each neighbor (adds up to 1).
+	GroundLevelFrac            []float64          // Fraction of cell above to each ground level cell (adds up to 1).
+	IWest                      []int              // Row indexes of neighbors to the East
+	IEast                      []int              // Row indexes of neighbors to the West
+	ISouth                     []int              // Row indexes of neighbors to the South
+	INorth                     []int              // Row indexes of neighbors to the north
+	IBelow                     []int              // Row indexes of neighbors below
+	IAbove                     []int              // Row indexes of neighbors above
+	IGroundLevel               []int              // Row indexes of neighbors at ground level
+	DxPlusHalf                 []float64          // Distance between centers of cell and East [m]
+	DxMinusHalf                []float64          // Distance between centers of cell and West [m]
+	DyPlusHalf                 []float64          // Distance between centers of cell and North [m]
+	DyMinusHalf                []float64          // Distance between centers of cell and South [m]
+	DzPlusHalf                 []float64          // Distance between centers of cell and Above [m]
+	DzMinusHalf                []float64          // Distance between centers of cell and Below [m]
+	Layer                      int                // layer index of grid cell
+	Temperature                float64            `desc:"Average temperature" units:"K"`
+	WindSpeed                  float64            `desc:"RMS wind speed" units:"m/s"`
+	WindSpeedInverse           float64            `desc:"RMS wind speed inverse" units:"(m/s)^(-1)"`
+	WindSpeedMinusThird        float64            `desc:"RMS wind speed^(-1/3)" units:"(m/s)^(-1/3)"`
+	WindSpeedMinusOnePointFour float64            `desc:"RMS wind speed^(-1.4)" units:"(m/s)^(-1.4)"`
+	S1                         float64            `desc:"Stability parameter" units:"?"`
+	SClass                     float64            `desc:"Stability class" units:"0=Unstable; 1=Stable"`
+	sync.RWMutex                                  // Avoid cell being written by one subroutine and read by another at the same time.
 }
 
 func (c *Cell) prepare() {

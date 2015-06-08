@@ -39,8 +39,8 @@ const (
 
 func init() {
 	runtime.GOMAXPROCS(8)
-	//d = InitInMAPdata("/media/chris/data1/inmapData/inmapData_48_24_12_4_2_1_40000/inmapData_[layer].gob", 27, numRunIterations, "8080")
-	d = InitInMAPdata("/home/marshall/tessumcm/inmapData/inmapData_48_24_12_4_2_1_40000/inmapData_[layer].gob", 27, numRunIterations, "8080")
+	dataPath := os.Getenv("inmapdata")
+	d = InitInMAPdata(dataPath, 27, numRunIterations, "8080")
 	d.Dt = Δt
 }
 

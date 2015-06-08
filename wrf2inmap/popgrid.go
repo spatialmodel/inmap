@@ -47,8 +47,11 @@ type gridCell struct {
 	ParticleDryDep, SO2DryDep, NOxDryDep, NH3DryDep  float64
 	VOCDryDep, Kxxyy, LayerHeights                   float64
 	ParticleWetDep, SO2WetDep, OtherGasWetDep        float64
-	Kzz, M2u, M2d, WindSpeed                         float64
-	Temperature, S1, Sclass                          float64
+	Kzz, M2u, M2d                                    float64
+	WindSpeed, WindSpeedMinusThird                   float64
+	WindSpeedInverse, WindSpeedMinusOnePointFour     float64
+	Temperature                                      float64
+	S1, Sclass                                       float64
 }
 
 func (c gridCell) Bounds() *rtreego.Rect {
@@ -722,6 +725,13 @@ func getData(cells []*gridCell, data map[string]dataHolder, k int) {
 				k, ctmrow, ctmcol) / ncells
 			cell.WindSpeed += data["WindSpeed"].data.Get(
 				k, ctmrow, ctmcol) / ncells
+			cell.WindSpeedInverse += data["WindSpeedInverse"].data.Get(
+				k, ctmrow, ctmcol) / ncells
+			cell.WindSpeedMinusThird += data["WindSpeedMinusThird"].data.Get(
+				k, ctmrow, ctmcol) / ncells
+			cell.WindSpeedMinusOnePointFour +=
+				data["WindSpeedMinusOnePointFour"].data.Get(
+					k, ctmrow, ctmcol) / ncells
 			cell.Temperature += data["Temperature"].data.Get(
 				k, ctmrow, ctmcol) / ncells
 			cell.S1 += data["S1"].data.Get(
