@@ -32,7 +32,7 @@ var d *InMAPdata
 
 const (
 	testRow          = 25300 // somewhere in Chicago
-	testTolerance    = 1e-4
+	testTolerance    = 1e-3
 	Δt               = 6.   // seconds
 	E                = 0.01 // emissions
 	numRunIterations = 100  // number of iterations for Run to run
@@ -41,6 +41,11 @@ const (
 func init() {
 	runtime.GOMAXPROCS(8)
 	dataPath := os.Getenv("inmapdata")
+	if dataPath == "" {
+		fmt.Println("Environment variable $inmapdata must " +
+			"be set to the location of the InMAP input data.")
+		os.Exit(2)
+	}
 	d = InitInMAPdata(dataPath, 27, numRunIterations, "8080")
 	d.Dt = Δt
 }

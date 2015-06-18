@@ -1,9 +1,25 @@
 language: go
 go:
-      - tip
+      - 1.3.3
+      - 1.4.2
+
+env:
+  global:
+      - inmapdata: "$HOME/gopath/src/github.com/ctessum/inmap/inmapData_48_24_12_4_2_1_40000/inmapData_[layer].gob"
+
 before_install:
       - go get github.com/axw/gocov/gocov
       - go get github.com/mattn/goveralls
       - go get golang.org/x/tools/cmd/cover
+
+install:
+      - go get -d -t
+
+before_script:
+      - wget https://github.com/ctessum/inmap/releases/download/v1.0.0/inmapData_48_24_12_4_2_1_40000.zip
+      - unzip inmapData_48_24_12_4_2_1_40000.zip
+
 script:
+      - go test
+      - go test github.com/ctessum/inmap/lib.inmap
       - $HOME/gopath/bin/goveralls -service=travis-ci -package=github.com/ctessum/inmap/lib.inmap
