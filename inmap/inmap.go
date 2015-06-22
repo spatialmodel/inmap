@@ -39,7 +39,7 @@ import (
 	"github.com/ctessum/geom/index/rtree"
 	"github.com/ctessum/geom/op"
 	"github.com/ctessum/geomconv"
-	"github.com/ctessum/inmap/lib.inmap"
+	"github.com/ctessum/inmap"
 	goshp "github.com/jonas-p/go-shp"
 )
 
