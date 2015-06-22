@@ -19,10 +19,16 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package inmap
 
 import (
+	"archive/zip"
+	"bytes"
 	"encoding/gob"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"math"
+	"net/http"
 	"os"
+	"path/filepath"
 	"reflect"
 	"runtime"
 	"strings"
@@ -145,56 +151,136 @@ func (c *Cell) makecopy() *Cell {
 	return c2
 }
 
-// InitInMAPdata initializes the model, where `filename` is the path to
+// InitOptions are options of different ways to initialize
+// the model.
+type InitOption func(*InMAPdata) error
+
+// UseFileTemplate initializes the model with data from a local disk,
+// where `filetemplate` is the path to
 // the Gob files with meteorology and background concentration data
-// (where `[layer]` is a stand-in for the layer number),
-// `nLayers` is the number of vertical layers in the model,
+// (where `[layer]` is a stand-in for the layer number), and
+// `nLayers` is the number of vertical layers in the model.
+func UseFileTemplate(filetemplate string, nLayers int) InitOption {
+	return func(d *InMAPdata) error {
+		readers := make([]io.ReadCloser, nLayers)
+		var err error
+		for k := 0; k < nLayers; k++ {
+			filename := strings.Replace(filetemplate, "[layer]",
+				fmt.Sprintf("%v", k), -1)
+			if readers[k], err = os.Open(filename); err != nil {
+				return fmt.Errorf("Problem opening InMAP data file: %v",
+					err.Error())
+			}
+		}
+		return UseReaders(readers)(d)
+	}
+}
+
+// UseWebArchive initializes the model with data from a network,
+// where `url` is the network address, `fileNameTemplate` is the template for
+// the names of the Gob files with meteorology and background concentration data
+// (where `[layer]` is a stand-in for the layer number), and
+// `nLayers` is the number of vertical layers in the model.
+func UseWebArchive(url, fileNameTemplate string, nLayers int) InitOption {
+	return func(d *InMAPdata) error {
+		fmt.Printf("Downloading data from %v...\n", url)
+		response, err := http.Get(url)
+		if err != nil {
+			return fmt.Errorf("error while downloading %v: %v", url, err)
+		}
+		defer response.Body.Close()
+		b, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			panic(err)
+		}
+		zr, err := zip.NewReader(bytes.NewReader(b), int64(len(b)))
+		if err != nil {
+			panic(err)
+		}
+		readers := make([]io.ReadCloser, nLayers)
+		for k := 0; k < nLayers; k++ {
+			found := false
+			filename := strings.Replace(fileNameTemplate, "[layer]",
+				fmt.Sprintf("%v", k), -1)
+			for _, f := range zr.File {
+				_, file := filepath.Split(f.Name)
+				if file == filename {
+					found = true
+					if readers[k], err = f.Open(); err != nil {
+						return fmt.Errorf(
+							"error while opening web "+
+								"archive: %v", err)
+					}
+				}
+			}
+			if !found {
+				return fmt.Errorf(
+					"could not file file %v in web archive",
+					filename)
+
+			}
+		}
+		return UseReaders(readers)(d)
+	}
+}
+
+// UseReaders initializes the model with data from `readers`,
+// with one reader for the data for each model layer. The
+// readers must be input in order with the ground-level
+// data first.
+func UseReaders(readers []io.ReadCloser) InitOption {
+	return func(d *InMAPdata) error {
+		d.Nlayers = len(readers)
+		inputData := make([][]*Cell, d.Nlayers)
+		d.LayerStart = make([]int, d.Nlayers)
+		d.LayerEnd = make([]int, d.Nlayers)
+		var wg sync.WaitGroup
+		wg.Add(d.Nlayers)
+		for k := 0; k < d.Nlayers; k++ {
+			go func(k int) {
+				f := readers[k]
+				g := gob.NewDecoder(f)
+				g.Decode(&inputData[k])
+				d.LayerStart[k] = 0
+				d.LayerEnd[k] = len(inputData[k])
+				f.Close()
+				wg.Done()
+			}(k)
+		}
+		wg.Wait()
+		ncells := 0
+		// Adjust so beginning of layer is at end of previous layer
+		for k := 0; k < d.Nlayers; k++ {
+			d.LayerStart[k] += ncells
+			d.LayerEnd[k] += ncells
+			ncells += len(inputData[k])
+		}
+		// set up data holders
+		d.Data = make([]*Cell, ncells)
+		for _, indata := range inputData {
+			for _, c := range indata {
+				c.prepare()
+				d.Data[c.Row] = c
+			}
+		}
+		return nil
+	}
+}
+
+// InitInMAPdata initializes the model where
+// `option` is the selected option for retrieving the input data,
 // `numIterations` is the number of iterations to calculate
 // (if `numIterations` < 1, convergence is calculated automatically),
 // and `httpPort` is the port number for hosting the html GUI
 // (if `httpPort` is "", then the GUI doesn't run).
-func InitInMAPdata(filetemplate string, nLayers int, numIterations int,
+func InitInMAPdata(option InitOption, numIterations int,
 	httpPort string) *InMAPdata {
-	inputData := make([][]*Cell, nLayers)
 	d := new(InMAPdata)
 	d.NumIterations = numIterations
-	d.Nlayers = nLayers
-	d.LayerStart = make([]int, nLayers)
-	d.LayerEnd = make([]int, nLayers)
-	var wg sync.WaitGroup
-	wg.Add(nLayers)
-	for k := 0; k < nLayers; k++ {
-		go func(k int) {
-			filename := strings.Replace(filetemplate, "[layer]",
-				fmt.Sprintf("%v", k), -1)
-			f, err := os.Open(filename)
-			if err != nil {
-				fmt.Println("Problem opening InMAP data file:", err.Error())
-				os.Exit(1)
-			}
-			g := gob.NewDecoder(f)
-			g.Decode(&inputData[k])
-			d.LayerStart[k] = 0
-			d.LayerEnd[k] = len(inputData[k])
-			f.Close()
-			wg.Done()
-		}(k)
-	}
-	wg.Wait()
-	ncells := 0
-	// Adjust so beginning of layer is at end of previous layer
-	for k := 0; k < nLayers; k++ {
-		d.LayerStart[k] += ncells
-		d.LayerEnd[k] += ncells
-		ncells += len(inputData[k])
-	}
-	// set up data holders
-	d.Data = make([]*Cell, ncells)
-	for _, indata := range inputData {
-		for _, c := range indata {
-			c.prepare()
-			d.Data[c.Row] = c
-		}
+	err := option(d)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(2)
 	}
 	d.westBoundary = make([]*Cell, 0, 200)
 	d.eastBoundary = make([]*Cell, 0, 200)
@@ -202,6 +288,7 @@ func InitInMAPdata(filetemplate string, nLayers int, numIterations int,
 	d.northBoundary = make([]*Cell, 0, 200)
 	d.topBoundary = make([]*Cell, 0, 200)
 	nprocs := runtime.GOMAXPROCS(0)
+	var wg sync.WaitGroup
 	wg.Add(nprocs)
 	for procNum := 0; procNum < nprocs; procNum++ {
 		go func(procNum int) {
@@ -252,7 +339,7 @@ func InitInMAPdata(filetemplate string, nLayers int, numIterations int,
 					}
 					cell.INorth = nil
 				}
-				if len(cell.IAbove) == 0 || cell.Layer == nLayers-1 {
+				if len(cell.IAbove) == 0 || cell.Layer == d.Nlayers-1 {
 					c := cell.makecopy()
 					cell.Above = []*Cell{c}
 					d.topBoundary = append(d.topBoundary, c)

@@ -36,17 +36,21 @@ const (
 	Δt               = 6.   // seconds
 	E                = 0.01 // emissions
 	numRunIterations = 100  // number of iterations for Run to run
+
+	dataURL = "https://github.com/ctessum/inmap/releases/download/v1.0.0/inmapData_48_24_12_4_2_1_40000.zip"
 )
 
 func init() {
-	runtime.GOMAXPROCS(8)
+	runtime.GOMAXPROCS(runtime.NumCPU())
 	dataPath := os.Getenv("inmapdata")
 	if dataPath == "" {
 		fmt.Println("Environment variable $inmapdata must " +
 			"be set to the location of the InMAP input data.")
 		os.Exit(2)
 	}
-	d = InitInMAPdata(dataPath, 27, numRunIterations, "8080")
+	//d = InitInMAPdata(UseFileTemplate(dataPath, 27), numRunIterations, "")
+	d = InitInMAPdata(UseWebArchive(dataURL,
+		"inmapData_[layer].gob", 27), numRunIterations, "")
 	d.Dt = Δt
 }
 

@@ -106,8 +106,9 @@ func main() {
 	runtime.GOMAXPROCS(config.NumProcessors)
 
 	fmt.Println("Reading input data...")
-	d := inmap.InitInMAPdata(config.InMAPdataTemplate,
-		config.NumLayers, config.NumIterations, config.HTTPport)
+	d := inmap.InitInMAPdata(
+		inmap.UseFileTemplate(config.InMAPdataTemplate, config.NumLayers),
+		config.NumIterations, config.HTTPport)
 
 	emissions := make(map[string][]float64)
 	for _, pol := range inmap.EmisNames {
