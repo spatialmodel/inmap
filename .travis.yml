@@ -21,5 +21,4 @@ before_script:
 
 script:
       - go test
-      - go test github.com/ctessum/inmap/lib.inmap
-      - $HOME/gopath/bin/goveralls -service=travis-ci -package=github.com/ctessum/inmap/lib.inmap
+      - $HOME/gopath/bin/goveralls -service=travis-ci -package=github.com/ctessum/inmap

@@ -28,9 +28,9 @@ This program should work on most types of computers. Refer [here](http://golang.
 
 ## Running InMAP
 
-1. Download the general input files (`InMAPData`) from and example emissions files from [here](https://bitbucket.org/ctessum/inmap/downloads/). For the InMAPData files, there are several options of computational grids varying numbers of high- and low-resolution grid cells. The example emissions data is a scenario where all of the pollutant emissions in the U.S., southern Canada, and Northern Mexico increase by 1% over their 2005 levels.
+1. Download the general input files (`InMAPData`) from and example emissions files from [here](https://github.com/ctessum/inmap/releases/download/v1.0.0/inmapData_48_24_12_4_2_1_40000.zip). For the InMAPData files, there are several options of computational grids varying numbers of high- and low-resolution grid cells. The example emissions data is a scenario where all of the pollutant emissions in the U.S., southern Canada, and Northern Mexico increase by 1% over their 2005 levels.
 
-1. Make a copy of the [configuration file template](configExample.json) and edit it so that the `InMAPdataTemplate` and `EmissionsShapefiles` variables point to the locations where you downloaded the general input and emissions files to, and so the `OutputTemplate` variable points to the desired location for the output files. The wildcard `[layer]` is a place holder for the vertical layer number. (Input and output data are separated into individual files by model layer). Refer directly to the source code ([here](inmap.go#cl-22)) for information about other configuration options.
+1. Make a copy of the [configuration file template](inmap/configExample.json) and edit it so that the `InMAPdataTemplate` and `EmissionsShapefiles` variables point to the locations where you downloaded the general input and emissions files to, and so the `OutputTemplate` variable points to the desired location for the output files. The wildcard `[layer]` is a place holder for the vertical layer number. (Input and output data are separated into individual files by model layer). Refer directly to the source code ([here](inmap/inmap.go#cl-22)) for information about other configuration options.
 
 2. Run the program:
 
@@ -56,4 +56,4 @@ This program should work on most types of computers. Refer [here](http://golang.
 
 ## API
 
-The InMAP package is split into an executable program and an application programming interface (API). The documentation [here](http://godoc.org/github.com/ctessum/inmap/lib.inmap) shows the functions available in the API and how they work.
+The InMAP package is split into an executable program and an application programming interface (API). The documentation [here](http://godoc.org/github.com/ctessum/inmap) shows the functions available in the API and how they work.
