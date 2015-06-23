@@ -26,13 +26,12 @@ import (
 	"strings"
 
 	"bitbucket.org/ctessum/webframework"
-	"code.google.com/p/plotinum/plot"
-	"code.google.com/p/plotinum/plotter"
-	"code.google.com/p/plotinum/plotutil"
-	"code.google.com/p/plotinum/vg"
-	"code.google.com/p/plotinum/vg/vgimg"
 	"github.com/ctessum/carto"
 	"github.com/ctessum/geomop"
+	"github.com/gonum/plot"
+	"github.com/gonum/plot/plotter"
+	"github.com/gonum/plot/plotutil"
+	"github.com/gonum/plot/vg"
 	"github.com/twpayne/gogeom/geom"
 )
 
@@ -399,10 +398,13 @@ func (d *InMAPdata) verticalProfileHandler(w http.ResponseWriter,
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	ww, hh := vg.Inches(2), vg.Inches(1.5)
-	c := vgimg.PngCanvas{Canvas: vgimg.New(ww, hh)}
-	p.Draw(plot.MakeDrawArea(c))
-	_, err = c.WriteTo(w)
+	ww, hh := 2.*vg.Inch, 1.5*vg.Inch
+	wt, err := p.WriterTo(ww, hh, "png")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	_, err = wt.WriteTo(w)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
