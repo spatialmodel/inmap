@@ -19,6 +19,8 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package inmap
 
 import (
+	"fmt"
+
 	"bitbucket.org/ctessum/atmos/plumerise"
 )
 
@@ -48,16 +50,23 @@ func (d *InMAPdata) CalcPlumeRise(stackHeight, stackDiam, stackTemp,
 		windSpeedMinusOnePointFour[i] = cell.WindSpeedMinusOnePointFour
 		sClass[i] = cell.SClass
 		s1[i] = cell.S1
-		cell = cell.Above[0]
+		if len(cell.Above) > 0 {
+			cell = cell.Above[0]
+		} else {
+			err = fmt.Errorf("Plume rise is above top layer for height=%g, "+
+				"diameter=%g, temperature=%g, velocity=%g.", stackHeight,
+				stackDiam, stackTemp, stackVel)
+			return
+		}
 	}
-	var kPlume int
-	kPlume, err = plumerise.PlumeRiseASMEPrecomputed(stackHeight, stackDiam,
+	var plumeIndex int
+	plumeIndex, err = plumerise.PlumeRiseASMEPrecomputed(stackHeight, stackDiam,
 		stackTemp, stackVel, layerHeights, temperature, windSpeed,
 		sClass, s1, windSpeedMinusOnePointFour, windSpeedMinusThird,
 		windSpeedInverse)
 	if err != nil {
 		if err == plumerise.AboveModelTop {
-			kPlume = d.Nlayers - 1
+			plumeIndex = d.Nlayers - 1
 			err = nil
 		} else {
 			return
@@ -65,7 +74,7 @@ func (d *InMAPdata) CalcPlumeRise(stackHeight, stackDiam, stackTemp,
 	}
 
 	plumeCell := d.Data[row]
-	for i := 0; i < kPlume; i++ {
+	for i := 0; i < plumeIndex; i++ {
 		plumeCell = plumeCell.Above[0]
 	}
 	plumeRow = plumeCell.Row
