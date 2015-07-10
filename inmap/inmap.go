@@ -94,13 +94,13 @@ func main() {
 	}
 	config := readConfigFile(*configFile)
 
-	fmt.Println("\n",
-		"------------------------------------------------\n",
-		"                    Welcome!\n",
-		"  (In)tervention (M)odel for (A)ir (P)ollution  \n",
-		"                Version "+version+"             \n",
-		"               Copyright 2013-2014              \n",
-		"     Regents of the University of Minnesota     \n",
+	fmt.Println("\n" +
+		"------------------------------------------------\n" +
+		"                    Welcome!\n" +
+		"  (In)tervention (M)odel for (A)ir (P)ollution  \n" +
+		"                Version " + version + "             \n" +
+		"               Copyright 2013-2014              \n" +
+		"     Regents of the University of Minnesota     \n" +
 		"------------------------------------------------\n")
 
 	runtime.GOMAXPROCS(config.NumProcessors)
@@ -209,7 +209,7 @@ func main() {
 			}
 			var plumeRow int
 			if e.Height > 0. { // calculate plume rise
-				plumeRow, err = d.CalcPlumeRise(
+				plumeRow, _, err = d.CalcPlumeRise(
 					e.Height, e.Diam, e.Temp, e.Velocity, i)
 				if err != nil {
 					panic(err)
@@ -261,9 +261,9 @@ func main() {
 	}
 	w.Flush()
 
-	fmt.Println("\n",
-		"------------------------------------\n",
-		"           InMAP Completed!\n",
+	fmt.Println("\n" +
+		"------------------------------------\n" +
+		"           InMAP Completed!\n" +
 		"------------------------------------\n")
 }
 

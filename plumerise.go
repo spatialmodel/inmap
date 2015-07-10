@@ -31,7 +31,7 @@ import (
 // This function assumes that when one grid cell is above another
 // grid cell, the upper cell is never smaller than the lower cell.
 func (d *InMAPdata) CalcPlumeRise(stackHeight, stackDiam, stackTemp,
-	stackVel float64, row int) (plumeRow int, err error) {
+	stackVel float64, row int) (plumeRow int, plumeHeight float64, err error) {
 	layerHeights := make([]float64, d.Nlayers+1)
 	temperature := make([]float64, d.Nlayers)
 	windSpeed := make([]float64, d.Nlayers)
@@ -60,12 +60,12 @@ func (d *InMAPdata) CalcPlumeRise(stackHeight, stackDiam, stackTemp,
 		}
 	}
 	var plumeIndex int
-	plumeIndex, err = plumerise.PlumeRiseASMEPrecomputed(stackHeight, stackDiam,
+	plumeIndex, plumeHeight, err = plumerise.ASMEPrecomputed(stackHeight, stackDiam,
 		stackTemp, stackVel, layerHeights, temperature, windSpeed,
 		sClass, s1, windSpeedMinusOnePointFour, windSpeedMinusThird,
 		windSpeedInverse)
 	if err != nil {
-		if err == plumerise.AboveModelTop {
+		if err == plumerise.ErrAboveModelTop {
 			plumeIndex = d.Nlayers - 1
 			err = nil
 		} else {
