@@ -1,4 +1,4 @@
-# (In)tervention (M)odel for (A)ir (P)ollution 
+# (In)tervention (M)odel for (A)ir (P)ollution
 
 [![Build Status](https://travis-ci.org/ctessum/inmap.svg?branch=master)](https://travis-ci.org/ctessum/inmap) [![Coverage Status](https://img.shields.io/coveralls/ctessum/inmap.svg)](https://coveralls.io/r/ctessum/inmap) [![GoDoc](http://godoc.org/github.com/ctessum/inmap/lib.inmap?status.svg)](http://godoc.org/github.com/ctessum/inmap/lib.inmap)
 
@@ -23,7 +23,7 @@ This program should work on most types of computers. Refer [here](http://golang.
 
 4. Download and install the main program:
 
-		go get bitbucket.org/ctessum/inmap
+		go get github.com/ctessum/inmap/inmap
 	The Go language has an automatic system for finding and installing library dependencies; you may want to refer [here](http://golang.org/doc/code.html) to understand how it works.
 
 ## Running InMAP
@@ -34,25 +34,40 @@ This program should work on most types of computers. Refer [here](http://golang.
 
 2. Run the program:
 
-		inmap -config=/path/to/configfile.json 
+		inmap -config=/path/to/configfile.json
 	While the program is running, you can open a web browser and navigate to `localhost:8080` to view status and diagnostic information.
 
 3. View the output program output. The output files are in [shapefile](http://en.wikipedia.org/wiki/Shapefile) format which can be viewed in most GIS programs. One free GIS program is [QGIS](http://www.qgis.org/). Output from each model layer is put into a separate file. Layer 0 is the one closest to the ground and will probably be of the most interest. By default, the InMAP only outputs results from layer zero, but this can be changed using the configuration file.
+  The output shapefiles have a number of attribute columns. They include:
+    * Pollutant concentrations in units of μg m<sup>-3</sup>:
+      * VOC (`VOC`)
+      * NO<sub>x</sub> (`NOx`)
+      * NH<sub>3</sub> (`NH3`)
+      * SO<sub>x</sub> (`SOx`)
+      * Total PM<sub>2.5</sub> (`TotalPM2_5`; The sum of all PM<sub>2.5</sub> components)
+      * Particulate sulfate (`pSO4`)
+      * Particulate nitrate (`pNO3`)
+      * Particulate ammonium (`pNH4`)
+      * Secondary organic aerosol (`SOA`)
+    * Populations of different demographic subgroups in units of people per grid cell. The included populations may vary but in the default dataset as of this writing the groups included are:
+      * total population (`TotalPop`)
+      * people identifying as black (`Black`), asian  (`Asian`), latino (`Latino`), native american or american indian (`Native`), non-latino white (`WhiteNoLat`) and everyone else (`Other`).
+      * People living below the poverty time (`Poverty`) and people living at more than twice the poverty line (`TwoXPov`).
+    * Numbers of deaths attributable to PM<sub>2.5</sub> in each of the populations in units of deaths/year. Attribute names in shapfiles are limited to 11 characters, so, for example, deaths in the `TotalPop` population would be labeled `TotalPop de`, deaths in the `Black` population would be labeled `Black death`, and—interestingly—deaths in the `WhiteNoLat` population would be labeled `WhiteNoLat_1`.
+    * Baseline mortality rate in units of deaths per year per 100,000 people, which can be used for performing alternative health impact calculations.
 
-3. Create your own emissions scenarios:
+3. Create your own emissions scenarios. Emissions files can be in [shapefile](http://en.wikipedia.org/wiki/Shapefile) format where the attribute columns correspond to the names of emitted pollutants. Refer [here](http://godoc.org/github.com/ctessum/inmap#pkg-variables) (the `EmisNames` variable) for acceptable pollutant names. Emissions should be in units of short tons per year. The model can handle multiple input emissions files, and emissions can be either elevated or ground level. Files with elevated emissions need to have attribute columns labeled "height", "diam", "temp", and "velocity" containing stack information in units of m, m, K, and m/s, respectively.
 
-	Emissions files can be in [shapefile](http://en.wikipedia.org/wiki/Shapefile) format where the attribute columns correspond to the names of emitted pollutants. Refer [here](http://godoc.org/github.com/ctessum/inmap/lib.inmap#pkg-variables) (the `EmisNames` variable) for acceptable pollutant names. Emissions should be in units of short tons per year. The model can handle multiple input emissions files, and emissions can be either elevated or ground level. Files with elevated emissions need to have attribute columns labeled "height", "diam", "temp", and "velocity" containing stack information in units of m, m, K, and m/s, respectively.
-	
 	Emissions will be allocated from the geometries in the shape file to the InMAP computational grid, but currently the mapping projection of the shapefile must be the same as the projection InMAP uses. In ESRI format, this projection is:
 
-		PROJCS["Lambert_Conformal_Conic",GEOGCS["GCS_unnamed ellipse",
+		PROJCS["Lambert_Conformal_Conic_2SP",GEOGCS["GCS_unnamed ellipse",
 		DATUM["D_unknown",SPHEROID["Unknown",6370997,0]],PRIMEM["Greenwich",0],
-		UNIT["Degree",0.017453292519943295]],PROJECTION["Lambert_Conformal_Conic"],
+		UNIT["Degree",0.017453292519943295]],PROJECTION["Lambert_Conformal_Conic_2SP"],
 		PARAMETER["standard_parallel_1",33],PARAMETER["standard_parallel_2",45],
 		PARAMETER["latitude_of_origin",40],PARAMETER["central_meridian",-97],
 		PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]
 
-	
+
 
 ## API
 
