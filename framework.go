@@ -151,7 +151,7 @@ func (c *Cell) makecopy() *Cell {
 	return c2
 }
 
-// InitOptions are options of different ways to initialize
+// InitOption allows options of different ways to initialize
 // the model.
 type InitOption func(*InMAPdata) error
 
@@ -274,13 +274,12 @@ func UseReaders(readers []io.ReadCloser) InitOption {
 // and `httpPort` is the port number for hosting the html GUI
 // (if `httpPort` is "", then the GUI doesn't run).
 func InitInMAPdata(option InitOption, numIterations int,
-	httpPort string) *InMAPdata {
+	httpPort string) (*InMAPdata, error) {
 	d := new(InMAPdata)
 	d.NumIterations = numIterations
 	err := option(d)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(2)
+		return nil, err
 	}
 	d.westBoundary = make([]*Cell, 0, 200)
 	d.eastBoundary = make([]*Cell, 0, 200)
@@ -376,7 +375,7 @@ func InitInMAPdata(option InitOption, numIterations int,
 	if httpPort != "" {
 		go d.WebServer(httpPort)
 	}
-	return d
+	return d, nil
 }
 
 // Calculate center-to-center cell distance,

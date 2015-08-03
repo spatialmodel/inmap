@@ -106,9 +106,12 @@ func main() {
 	runtime.GOMAXPROCS(config.NumProcessors)
 
 	fmt.Println("Reading input data...")
-	d := inmap.InitInMAPdata(
+	d, err := inmap.InitInMAPdata(
 		inmap.UseFileTemplate(config.InMAPdataTemplate, config.NumLayers),
 		config.NumIterations, config.HTTPport)
+	if err != nil {
+		log.Fatalf("Problem loading input data: %v\n", err)
+	}
 
 	emissions := make(map[string][]float64)
 	for _, pol := range inmap.EmisNames {
