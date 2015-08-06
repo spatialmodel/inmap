@@ -49,8 +49,12 @@ func init() {
 		os.Exit(2)
 	}
 	//d = InitInMAPdata(UseFileTemplate(dataPath, 27), numRunIterations, "")
-	d = InitInMAPdata(UseWebArchive(dataURL,
+	var err error
+	d, err = InitInMAPdata(UseWebArchive(dataURL,
 		"inmapData_[layer].gob", 27), numRunIterations, "")
+	if err != nil {
+		panic(err)
+	}
 	d.Dt = Δt
 }
 

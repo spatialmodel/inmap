@@ -34,6 +34,16 @@ import (
 	"strings"
 	"sync"
 
+	"google.golang.org/appengine"
+	"google.golang.org/appengine/log"
+	"google.golang.org/appengine/urlfetch"
+	"google.golang.org/cloud"
+	"google.golang.org/cloud/storage"
+
+	"golang.org/x/net/context"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
+
 	"bitbucket.org/ctessum/aqhealth"
 	"github.com/twpayne/gogeom/geom"
 )
@@ -180,7 +190,8 @@ func UseFileTemplate(filetemplate string, nLayers int) InitOption {
 // where `url` is the network address, `fileNameTemplate` is the template for
 // the names of the Gob files with meteorology and background concentration data
 // (where `[layer]` is a stand-in for the layer number), and
-// `nLayers` is the number of vertical layers in the model.
+// `nLayers` is the number of vertical layers in the model. It is assumed
+// that the input files are contained in a single zip archive.
 func UseWebArchive(url, fileNameTemplate string, nLayers int) InitOption {
 	return func(d *InMAPdata) error {
 		fmt.Printf("Downloading data from %v...\n", url)
@@ -208,20 +219,70 @@ func UseWebArchive(url, fileNameTemplate string, nLayers int) InitOption {
 					found = true
 					if readers[k], err = f.Open(); err != nil {
 						return fmt.Errorf(
-							"error while opening web "+
-								"archive: %v", err)
+							"error while opening web archive: %v", err)
 					}
 				}
 			}
 			if !found {
-				return fmt.Errorf(
-					"could not file file %v in web archive",
-					filename)
+				return fmt.Errorf("could not file file %v in web archive", filename)
 
 			}
 		}
 		return UseReaders(readers)(d)
 	}
+}
+
+// UseCloudStorage initializes the model with data from Google Cloud Storage,
+// where ctx is the Context, `bucket` is the name of the bucket,
+// `fileNameTemplate` is the template for
+// the names of the Gob files with meteorology and background concentration data
+// (where `[layer]` is a stand-in for the layer number), and
+// `nLayers` is the number of vertical layers in the model. To minimize individual
+// download sizes, the input files
+// must be enclosed in zip files, with one input file per zip file.
+func UseCloudStorage(ctx context.Context, bucket string, fileNameTemplate string,
+	nLayers int) InitOption {
+	return func(d *InMAPdata) error {
+		cloudCTX := newCloudContext(ctx)
+		readers := make([]io.ReadCloser, nLayers)
+		for k := 0; k < nLayers; k++ {
+			filename := strings.Replace(fileNameTemplate, "[layer]",
+				fmt.Sprintf("%v", k), -1)
+			rc, err := storage.NewReader(cloudCTX, bucket, filename)
+			if err != nil {
+				log.Errorf(ctx, "In UseCloudStorage, retrieving file "+
+					"%v: %v", filename, err)
+				return err
+			}
+			b, err := ioutil.ReadAll(rc)
+			if err != nil {
+				log.Errorf(ctx,
+					"UseCloudStorage: error while opening zip file: %v", err)
+				return err
+			}
+			zr, err := zip.NewReader(bytes.NewReader(b), int64(len(b)))
+			if err != nil {
+				panic(err)
+			}
+			if readers[k], err = zr.File[0].Open(); err != nil {
+				log.Errorf(ctx,
+					"UseCloudStorage: error while opening zip file: %v", err)
+				return err
+			}
+		}
+		log.Infof(ctx, "got readers")
+		return UseReaders(readers)(d)
+	}
+}
+
+func newCloudContext(ctx context.Context) context.Context {
+	hc := &http.Client{
+		Transport: &oauth2.Transport{
+			Source: google.AppEngineTokenSource(ctx, storage.ScopeFullControl),
+			Base:   &urlfetch.Transport{Context: ctx},
+		},
+	}
+	return cloud.NewContext(appengine.AppID(ctx), hc)
 }
 
 // UseReaders initializes the model with data from `readers`,
@@ -240,7 +301,9 @@ func UseReaders(readers []io.ReadCloser) InitOption {
 			go func(k int) {
 				f := readers[k]
 				g := gob.NewDecoder(f)
-				g.Decode(&inputData[k])
+				if err := g.Decode(&inputData[k]); err != nil {
+					panic(err)
+				}
 				d.LayerStart[k] = 0
 				d.LayerEnd[k] = len(inputData[k])
 				f.Close()
