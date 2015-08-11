@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"math"
 	"net/http"
 	"os"
@@ -34,7 +35,6 @@ import (
 	"strings"
 	"sync"
 
-	"google.golang.org/appengine/log"
 	"google.golang.org/cloud/storage"
 
 	"golang.org/x/net/context"
@@ -245,13 +245,13 @@ func UseCloudStorage(ctx context.Context, bucket string, fileNameTemplate string
 				fmt.Sprintf("%v", k), -1)
 			rc, err := storage.NewReader(ctx, bucket, filename)
 			if err != nil {
-				log.Errorf(ctx, "In UseCloudStorage, retrieving file "+
+				log.Printf("In UseCloudStorage, retrieving file "+
 					"%v: %v", filename, err)
 				return err
 			}
 			b, err := ioutil.ReadAll(rc)
 			if err != nil {
-				log.Errorf(ctx,
+				log.Printf(
 					"UseCloudStorage: error while opening zip file: %v", err)
 				return err
 			}
@@ -260,12 +260,12 @@ func UseCloudStorage(ctx context.Context, bucket string, fileNameTemplate string
 				panic(err)
 			}
 			if readers[k], err = zr.File[0].Open(); err != nil {
-				log.Errorf(ctx,
+				log.Printf(
 					"UseCloudStorage: error while opening zip file: %v", err)
 				return err
 			}
 		}
-		log.Infof(ctx, "got readers")
+		log.Printf("got readers")
 		return UseReaders(readers)(d)
 	}
 }
