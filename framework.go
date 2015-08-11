@@ -34,15 +34,10 @@ import (
 	"strings"
 	"sync"
 
-	"google.golang.org/appengine"
 	"google.golang.org/appengine/log"
-	"google.golang.org/appengine/urlfetch"
-	"google.golang.org/cloud"
 	"google.golang.org/cloud/storage"
 
 	"golang.org/x/net/context"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
 
 	"bitbucket.org/ctessum/aqhealth"
 	"github.com/twpayne/gogeom/geom"
@@ -240,15 +235,15 @@ func UseWebArchive(url, fileNameTemplate string, nLayers int) InitOption {
 // `nLayers` is the number of vertical layers in the model. To minimize individual
 // download sizes, the input files
 // must be enclosed in zip files, with one input file per zip file.
+// ctx must include any authentication needed for acessing the files.
 func UseCloudStorage(ctx context.Context, bucket string, fileNameTemplate string,
 	nLayers int) InitOption {
 	return func(d *InMAPdata) error {
-		cloudCTX := newCloudContext(ctx)
 		readers := make([]io.ReadCloser, nLayers)
 		for k := 0; k < nLayers; k++ {
 			filename := strings.Replace(fileNameTemplate, "[layer]",
 				fmt.Sprintf("%v", k), -1)
-			rc, err := storage.NewReader(cloudCTX, bucket, filename)
+			rc, err := storage.NewReader(ctx, bucket, filename)
 			if err != nil {
 				log.Errorf(ctx, "In UseCloudStorage, retrieving file "+
 					"%v: %v", filename, err)
@@ -273,16 +268,6 @@ func UseCloudStorage(ctx context.Context, bucket string, fileNameTemplate string
 		log.Infof(ctx, "got readers")
 		return UseReaders(readers)(d)
 	}
-}
-
-func newCloudContext(ctx context.Context) context.Context {
-	hc := &http.Client{
-		Transport: &oauth2.Transport{
-			Source: google.AppEngineTokenSource(ctx, storage.ScopeFullControl),
-			Base:   &urlfetch.Transport{Context: ctx},
-		},
-	}
-	return cloud.NewContext(appengine.AppID(ctx), hc)
 }
 
 // UseReaders initializes the model with data from `readers`,
