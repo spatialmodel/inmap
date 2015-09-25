@@ -26,7 +26,7 @@ import (
 	"strings"
 
 	"bitbucket.org/ctessum/webframework"
-	"github.com/ctessum/carto"
+	"github.com/ctessum/geom/carto"
 	"github.com/ctessum/geomop"
 	"github.com/gonum/plot"
 	"github.com/gonum/plot/plotter"
@@ -106,35 +106,35 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 	z-index: -2;
 }
 #legendholder {
-	position: fixed; 
-	bottom: 0; 
-	width: 630px; 
-	left: 50%; 
+	position: fixed;
+	bottom: 0;
+	width: 630px;
+	left: 50%;
 	margin-left: -315px;
 	background:rgba(255,255,255,0.8);
 	border-radius:10px;
 	z-index: -1;
 }
 #titleholder {
-	position: fixed; 
-	top: 50px; 
-	width: 630px; 
-	left: 50%; 
+	position: fixed;
+	top: 50px;
+	width: 630px;
+	left: 50%;
 	margin-left: -315px;
 	background:rgba(255,255,255,0.8);
 	border-radius:10px;
 	z-index: -1;
 }
 #varholder {
-	position: fixed; 
-	left: 80px; 
+	position: fixed;
+	left: 80px;
 	top: 50px;
 	z-index: -1;
 }
 #layerholder {
-	position: fixed; 
-	left: 80px; 
-	top: 130px; 
+	position: fixed;
+	left: 80px;
+	top: 130px;
 	z-index: -1;
 }
 #mapdiv img {
@@ -206,7 +206,7 @@ function tileOptions(layer) {
 }
 function loadmap(mapvar,layer,id) {
 	window.mapvar = mapvar
-	var windowheight = $(window).height(); 
+	var windowheight = $(window).height();
 	$('#mapdiv').css('height', windowheight-40);
 	var customMapType = tileOptions(layer);
 	var labelTiles = {
@@ -237,7 +237,7 @@ function loadmap(mapvar,layer,id) {
 			event.latLng.lng()+'/'+event.latLng.lat()+'>'
 		new google.maps.InfoWindow({
 			position: event.latLng,
-			content: infoString 
+			content: infoString
 		}).open(map);
 	});
 }
@@ -346,7 +346,13 @@ func (d *InMAPdata) legendHandler(w http.ResponseWriter, r *http.Request) {
 	cmap.LegendHeight = 0.2
 	cmap.LineWidth = 0.2
 	cmap.FontSize = 3.5
-	err = cmap.Legend(w, fmt.Sprintf("%v (%v)", name, d.getUnits(name)))
+	c := carto.NewDefaultLegendCanvas()
+	err = cmap.Legend(&c.Canvas, fmt.Sprintf("%v (%v)", name, d.getUnits(name)))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = c.WriteTo(w)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -418,7 +424,7 @@ func (d *InMAPdata) VerticalProfile(variable string, lon, lat float64) (
 	height = make([]float64, d.Nlayers)
 	vals = make([]float64, d.Nlayers)
 	x, y := carto.Degrees2meters(lon, lat)
-	loc := geom.Point{x, y}
+	loc := geom.Point{X: x, Y: y}
 	for _, cell := range d.Data {
 		in, err := geomop.Within(loc, cell.WebMapGeom)
 		if err != nil {

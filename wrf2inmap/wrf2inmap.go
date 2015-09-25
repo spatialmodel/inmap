@@ -22,8 +22,8 @@ import (
 	"bitbucket.org/ctessum/atmos/gocart"
 	"bitbucket.org/ctessum/atmos/seinfeld"
 	"bitbucket.org/ctessum/atmos/wesely1989"
+	"bitbucket.org/ctessum/cdf"
 	"bitbucket.org/ctessum/sparse"
-	"code.google.com/p/lvd.go/cdf"
 )
 
 // ConfigInfo holds the configuration information for the program run.

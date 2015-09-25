@@ -43,15 +43,13 @@ const (
 func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	dataPath := os.Getenv("inmapdata")
-	if dataPath == "" {
-		fmt.Println("Environment variable $inmapdata must " +
-			"be set to the location of the InMAP input data.")
-		os.Exit(2)
-	}
-	//d = InitInMAPdata(UseFileTemplate(dataPath, 27), numRunIterations, "")
 	var err error
-	d, err = InitInMAPdata(UseWebArchive(dataURL,
-		"inmapData_[layer].gob", 27), numRunIterations, "")
+	if dataPath != "" {
+		d, err = InitInMAPdata(UseFileTemplate(dataPath, 27), numRunIterations, "")
+	} else {
+		d, err = InitInMAPdata(UseWebArchive(dataURL,
+			"inmapData_[layer].gob", 27), numRunIterations, "")
+	}
 	if err != nil {
 		panic(err)
 	}
