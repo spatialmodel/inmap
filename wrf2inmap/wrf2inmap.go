@@ -65,7 +65,7 @@ const (
 
 	// physical constants
 	MWa      = 28.97   // g/mol, molar mass of air
-	mwN      = 46.0055 // g/mol, molar mass of nitrogen
+	mwN      = 14.0067 // g/mol, molar mass of nitrogen
 	mwS      = 32.0655 // g/mol, molar mass of sulfur
 	mwNH4    = 18.03851
 	mwSO4    = 96.0632
@@ -88,8 +88,8 @@ var (
 	// RACM VOC species and molecular weights (g/mol);
 	// Only includes anthropogenic precursors to SOA from
 	// anthropogenic (aSOA) and biogenic (bSOA) sources as
-	// an Ahmadov et al. (2012)
-	// assume condensable vapor from SOA has molar mass of 70
+	// in Ahmadov et al. (2012)
+	// Assume condensable vapor from SOA has molar mass of 70
 	aVOC = map[string]float64{"hc5": 72, "hc8": 114,
 		"olt": 42, "oli": 68, "tol": 92, "xyl": 106, "csl": 108,
 		"cvasoa1": 70, "cvasoa2": 70, "cvasoa3": 70, "cvasoa4": 70}
@@ -104,20 +104,20 @@ var (
 		"bsoa2j": 1, "bsoa3i": 1, "bsoa3j": 1, "bsoa4i": 1, "bsoa4j": 1}
 	// RACM NOx species and molecular weights, multiplied by their
 	// nitrogen fractions
-	NOx = map[string]float64{"no": 30 * 30 / mwN, "no2": 46 * 46 / mwN}
+	NOx = map[string]float64{"no": 30 / 30 * mwN, "no2": 46 / 46 * mwN}
 	// mass of N in NO
 	NO = map[string]float64{"no": 1.}
 	// mass of N in  NO2
 	NO2 = map[string]float64{"no2": 1.}
 	// MADE particulate NO species, nitrogen fraction
-	pNO = map[string]float64{"no3ai": mwNO3 / mwN, "no3aj": mwNO3 / mwN}
+	pNO = map[string]float64{"no3ai": mwN / mwNO3, "no3aj": mwN / mwNO3}
 	// RACM SOx species and molecular weights
-	SOx = map[string]float64{"so2": 64 * 64 / mwS, "sulf": 98 * 98 / mwS}
+	SOx = map[string]float64{"so2": 64 / 64 * mwS, "sulf": 98 / 98 * mwS}
 	// MADE particulate Sulfur species; sulfur fraction
-	pS  = map[string]float64{"so4ai": mwSO4 / mwS, "so4aj": mwSO4 / mwS}
+	pS  = map[string]float64{"so4ai": mwS / mwSO4, "so4aj": mwS / mwSO4}
 	NH3 = map[string]float64{"nh3": 17.03056 * 17.03056 / mwN}
 	// MADE particulate ammonia species, nitrogen fraction
-	pNH = map[string]float64{"nh4ai": mwNH4 / mwN, "nh4aj": mwNH4 / mwN}
+	pNH = map[string]float64{"nh4ai": mwN / mwNH4, "nh4aj": mwN / mwNH4}
 
 	totalPM25 = map[string]float64{"PM2_5_DRY": 1.}
 )
@@ -128,7 +128,7 @@ func init() {
 	flag.Parse()
 	if *configFile == "" {
 		fmt.Println("Need to specify configuration file as in " +
-			"`aim -config=configFile.json`")
+			"`wrf2inmap -config=configFile.json`")
 		os.Exit(1)
 	}
 	ReadConfigFile(*configFile)
@@ -707,8 +707,10 @@ func calcPartitioning(gaschan, particlechan chan *sparse.DenseArray) {
 			// change in particle concentration divided by the change in overall
 			// concentration. Force the coefficient to be between zero and
 			// one.
-			partitioning.Elements[i] +=
-				math.Min(math.Max(particlechange/totalchange, 0), 1)
+			part := math.Min(math.Max(particlechange/totalchange, 0), 1)
+			if !math.IsNaN(part) {
+				partitioning.Elements[i] += part
+			}
 		}
 		oldgas = gasdata.Copy()
 		oldparticle = particledata.Copy()
