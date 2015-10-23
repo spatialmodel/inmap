@@ -26,13 +26,13 @@ import (
 	"strings"
 
 	"bitbucket.org/ctessum/webframework"
+	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/carto"
-	"github.com/ctessum/geomop"
+	"github.com/ctessum/geom/op"
 	"github.com/gonum/plot"
 	"github.com/gonum/plot/plotter"
 	"github.com/gonum/plot/plotutil"
 	"github.com/gonum/plot/vg"
-	"github.com/twpayne/gogeom/geom"
 )
 
 //  Descriptions of web server map variables
@@ -426,7 +426,7 @@ func (d *InMAPdata) VerticalProfile(variable string, lon, lat float64) (
 	x, y := carto.Degrees2meters(lon, lat)
 	loc := geom.Point{X: x, Y: y}
 	for _, cell := range d.Data {
-		in, err := geomop.Within(loc, cell.WebMapGeom)
+		in, err := op.Within(loc, cell.WebMapGeom)
 		if err != nil {
 			panic(err)
 		}

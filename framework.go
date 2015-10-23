@@ -40,9 +40,7 @@ import (
 	"golang.org/x/net/context"
 
 	"bitbucket.org/ctessum/aqhealth"
-	newgeom "github.com/ctessum/geom"
-	"github.com/ctessum/geomconv"
-	"github.com/twpayne/gogeom/geom"
+	"github.com/ctessum/geom"
 )
 
 // InMAPdata is holds the current state of the model.
@@ -592,10 +590,10 @@ func (d *InMAPdata) getUnits(varName string) string {
 }
 
 // GetGeometry returns the cell geometry for the given layer.
-func (d *InMAPdata) GetGeometry(layer int) []newgeom.T {
-	o := make([]newgeom.T, d.LayerEnd[layer]-d.LayerStart[layer])
+func (d *InMAPdata) GetGeometry(layer int) []geom.T {
+	o := make([]geom.T, d.LayerEnd[layer]-d.LayerStart[layer])
 	for i, c := range d.Data[d.LayerStart[layer]:d.LayerEnd[layer]] {
-		o[i] = geomconv.OldToNew(c.WebMapGeom)
+		o[i] = c.WebMapGeom
 	}
 	return o
 }
