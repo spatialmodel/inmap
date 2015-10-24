@@ -70,7 +70,7 @@ func init() {
 
 // Cell holds the state of a single grid cell.
 type Cell struct {
-	Geom                       geom.T             // Cell geometry
+	geom.T                                        // Cell geometry
 	WebMapGeom                 geom.T             // Cell geometry in web map (mercator) coordinate system
 	UPlusSpeed                 float64            `desc:"Westerly wind speed" units:"m/s"`
 	UMinusSpeed                float64            `desc:"Easterly wind speed" units:"m/s"`

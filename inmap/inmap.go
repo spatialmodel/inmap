@@ -38,14 +38,13 @@ import (
 	"github.com/ctessum/geom/encoding/shp"
 	"github.com/ctessum/geom/index/rtree"
 	"github.com/ctessum/geom/op"
-	"github.com/ctessum/geomconv"
 	"github.com/ctessum/inmap"
 	goshp "github.com/jonas-p/go-shp"
 )
 
 var configFile = flag.String("config", "none", "Path to configuration file")
 
-const version = "0.1.0"
+const version = "1.1.0"
 
 type configData struct {
 	// Path to location of baseline meteorology and pollutant data,
@@ -173,14 +172,13 @@ func main() {
 	// allocate emissions to appropriate grid cells
 	for i := d.LayerStart[0]; i < d.LayerEnd[0]; i++ {
 		cell := d.Data[i]
-		cellGeom := geomconv.OldToNew(cell.Geom)
-		for _, eTemp := range emisTree.SearchIntersect(cellGeom.Bounds(nil)) {
+		for _, eTemp := range emisTree.SearchIntersect(cell.Bounds(nil)) {
 			e := eTemp.(emisRecord)
 			var intersection geom.T
 			var err error
 			switch e.T.(type) {
 			case geom.Point:
-				in, err := op.Within(e.T, cellGeom)
+				in, err := op.Within(e.T, cell.T)
 				if err != nil {
 					panic(err)
 				}
@@ -190,7 +188,7 @@ func main() {
 					continue
 				}
 			default:
-				intersection, err = op.Construct(e.T, cellGeom,
+				intersection, err = op.Construct(e.T, cell.T,
 					op.INTERSECTION)
 				if err != nil {
 					panic(err)
@@ -314,21 +312,20 @@ func writeOutput(results map[string][][]float64, d *inmap.InMAPdata,
 			extIndex = len(filename)
 		}
 		filename = filename[0:extIndex] + ".shp"
-		shape, err := goshp.Create(filename, goshp.POLYGON)
+		shape, err := shp.NewEncoderFromFields(filename, goshp.POLYGON, fields...)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("error creating output shapefile: %v", err)
 		}
-		shape.SetFields(fields)
 
 		numRowsInLayer := len(results[vars[0]][k])
 		for i := 0; i < numRowsInLayer; i++ {
-			s, err := geomconv.Geom2Shp(d.Data[row].Geom)
-			if err != nil {
-				panic(err)
-			}
-			shape.Write(s)
+			outFields := make([]interface{}, len(vars))
 			for j, v := range vars {
-				shape.WriteAttribute(i, j, results[v][k][i])
+				outFields[j] = results[v][k][i]
+			}
+			err := shape.EncodeFields(d.Data[row].T, outFields...)
+			if err != nil {
+				log.Fatalf("error writing output shapefile: %v", err)
 			}
 			row++
 		}
@@ -337,7 +334,7 @@ func writeOutput(results map[string][][]float64, d *inmap.InMAPdata,
 		// Create .prj file
 		f, err := os.Create(filename[0:extIndex] + ".prj")
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("error creating output prj file: %v", err)
 		}
 		fmt.Fprint(f, proj4)
 		f.Close()
