@@ -98,7 +98,7 @@ func main() {
 		"                    Welcome!\n" +
 		"  (In)tervention (M)odel for (A)ir (P)ollution  \n" +
 		"                Version " + version + "             \n" +
-		"               Copyright 2013-2014              \n" +
+		"               Copyright 2013-2015              \n" +
 		"     Regents of the University of Minnesota     \n" +
 		"------------------------------------------------\n")
 
