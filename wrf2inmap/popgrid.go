@@ -397,18 +397,18 @@ func CreateCell(pop, mort *rtree.Rtree, index [][2]int) *gridCell {
 	}
 
 	xResFac, yResFac := 1., 1.
-	l := config.VariableGrid_x_o
-	b := config.VariableGrid_y_o
+	l := config.VariableGridXo
+	b := config.VariableGridYo
 	for i, ii := range index {
 		if i > 0 {
 			xResFac *= float64(config.Xnests[i])
 			yResFac *= float64(config.Ynests[i])
 		}
-		l += float64(ii[0]) * config.VariableGrid_dx / xResFac
-		b += float64(ii[1]) * config.VariableGrid_dy / yResFac
+		l += float64(ii[0]) * config.VariableGridDx / xResFac
+		b += float64(ii[1]) * config.VariableGridDy / yResFac
 	}
-	r := l + config.VariableGrid_dx/xResFac
-	u := b + config.VariableGrid_dy/yResFac
+	r := l + config.VariableGridDx/xResFac
+	u := b + config.VariableGridDy/yResFac
 
 	cell := new(gridCell)
 	cell.PopData = make(map[string]float64)
@@ -648,13 +648,13 @@ func getData(cells []*gridCell, data map[string]dataHolder, k int) {
 // make a vector representation of the chemical transport model grid
 func makeCTMgrid() *rtree.Rtree {
 	tree := rtree.NewTree(25, 50)
-	for ix := 0; ix < config.CtmGrid_nx; ix++ {
-		for iy := 0; iy < config.CtmGrid_ny; iy++ {
+	for ix := 0; ix < config.CtmGridNx; ix++ {
+		for iy := 0; iy < config.CtmGridNy; iy++ {
 			cell := new(gridCellLight)
-			x0 := config.CtmGrid_x_o + config.CtmGrid_dx*float64(ix)
-			x1 := config.CtmGrid_x_o + config.CtmGrid_dx*float64(ix+1)
-			y0 := config.CtmGrid_y_o + config.CtmGrid_dy*float64(iy)
-			y1 := config.CtmGrid_y_o + config.CtmGrid_dy*float64(iy+1)
+			x0 := config.CtmGridXo + config.CtmGridDx*float64(ix)
+			x1 := config.CtmGridXo + config.CtmGridDx*float64(ix+1)
+			y0 := config.CtmGridYo + config.CtmGridDy*float64(iy)
+			y1 := config.CtmGridYo + config.CtmGridDy*float64(iy+1)
 			cell.T = geom.Polygon{[]geom.Point{
 				geom.Point{x0, y0},
 				geom.Point{x1, y0},

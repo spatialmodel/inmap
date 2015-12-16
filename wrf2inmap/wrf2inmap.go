@@ -34,19 +34,19 @@ type ConfigInfo struct {
 	StartDate           string  // Format = "YYYYMMDD"
 	EndDate             string  // Format = "YYYYMMDD"
 	Nprocs              int     // number of processors to use
-	VariableGrid_x_o    float64 // lower left of output grid, x
-	VariableGrid_y_o    float64 // lower left of output grid, y
-	VariableGrid_dx     float64 // m
-	VariableGrid_dy     float64 // m
+	VariableGridXo      float64 // lower left of output grid, x
+	VariableGridYo      float64 // lower left of output grid, y
+	VariableGridDx      float64 // m
+	VariableGridDy      float64 // m
 	Xnests              []int   // Nesting multiples in the X direction
 	Ynests              []int   // Nesting multiples in the Y direction
 	HiResLayers         int     // number of layers to do in high resolution (layers above this will be lowest resolution.
-	CtmGrid_x_o         float64 // lower left of Chemical Transport Model (CTM) grid, x
-	CtmGrid_y_o         float64 // lower left of grid, y
-	CtmGrid_dx          float64 // m
-	CtmGrid_dy          float64 // m
-	CtmGrid_nx          int
-	CtmGrid_ny          int
+	CtmGridXo           float64 // lower left of Chemical Transport Model (CTM) grid, x
+	CtmGridYo           float64 // lower left of grid, y
+	CtmGridDx           float64 // m
+	CtmGridDy           float64 // m
+	CtmGridNx           int
+	CtmGridNy           int
 	GridProj            string   // projection info for CTM grid; Proj4 format
 	PopDensityCutoff    float64  // limit for people per unit area in the grid cell
 	PopCutoff           float64  // limit for total number of people in the grid cell
@@ -62,8 +62,10 @@ const (
 	wrfFormat    = "2006-01-02_15_04_05"
 	inDateFormat = "20060102"
 	tolerance    = 1.e-10 // tolerance for comparing floats
+)
 
-	// physical constants
+// physical constants
+const (
 	MWa      = 28.97   // g/mol, molar mass of air
 	mwN      = 14.0067 // g/mol, molar mass of nitrogen
 	mwS      = 32.0655 // g/mol, molar mass of sulfur
@@ -80,8 +82,8 @@ var (
 	end        time.Time
 	current    time.Time
 	numTsteps  float64
-	configFile *string = flag.String("config", "none", "Path to configuration file")
-	config             = new(ConfigInfo)
+	configFile = flag.String("config", "none", "Path to configuration file")
+	config     = new(ConfigInfo)
 )
 
 var (
@@ -102,21 +104,22 @@ var (
 	// VBS SOA species (biogenic only)
 	bSOA = map[string]float64{"bsoa1i": 1, "bsoa1j": 1, "bsoa2i": 1,
 		"bsoa2j": 1, "bsoa3i": 1, "bsoa3j": 1, "bsoa4i": 1, "bsoa4j": 1}
-	// RACM NOx species and molecular weights, multiplied by their
+	// NOx is RACM NOx species and molecular weights, multiplied by their
 	// nitrogen fractions
 	NOx = map[string]float64{"no": 30 / 30 * mwN, "no2": 46 / 46 * mwN}
-	// mass of N in NO
+	// NO is the mass of N in NO
 	NO = map[string]float64{"no": 1.}
-	// mass of N in  NO2
+	// NO2 is the mass of N in  NO2
 	NO2 = map[string]float64{"no2": 1.}
-	// MADE particulate NO species, nitrogen fraction
+	// pNO is the MADE particulate NO species, nitrogen fraction
 	pNO = map[string]float64{"no3ai": mwN / mwNO3, "no3aj": mwN / mwNO3}
-	// RACM SOx species and molecular weights
+	// SOx is the RACM SOx species and molecular weights
 	SOx = map[string]float64{"so2": 64 / 64 * mwS, "sulf": 98 / 98 * mwS}
-	// MADE particulate Sulfur species; sulfur fraction
-	pS  = map[string]float64{"so4ai": mwS / mwSO4, "so4aj": mwS / mwSO4}
+	// pS is the MADE particulate Sulfur species; sulfur fraction
+	pS = map[string]float64{"so4ai": mwS / mwSO4, "so4aj": mwS / mwSO4}
+	// NH3 is ammonia
 	NH3 = map[string]float64{"nh3": 17.03056 * 17.03056 / mwN}
-	// MADE particulate ammonia species, nitrogen fraction
+	// pNH is the MADE particulate ammonia species, nitrogen fraction
 	pNH = map[string]float64{"nh4ai": mwN / mwNH4, "nh4aj": mwN / mwNH4}
 
 	totalPM25 = map[string]float64{"PM2_5_DRY": 1.}
@@ -303,7 +306,7 @@ func main() {
 	pNH := <-NH3chan
 
 	NOchan <- nil
-	NO_NO2partitioning := <-NOchan
+	NONO2partitioning := <-NOchan
 	<-NOchan
 	<-NOchan
 
@@ -402,7 +405,7 @@ func main() {
 			"ug m-3", pNH},
 		"NO_NO2partitioning": dataHolder{[]string{"z", "y", "x"},
 			"Mass fraction of N in NOx that exists as NO.", "fraction",
-			NO_NO2partitioning},
+			NONO2partitioning},
 		"SO2oxidation": dataHolder{[]string{"z", "y", "x"},
 			"Rate of SO2 oxidation to SO4 by hydroxyl radical and H2O2",
 			"s-1", SO2oxidation},
@@ -641,36 +644,6 @@ func writeNCF(f *cdf.File, Var string, data *sparse.DenseArray) {
 		panic(err)
 	}
 }
-
-//func calcPartitioning(gaschan, particlechan chan *sparse.DenseArray) {
-//	var gas, particle *sparse.DenseArray
-//	firstData := true
-//	for {
-//		gasdata := <-gaschan
-//		if gasdata == nil {
-//			partitioning := sparse.ZerosDense(gas.Shape...)
-//			log.Println("Calculating partitioning...")
-//			for i, gasval := range gas.Elements {
-//				particleval := particle.Elements[i]
-//				partitioning.Elements[i] = gasval / (gasval + particleval)
-//				gas.Elements[i] /= numTsteps
-//				particle.Elements[i] /= numTsteps
-//			}
-//			gaschan <- partitioning
-//			gaschan <- gas
-//			gaschan <- particle
-//			return
-//		}
-//		particledata := <-particlechan
-//		if firstData {
-//			gas = sparse.ZerosDense(gasdata.Shape...)
-//			particle = sparse.ZerosDense(particledata.Shape...)
-//			firstData = false
-//		}
-//		gas.AddDense(gasdata)
-//		particle.AddDense(particledata)
-//	}
-//}
 
 // Calculate marginal partitioning
 func calcPartitioning(gaschan, particlechan chan *sparse.DenseArray) {
@@ -936,7 +909,6 @@ func calcWindDirection(uChan, vChan, wChan chan *sparse.DenseArray) {
 			}
 		}
 	}
-	return
 }
 
 func arrayAverage(s *sparse.DenseArray) *sparse.DenseArray {
@@ -1004,7 +976,6 @@ func windSpeed(uChan, vChan, wChan chan *sparse.DenseArray) {
 			}
 		}
 	}
-	return
 }
 
 // Roughness lengths for USGS land classes ([m]), from WRF file
@@ -1075,7 +1046,7 @@ var USGSwesely = []wesely1989.LandUseCategory{
 	wesely1989.Barren,       //'Lava'
 	wesely1989.Barren}       //'White Sand'
 
-// Calculates:
+// StabilityMixingChemistry Calculates:
 // 1) Stability parameters for use in plume rise calculation (ASME, 1973,
 // as described in Seinfeld and Pandis, 2006).
 // 2) Vertical turbulent diffusivity using a middling value (1 m2/s)
@@ -1193,17 +1164,17 @@ func StabilityMixingChemistry(LayerHeights *sparse.DenseArray,
 			go func(j int) { // concurrent processing
 				for i := 0; i < T.Shape[2]; i++ {
 					// Get Layer index of PBL top (staggered)
-					var kPblTop int
+					var pblTop int
 					for k := 0; k < LayerHeights.Shape[0]; k++ {
 						if LayerHeights.Get(k, j, i) >= pblh.Get(j, i) {
-							kPblTop = k
+							pblTop = k
 							break
 						}
 					}
 					// Calculate boundary layer average temperature (K)
 					To := 0.
 					for k := 0; k < LayerHeights.Shape[0]; k++ {
-						if k == kPblTop {
+						if k == pblTop {
 							To /= float64(k)
 							break
 						}
@@ -1211,7 +1182,7 @@ func StabilityMixingChemistry(LayerHeights *sparse.DenseArray,
 					}
 					// Calculate convective mixing rate
 					u := ustar.Get(j, i) // friction velocity
-					h := LayerHeights.Get(kPblTop, j, i)
+					h := LayerHeights.Get(pblTop, j, i)
 					hflux := hfx.Get(j, i)                // heat flux [W m-2]
 					ρ := 1 / alt.Get(0, j, i)             // density [kg/m3]
 					L := acm2.ObukhovLen(hflux, ρ, To, u) // Monin-Obukhov length [m]
@@ -1282,9 +1253,9 @@ func StabilityMixingChemistry(LayerHeights *sparse.DenseArray,
 
 					for k := 0; k < T.Shape[0]; k++ {
 						Tval := T.Get(k, j, i)
-						var dtheta_dz = 0. // potential temperature gradient
+						var dthetaDz = 0. // potential temperature gradient
 						if k > 0 {
-							dtheta_dz = (Tval - T.Get(k-1, j, i)) /
+							dthetaDz = (Tval - T.Get(k-1, j, i)) /
 								(LayerHeights.Get(k, j, i) -
 									LayerHeights.Get(k-1, j, i)) // K/m
 						}
@@ -1299,11 +1270,11 @@ func StabilityMixingChemistry(LayerHeights *sparse.DenseArray,
 						Temp.AddVal(t, k, j, i)
 
 						// Stability parameter
-						s1 := dtheta_dz / t * pressureCorrection
+						s1 := dthetaDz / t * pressureCorrection
 						S1.AddVal(s1, k, j, i)
 
 						// Stability class
-						if dtheta_dz < 0.005 {
+						if dthetaDz < 0.005 {
 							Sclass.AddVal(0., k, j, i)
 						} else {
 							Sclass.AddVal(1., k, j, i)
@@ -1317,7 +1288,7 @@ func StabilityMixingChemistry(LayerHeights *sparse.DenseArray,
 						Δz := zabove - z
 
 						const freeAtmKzz = 3. // [m2 s-1]
-						if k >= kPblTop {     // free atmosphere (unstaggered grid)
+						if k >= pblTop {      // free atmosphere (unstaggered grid)
 							Kzz.AddVal(freeAtmKzz, k, j, i)
 							Kyy.AddVal(freeAtmKzz, k, j, i)
 							if k == T.Shape[0]-1 { // Top Layer
@@ -1351,7 +1322,7 @@ func StabilityMixingChemistry(LayerHeights *sparse.DenseArray,
 						ko := 3.e-31 * math.Pow(t/300., -3.3)
 						SO2rate := (ko * M / (1 + ko*M/kinf)) * math.Pow(0.6,
 							1./(1+math.Pow(math.Log10(ko*M/kinf), 2.))) // cm3/molec/s
-						kSO2 := SO2rate * hoConc
+						kso2 := SO2rate * hoConc
 
 						// Aqueous phase sulfur chemistry
 						qCloudVal := qCloud.Get(k, j, i)
@@ -1359,11 +1330,11 @@ func StabilityMixingChemistry(LayerHeights *sparse.DenseArray,
 							const pH = 3.5 // doesn't really matter for SO2
 							qCloudVal /=
 								alt.Get(k, j, i) * 1000. // convert to volume frac.
-							kSO2 += seinfeld.SulfurH2O2aqueousOxidationRate(
+							kso2 += seinfeld.SulfurH2O2aqueousOxidationRate(
 								h2o2.Get(k, j, i)*1000., pH, t, p*atmPerPa,
 								qCloudVal)
 						}
-						SO2oxidation.AddVal(kSO2, k, j, i) // 1/s
+						SO2oxidation.AddVal(kso2, k, j, i) // 1/s
 					}
 
 					// Check for mass balance in convection coefficients
@@ -1380,7 +1351,7 @@ func StabilityMixingChemistry(LayerHeights *sparse.DenseArray,
 								"(k,j,i)=(%v,%v,%v); val=%v; m2u=%v; "+
 								"m2d=%v, m2dAbove=%v; kpbl=%v",
 								k, j, i, val, m2u, M2d.Get(k, j, i),
-								M2d.Get(k+1, j, i), kPblTop))
+								M2d.Get(k+1, j, i), pblTop))
 						}
 					}
 
@@ -1392,7 +1363,6 @@ func StabilityMixingChemistry(LayerHeights *sparse.DenseArray,
 			<-sem
 		}
 	}
-	return
 }
 
 func minInt(vals ...int) int {
@@ -1410,7 +1380,7 @@ func f2i(f float64) int {
 	return int(f + 0.5)
 }
 
-// Reads and parse a json configuration file.
+// ReadConfigFile Reads and parses a json configuration file.
 func ReadConfigFile(filename string) {
 	// Open the configuration file
 	var (
