@@ -20,7 +20,8 @@ import (
 	goshp "github.com/jonas-p/go-shp"
 )
 
-const WebMapProj = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs"
+// webMapProj is the spatial reference for web mapping.
+const webMapProj = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs"
 
 func init() {
 	gob.Register(geom.Polygon{})
@@ -28,29 +29,29 @@ func init() {
 
 type gridCell struct {
 	geom.T
-	WebMapGeom                                       geom.T
-	Row, Col, Layer                                  int
-	Dx, Dy, Dz                                       float64
-	index                                            [][2]int
-	PopData                                          map[string]float64 // Population for multiple demographic types
-	MortalityRate                                    float64            // mortalities per year per 100,000
-	IWest, IEast, INorth, ISouth, IAbove, IBelow     []int
-	IGroundLevel                                     []int
-	UPlusSpeed, UMinusSpeed, VPlusSpeed, VMinusSpeed float64
-	WPlusSpeed, WMinusSpeed                          float64
-	AOrgPartitioning, BOrgPartitioning               float64
-	NOPartitioning, SPartitioning                    float64
-	NHPartitioning                                   float64
-	SO2oxidation                                     float64
-	ParticleDryDep, SO2DryDep, NOxDryDep, NH3DryDep  float64
-	VOCDryDep, Kxxyy, LayerHeights                   float64
-	ParticleWetDep, SO2WetDep, OtherGasWetDep        float64
-	Kzz, M2u, M2d                                    float64
-	WindSpeed, WindSpeedMinusThird                   float64
-	WindSpeedInverse, WindSpeedMinusOnePointFour     float64
-	Temperature                                      float64
-	S1, Sclass                                       float64
-	aboveDensityThreshold                            bool
+	WebMapGeom                                      geom.T
+	Row, Col, Layer                                 int
+	Dx, Dy, Dz                                      float64
+	index                                           [][2]int
+	PopData                                         map[string]float64 // Population for multiple demographic types
+	MortalityRate                                   float64            // mortalities per year per 100,000
+	IWest, IEast, INorth, ISouth, IAbove, IBelow    []int
+	IGroundLevel                                    []int
+	UAvg, VAvg, WAvg                                float64   // Average velocities (staggered)
+	UDeviation, VDeviation                          []float64 // Spectral deviations from average velocity
+	AOrgPartitioning, BOrgPartitioning              float64
+	NOPartitioning, SPartitioning                   float64
+	NHPartitioning                                  float64
+	SO2oxidation                                    float64
+	ParticleDryDep, SO2DryDep, NOxDryDep, NH3DryDep float64
+	VOCDryDep, Kxxyy, LayerHeights                  float64
+	ParticleWetDep, SO2WetDep, OtherGasWetDep       float64
+	Kzz, M2u, M2d                                   float64
+	WindSpeed, WindSpeedMinusThird                  float64
+	WindSpeedInverse, WindSpeedMinusOnePointFour    float64
+	Temperature                                     float64
+	S1, Sclass                                      float64
+	aboveDensityThreshold                           bool
 }
 
 func (c *gridCell) copyCell() *gridCell {
@@ -137,12 +138,12 @@ func variableGrid(data map[string]dataHolder) {
 		}
 		if k != 0 {
 			getData(cellsBelow, data, k-1)
-			writeJsonAndGob(cellsBelow, k-1)
+			writeJSONAndGob(cellsBelow, k-1)
 		}
 
 		if k == kmax-1 {
 			getData(cells, data, k)
-			writeJsonAndGob(cells, k)
+			writeJSONAndGob(cells, k)
 		}
 		cellsBelow = cells
 		cellTreeBelow = cellTree
@@ -175,7 +176,7 @@ func (c *cellsSorter) Swap(i, j int) {
 func (c *cellsSorter) Less(i, j int) bool {
 	iindex := c.cells[i].index
 	jindex := c.cells[j].index
-	for q, _ := range iindex {
+	for q := range iindex {
 		if iindex[q][0] < jindex[q][0] {
 			return true
 		} else if iindex[q][0] > jindex[q][0] {
@@ -189,7 +190,6 @@ func (c *cellsSorter) Less(i, j int) bool {
 	}
 	panic(fmt.Errorf("Problem sorting: iindex: %v, jindex: %v",
 		iindex, jindex))
-	return false
 }
 
 func getNeighborsHorizontal(cells []*gridCell, cellTree *rtree.Rtree) {
@@ -250,29 +250,32 @@ func getIndexes(cellTree *rtree.Rtree, box *geom.Bounds) []int {
 
 func newRect(xmin, ymin, xmax, ymax float64) *geom.Bounds {
 	p := geom.NewBounds()
-	p.ExtendPoint(geom.Point{xmin, ymin})
-	p.ExtendPoint(geom.Point{xmax, ymax})
+	p.ExtendPoint(geom.Point{X: xmin, Y: ymin})
+	p.ExtendPoint(geom.Point{X: xmax, Y: ymax})
 	return p
 }
 
-type JsonHolder struct {
+// JSONHolder holds GeoJSON information
+type JSONHolder struct {
 	Type       string
 	Geometry   *geojson.Geometry
 	Properties *gridCell
 }
-type JsonHolderHolder struct {
+
+// JSONHolderHolder holds GeoJSON information
+type JSONHolderHolder struct {
 	Proj4, Type string
-	Features    []*JsonHolder
+	Features    []*JSONHolder
 }
 
-func writeJsonAndGob(cells []*gridCell, k int) {
+func writeJSONAndGob(cells []*gridCell, k int) {
 	var err error
-	outData := new(JsonHolderHolder)
+	outData := new(JSONHolderHolder)
 	outData.Proj4 = config.GridProj
 	outData.Type = "FeatureCollection"
-	outData.Features = make([]*JsonHolder, len(cells))
+	outData.Features = make([]*JSONHolder, len(cells))
 	for i, cell := range cells {
-		x := new(JsonHolder)
+		x := new(JSONHolder)
 		x.Type = "Feature"
 		x.Geometry, err = geojson.ToGeoJSON(cell.T)
 		if err != nil {
@@ -301,7 +304,7 @@ func writeJsonAndGob(cells []*gridCell, k int) {
 	if err != nil {
 		panic(err)
 	}
-	dst, err := proj.FromProj4(WebMapProj)
+	dst, err := proj.FromProj4(webMapProj)
 	if err != nil {
 		panic(err)
 	}
@@ -352,7 +355,7 @@ func createCells(localxNests, localyNests []int, index [][2]int,
 			}
 			newIndex = append(newIndex, [2]int{i, j})
 			// Create the cell in this nest
-			cell := CreateCell(pop, mort, newIndex)
+			cell := createCell(pop, mort, newIndex)
 			if len(localxNests) > 1 {
 				// Check if this grid cell is above the population threshold
 				// or the population density threshold.
@@ -383,10 +386,10 @@ func init() {
 	cellCache = make(map[string]*gridCell)
 }
 
-// CreateCell creates a new grid cell. If any of the census shapes
+// createCell creates a new grid cell. If any of the census shapes
 // that intersect the cell are above the population density threshold,
 // then the grid cell is also set to being above the density threshold.
-func CreateCell(pop, mort *rtree.Rtree, index [][2]int) *gridCell {
+func createCell(pop, mort *rtree.Rtree, index [][2]int) *gridCell {
 	// first, see if the cell is already in the cache.
 	cacheKey := ""
 	for _, v := range index {
@@ -561,6 +564,7 @@ func loadMortality(sr proj.SR) (
 
 func getData(cells []*gridCell, data map[string]dataHolder, k int) {
 	ctmtree := makeCTMgrid()
+	numNonlocal := data["UDeviation"].data.Shape[3]
 	for _, cell := range cells {
 		cell.Layer = k
 		ctmcells := ctmtree.SearchIntersect(cell.Bounds(nil))
@@ -574,18 +578,24 @@ func getData(cells []*gridCell, data map[string]dataHolder, k int) {
 			ctmrow := c.(*gridCellLight).Row
 			ctmcol := c.(*gridCellLight).Col
 
-			cell.UPlusSpeed += data["UPlusSpeed"].data.Get(
+			// TODO: wind speeds and deviation speeds are on a staggered grid.
+			// They should be handled with some sort of interpolating.
+			cell.UAvg += data["UAvg"].data.Get(
 				k, ctmrow, ctmcol) / ncells
-			cell.UMinusSpeed += data["UMinusSpeed"].data.Get(
+			cell.VAvg += data["VAvg"].data.Get(
 				k, ctmrow, ctmcol) / ncells
-			cell.VPlusSpeed += data["VPlusSpeed"].data.Get(
+			cell.WAvg += data["WAvg"].data.Get(
 				k, ctmrow, ctmcol) / ncells
-			cell.VMinusSpeed += data["VMinusSpeed"].data.Get(
-				k, ctmrow, ctmcol) / ncells
-			cell.WPlusSpeed += data["WPlusSpeed"].data.Get(
-				k, ctmrow, ctmcol) / ncells
-			cell.WMinusSpeed += data["WMinusSpeed"].data.Get(
-				k, ctmrow, ctmcol) / ncells
+
+			cell.UDeviation = make([]float64, numNonlocal)
+			cell.VDeviation = make([]float64, numNonlocal)
+			for d := 0; d < numNonlocal; d++ {
+				cell.UDeviation[d] += data["UDeviation"].data.Get(
+					k, ctmrow, ctmcol, d) / ncells
+				cell.VDeviation[d] += data["VDeviation"].data.Get(
+					k, ctmrow, ctmcol, d) / ncells
+			}
+
 			cell.AOrgPartitioning += data["aOrgPartitioning"].data.Get(
 				k, ctmrow, ctmcol) / ncells
 			cell.BOrgPartitioning += data["bOrgPartitioning"].data.Get(
@@ -656,11 +666,11 @@ func makeCTMgrid() *rtree.Rtree {
 			y0 := config.CtmGridYo + config.CtmGridDy*float64(iy)
 			y1 := config.CtmGridYo + config.CtmGridDy*float64(iy+1)
 			cell.T = geom.Polygon{[]geom.Point{
-				geom.Point{x0, y0},
-				geom.Point{x1, y0},
-				geom.Point{x1, y1},
-				geom.Point{x0, y1},
-				geom.Point{x0, y0},
+				geom.Point{X: x0, Y: y0},
+				geom.Point{X: x1, Y: y0},
+				geom.Point{X: x1, Y: y1},
+				geom.Point{X: x0, Y: y1},
+				geom.Point{X: x0, Y: y0},
 			}}
 			cell.Row = iy
 			cell.Col = ix

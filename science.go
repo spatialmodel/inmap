@@ -66,12 +66,10 @@ func (c *Cell) Mixing(Δt float64) {
 func (c *Cell) westEastFlux(ii int) float64 {
 	var flux float64
 	for i, w := range c.West {
-		flux += (w.UPlusSpeed*w.Ci[ii] -
-			c.Ci[ii]*c.UMinusSpeed) * c.WestFrac[i]
+		flux += (c.UAvg * w.Ci[ii]) * c.WestFrac[i]
 	}
 	for i, e := range c.East {
-		flux += (e.UMinusSpeed*e.Ci[ii] -
-			c.Ci[ii]*c.UPlusSpeed) * c.EastFrac[i]
+		flux += (e.UAvg * c.Ci[ii]) * c.EastFrac[i]
 	}
 	return flux
 }
@@ -82,12 +80,10 @@ func (c *Cell) westEastFlux(ii int) float64 {
 func (c *Cell) southNorthFlux(ii int) float64 {
 	var flux float64
 	for i, s := range c.South {
-		flux += (s.VPlusSpeed*s.Ci[ii] -
-			c.Ci[ii]*c.VMinusSpeed) * c.SouthFrac[i]
+		flux += c.VAvg * s.Ci[ii] * c.SouthFrac[i]
 	}
 	for i, n := range c.North {
-		flux += (n.VMinusSpeed*n.Ci[ii] -
-			c.Ci[ii]*c.VPlusSpeed) * c.NorthFrac[i]
+		flux += (n.VAvg * c.Ci[ii]) * c.NorthFrac[i]
 	}
 	return flux
 }
@@ -99,18 +95,16 @@ func (c *Cell) belowAboveFlux(ii int) float64 {
 	var flux float64
 	if c.Layer != 0 { // Can't advect downwards from bottom cell
 		for i, b := range c.Below {
-			flux += (b.WPlusSpeed*b.Ci[ii] -
-				c.Ci[ii]*c.WMinusSpeed) * c.BelowFrac[i]
+			flux += (c.WAvg * b.Ci[ii]) * c.BelowFrac[i]
 		}
 	}
 	for i, a := range c.Above {
-		flux += (a.WMinusSpeed*a.Ci[ii] -
-			c.Ci[ii]*c.WPlusSpeed) * c.AboveFrac[i]
+		flux += (a.WAvg * c.Ci[ii]) * c.AboveFrac[i]
 	}
 	return flux
 }
 
-const advectionFactor = 2.
+const advectionFactor = 1.
 
 // UpwindAdvection calculates advection in the cell based
 // on the upwind differences scheme.
@@ -119,6 +113,62 @@ func (c *Cell) UpwindAdvection(Δt float64) {
 		c.Cf[ii] += c.westEastFlux(ii) / c.Dx * Δt * advectionFactor
 		c.Cf[ii] += c.southNorthFlux(ii) / c.Dy * Δt * advectionFactor
 		c.Cf[ii] += c.belowAboveFlux(ii) / c.Dz * Δt * advectionFactor
+	}
+}
+
+// TODO: These shouldn't be hard coded.
+const (
+	CTMDx = 12000.
+	CTMDy = 12000.
+)
+
+// meanderFlux calculates the flux due to meanders. See MeanderMixing for
+// further explaination.
+// flux = ubar' * (Ci - Cj) / Δx = [m/s] * μg/m3 / m = μg/(m3-s)
+func meanderFlux(ubarPrime, Ci, Cj, Δx float64) float64 {
+	return ubarPrime * (Ci - Cj) / Δx
+}
+
+func (c *Cell) meanderFluxEast(frac float64, ec *Cell, distance float64, pi int) float64 {
+	var flux float64
+	devI := int(distance / CTMDx)
+	if devI < len(c.UDeviation) {
+		flux += meanderFlux(c.UDeviation[devI], c.Ci[pi], ec.Ci[pi], distance)
+		for i, e := range c.East {
+			flux += c.meanderFluxEast(frac*ec.EastFrac[i], e, distance+ec.DxPlusHalf[i], pi)
+		}
+	}
+	return flux
+}
+
+func (c *Cell) meanderFluxWest(frac float64, wc *Cell, distance float64, pi int) float64 {
+	var flux float64
+	devI := int(distance / CTMDx)
+	if devI < len(c.UDeviation) {
+		flux += meanderFlux(c.UDeviation[devI], wc.Ci[pi], c.Ci[pi], distance)
+		for i, w := range c.West {
+			flux += c.meanderFluxWest(frac*wc.EastFrac[i], w, distance+wc.DxPlusHalf[i], pi)
+		}
+	}
+	return flux
+}
+
+// MeanderMixing calculates changes in concentrations caused by meanders:
+// adevection that is resolved by the underlying comprehensive chemical
+// transport model but is not resolved by InMAP.
+// The algorithm is an adaptation of the Spectral Diffusivity nonlocal turbulence
+// closure method described in:
+// TODO: add citations.
+func (c *Cell) MeanderMixing(Δt float64) {
+	for pi := range c.Ci {
+		flux := 0.
+		for i, e := range c.East {
+			flux += c.meanderFluxEast(c.EastFrac[i], e, c.DxPlusHalf[i], pi)
+		}
+		for i, w := range c.West {
+			flux += c.meanderFluxWest(c.WestFrac[i], w, c.DxMinusHalf[i], pi)
+		}
+		c.Cf[pi] += flux * Δt
 	}
 }
 

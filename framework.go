@@ -72,11 +72,10 @@ func init() {
 type Cell struct {
 	geom.T                                        // Cell geometry
 	WebMapGeom                 geom.T             // Cell geometry in web map (mercator) coordinate system
-	UPlusSpeed                 float64            `desc:"Westerly wind speed" units:"m/s"`
-	UMinusSpeed                float64            `desc:"Easterly wind speed" units:"m/s"`
-	VPlusSpeed                 float64            `desc:"Southerly wind speed" units:"m/s"`
-	VMinusSpeed                float64            `desc:"Northerly wind speed" units:"m/s"`
-	WPlusSpeed, WMinusSpeed    float64            `desc:"Upwardly wind speed" units:"m/s"`
+	UAvg                       float64            `desc:"Average East-West wind speed" units:"m/s"`
+	VAvg                       float64            `desc:"Average North-South wind speed" units:"m/s"`
+	WAvg                       float64            `desc:"Average up-down wind speed" units:"m/s"`
+	UDeviation, VDeviation     []float64          // Spectral deviations from average velocity [m/s]
 	AOrgPartitioning           float64            `desc:"Organic particle partitioning" units:"fraction particles"`
 	BOrgPartitioning           float64            // particle fraction
 	SPartitioning              float64            `desc:"Sulfur particle partitioning" units:"fraction particles"`
@@ -345,6 +344,7 @@ func InitInMAPdata(option InitOption, numIterations int,
 				if len(cell.IWest) == 0 {
 					c := cell.makecopy()
 					cell.West = []*Cell{c}
+					c.West = []*Cell{c} // boundary cells are adjacent to themselves.
 					d.westBoundary = append(d.westBoundary, c)
 				} else {
 					cell.West = make([]*Cell, len(cell.IWest))
@@ -356,6 +356,7 @@ func InitInMAPdata(option InitOption, numIterations int,
 				if len(cell.IEast) == 0 {
 					c := cell.makecopy()
 					cell.East = []*Cell{c}
+					c.East = []*Cell{c} // boundary cells are adjacent to themselves.
 					d.eastBoundary = append(d.eastBoundary, c)
 				} else {
 					cell.East = make([]*Cell, len(cell.IEast))
@@ -367,6 +368,7 @@ func InitInMAPdata(option InitOption, numIterations int,
 				if len(cell.ISouth) == 0 {
 					c := cell.makecopy()
 					cell.South = []*Cell{c}
+					c.South = []*Cell{c} // boundary cells are adjacent to themselves.
 					d.southBoundary = append(d.southBoundary, c)
 				} else {
 					cell.South = make([]*Cell, len(cell.ISouth))
@@ -378,6 +380,7 @@ func InitInMAPdata(option InitOption, numIterations int,
 				if len(cell.INorth) == 0 {
 					c := cell.makecopy()
 					cell.North = []*Cell{c}
+					c.North = []*Cell{c} // boundary cells are adjacent to themselves.
 					d.northBoundary = append(d.northBoundary, c)
 				} else {
 					cell.North = make([]*Cell, len(cell.INorth))
@@ -389,6 +392,7 @@ func InitInMAPdata(option InitOption, numIterations int,
 				if len(cell.IAbove) == 0 || cell.Layer == d.Nlayers-1 {
 					c := cell.makecopy()
 					cell.Above = []*Cell{c}
+					c.Above = []*Cell{c} // boundary cells are adjacent to themselves.
 					d.topBoundary = append(d.topBoundary, c)
 				} else {
 					cell.Above = make([]*Cell, len(cell.IAbove))
@@ -504,9 +508,7 @@ func (d *InMAPdata) setTstepCFL() {
 	for i, c := range d.Data {
 		// Advection time step
 		dt1 := Cmax / math.Pow(3., 0.5) /
-			max(c.UPlusSpeed/c.Dx, c.UMinusSpeed/c.Dx,
-				c.VPlusSpeed/c.Dy, c.VMinusSpeed/c.Dy,
-				c.WPlusSpeed/c.Dz, c.WMinusSpeed/c.Dz)
+			max(c.UAvg/c.Dx, c.VAvg/c.Dy, c.WAvg/c.Dz)
 		// vertical diffusion time step
 		dt2 := Cmax * c.Dz * c.Dz / 2. / c.Kzz
 		// horizontal diffusion time step

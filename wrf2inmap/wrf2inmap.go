@@ -33,7 +33,6 @@ type ConfigInfo struct {
 	OutputFilePrefix    string  // name for output files
 	StartDate           string  // Format = "YYYYMMDD"
 	EndDate             string  // Format = "YYYYMMDD"
-	Nprocs              int     // number of processors to use
 	VariableGridXo      float64 // lower left of output grid, x
 	VariableGridYo      float64 // lower left of output grid, y
 	VariableGridDx      float64 // m
@@ -41,6 +40,7 @@ type ConfigInfo struct {
 	Xnests              []int   // Nesting multiples in the X direction
 	Ynests              []int   // Nesting multiples in the Y direction
 	HiResLayers         int     // number of layers to do in high resolution (layers above this will be lowest resolution.
+	NonlocalDistance    float64 // Distance (in CTM grid units) over which to consider nonlocal advection.
 	CtmGridXo           float64 // lower left of Chemical Transport Model (CTM) grid, x
 	CtmGridYo           float64 // lower left of grid, y
 	CtmGridDx           float64 // m
@@ -125,12 +125,12 @@ var (
 	totalPM25 = map[string]float64{"PM2_5_DRY": 1.}
 )
 
-func init() {
+func main() {
 	var err error
 
 	flag.Parse()
 	if *configFile == "" {
-		fmt.Println("Need to specify configuration file as in " +
+		log.Println("Need to specify configuration file as in " +
 			"`wrf2inmap -config=configFile.json`")
 		os.Exit(1)
 	}
@@ -147,22 +147,10 @@ func init() {
 	end = end.AddDate(0, 0, 1) // add 1 day to the end
 	numTsteps = end.Sub(start).Hours()
 
-	runtime.GOMAXPROCS(config.Nprocs)
-}
-
-func main() {
-
-	flag.Parse()
 	go func() {
 		http.ListenAndServe("localhost:6060", nil)
 	}()
 
-	// calculate wind speed and direction
-	windDirectionChanU := make(chan *sparse.DenseArray)
-	windDirectionChanV := make(chan *sparse.DenseArray)
-	windDirectionChanW := make(chan *sparse.DenseArray)
-	go calcWindDirection(windDirectionChanU, windDirectionChanV,
-		windDirectionChanW)
 	pblhChan := make(chan *sparse.DenseArray)
 	go average(pblhChan)
 	phChan := make(chan *sparse.DenseArray)
@@ -175,27 +163,18 @@ func main() {
 	go windSpeed(uAvgChan, vAvgChan, wAvgChan)
 
 	iterateTimeSteps("Reading data--pass 1: ",
-		readSingleVar("U", windDirectionChanU, uAvgChan),
-		readSingleVar("V", windDirectionChanV, vAvgChan),
-		readSingleVar("W", windDirectionChanW, wAvgChan),
+		readSingleVar("U", uAvgChan),
+		readSingleVar("V", vAvgChan),
+		readSingleVar("W", wAvgChan),
 		readSingleVar("PBLH", pblhChan),
 		readSingleVar("PH", phChan), readSingleVar("PHB", phbChan))
 
-	windDirectionChanU <- nil
-	windDirectionChanV <- nil
-	windDirectionChanW <- nil
 	pblhChan <- nil
 	phChan <- nil
 	phbChan <- nil
 	uAvgChan <- nil
 	vAvgChan <- nil
 	wAvgChan <- nil
-	uPlusSpeed := <-windDirectionChanU
-	uMinusSpeed := <-windDirectionChanU
-	vPlusSpeed := <-windDirectionChanU
-	vMinusSpeed := <-windDirectionChanU
-	wPlusSpeed := <-windDirectionChanU
-	wMinusSpeed := <-windDirectionChanU
 	pblh := <-pblhChan
 	ph := <-phChan
 	phb := <-phbChan
@@ -203,8 +182,20 @@ func main() {
 	windSpeedInverse := <-uAvgChan
 	windSpeedMinusThird := <-uAvgChan
 	windSpeedMinusOnePointFour := <-uAvgChan
+	uAvg := <-uAvgChan
+	vAvg := <-vAvgChan
+	wAvg := <-wAvgChan
 
 	layerHeights, Dz := calcLayerHeights(ph, phb)
+
+	// calculate deviation from average wind speed.
+	// Only calculate horizontal deviations.
+	deviationChanU := make(chan *sparse.DenseArray)
+	deviationChanV := make(chan *sparse.DenseArray)
+	numNonLocalX := int(config.NonlocalDistance / config.CtmGridDx)
+	numNonLocalY := int(config.NonlocalDistance / config.CtmGridDy)
+	go windDeviation(uAvg, deviationChanU, numNonLocalX, 2)
+	go windDeviation(vAvg, deviationChanV, numNonLocalY, 1)
 
 	// calculate gas/particle partitioning
 	aVOCchan := make(chan *sparse.DenseArray)
@@ -237,8 +228,7 @@ func main() {
 	altChanWetDep := make(chan *sparse.DenseArray)
 	altChan := make(chan *sparse.DenseArray)
 	go average(altChan)
-	go calcWetDeposition(layerHeights, qrainChan, cloudFracChan,
-		altChanWetDep)
+	go calcWetDeposition(layerHeights, qrainChan, cloudFracChan, altChanWetDep)
 
 	// Calculate stability for plume rise, vertical mixing,
 	// and chemical reaction rates
@@ -262,6 +252,8 @@ func main() {
 		luIndexChan, qCloudChan, swDownChan, glwChan, qrainChan2)
 
 	iterateTimeSteps("Reading data--pass 2: ",
+		readSingleVar("U", deviationChanU),
+		readSingleVar("V", deviationChanV),
 		readGasGroup(aVOC, aVOCchan), readParticleGroup(aSOA, aSOAchan),
 		readGasGroup(bVOC, bVOCchan), readParticleGroup(bSOA, bSOAchan),
 		readGasGroup(NOx, NOxchan), readParticleGroup(pNO, pNOchan),
@@ -282,6 +274,12 @@ func main() {
 		readSingleVar("ALT", altChanWetDep, altChanMixing, altChan),
 		readSingleVar("SWDOWN", swDownChan),
 		readSingleVar("GLW", glwChan))
+
+	// speed deviation results
+	deviationChanU <- nil
+	deviationChanV <- nil
+	uDeviation := <-deviationChanU
+	vDeviation := <-deviationChanV
 
 	// partitioning results
 	aVOCchan <- nil
@@ -344,24 +342,22 @@ func main() {
 	outputFile := filepath.Join(config.OutputDir, config.OutputFilePrefix+".ncf")
 	fmt.Printf("Writing out data to %v...\n", outputFile)
 	h := cdf.NewHeader(
-		[]string{"x", "y", "z", "zStagger"},
+		[]string{"x", "y", "z", "xStagger", "yStagger", "zStagger", "xdeviation", "ydeviation"},
 		[]int{windSpeed.Shape[2], windSpeed.Shape[1], windSpeed.Shape[0],
-			windSpeed.Shape[0] + 1})
-	h.AddAttribute("", "comment", "Meteorology and baseline chemistry data file")
+			uAvg.Shape[2], vAvg.Shape[1], wAvg.Shape[0], numNonLocalX, numNonLocalY})
+	h.AddAttribute("", "comment", "InMAP meteorology and baseline chemistry data file")
 
 	data := map[string]dataHolder{
-		"UPlusSpeed": dataHolder{[]string{"z", "y", "x"},
-			"Average speed of wind going in +U direction", "m/s", uPlusSpeed},
-		"UMinusSpeed": dataHolder{[]string{"z", "y", "x"},
-			"Average speed of wind going in -U direction", "m/s", uMinusSpeed},
-		"VPlusSpeed": dataHolder{[]string{"z", "y", "x"},
-			"Average speed of wind going in +V direction", "m/s", vPlusSpeed},
-		"VMinusSpeed": dataHolder{[]string{"z", "y", "x"},
-			"Average speed of wind going in -V direction", "m/s", vMinusSpeed},
-		"WPlusSpeed": dataHolder{[]string{"z", "y", "x"},
-			"Average speed of wind going in +W direction", "m/s", wPlusSpeed},
-		"WMinusSpeed": dataHolder{[]string{"z", "y", "x"},
-			"Average speed of wind going in -W direction", "m/s", wMinusSpeed},
+		"UAvg": dataHolder{[]string{"z", "y", "xStagger"},
+			"Annual average x velocity", "m/s", uAvg},
+		"VAvg": dataHolder{[]string{"z", "yStagger", "x"},
+			"Annual average y velocity", "m/s", vAvg},
+		"WAvg": dataHolder{[]string{"zStagger", "y", "x"},
+			"Annual average z velocity", "m/s", wAvg},
+		"UDeviation": dataHolder{[]string{"z", "y", "xStagger", "xdeviation"},
+			"Spectral deviations from average x velocity", "m/s", uDeviation},
+		"VDeviation": dataHolder{[]string{"z", "yStagger", "x", "ydeviation"},
+			"Spectral deviations from average y velocity", "m/s", vDeviation},
 		"aOrgPartitioning": dataHolder{[]string{"z", "y", "x"},
 			"Mass fraction of anthropogenic organic matter in particle {vs. gas} phase",
 			"fraction", aOrgPartitioning},
@@ -741,45 +737,6 @@ func average(datachan chan *sparse.DenseArray) {
 	}
 }
 
-func binEdgeToCenter(in *sparse.DenseArray) *sparse.DenseArray {
-	outshape := make([]int, len(in.Shape))
-	outshape[0] = in.Shape[0] - 1
-	outshape[1], outshape[2], outshape[3] = in.Shape[1], in.Shape[2], in.Shape[3]
-	out := sparse.ZerosDense(outshape...)
-	for b := 0; b < out.Shape[0]; b++ {
-		for i := 0; i < out.Shape[1]; i++ {
-			for j := 0; j < out.Shape[2]; j++ {
-				for k := 0; k < out.Shape[3]; k++ {
-					center := (in.Get(b, i, j, k) + in.Get(b+1, i, j, k)) / 2.
-					out.Set(center, b, i, j, k)
-				}
-			}
-		}
-	}
-	return out
-}
-
-func statsCumulative(in *sparse.DenseArray) *sparse.DenseArray {
-	out := sparse.ZerosDense(in.Shape...)
-	for b := 0; b < out.Shape[0]; b++ {
-		for i := 0; i < out.Shape[1]; i++ {
-			for j := 0; j < out.Shape[2]; j++ {
-				for k := 0; k < out.Shape[3]; k++ {
-					var cumulativeVal float64
-					if b == 0 {
-						cumulativeVal = in.Get(b, i, j, k)
-					} else {
-						cumulativeVal = out.Get(b-1, i, j, k) + in.Get(b, i, j, k)
-
-					}
-					out.Set(cumulativeVal, b, i, j, k)
-				}
-			}
-		}
-	}
-	return out
-}
-
 // calcLayerHeights calculates the heights above the ground
 // of the layers (in meters).
 // For more information, refer to
@@ -846,69 +803,87 @@ func calcWetDeposition(layerHeights *sparse.DenseArray, qrainChan,
 	}
 }
 
-// Calculate average wind directions and speeds
-func calcWindDirection(uChan, vChan, wChan chan *sparse.DenseArray) {
-	var uPlusSpeed *sparse.DenseArray
-	var uMinusSpeed *sparse.DenseArray
-	var vPlusSpeed *sparse.DenseArray
-	var vMinusSpeed *sparse.DenseArray
-	var wPlusSpeed *sparse.DenseArray
-	var wMinusSpeed *sparse.DenseArray
+// windDeviation calculates the spectral intensity of deviations from
+// average wind speed. Output is based on a staggered grid.
+// numNonlocal is the number of grid cells to create nonlocal diffusion
+// coefficients for. index dictates which directional index (i, j, or k) that
+// we are calculating devaitions in.
+//
+// This algorithm is an adaptation of the Spectral Diffusivity nonlocal turbulence
+// closure method described in:
+// TODO: add citations.
+func windDeviation(uAvg *sparse.DenseArray, uChan chan *sparse.DenseArray, numNonlocal, index int) {
+	var uDeviation *sparse.DenseArray
 	firstData := true
-	var dims []int
 	for {
 		u := <-uChan
-		v := <-vChan
-		w := <-wChan
 		if u == nil {
-			uChan <- arrayAverage(uPlusSpeed)
-			uChan <- arrayAverage(uMinusSpeed)
-			uChan <- arrayAverage(vPlusSpeed)
-			uChan <- arrayAverage(vMinusSpeed)
-			uChan <- arrayAverage(wPlusSpeed)
-			uChan <- arrayAverage(wMinusSpeed)
+			uChan <- arrayAverage(uDeviation)
 			return
 		}
 		if firstData {
-			// get unstaggered grid sizes
-			dims = make([]int, len(u.Shape))
-			for i, ulen := range u.Shape {
-				vlen := v.Shape[i]
-				dims[i] = minInt(ulen, vlen)
-			}
-			uPlusSpeed = sparse.ZerosDense(dims...)
-			uMinusSpeed = sparse.ZerosDense(dims...)
-			vPlusSpeed = sparse.ZerosDense(dims...)
-			vMinusSpeed = sparse.ZerosDense(dims...)
-			wPlusSpeed = sparse.ZerosDense(dims...)
-			wMinusSpeed = sparse.ZerosDense(dims...)
+			uDeviation = sparse.ZerosDense(append(u.Shape, numNonlocal)...)
 			firstData = false
 		}
-		for k := 0; k < dims[0]; k++ {
-			for j := 0; j < dims[1]; j++ {
-				for i := 0; i < dims[2]; i++ {
-					ucenter := (u.Get(k, j, i) + u.Get(k, j, i+1)) / 2.
-					vcenter := (v.Get(k, j, i) + v.Get(k, j+1, i)) / 2.
-					wcenter := (w.Get(k, j, i) + w.Get(k+1, j, i)) / 2.
-					if ucenter > 0 {
-						uPlusSpeed.AddVal(ucenter, k, j, i)
-					} else {
-						uMinusSpeed.AddVal(-ucenter, k, j, i)
-					}
-					if vcenter > 0 {
-						vPlusSpeed.AddVal(vcenter, k, j, i)
-					} else {
-						vMinusSpeed.AddVal(-vcenter, k, j, i)
-					}
-					if wcenter > 0 {
-						wPlusSpeed.AddVal(wcenter, k, j, i)
-					} else {
-						wMinusSpeed.AddVal(-wcenter, k, j, i)
+		for k := 0; k < u.Shape[0]; k++ {
+			for j := 0; j < u.Shape[1]; j++ {
+				for i := 0; i < u.Shape[2]; i++ {
+					centerDeviation := u.Get(k, j, i) - uAvg.Get(k, j, i) // Cell we're diffusing from
+					centerDeviationSign := math.Signbit(centerDeviation)
+					// look both forward and backward from cell of interest, but
+					// assume diffusion to be symmetrical.
+					for _, direction := range []int{1, -1} {
+						// nonlocal mass transfer is assumed to be symmetrical, but the
+						// positive and negative coefficients may end up at different
+						// meander lengths.
+						var valCount int
+						var coeff float64
+						var meanderLength int // number of grid cells with deviation in same direction.
+						elems, deltas := getDeviationIndexRange(k, j, i, numNonlocal, index, direction, u)
+						for id, elem := range elems {
+							deviation := u.Elements[elem] - uAvg.Elements[elem] // Cell we're potentially diffusing to.
+							if math.Signbit(deviation) != centerDeviationSign {
+								// if the deviation isn't in the same direction as the deviation
+								// of cell [k,j,i], it means that we've reached the end of the
+								// meander so we're done.
+								break
+							}
+							meanderLength = deltas[id]
+							valCount++
+							coeff += math.Abs(deviation)
+						}
+						// The transfer coefficient is placed at the maximum length of the
+						// meander and is the average deviation velocity of all grid cells
+						// within the meander.
+						if valCount != 0 {
+							uDeviation.AddVal(coeff/float64(valCount), k, j, i,
+								meanderLength)
+						}
 					}
 				}
 			}
 		}
 	}
+}
+
+// getDeviationIndexRange gets the array indexes of deviations within numNonlocal
+// grid cells from cell [k,j,i] in the direction specified by direction. direction
+// should be 1 or -1.
+func getDeviationIndexRange(k, j, i, numNonlocal, index, direction int, u *sparse.DenseArray) (elems, deltas []int) {
+	if direction != 1 && direction != -1 {
+		panic("invalid direction")
+	}
+	for ii := 1 * direction; ii*direction <= numNonlocal; ii += direction {
+		iiIndex := []int{k, j, i}
+		iiIndex[index] += ii
+		if err := u.CheckIndex(iiIndex); err != nil {
+			// don't include the index if it's outside the bounds of the grid.
+			continue
+		}
+		elems = append(elems, u.Index1d(iiIndex...))
+		deltas = append(deltas, ii*direction-1) // the neighbor grid cell has a delta of zero.
+	}
+	return
 }
 
 func arrayAverage(s *sparse.DenseArray) *sparse.DenseArray {
@@ -918,12 +893,14 @@ func arrayAverage(s *sparse.DenseArray) *sparse.DenseArray {
 	return s
 }
 
-// Calculate RMS wind speed
+// windSpeed calculates RMS wind speed as well as average speeds in each
+// direction.
 func windSpeed(uChan, vChan, wChan chan *sparse.DenseArray) {
 	var speed *sparse.DenseArray
 	var speedInverse *sparse.DenseArray
 	var speedMinusThird *sparse.DenseArray
 	var speedMinusOnePointFour *sparse.DenseArray
+	var uAvg, vAvg, wAvg *sparse.DenseArray
 	firstData := true
 	var dims []int
 	for {
@@ -941,9 +918,15 @@ func windSpeed(uChan, vChan, wChan chan *sparse.DenseArray) {
 			uChan <- speedInverse
 			uChan <- speedMinusThird
 			uChan <- speedMinusOnePointFour
+			uChan <- arrayAverage(uAvg)
+			vChan <- arrayAverage(vAvg)
+			wChan <- arrayAverage(wAvg)
 			return
 		}
 		if firstData {
+			uAvg = sparse.ZerosDense(u.Shape...)
+			vAvg = sparse.ZerosDense(v.Shape...)
+			wAvg = sparse.ZerosDense(w.Shape...)
 			// get unstaggered grid sizes
 			dims = make([]int, len(u.Shape))
 			for i, ulen := range u.Shape {
@@ -957,6 +940,9 @@ func windSpeed(uChan, vChan, wChan chan *sparse.DenseArray) {
 			speedMinusOnePointFour = sparse.ZerosDense(dims...)
 			firstData = false
 		}
+		uAvg.AddDense(u)
+		vAvg.AddDense(v)
+		wAvg.AddDense(w)
 		for k := 0; k < dims[0]; k++ {
 			for j := 0; j < dims[1]; j++ {
 				for i := 0; i < dims[2]; i++ {
@@ -1300,14 +1286,6 @@ func StabilityMixingChemistry(LayerHeights *sparse.DenseArray,
 							M2u.AddVal(m2u, k, j, i)
 							kmyy := acm2.CalculateKm(zcenter, h, L, u)
 							Kyy.AddVal(kmyy, k, j, i)
-
-							//////////////////////////
-							//						m2d := acm2.M2d(m2u, z, Δz, h)
-							//					z2 := LayerHeights.Get(k+1, j, i)
-							//					Δz2 := LayerHeights.Get(k+1, j, i) - z2
-							//						m2d2 := acm2.M2d(m2u, z2, Δz2, h)
-
-							/////////////////////////
 						}
 
 						// Gas phase sulfur chemistry
@@ -1413,7 +1391,7 @@ func ReadConfigFile(filename string) {
 
 	err = os.MkdirAll(config.OutputDir, os.ModePerm)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Println(err.Error())
 		os.Exit(1)
 	}
 	return
