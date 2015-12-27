@@ -79,7 +79,7 @@ func variableGrid(data map[string]dataHolder) {
 	mort := loadMortality(sr)
 	log.Println("Loaded mortality")
 	filePrefix := filepath.Join(config.OutputDir, config.OutputFilePrefix)
-	kmax := data["UPlusSpeed"].data.Shape[0]
+	kmax := data["UAvg"].data.Shape[0]
 	var cellsBelow []*gridCell
 	var cellTreeBelow *rtree.Rtree
 	var cellTreeGroundLevel *rtree.Rtree
@@ -580,12 +580,9 @@ func getData(cells []*gridCell, data map[string]dataHolder, k int) {
 
 			// TODO: wind speeds and deviation speeds are on a staggered grid.
 			// They should be handled with some sort of interpolating.
-			cell.UAvg += data["UAvg"].data.Get(
-				k, ctmrow, ctmcol) / ncells
-			cell.VAvg += data["VAvg"].data.Get(
-				k, ctmrow, ctmcol) / ncells
-			cell.WAvg += data["WAvg"].data.Get(
-				k, ctmrow, ctmcol) / ncells
+			cell.UAvg += data["UAvg"].data.Get(k, ctmrow, ctmcol) / ncells
+			cell.VAvg += data["VAvg"].data.Get(k, ctmrow, ctmcol) / ncells
+			cell.WAvg += data["WAvg"].data.Get(k, ctmrow, ctmcol) / ncells
 
 			cell.UDeviation = make([]float64, numNonlocal)
 			cell.VDeviation = make([]float64, numNonlocal)

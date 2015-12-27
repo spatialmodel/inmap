@@ -19,5 +19,5 @@ before_script:
       - unzip inmapData_48_24_12_4_2_1_40000.zip
 
 script:
-      - go test
+      - go test ./...
       - $HOME/gopath/bin/goveralls -service=travis-ci -package=github.com/ctessum/inmap
