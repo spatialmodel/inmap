@@ -520,7 +520,6 @@ func (d *InMAPdata) setTstepCFL() {
 			d.Dt = amin(d.Dt, dt1, dt2, dt3, dt4) // seconds
 		}
 	}
-	d.Dt /= advectionFactor
 }
 
 //  Set the time step using the WRF rule of thumb.

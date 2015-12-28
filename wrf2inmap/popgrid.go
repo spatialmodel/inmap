@@ -37,7 +37,7 @@ type gridCell struct {
 	MortalityRate                                   float64            // mortalities per year per 100,000
 	IWest, IEast, INorth, ISouth, IAbove, IBelow    []int
 	IGroundLevel                                    []int
-	UAvg, VAvg, WAvg                                float64   // Average velocities (staggered)
+	UAvg, VAvg, WAvg                                float64   // Average velocities
 	UDeviation, VDeviation                          []float64 // Spectral deviations from average velocity
 	AOrgPartitioning, BOrgPartitioning              float64
 	NOPartitioning, SPartitioning                   float64
@@ -578,8 +578,6 @@ func getData(cells []*gridCell, data map[string]dataHolder, k int) {
 			ctmrow := c.(*gridCellLight).Row
 			ctmcol := c.(*gridCellLight).Col
 
-			// TODO: wind speeds and deviation speeds are on a staggered grid.
-			// They should be handled with some sort of interpolating.
 			cell.UAvg += data["UAvg"].data.Get(k, ctmrow, ctmcol) / ncells
 			cell.VAvg += data["VAvg"].data.Get(k, ctmrow, ctmcol) / ncells
 			cell.WAvg += data["WAvg"].data.Get(k, ctmrow, ctmcol) / ncells

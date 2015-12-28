@@ -60,59 +60,52 @@ func (c *Cell) Mixing(Δt float64) {
 	}
 }
 
-// Calculates advective flux in West and East directions
-// using upwind flux-form spatial approximation for δ(uq)/δx.
-// Returns mass flux per unit area per unit time.
-func (c *Cell) westEastFlux(ii int) float64 {
-	var flux float64
-	for i, w := range c.West {
-		flux += (c.UAvg * w.Ci[ii]) * c.WestFrac[i]
+// upwind calculates advective mass transfer
+// where u is wind velocity, Cm1 is the concentration in the cell adjecent in
+// the negative direction, C is the concentration in the cell of interest,
+// and Δx is the distance between cell centers.
+// Flux is calculated using the upwind flux-form spatial approximation for δ(uq)/δx,
+func upwind(u, Cm1, C, Δx float64) float64 {
+	if u > 0 {
+		return u * (Cm1 - C) / Δx
 	}
-	for i, e := range c.East {
-		flux += (e.UAvg * c.Ci[ii]) * c.EastFrac[i]
-	}
-	return flux
+	return 0
 }
-
-// Calculates advective flux in South and North directions
-// using upwind flux-form spatial approximation for δ(uq)/δx.
-// Returns mass flux per unit area per unit time.
-func (c *Cell) southNorthFlux(ii int) float64 {
-	var flux float64
-	for i, s := range c.South {
-		flux += c.VAvg * s.Ci[ii] * c.SouthFrac[i]
-	}
-	for i, n := range c.North {
-		flux += (n.VAvg * c.Ci[ii]) * c.NorthFrac[i]
-	}
-	return flux
-}
-
-// Calculates advective flux in Below and Above directions
-// using upwind flux-form spatial approximation for δ(uq)/δx.
-// Returns mass flux per unit area per unit time.
-func (c *Cell) belowAboveFlux(ii int) float64 {
-	var flux float64
-	if c.Layer != 0 { // Can't advect downwards from bottom cell
-		for i, b := range c.Below {
-			flux += (c.WAvg * b.Ci[ii]) * c.BelowFrac[i]
-		}
-	}
-	for i, a := range c.Above {
-		flux += (a.WAvg * c.Ci[ii]) * c.AboveFrac[i]
-	}
-	return flux
-}
-
-const advectionFactor = 1.
 
 // UpwindAdvection calculates advection in the cell based
 // on the upwind differences scheme.
 func (c *Cell) UpwindAdvection(Δt float64) {
 	for ii := range c.Cf {
-		c.Cf[ii] += c.westEastFlux(ii) / c.Dx * Δt * advectionFactor
-		c.Cf[ii] += c.southNorthFlux(ii) / c.Dy * Δt * advectionFactor
-		c.Cf[ii] += c.belowAboveFlux(ii) / c.Dz * Δt * advectionFactor
+		flux := 0.
+		for i, w := range c.West {
+			flux += upwind(c.UAvg, w.Ci[ii], c.Ci[ii], c.DxMinusHalf[i]) *
+				c.WestFrac[i]
+		}
+		for i, e := range c.East {
+			flux += upwind(e.UAvg, c.Ci[ii], e.Ci[ii], c.DxPlusHalf[i]) *
+				c.EastFrac[i]
+		}
+
+		for i, s := range c.South {
+			flux += upwind(c.VAvg, s.Ci[ii], c.Ci[ii], c.DyMinusHalf[i]) *
+				c.SouthFrac[i]
+		}
+		for i, n := range c.North {
+			flux += upwind(n.VAvg, c.Ci[ii], n.Ci[ii], c.DyPlusHalf[i]) *
+				c.NorthFrac[i]
+		}
+
+		if c.Layer > 0 {
+			for i, b := range c.Below {
+				flux += upwind(c.WAvg, b.Ci[ii], c.Ci[ii], c.DzMinusHalf[i]) *
+					c.BelowFrac[i]
+			}
+		}
+		for i, a := range c.Above {
+			flux += upwind(a.WAvg, c.Ci[ii], a.Ci[ii], c.DzPlusHalf[i]) *
+				c.AboveFrac[i]
+		}
+		c.Cf[ii] += flux * Δt
 	}
 }
 

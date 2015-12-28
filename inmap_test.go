@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
-	"os"
 	"runtime"
 	"testing"
 	"time"
@@ -31,25 +30,25 @@ import (
 var d *InMAPdata
 
 const (
-	testRow          = 25300 // somewhere in Chicago
+	testRow          = 240 // in the middle of the grid
 	testTolerance    = 1e-3
 	Δt               = 6.   // seconds
 	E                = 0.01 // emissions
 	numRunIterations = 100  // number of iterations for Run to run
 
-	dataURL = "https://github.com/ctessum/inmap/releases/download/v1.0.0/inmapData_48_24_12_4_2_1_40000.zip"
+	dataPath = "testdata/inmapData_[layer].gob"
+	//dataURL  = "https://github.com/ctessum/inmap/releases/download/v1.0.0/inmapData_48_24_12_4_2_1_40000.zip"
 )
 
 func init() {
-	runtime.GOMAXPROCS(runtime.NumCPU())
-	dataPath := os.Getenv("inmapdata")
+	//dataPath := os.Getenv("inmapdata")
 	var err error
-	if dataPath != "" {
-		d, err = InitInMAPdata(UseFileTemplate(dataPath, 27), numRunIterations, "")
-	} else {
-		d, err = InitInMAPdata(UseWebArchive(dataURL,
-			"inmapData_[layer].gob", 27), numRunIterations, "")
-	}
+	//if dataPath != "" {
+	d, err = InitInMAPdata(UseFileTemplate(dataPath, 27), numRunIterations, "")
+	//} else {
+	//	d, err = InitInMAPdata(UseWebArchive(dataURL,
+	//		"inmapData_[layer].gob", 27), numRunIterations, "")
+	//}
 	if err != nil {
 		panic(err)
 	}
@@ -69,11 +68,11 @@ func TestCellAlignment(t *testing.T) {
 				for j, e := range w.East {
 					if e.Row == cell.Row {
 						pass = true
-						if different(w.KxxEast[j], cell.KxxWest[i]) {
+						if different(w.KxxEast[j], cell.KxxWest[i], testTolerance) {
 							t.Logf("Kxx doesn't match")
 							t.FailNow()
 						}
-						if different(w.DxPlusHalf[j], cell.DxMinusHalf[i]) {
+						if different(w.DxPlusHalf[j], cell.DxMinusHalf[i], testTolerance) {
 							t.Logf("Dx doesn't match")
 							t.FailNow()
 						}
@@ -93,11 +92,11 @@ func TestCellAlignment(t *testing.T) {
 				for j, w := range e.West {
 					if w.Row == cell.Row {
 						pass = true
-						if different(e.KxxWest[j], cell.KxxEast[i]) {
+						if different(e.KxxWest[j], cell.KxxEast[i], testTolerance) {
 							t.Logf("Kxx doesn't match")
 							t.FailNow()
 						}
-						if different(e.DxMinusHalf[j], cell.DxPlusHalf[i]) {
+						if different(e.DxMinusHalf[j], cell.DxPlusHalf[i], testTolerance) {
 							t.Logf("Dx doesn't match")
 							t.FailNow()
 						}
@@ -117,11 +116,11 @@ func TestCellAlignment(t *testing.T) {
 				for j, s := range n.South {
 					if s.Row == cell.Row {
 						pass = true
-						if different(n.KyySouth[j], cell.KyyNorth[i]) {
+						if different(n.KyySouth[j], cell.KyyNorth[i], testTolerance) {
 							t.Logf("Kyy doesn't match")
 							t.FailNow()
 						}
-						if different(n.DyMinusHalf[j], cell.DyPlusHalf[i]) {
+						if different(n.DyMinusHalf[j], cell.DyPlusHalf[i], testTolerance) {
 							t.Logf("Dy doesn't match")
 							t.FailNow()
 						}
@@ -141,11 +140,11 @@ func TestCellAlignment(t *testing.T) {
 				for j, n := range s.North {
 					if n.Row == cell.Row {
 						pass = true
-						if different(s.KyyNorth[j], cell.KyySouth[i]) {
+						if different(s.KyyNorth[j], cell.KyySouth[i], testTolerance) {
 							t.Logf("Kyy doesn't match")
 							t.FailNow()
 						}
-						if different(s.DyPlusHalf[j], cell.DyMinusHalf[i]) {
+						if different(s.DyPlusHalf[j], cell.DyMinusHalf[i], testTolerance) {
 							t.Logf("Dy doesn't match")
 							t.FailNow()
 						}
@@ -165,13 +164,13 @@ func TestCellAlignment(t *testing.T) {
 				for j, b := range a.Below {
 					if b.Row == cell.Row {
 						pass = true
-						if different(a.KzzBelow[j], cell.KzzAbove[i]) {
+						if different(a.KzzBelow[j], cell.KzzAbove[i], testTolerance) {
 							t.Logf("Kzz doesn't match above (layer=%v, "+
 								"KzzAbove=%v, KzzBelow=%v)", cell.Layer,
 								cell.KzzAbove[i], a.KzzBelow[j])
 							t.Fail()
 						}
-						if different(a.DzMinusHalf[j], cell.DzPlusHalf[i]) {
+						if different(a.DzMinusHalf[j], cell.DzPlusHalf[i], testTolerance) {
 							t.Logf("Dz doesn't match")
 							t.FailNow()
 						}
@@ -193,11 +192,11 @@ func TestCellAlignment(t *testing.T) {
 				for j, a := range b.Above {
 					if a.Row == cell.Row {
 						pass = true
-						if different(b.KzzAbove[j], cell.KzzBelow[i]) {
+						if different(b.KzzAbove[j], cell.KzzBelow[i], testTolerance) {
 							t.Logf("Kzz doesn't match below")
 							t.FailNow()
 						}
-						if different(b.DzPlusHalf[j], cell.DzMinusHalf[i]) {
+						if different(b.DzPlusHalf[j], cell.DzMinusHalf[i], testTolerance) {
 							t.Logf("Dz doesn't match")
 							t.FailNow()
 						}
@@ -273,10 +272,10 @@ func TestMixing(t *testing.T) {
 		maxval = max(maxval, cell.Cf[0])
 	}
 	t.Logf("sum=%.12g (it should equal %v)\n", sum, E*float64(nsteps))
-	if different(sum, E*float64(nsteps)) {
+	if different(sum, E*float64(nsteps), testTolerance) {
 		t.FailNow()
 	}
-	if !different(sum, maxval) {
+	if !different(sum, maxval, testTolerance) {
 		t.Log("All of the mass is in one cell--it didn't mix")
 		t.FailNow()
 	}
@@ -305,7 +304,7 @@ func TestChemistry(t *testing.T) {
 				t.FailNow()
 			}
 		}
-		if different(finalSum, sum) {
+		if different(finalSum, sum, testTolerance) {
 			t.FailNow()
 		}
 		//chemPrint(t, vals, c)
@@ -320,11 +319,16 @@ func chemPrint(t *testing.T, vals []float64, c *Cell) {
 
 // Test whether mass is conserved during advection.
 func TestAdvection(t *testing.T) {
-	for _, c := range d.Data {
-		c.Ci[0] = 0
-		c.Cf[0] = 0
+	const tolerance = 1.e-8
+	var cellGroups = [][]*Cell{d.Data, d.westBoundary, d.eastBoundary,
+		d.northBoundary, d.southBoundary, d.topBoundary}
+	for _, cellGroup := range cellGroups {
+		for _, c := range cellGroup {
+			c.Ci[0] = 0
+			c.Cf[0] = 0
+		}
 	}
-	nsteps := 50
+	nsteps := 1000
 	for tt := 0; tt < nsteps; tt++ {
 		c := d.Data[testRow]
 		c.Ci[0] += E / c.Dz / c.Dy / c.Dx // ground level emissions
@@ -338,13 +342,18 @@ func TestAdvection(t *testing.T) {
 	}
 	sum := 0.
 	layerSum := make(map[int]float64)
-	for _, c := range d.Data {
-		val := c.Cf[0] * c.Dy * c.Dx * c.Dz
-		sum += val
-		layerSum[c.Layer] += val
+	for _, cellGroup := range cellGroups {
+		for _, c := range cellGroup {
+			val := c.Cf[0] * c.Dy * c.Dx * c.Dz
+			if val < 0 {
+				t.Fatalf("negative concentration")
+			}
+			sum += val
+			layerSum[c.Layer] += val
+		}
 	}
 	t.Logf("sum=%.12g (it should equal %v)\n", sum, E*float64(nsteps))
-	if different(sum, E*float64(nsteps)) {
+	if different(sum, E*float64(nsteps), tolerance) {
 		t.FailNow()
 	}
 }
@@ -366,7 +375,7 @@ func BenchmarkRun(b *testing.B) {
 			totald += v
 		}
 		const expectedDeaths = 7.191501683235596e-10
-		if different(totald+1, expectedDeaths+1) {
+		if different(totald+1, expectedDeaths+1, testTolerance) {
 			b.Errorf("Deaths (%v) doesn't equal %v", totald, expectedDeaths)
 		}
 	}
@@ -377,8 +386,8 @@ func BenchmarkRun(b *testing.B) {
 	}
 }
 
-func different(a, b float64) bool {
-	if 2*math.Abs(a-b)/math.Abs(a+b) > testTolerance {
+func different(a, b, tolerance float64) bool {
+	if 2*math.Abs(a-b)/math.Abs(a+b) > tolerance || math.IsNaN(a) || math.IsNaN(b) {
 		return true
 	}
 	return false
