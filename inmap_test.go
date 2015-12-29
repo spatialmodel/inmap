@@ -30,7 +30,7 @@ import (
 var d *InMAPdata
 
 const (
-	testRow          = 240 // in the middle of the grid
+	testRow          = 92 // in the middle of the grid
 	testTolerance    = 1e-3
 	Δt               = 6.   // seconds
 	E                = 0.01 // emissions
@@ -63,7 +63,7 @@ func TestCellAlignment(t *testing.T) {
 			t.FailNow()
 		}
 		for i, w := range cell.West {
-			if len(w.East) != 0 {
+			if !w.Boundary && len(w.East) != 0 {
 				pass := false
 				for j, e := range w.East {
 					if e.Row == cell.Row {
@@ -87,7 +87,7 @@ func TestCellAlignment(t *testing.T) {
 			}
 		}
 		for i, e := range cell.East {
-			if len(e.West) != 0 {
+			if !e.Boundary && len(e.West) != 0 {
 				pass := false
 				for j, w := range e.West {
 					if w.Row == cell.Row {
@@ -111,7 +111,7 @@ func TestCellAlignment(t *testing.T) {
 			}
 		}
 		for i, n := range cell.North {
-			if len(n.South) != 0 {
+			if !n.Boundary && len(n.South) != 0 {
 				pass := false
 				for j, s := range n.South {
 					if s.Row == cell.Row {
@@ -135,7 +135,7 @@ func TestCellAlignment(t *testing.T) {
 			}
 		}
 		for i, s := range cell.South {
-			if len(s.North) != 0 {
+			if !s.Boundary && len(s.North) != 0 {
 				pass := false
 				for j, n := range s.North {
 					if n.Row == cell.Row {
@@ -159,7 +159,7 @@ func TestCellAlignment(t *testing.T) {
 			}
 		}
 		for i, a := range cell.Above {
-			if len(a.Below) != 0 {
+			if !a.Boundary && len(a.Below) != 0 {
 				pass := false
 				for j, b := range a.Below {
 					if b.Row == cell.Row {
@@ -320,41 +320,80 @@ func chemPrint(t *testing.T, vals []float64, c *Cell) {
 // Test whether mass is conserved during advection.
 func TestAdvection(t *testing.T) {
 	const tolerance = 1.e-4
+	nsteps := 100
 	var cellGroups = [][]*Cell{d.Data, d.westBoundary, d.eastBoundary,
 		d.northBoundary, d.southBoundary, d.topBoundary}
-	for _, cellGroup := range cellGroups {
-		for _, c := range cellGroup {
+	// Test emissions from every third row.
+	for testRow := d.LayerStart[0]; testRow < d.LayerEnd[0]; testRow += 3 {
+		for _, cellGroup := range cellGroups {
+			for _, c := range cellGroup {
+				c.Ci[0] = 0
+				c.Cf[0] = 0
+			}
+		}
+		for tt := 0; tt < nsteps; tt++ {
+			c := d.Data[testRow]
+			c.Ci[0] += E / c.Dz / c.Dy / c.Dx // ground level emissions
+			c.Cf[0] += E / c.Dz / c.Dy / c.Dx // ground level emissions
+			for _, c := range d.Data {
+				c.UpwindAdvection(Δt)
+			}
+			for _, c := range d.Data {
+				c.Ci[0] = c.Cf[0]
+			}
+		}
+		sum := 0.
+		layerSum := make(map[int]float64)
+		for _, cellGroup := range cellGroups {
+			for _, c := range cellGroup {
+				val := c.Cf[0] * c.Dy * c.Dx * c.Dz
+				if val < 0 {
+					t.Fatalf("row %d emis: negative concentration", testRow)
+				}
+				sum += val
+				layerSum[c.Layer] += val
+			}
+		}
+		if different(sum, E*float64(nsteps), tolerance) {
+			t.Logf("row %d emis: sum=%.12g (it should equal %v)\n", testRow, sum, E*float64(nsteps))
+		}
+	}
+}
+
+// Test whether mass is conserved during meander mixing.
+func TestMeanderMixing(t *testing.T) {
+	const tolerance = 5.e-4
+	nsteps := 10
+	// Test emissions from every third row.
+	for testRow := d.LayerStart[0]; testRow < d.LayerEnd[0]; testRow += 3 {
+		for _, c := range d.Data {
 			c.Ci[0] = 0
 			c.Cf[0] = 0
 		}
-	}
-	nsteps := 100
-	for tt := 0; tt < nsteps; tt++ {
-		c := d.Data[testRow]
-		c.Ci[0] += E / c.Dz / c.Dy / c.Dx // ground level emissions
-		c.Cf[0] += E / c.Dz / c.Dy / c.Dx // ground level emissions
-		for _, c := range d.Data {
-			c.UpwindAdvection(Δt)
+		for tt := 0; tt < nsteps; tt++ {
+			c := d.Data[testRow]
+			c.Ci[0] += E / c.Dz / c.Dy / c.Dx // ground level emissions
+			c.Cf[0] += E / c.Dz / c.Dy / c.Dx // ground level emissions
+			for _, c := range d.Data {
+				c.MeanderMixing(Δt)
+			}
+			for _, c := range d.Data {
+				c.Ci[0] = c.Cf[0]
+			}
 		}
+		sum := 0.
+		layerSum := make(map[int]float64)
 		for _, c := range d.Data {
-			c.Ci[0] = c.Cf[0]
-		}
-	}
-	sum := 0.
-	layerSum := make(map[int]float64)
-	for _, cellGroup := range cellGroups {
-		for _, c := range cellGroup {
 			val := c.Cf[0] * c.Dy * c.Dx * c.Dz
 			if val < 0 {
-				t.Fatalf("negative concentration")
+				t.Fatalf("row %d emis: negative concentration", testRow)
 			}
 			sum += val
 			layerSum[c.Layer] += val
 		}
-	}
-	t.Logf("sum=%.12g (it should equal %v)\n", sum, E*float64(nsteps))
-	if different(sum, E*float64(nsteps), tolerance) {
-		t.FailNow()
+		if different(sum, E*float64(nsteps), tolerance) {
+			t.Fatalf("row %d emis: sum=%.12g (it should equal %v)\n", testRow, sum, E*float64(nsteps))
+		}
 	}
 }
 

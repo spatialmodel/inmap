@@ -103,32 +103,35 @@ const (
 	CTMDy = 12000.
 )
 
-// meanderFlux calculates the flux due to meanders. See MeanderMixing for
-// further explaination.
-// flux = ubar' * (Ci - Cj) / Δx = [m/s] * μg/m3 / m = μg/(m3-s)
-func meanderFlux(ubarPrime, Ci, Cj, Δx float64) float64 {
-	return ubarPrime * (Ci - Cj) / Δx
-}
-
-func (c *Cell) meanderFluxEast(frac float64, ec *Cell, distance float64, pi int) float64 {
+func (c *Cell) meanderFluxWest(wc *Cell, distance float64, pi int) float64 {
+	if wc.Boundary {
+		return 0.
+	}
 	var flux float64
 	devI := int(distance / CTMDx)
 	if devI < len(c.UDeviation) {
-		flux += meanderFlux(c.UDeviation[devI], c.Ci[pi], ec.Ci[pi], distance)
-		for i, e := range c.East {
-			flux += c.meanderFluxEast(frac*ec.EastFrac[i], e, distance+ec.DxPlusHalf[i], pi)
+		westFrac := min(wc.Dx/c.Dx, 1.)
+		f := advect.UpwindFlux(wc.UDeviation[devI], wc.Ci[pi], c.Ci[pi], c.Dx) * westFrac
+		flux += f
+		for i, w := range wc.West {
+			flux += c.meanderFluxWest(w, distance+wc.DxMinusHalf[i], pi)
 		}
 	}
 	return flux
 }
 
-func (c *Cell) meanderFluxWest(frac float64, wc *Cell, distance float64, pi int) float64 {
+func (c *Cell) meanderFluxEast(ec *Cell, distance float64, pi int) float64 {
+	if ec.Boundary {
+		return 0.
+	}
 	var flux float64
 	devI := int(distance / CTMDx)
 	if devI < len(c.UDeviation) {
-		flux += meanderFlux(c.UDeviation[devI], wc.Ci[pi], c.Ci[pi], distance)
-		for i, w := range c.West {
-			flux += c.meanderFluxWest(frac*wc.EastFrac[i], w, distance+wc.DxPlusHalf[i], pi)
+		eastFrac := min(ec.Dx/c.Dx, 1.)
+		f := advect.UpwindFlux(c.UDeviation[devI], c.Ci[pi], ec.Ci[pi], c.Dx) * eastFrac
+		flux += f
+		for i, e := range ec.East {
+			flux += c.meanderFluxEast(e, distance+ec.DxPlusHalf[i], pi)
 		}
 	}
 	return flux
@@ -143,11 +146,11 @@ func (c *Cell) meanderFluxWest(frac float64, wc *Cell, distance float64, pi int)
 func (c *Cell) MeanderMixing(Δt float64) {
 	for pi := range c.Ci {
 		flux := 0.
-		for i, e := range c.East {
-			flux += c.meanderFluxEast(c.EastFrac[i], e, c.DxPlusHalf[i], pi)
-		}
 		for i, w := range c.West {
-			flux += c.meanderFluxWest(c.WestFrac[i], w, c.DxMinusHalf[i], pi)
+			flux += c.meanderFluxWest(w, c.DxMinusHalf[i], pi)
+		}
+		for i, e := range c.East {
+			flux -= c.meanderFluxEast(e, c.DxPlusHalf[i], pi)
 		}
 		c.Cf[pi] += flux * Δt
 	}

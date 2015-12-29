@@ -138,6 +138,7 @@ type Cell struct {
 	S1                         float64            `desc:"Stability parameter" units:"?"`
 	SClass                     float64            `desc:"Stability class" units:"0=Unstable; 1=Stable"`
 	sync.RWMutex                                  // Avoid cell being written by one subroutine and read by another at the same time.
+	Boundary                   bool               // Does this cell represent a boundary condition?
 }
 
 func (c *Cell) prepare() {
@@ -340,83 +341,7 @@ func InitInMAPdata(option InitOption, numIterations int,
 		go func(procNum int) {
 			for ii := procNum; ii < len(d.Data); ii += nprocs {
 				cell := d.Data[ii]
-				// Link cells to neighbors and/or boundaries.
-				if len(cell.IWest) == 0 {
-					c := cell.makecopy()
-					cell.West = []*Cell{c}
-					c.West = []*Cell{c} // boundary cells are adjacent to themselves.
-					d.westBoundary = append(d.westBoundary, c)
-				} else {
-					cell.West = make([]*Cell, len(cell.IWest))
-					for i, row := range cell.IWest {
-						cell.West[i] = d.Data[row]
-					}
-					cell.IWest = nil
-				}
-				if len(cell.IEast) == 0 {
-					c := cell.makecopy()
-					cell.East = []*Cell{c}
-					c.East = []*Cell{c} // boundary cells are adjacent to themselves.
-					d.eastBoundary = append(d.eastBoundary, c)
-				} else {
-					cell.East = make([]*Cell, len(cell.IEast))
-					for i, row := range cell.IEast {
-						cell.East[i] = d.Data[row]
-					}
-					cell.IEast = nil
-				}
-				if len(cell.ISouth) == 0 {
-					c := cell.makecopy()
-					cell.South = []*Cell{c}
-					c.South = []*Cell{c} // boundary cells are adjacent to themselves.
-					d.southBoundary = append(d.southBoundary, c)
-				} else {
-					cell.South = make([]*Cell, len(cell.ISouth))
-					for i, row := range cell.ISouth {
-						cell.South[i] = d.Data[row]
-					}
-					cell.ISouth = nil
-				}
-				if len(cell.INorth) == 0 {
-					c := cell.makecopy()
-					cell.North = []*Cell{c}
-					c.North = []*Cell{c} // boundary cells are adjacent to themselves.
-					d.northBoundary = append(d.northBoundary, c)
-				} else {
-					cell.North = make([]*Cell, len(cell.INorth))
-					for i, row := range cell.INorth {
-						cell.North[i] = d.Data[row]
-					}
-					cell.INorth = nil
-				}
-				if len(cell.IAbove) == 0 || cell.Layer == d.Nlayers-1 {
-					c := cell.makecopy()
-					cell.Above = []*Cell{c}
-					c.Above = []*Cell{c} // boundary cells are adjacent to themselves.
-					d.topBoundary = append(d.topBoundary, c)
-				} else {
-					cell.Above = make([]*Cell, len(cell.IAbove))
-					for i, row := range cell.IAbove {
-						cell.Above[i] = d.Data[row]
-					}
-					cell.IAbove = nil
-				}
-				if cell.Layer != 0 {
-					cell.Below = make([]*Cell, len(cell.IBelow))
-					cell.GroundLevel = make([]*Cell, len(cell.IGroundLevel))
-					for i, row := range cell.IBelow {
-						cell.Below[i] = d.Data[row]
-					}
-					for i, row := range cell.IGroundLevel {
-						cell.GroundLevel[i] = d.Data[row]
-					}
-					cell.IBelow = nil
-					cell.IGroundLevel = nil
-				} else { // assume bottom boundary is the same as lowest layer.
-					cell.Below = []*Cell{d.Data[cell.Row]}
-					cell.GroundLevel = []*Cell{d.Data[cell.Row]}
-				}
-				cell.neighborInfo()
+				cell.setup(d)
 			}
 			wg.Done()
 		}(procNum)
@@ -428,6 +353,91 @@ func InitInMAPdata(option InitOption, numIterations int,
 		go d.WebServer(httpPort)
 	}
 	return d, nil
+}
+
+func (cell *Cell) setup(d *InMAPdata) {
+	// Link cells to neighbors and/or boundaries.
+	if len(cell.IWest) == 0 {
+		c := cell.makecopy()
+		cell.West = []*Cell{c}
+		c.West, c.East = []*Cell{c}, []*Cell{c} // boundary cells are adjacent to themselves.
+		c.Boundary = true
+		d.westBoundary = append(d.westBoundary, c)
+	} else {
+		cell.West = make([]*Cell, len(cell.IWest))
+		for i, row := range cell.IWest {
+			cell.West[i] = d.Data[row]
+		}
+		cell.IWest = nil
+	}
+	if len(cell.IEast) == 0 {
+		c := cell.makecopy()
+		cell.East = []*Cell{c}
+		c.West, c.East = []*Cell{c}, []*Cell{c} // boundary cells are adjacent to themselves.
+		c.Boundary = true
+		d.eastBoundary = append(d.eastBoundary, c)
+	} else {
+		cell.East = make([]*Cell, len(cell.IEast))
+		for i, row := range cell.IEast {
+			cell.East[i] = d.Data[row]
+		}
+		cell.IEast = nil
+	}
+	if len(cell.ISouth) == 0 {
+		c := cell.makecopy()
+		cell.South = []*Cell{c}
+		c.South, c.North = []*Cell{c}, []*Cell{c} // boundary cells are adjacent to themselves.
+		c.Boundary = true
+		d.southBoundary = append(d.southBoundary, c)
+	} else {
+		cell.South = make([]*Cell, len(cell.ISouth))
+		for i, row := range cell.ISouth {
+			cell.South[i] = d.Data[row]
+		}
+		cell.ISouth = nil
+	}
+	if len(cell.INorth) == 0 {
+		c := cell.makecopy()
+		cell.North = []*Cell{c}
+		c.South, c.North = []*Cell{c}, []*Cell{c} // boundary cells are adjacent to themselves.
+		c.Boundary = true
+		d.northBoundary = append(d.northBoundary, c)
+	} else {
+		cell.North = make([]*Cell, len(cell.INorth))
+		for i, row := range cell.INorth {
+			cell.North[i] = d.Data[row]
+		}
+		cell.INorth = nil
+	}
+	if len(cell.IAbove) == 0 || cell.Layer == d.Nlayers-1 {
+		c := cell.makecopy()
+		cell.Above = []*Cell{c}
+		c.Below, c.Above = []*Cell{c}, []*Cell{c} // boundary cells are adjacent to themselves.
+		c.Boundary = true
+		d.topBoundary = append(d.topBoundary, c)
+	} else {
+		cell.Above = make([]*Cell, len(cell.IAbove))
+		for i, row := range cell.IAbove {
+			cell.Above[i] = d.Data[row]
+		}
+		cell.IAbove = nil
+	}
+	if cell.Layer != 0 {
+		cell.Below = make([]*Cell, len(cell.IBelow))
+		cell.GroundLevel = make([]*Cell, len(cell.IGroundLevel))
+		for i, row := range cell.IBelow {
+			cell.Below[i] = d.Data[row]
+		}
+		for i, row := range cell.IGroundLevel {
+			cell.GroundLevel[i] = d.Data[row]
+		}
+		cell.IBelow = nil
+		cell.IGroundLevel = nil
+	} else { // assume bottom boundary is the same as lowest layer.
+		cell.Below = []*Cell{d.Data[cell.Row]}
+		cell.GroundLevel = []*Cell{d.Data[cell.Row]}
+	}
+	cell.neighborInfo()
 }
 
 // Calculate center-to-center cell distance,

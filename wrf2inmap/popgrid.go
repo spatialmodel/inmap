@@ -578,6 +578,8 @@ func getData(cells []*gridCell, data map[string]dataHolder, k int) {
 			ctmrow := c.(*gridCellLight).Row
 			ctmcol := c.(*gridCellLight).Col
 
+			// TODO: Average velocity is on a staggered grid, so we should
+			// do some sort of interpolation here.
 			cell.UAvg += data["UAvg"].data.Get(k, ctmrow, ctmcol) / ncells
 			cell.VAvg += data["VAvg"].data.Get(k, ctmrow, ctmcol) / ncells
 			cell.WAvg += data["WAvg"].data.Get(k, ctmrow, ctmcol) / ncells
