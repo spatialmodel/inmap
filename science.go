@@ -66,34 +66,46 @@ func (c *Cell) Mixing(Δt float64) {
 // on the upwind differences scheme.
 func (c *Cell) UpwindAdvection(Δt float64) {
 	for ii := range c.Cf {
-		flux := 0.
 		for i, w := range c.West {
-			flux += advect.UpwindFlux(c.UAvg, w.Ci[ii], c.Ci[ii], c.Dx) * c.WestFrac[i]
+			flux := advect.UpwindFlux(c.UAvg, w.Ci[ii], c.Ci[ii], c.Dx) *
+				c.WestFrac[i] * Δt
+			c.Cf[ii] += flux
+			w.Cf[ii] -= flux * c.Volume / w.Volume
 		}
 		for i, e := range c.East {
-			flux -= advect.UpwindFlux(e.UAvg, c.Ci[ii], e.Ci[ii], c.Dx) * c.EastFrac[i]
+			if e.Boundary {
+				c.Cf[ii] -= advect.UpwindFlux(e.UAvg, c.Ci[ii], e.Ci[ii], c.Dx) *
+					c.EastFrac[i] * Δt
+			}
 		}
 
 		for i, s := range c.South {
-			flux += advect.UpwindFlux(c.VAvg, s.Ci[ii], c.Ci[ii], c.Dy) *
-				c.SouthFrac[i]
+			flux := advect.UpwindFlux(c.VAvg, s.Ci[ii], c.Ci[ii], c.Dy) *
+				c.SouthFrac[i] * Δt
+			c.Cf[ii] += flux
+			s.Cf[ii] -= flux * c.Volume / s.Volume
 		}
 		for i, n := range c.North {
-			flux -= advect.UpwindFlux(n.VAvg, c.Ci[ii], n.Ci[ii], c.Dy) *
-				c.NorthFrac[i]
+			if n.Boundary {
+				c.Cf[ii] -= advect.UpwindFlux(n.VAvg, c.Ci[ii], n.Ci[ii], c.Dy) *
+					c.NorthFrac[i] * Δt
+			}
 		}
 
-		if c.Layer > 0 {
-			for i, b := range c.Below {
-				flux += advect.UpwindFlux(c.WAvg, b.Ci[ii], c.Ci[ii], c.Dz) *
-					c.BelowFrac[i]
+		for i, b := range c.Below {
+			flux := advect.UpwindFlux(c.WAvg, b.Ci[ii], c.Ci[ii], c.Dz) *
+				c.BelowFrac[i] * Δt
+			if c.Layer > 0 {
+				c.Cf[ii] += flux
+				b.Cf[ii] -= flux * c.Volume / b.Volume
 			}
 		}
 		for i, a := range c.Above {
-			flux -= advect.UpwindFlux(a.WAvg, c.Ci[ii], a.Ci[ii], c.Dz) *
-				c.AboveFrac[i]
+			if a.Boundary {
+				c.Cf[ii] -= advect.UpwindFlux(a.WAvg, c.Ci[ii], a.Ci[ii], c.Dz) *
+					c.AboveFrac[i] * Δt
+			}
 		}
-		c.Cf[ii] += flux * Δt
 	}
 }
 

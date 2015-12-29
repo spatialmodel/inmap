@@ -319,12 +319,12 @@ func chemPrint(t *testing.T, vals []float64, c *Cell) {
 
 // Test whether mass is conserved during advection.
 func TestAdvection(t *testing.T) {
-	const tolerance = 1.e-4
-	nsteps := 100
+	const tolerance = 1.e-8
+	nsteps := 10
 	var cellGroups = [][]*Cell{d.Data, d.westBoundary, d.eastBoundary,
 		d.northBoundary, d.southBoundary, d.topBoundary}
-	// Test emissions from every third row.
-	for testRow := d.LayerStart[0]; testRow < d.LayerEnd[0]; testRow += 3 {
+	// Test emissions from every thirtieth row.
+	for testRow := 0; testRow < len(d.Data); testRow += 30 {
 		for _, cellGroup := range cellGroups {
 			for _, c := range cellGroup {
 				c.Ci[0] = 0
@@ -355,17 +355,17 @@ func TestAdvection(t *testing.T) {
 			}
 		}
 		if different(sum, E*float64(nsteps), tolerance) {
-			t.Logf("row %d emis: sum=%.12g (it should equal %v)\n", testRow, sum, E*float64(nsteps))
+			t.Fatalf("row %d emis: sum=%.12g (it should equal %v)\n", testRow, sum, E*float64(nsteps))
 		}
 	}
 }
 
 // Test whether mass is conserved during meander mixing.
 func TestMeanderMixing(t *testing.T) {
-	const tolerance = 5.e-4
+	const tolerance = 1.e-8
 	nsteps := 10
-	// Test emissions from every third row.
-	for testRow := d.LayerStart[0]; testRow < d.LayerEnd[0]; testRow += 3 {
+	// Test emissions from every thirtieth row.
+	for testRow := 0; testRow < len(d.Data); testRow += 30 {
 		for _, c := range d.Data {
 			c.Ci[0] = 0
 			c.Cf[0] = 0
@@ -404,7 +404,7 @@ func BenchmarkRun(b *testing.B) {
 		runtime.GOMAXPROCS(nprocs)
 		emissions := make(map[string][]float64)
 		emissions["SOx"] = make([]float64, len(d.Data))
-		emissions["SOx"][25000] = 100.
+		emissions["SOx"][testRow] = 100.
 		var results []float64
 		start := time.Now()
 		results = d.Run(emissions, false)["TotalPop deaths"][0]
