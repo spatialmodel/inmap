@@ -12,7 +12,7 @@ before_install:
       - go get golang.org/x/tools/cmd/cover
 
 install:
-      - go get -d -t
+      - go get -d -t ./...
 
 before_script:
       - wget https://github.com/ctessum/inmap/releases/download/v1.0.0/inmapData_48_24_12_4_2_1_40000.zip
