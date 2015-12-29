@@ -319,7 +319,7 @@ func chemPrint(t *testing.T, vals []float64, c *Cell) {
 
 // Test whether mass is conserved during advection.
 func TestAdvection(t *testing.T) {
-	const tolerance = 1.e-8
+	const tolerance = 1.e-4
 	var cellGroups = [][]*Cell{d.Data, d.westBoundary, d.eastBoundary,
 		d.northBoundary, d.southBoundary, d.topBoundary}
 	for _, cellGroup := range cellGroups {
@@ -328,7 +328,7 @@ func TestAdvection(t *testing.T) {
 			c.Cf[0] = 0
 		}
 	}
-	nsteps := 1000
+	nsteps := 100
 	for tt := 0; tt < nsteps; tt++ {
 		c := d.Data[testRow]
 		c.Ci[0] += E / c.Dz / c.Dy / c.Dx // ground level emissions

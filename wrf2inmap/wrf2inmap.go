@@ -17,13 +17,13 @@ import (
 	"sync"
 	"time"
 
-	"bitbucket.org/ctessum/atmos/acm2"
-	"bitbucket.org/ctessum/atmos/emep"
-	"bitbucket.org/ctessum/atmos/gocart"
-	"bitbucket.org/ctessum/atmos/seinfeld"
-	"bitbucket.org/ctessum/atmos/wesely1989"
 	"bitbucket.org/ctessum/cdf"
 	"bitbucket.org/ctessum/sparse"
+	"github.com/ctessum/atmos/acm2"
+	"github.com/ctessum/atmos/emep"
+	"github.com/ctessum/atmos/gocart"
+	"github.com/ctessum/atmos/seinfeld"
+	"github.com/ctessum/atmos/wesely1989"
 )
 
 // ConfigInfo holds the configuration information for the program run.

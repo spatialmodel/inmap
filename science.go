@@ -18,6 +18,8 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 
 package inmap
 
+import "github.com/ctessum/atmos/advect"
+
 // Mixing calculates vertical mixing based on Pleim (2007), which is
 // combined local-nonlocal closure scheme, for
 // boundary layer and based on Wilson (2004) for above the boundary layer.
@@ -60,49 +62,35 @@ func (c *Cell) Mixing(Δt float64) {
 	}
 }
 
-// upwind calculates advective mass transfer
-// where u is wind velocity, Cm1 is the concentration in the cell adjecent in
-// the negative direction, C is the concentration in the cell of interest,
-// and Δx is the distance between cell centers.
-// Flux is calculated using the upwind flux-form spatial approximation for δ(uq)/δx,
-func upwind(u, Cm1, C, Δx float64) float64 {
-	if u > 0 {
-		return u * (Cm1 - C) / Δx
-	}
-	return 0
-}
-
 // UpwindAdvection calculates advection in the cell based
 // on the upwind differences scheme.
 func (c *Cell) UpwindAdvection(Δt float64) {
 	for ii := range c.Cf {
 		flux := 0.
 		for i, w := range c.West {
-			flux += upwind(c.UAvg, w.Ci[ii], c.Ci[ii], c.DxMinusHalf[i]) *
-				c.WestFrac[i]
+			flux += advect.UpwindFlux(c.UAvg, w.Ci[ii], c.Ci[ii], c.Dx) * c.WestFrac[i]
 		}
 		for i, e := range c.East {
-			flux += upwind(e.UAvg, c.Ci[ii], e.Ci[ii], c.DxPlusHalf[i]) *
-				c.EastFrac[i]
+			flux -= advect.UpwindFlux(e.UAvg, c.Ci[ii], e.Ci[ii], c.Dx) * c.EastFrac[i]
 		}
 
 		for i, s := range c.South {
-			flux += upwind(c.VAvg, s.Ci[ii], c.Ci[ii], c.DyMinusHalf[i]) *
+			flux += advect.UpwindFlux(c.VAvg, s.Ci[ii], c.Ci[ii], c.Dy) *
 				c.SouthFrac[i]
 		}
 		for i, n := range c.North {
-			flux += upwind(n.VAvg, c.Ci[ii], n.Ci[ii], c.DyPlusHalf[i]) *
+			flux -= advect.UpwindFlux(n.VAvg, c.Ci[ii], n.Ci[ii], c.Dy) *
 				c.NorthFrac[i]
 		}
 
 		if c.Layer > 0 {
 			for i, b := range c.Below {
-				flux += upwind(c.WAvg, b.Ci[ii], c.Ci[ii], c.DzMinusHalf[i]) *
+				flux += advect.UpwindFlux(c.WAvg, b.Ci[ii], c.Ci[ii], c.Dz) *
 					c.BelowFrac[i]
 			}
 		}
 		for i, a := range c.Above {
-			flux += upwind(a.WAvg, c.Ci[ii], a.Ci[ii], c.DzPlusHalf[i]) *
+			flux -= advect.UpwindFlux(a.WAvg, c.Ci[ii], a.Ci[ii], c.Dz) *
 				c.AboveFrac[i]
 		}
 		c.Cf[ii] += flux * Δt

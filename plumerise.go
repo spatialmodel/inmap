@@ -21,11 +21,11 @@ package inmap
 import (
 	"fmt"
 
-	"bitbucket.org/ctessum/atmos/plumerise"
+	"github.com/ctessum/atmos/plumerise"
 )
 
 // CalcPlumeRise calculates plume rise when given stack information
-// (see bitbucket.org/ctessum/atmos/plumerise for required units)
+// (see github.com/ctessum/atmos/plumerise for required units)
 // and the index of the (ground level) grid cell (called `row`).
 // Returns the index of the cell the emissions should be added to.
 // This function assumes that when one grid cell is above another
