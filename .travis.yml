@@ -11,6 +11,8 @@ before_install:
       - go get golang.org/x/tools/cmd/cover
       - go get github.com/github/git-lfs
       - git lfs install
+      - git lfs init
+      - git lfs pull
 
 install:
       - go get -d -t ./...
