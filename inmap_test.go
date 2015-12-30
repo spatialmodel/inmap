@@ -37,18 +37,11 @@ const (
 	numRunIterations = 100  // number of iterations for Run to run
 
 	dataPath = "testdata/inmapData_[layer].gob"
-	//dataURL  = "https://github.com/ctessum/inmap/releases/download/v1.0.0/inmapData_48_24_12_4_2_1_40000.zip"
 )
 
 func init() {
-	//dataPath := os.Getenv("inmapdata")
 	var err error
-	//if dataPath != "" {
 	d, err = InitInMAPdata(UseFileTemplate(dataPath, 27), numRunIterations, "")
-	//} else {
-	//	d, err = InitInMAPdata(UseWebArchive(dataURL,
-	//		"inmapData_[layer].gob", 27), numRunIterations, "")
-	//}
 	if err != nil {
 		panic(err)
 	}

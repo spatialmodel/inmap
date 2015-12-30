@@ -35,9 +35,11 @@ import (
 	"strings"
 	"sync"
 
-	"google.golang.org/cloud/storage"
-
 	"golang.org/x/net/context"
+	"golang.org/x/oauth2/google"
+
+	"google.golang.org/cloud"
+	"google.golang.org/cloud/storage"
 
 	"bitbucket.org/ctessum/aqhealth"
 	"github.com/ctessum/geom"
@@ -240,10 +242,20 @@ func UseCloudStorage(ctx context.Context, bucket string, fileNameTemplate string
 	nLayers int) InitOption {
 	return func(d *InMAPdata) error {
 		readers := make([]io.ReadCloser, nLayers)
+		ts, err := google.DefaultTokenSource(ctx, storage.ScopeReadOnly)
+		if err != nil {
+			return fmt.Errorf("could not retrieve default token source: %v", err)
+		}
+		client, err := storage.NewClient(ctx, cloud.WithTokenSource(ts))
+		if err != nil {
+			return fmt.Errorf("unable to get default client: %v", err)
+		}
+		bh := client.Bucket(bucket)
 		for k := 0; k < nLayers; k++ {
 			filename := strings.Replace(fileNameTemplate, "[layer]",
 				fmt.Sprintf("%v", k), -1)
-			rc, err := storage.NewReader(ctx, bucket, filename)
+			obj := bh.Object(filename)
+			rc, err := obj.NewReader(ctx)
 			if err != nil {
 				log.Printf("In UseCloudStorage, retrieving file "+
 					"%v: %v", filename, err)

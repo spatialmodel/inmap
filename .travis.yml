@@ -7,6 +7,8 @@ env:
       - inmapdata: "$HOME/gopath/src/github.com/ctessum/inmap/inmapData_48_24_12_4_2_1_40000/inmapData_[layer].gob"
 
 before_install:
+      - sudo apt-get update -qq
+      - sudo apt-get install -qq libproj0 libproj-dev libgdal-dev
       - go get github.com/axw/gocov/gocov
       - go get github.com/mattn/goveralls
       - go get golang.org/x/tools/cmd/cover
@@ -20,4 +22,4 @@ before_script:
 
 script:
       - go test ./...
-      - $HOME/gopath/bin/goveralls -service=travis-ci -package=github.com/ctessum/inmap
+      - bash ./.travis/test-coverage.sh
