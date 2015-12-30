@@ -518,7 +518,7 @@ func (d *InMAPdata) setTstepCFL() {
 	for i, c := range d.Data {
 		// Advection time step
 		dt1 := Cmax / math.Pow(3., 0.5) /
-			max(c.UAvg/c.Dx, c.VAvg/c.Dy, c.WAvg/c.Dz)
+			max(math.Abs(c.UAvg)/c.Dx, math.Abs(c.VAvg)/c.Dy, math.Abs(c.WAvg)/c.Dz)
 		// vertical diffusion time step
 		dt2 := Cmax * c.Dz * c.Dz / 2. / c.Kzz
 		// horizontal diffusion time step

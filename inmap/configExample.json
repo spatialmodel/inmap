@@ -1,11 +1,9 @@
 {
-	"InMAPdataTemplate":"/path/to/InMAPdata_[layer].gob",
+	"InMAPdataTemplate":"../testdata/inmapData_[layer].gob",
 	"NumLayers":27,
-	"NumProcessors":4,
 	"EmissionsShapefiles":[
-		"file1",
-		"file2"
+		"../testdata/testEmis.shp"
 	],
-	"OutputTemplate":"output/output_[layer].geojson",
+	"OutputTemplate":"../testdata/output_[layer].geojson",
 	"HTTPport":"8080"
 }
