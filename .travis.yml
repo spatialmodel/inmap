@@ -16,4 +16,4 @@ install:
 
 script:
       - go test ./...
-      - bash ./.travis/test-coverage.sh
+      - bash ./.travis/test_coverage.sh

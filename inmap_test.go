@@ -355,7 +355,7 @@ func TestAdvection(t *testing.T) {
 
 // Test whether mass is conserved during meander mixing.
 func TestMeanderMixing(t *testing.T) {
-	const tolerance = 1.e-3
+	const tolerance = 1.e-7
 	nsteps := 10
 	// Test emissions from every thirtieth row.
 	for testRow := 0; testRow < len(d.Data); testRow += 30 {
