@@ -31,7 +31,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"runtime"
 	"strings"
 	"sync"
 
@@ -43,6 +42,7 @@ import (
 
 	"bitbucket.org/ctessum/aqhealth"
 	"github.com/ctessum/geom"
+	"github.com/ctessum/geom/op"
 )
 
 // InMAPdata is holds the current state of the model.
@@ -72,75 +72,99 @@ func init() {
 
 // Cell holds the state of a single grid cell.
 type Cell struct {
-	geom.T                                        // Cell geometry
-	WebMapGeom                 geom.T             // Cell geometry in web map (mercator) coordinate system
-	UAvg                       float64            `desc:"Average East-West wind speed" units:"m/s"`
-	VAvg                       float64            `desc:"Average North-South wind speed" units:"m/s"`
-	WAvg                       float64            `desc:"Average up-down wind speed" units:"m/s"`
-	UDeviation, VDeviation     []float64          // Spectral deviations from average velocity [m/s]
-	AOrgPartitioning           float64            `desc:"Organic particle partitioning" units:"fraction particles"`
-	BOrgPartitioning           float64            // particle fraction
-	SPartitioning              float64            `desc:"Sulfur particle partitioning" units:"fraction particles"`
-	NOPartitioning             float64            `desc:"Nitrate particle partitioning" units:"fraction particles"`
-	NHPartitioning             float64            `desc:"Ammonium particle partitioning" units:"fraction particles"`
-	ParticleWetDep             float64            `desc:"Particle wet deposition" units:"1/s"`
-	SO2WetDep                  float64            `desc:"SO2 wet deposition" units:"1/s"`
-	OtherGasWetDep             float64            `desc:"Wet deposition: other gases" units:"1/s"`
-	ParticleDryDep             float64            `desc:"Particle dry deposition" units:"m/s"`
-	NH3DryDep                  float64            `desc:"Ammonia dry deposition" units:"m/s"`
-	SO2DryDep                  float64            `desc:"SO2 dry deposition" units:"m/s"`
-	VOCDryDep                  float64            `desc:"VOC dry deposition" units:"m/s"`
-	NOxDryDep                  float64            `desc:"NOx dry deposition" units:"m/s"`
-	SO2oxidation               float64            `desc:"SO2 oxidation to SO4 by HO and H2O2" units:"1/s"`
-	Kzz                        float64            `desc:"Grid center vertical diffusivity after applying convective fraction" units:"m²/s"`
-	KzzAbove, KzzBelow         []float64          // horizontal diffusivity [m2/s] (staggered grid)
-	Kxxyy                      float64            `desc:"Grid center horizontal diffusivity" units:"m²/s"`
-	KyySouth, KyyNorth         []float64          // horizontal diffusivity [m2/s] (staggered grid)
-	KxxWest, KxxEast           []float64          // horizontal diffusivity at [m2/s] (staggered grid)
-	M2u                        float64            `desc:"ACM2 upward mixing (Pleim 2007)" units:"1/s"`
-	M2d                        float64            `desc:"ACM2 downward mixing (Pleim 2007)" units:"1/s"`
-	PopData                    map[string]float64 // Population for multiple demographics [people/grid cell]
-	MortalityRate              float64            `desc:"Baseline mortalities rate" units:"Deaths per 100,000 people per year"`
-	Dx, Dy, Dz                 float64            // grid size [meters]
-	Volume                     float64            `desc:"Cell volume" units:"m³"`
-	Row                        int                // master cell index
-	Ci                         []float64          // concentrations at beginning of time step [μg/m³]
-	Cf                         []float64          // concentrations at end of time step [μg/m³]
-	emisFlux                   []float64          // emissions [μg/m³/s]
-	West                       []*Cell            // Neighbors to the East
-	East                       []*Cell            // Neighbors to the West
-	South                      []*Cell            // Neighbors to the South
-	North                      []*Cell            // Neighbors to the North
-	Below                      []*Cell            // Neighbors below
-	Above                      []*Cell            // Neighbors above
-	GroundLevel                []*Cell            // Neighbors at ground level
-	WestFrac, EastFrac         []float64          // Fraction of cell covered by each neighbor (adds up to 1).
-	NorthFrac, SouthFrac       []float64          // Fraction of cell covered by each neighbor (adds up to 1).
-	AboveFrac, BelowFrac       []float64          // Fraction of cell covered by each neighbor (adds up to 1).
-	GroundLevelFrac            []float64          // Fraction of cell above to each ground level cell (adds up to 1).
-	IWest                      []int              // Row indexes of neighbors to the East
-	IEast                      []int              // Row indexes of neighbors to the West
-	ISouth                     []int              // Row indexes of neighbors to the South
-	INorth                     []int              // Row indexes of neighbors to the north
-	IBelow                     []int              // Row indexes of neighbors below
-	IAbove                     []int              // Row indexes of neighbors above
-	IGroundLevel               []int              // Row indexes of neighbors at ground level
-	DxPlusHalf                 []float64          // Distance between centers of cell and East [m]
-	DxMinusHalf                []float64          // Distance between centers of cell and West [m]
-	DyPlusHalf                 []float64          // Distance between centers of cell and North [m]
-	DyMinusHalf                []float64          // Distance between centers of cell and South [m]
-	DzPlusHalf                 []float64          // Distance between centers of cell and Above [m]
-	DzMinusHalf                []float64          // Distance between centers of cell and Below [m]
-	Layer                      int                // layer index of grid cell
-	Temperature                float64            `desc:"Average temperature" units:"K"`
-	WindSpeed                  float64            `desc:"RMS wind speed" units:"m/s"`
-	WindSpeedInverse           float64            `desc:"RMS wind speed inverse" units:"(m/s)^(-1)"`
-	WindSpeedMinusThird        float64            `desc:"RMS wind speed^(-1/3)" units:"(m/s)^(-1/3)"`
-	WindSpeedMinusOnePointFour float64            `desc:"RMS wind speed^(-1.4)" units:"(m/s)^(-1.4)"`
-	S1                         float64            `desc:"Stability parameter" units:"?"`
-	SClass                     float64            `desc:"Stability class" units:"0=Unstable; 1=Stable"`
-	sync.RWMutex                                  // Avoid cell being written by one subroutine and read by another at the same time.
-	Boundary                   bool               // Does this cell represent a boundary condition?
+	geom.T            // Cell geometry
+	WebMapGeom geom.T // Cell geometry in web map (mercator) coordinate system
+
+	UAvg       float64 `desc:"Average East-West wind speed" units:"m/s"`
+	VAvg       float64 `desc:"Average North-South wind speed" units:"m/s"`
+	WAvg       float64 `desc:"Average up-down wind speed" units:"m/s"`
+	UDeviation float64 `desc:"Average deviation from East-West velocity" units:"m/s"`
+	VDeviation float64 `desc:"Average deviation from North-South velocity" units:"m/s"`
+	UDevLength float64 `desc:"Length of average East-West velocity deviation" units:"m"`
+	VDevLength float64 `desc:"Length of average North-South velocity deviation" units:"m"`
+
+	AOrgPartitioning float64 `desc:"Organic particle partitioning" units:"fraction particles"`
+	BOrgPartitioning float64 // particle fraction
+	SPartitioning    float64 `desc:"Sulfur particle partitioning" units:"fraction particles"`
+	NOPartitioning   float64 `desc:"Nitrate particle partitioning" units:"fraction particles"`
+	NHPartitioning   float64 `desc:"Ammonium particle partitioning" units:"fraction particles"`
+	SO2oxidation     float64 `desc:"SO2 oxidation to SO4 by HO and H2O2" units:"1/s"`
+
+	ParticleWetDep float64 `desc:"Particle wet deposition" units:"1/s"`
+	SO2WetDep      float64 `desc:"SO2 wet deposition" units:"1/s"`
+	OtherGasWetDep float64 `desc:"Wet deposition: other gases" units:"1/s"`
+	ParticleDryDep float64 `desc:"Particle dry deposition" units:"m/s"`
+
+	NH3DryDep float64 `desc:"Ammonia dry deposition" units:"m/s"`
+	SO2DryDep float64 `desc:"SO2 dry deposition" units:"m/s"`
+	VOCDryDep float64 `desc:"VOC dry deposition" units:"m/s"`
+	NOxDryDep float64 `desc:"NOx dry deposition" units:"m/s"`
+
+	Kzz                float64   `desc:"Grid center vertical diffusivity after applying convective fraction" units:"m²/s"`
+	KzzAbove, KzzBelow []float64 // horizontal diffusivity [m2/s] (staggered grid)
+	Kxxyy              float64   `desc:"Grid center horizontal diffusivity" units:"m²/s"`
+	KyySouth, KyyNorth []float64 // horizontal diffusivity [m2/s] (staggered grid)
+	KxxWest, KxxEast   []float64 // horizontal diffusivity at [m2/s] (staggered grid)
+
+	M2u float64 `desc:"ACM2 upward mixing (Pleim 2007)" units:"1/s"`
+	M2d float64 `desc:"ACM2 downward mixing (Pleim 2007)" units:"1/s"`
+
+	PopData       map[string]float64 // Population for multiple demographics [people/grid cell]
+	MortalityRate float64            `desc:"Baseline mortalities rate" units:"Deaths per 100,000 people per year"`
+
+	Dx, Dy, Dz float64 // grid size [meters]
+	Volume     float64 `desc:"Cell volume" units:"m³"`
+	Row        int     // master cell index
+
+	Ci       []float64 // concentrations at beginning of time step [μg/m³]
+	Cf       []float64 // concentrations at end of time step [μg/m³]
+	emisFlux []float64 // emissions [μg/m³/s]
+
+	West        []*Cell // Neighbors to the East
+	East        []*Cell // Neighbors to the West
+	South       []*Cell // Neighbors to the South
+	North       []*Cell // Neighbors to the North
+	Below       []*Cell // Neighbors below
+	Above       []*Cell // Neighbors above
+	GroundLevel []*Cell // Neighbors at ground level
+	Boundary    bool    // Does this cell represent a boundary condition?
+
+	WestFrac, EastFrac   []float64 // Fraction of cell covered by each neighbor (adds up to 1).
+	NorthFrac, SouthFrac []float64 // Fraction of cell covered by each neighbor (adds up to 1).
+	AboveFrac, BelowFrac []float64 // Fraction of cell covered by each neighbor (adds up to 1).
+	GroundLevelFrac      []float64 // Fraction of cell above to each ground level cell (adds up to 1).
+
+	IWest        []int // Row indexes of neighbors to the East
+	IEast        []int // Row indexes of neighbors to the West
+	ISouth       []int // Row indexes of neighbors to the South
+	INorth       []int // Row indexes of neighbors to the north
+	IBelow       []int // Row indexes of neighbors below
+	IAbove       []int // Row indexes of neighbors above
+	IGroundLevel []int // Row indexes of neighbors at ground level
+
+	NSMeanderCells []*Cell   // Cells for nonlocal advection
+	EWMeanderCells []*Cell   // Cells for nonlocal advection
+	NSMeanderFrac  []float64 // Volume fractions of each nonlocal cell
+	EWMeanderFrac  []float64 // Volume fractions of each nonlocal cell
+
+	DxPlusHalf  []float64 // Distance between centers of cell and East [m]
+	DxMinusHalf []float64 // Distance between centers of cell and West [m]
+	DyPlusHalf  []float64 // Distance between centers of cell and North [m]
+	DyMinusHalf []float64 // Distance between centers of cell and South [m]
+	DzPlusHalf  []float64 // Distance between centers of cell and Above [m]
+	DzMinusHalf []float64 // Distance between centers of cell and Below [m]
+
+	Layer int // layer index of grid cell
+
+	Temperature                float64 `desc:"Average temperature" units:"K"`
+	WindSpeed                  float64 `desc:"RMS wind speed" units:"m/s"`
+	WindSpeedInverse           float64 `desc:"RMS wind speed inverse" units:"(m/s)^(-1)"`
+	WindSpeedMinusThird        float64 `desc:"RMS wind speed^(-1/3)" units:"(m/s)^(-1/3)"`
+	WindSpeedMinusOnePointFour float64 `desc:"RMS wind speed^(-1.4)" units:"(m/s)^(-1.4)"`
+	S1                         float64 `desc:"Stability parameter" units:"?"`
+	SClass                     float64 `desc:"Stability class" units:"0=Unstable; 1=Stable"`
+
+	sync.RWMutex // Avoid cell being written by one subroutine and read by another at the same time.
 }
 
 func (c *Cell) prepare() {
@@ -333,20 +357,17 @@ func UseReaders(readers []io.ReadCloser) InitOption {
 // (if `numIterations` < 1, convergence is calculated automatically),
 // and `httpPort` is the port number for hosting the html GUI
 // (if `httpPort` is "", then the GUI doesn't run).
-func InitInMAPdata(option InitOption, numIterations int,
-	httpPort string) (*InMAPdata, error) {
+func InitInMAPdata(option InitOption, numIterations int, httpPort string) (*InMAPdata, error) {
 	d := new(InMAPdata)
 	d.NumIterations = numIterations
 	err := option(d)
 	if err != nil {
 		return nil, err
 	}
-	d.westBoundary = make([]*Cell, 0, 200)
-	d.eastBoundary = make([]*Cell, 0, 200)
-	d.southBoundary = make([]*Cell, 0, 200)
-	d.northBoundary = make([]*Cell, 0, 200)
-	d.topBoundary = make([]*Cell, 0, 200)
-	nprocs := runtime.GOMAXPROCS(0)
+	for _, cell := range d.Data {
+		cell.setup(d)
+	}
+	/*nprocs := runtime.GOMAXPROCS(0)
 	var wg sync.WaitGroup
 	wg.Add(nprocs)
 	for procNum := 0; procNum < nprocs; procNum++ {
@@ -357,163 +378,253 @@ func InitInMAPdata(option InitOption, numIterations int,
 			}
 			wg.Done()
 		}(procNum)
-	}
-	wg.Wait()
+	}*/
+	//wg.Wait()
 	d.setTstepCFL() // Set time step
-	//d.setTstepRuleOfThumb() // Set time step
 	if httpPort != "" {
 		go d.WebServer(httpPort)
 	}
 	return d, nil
 }
 
-func (cell *Cell) setup(d *InMAPdata) {
-	// Link cells to neighbors and/or boundaries.
-	if len(cell.IWest) == 0 {
-		c := cell.makecopy()
-		cell.West = []*Cell{c}
-		c.West, c.East = []*Cell{c}, []*Cell{c} // boundary cells are adjacent to themselves.
-		c.Boundary = true
-		d.westBoundary = append(d.westBoundary, c)
+func (c *Cell) setup(d *InMAPdata) {
+	// Link cells to neighbors or boundaries.
+	if len(c.IWest) == 0 {
+		d.addWestBoundary(c)
 	} else {
-		cell.West = make([]*Cell, len(cell.IWest))
-		for i, row := range cell.IWest {
-			cell.West[i] = d.Data[row]
+		c.West = make([]*Cell, len(c.IWest))
+		for i, row := range c.IWest {
+			c.West[i] = d.Data[row]
 		}
-		cell.IWest = nil
+		c.IWest = nil
 	}
-	if len(cell.IEast) == 0 {
-		c := cell.makecopy()
-		cell.East = []*Cell{c}
-		c.West, c.East = []*Cell{c}, []*Cell{c} // boundary cells are adjacent to themselves.
-		c.Boundary = true
-		d.eastBoundary = append(d.eastBoundary, c)
+	if len(c.IEast) == 0 {
+		d.addEastBoundary(c)
 	} else {
-		cell.East = make([]*Cell, len(cell.IEast))
-		for i, row := range cell.IEast {
-			cell.East[i] = d.Data[row]
+		c.East = make([]*Cell, len(c.IEast))
+		for i, row := range c.IEast {
+			c.East[i] = d.Data[row]
 		}
-		cell.IEast = nil
+		c.IEast = nil
 	}
-	if len(cell.ISouth) == 0 {
-		c := cell.makecopy()
-		cell.South = []*Cell{c}
-		c.South, c.North = []*Cell{c}, []*Cell{c} // boundary cells are adjacent to themselves.
-		c.Boundary = true
-		d.southBoundary = append(d.southBoundary, c)
+	if len(c.ISouth) == 0 {
+		d.addSouthBoundary(c)
 	} else {
-		cell.South = make([]*Cell, len(cell.ISouth))
-		for i, row := range cell.ISouth {
-			cell.South[i] = d.Data[row]
+		c.South = make([]*Cell, len(c.ISouth))
+		for i, row := range c.ISouth {
+			c.South[i] = d.Data[row]
 		}
-		cell.ISouth = nil
+		c.ISouth = nil
 	}
-	if len(cell.INorth) == 0 {
-		c := cell.makecopy()
-		cell.North = []*Cell{c}
-		c.South, c.North = []*Cell{c}, []*Cell{c} // boundary cells are adjacent to themselves.
-		c.Boundary = true
-		d.northBoundary = append(d.northBoundary, c)
+	if len(c.INorth) == 0 {
+		d.addNorthBoundary(c)
 	} else {
-		cell.North = make([]*Cell, len(cell.INorth))
-		for i, row := range cell.INorth {
-			cell.North[i] = d.Data[row]
+		c.North = make([]*Cell, len(c.INorth))
+		for i, row := range c.INorth {
+			c.North[i] = d.Data[row]
 		}
-		cell.INorth = nil
+		c.INorth = nil
 	}
-	if len(cell.IAbove) == 0 || cell.Layer == d.Nlayers-1 {
-		c := cell.makecopy()
-		cell.Above = []*Cell{c}
-		c.Below, c.Above = []*Cell{c}, []*Cell{c} // boundary cells are adjacent to themselves.
-		c.Boundary = true
-		d.topBoundary = append(d.topBoundary, c)
+	if len(c.IAbove) == 0 || c.Layer == d.Nlayers-1 {
+		d.addTopBoundary(c)
 	} else {
-		cell.Above = make([]*Cell, len(cell.IAbove))
-		for i, row := range cell.IAbove {
-			cell.Above[i] = d.Data[row]
+		c.Above = make([]*Cell, len(c.IAbove))
+		for i, row := range c.IAbove {
+			c.Above[i] = d.Data[row]
 		}
-		cell.IAbove = nil
+		c.IAbove = nil
 	}
-	if cell.Layer != 0 {
-		cell.Below = make([]*Cell, len(cell.IBelow))
-		cell.GroundLevel = make([]*Cell, len(cell.IGroundLevel))
-		for i, row := range cell.IBelow {
-			cell.Below[i] = d.Data[row]
+	if c.Layer != 0 {
+		c.Below = make([]*Cell, len(c.IBelow))
+		c.GroundLevel = make([]*Cell, len(c.IGroundLevel))
+		for i, row := range c.IBelow {
+			c.Below[i] = d.Data[row]
 		}
-		for i, row := range cell.IGroundLevel {
-			cell.GroundLevel[i] = d.Data[row]
+		for i, row := range c.IGroundLevel {
+			c.GroundLevel[i] = d.Data[row]
 		}
-		cell.IBelow = nil
-		cell.IGroundLevel = nil
+		c.IBelow = nil
+		c.IGroundLevel = nil
 	} else { // assume bottom boundary is the same as lowest layer.
-		cell.Below = []*Cell{d.Data[cell.Row]}
-		cell.GroundLevel = []*Cell{d.Data[cell.Row]}
+		c.Below = []*Cell{d.Data[c.Row]}
+		c.GroundLevel = []*Cell{d.Data[c.Row]}
 	}
-	cell.neighborInfo()
+	c.neighborInfo()
+}
+
+// addWestBoundary adds a cell to the western boundary of the domain.
+func (d *InMAPdata) addWestBoundary(cell *Cell) {
+	c := cell.makecopy()
+	cell.West = []*Cell{c}
+	c.West, c.East = []*Cell{c}, []*Cell{c} // boundary cells are adjacent to themselves.
+	c.Boundary = true
+	c.UAvg = cell.UAvg
+	d.westBoundary = append(d.westBoundary, c)
+}
+
+// addEastBoundary adds a cell to the eastern boundary of the domain.
+func (d *InMAPdata) addEastBoundary(cell *Cell) {
+	c := cell.makecopy()
+	cell.East = []*Cell{c}
+	c.West, c.East = []*Cell{c}, []*Cell{c} // boundary cells are adjacent to themselves.
+	c.Boundary = true
+	c.UAvg = cell.UAvg
+	d.eastBoundary = append(d.eastBoundary, c)
+}
+
+// addSouthBoundary adds a cell to the southern boundary of the domain.
+func (d *InMAPdata) addSouthBoundary(cell *Cell) {
+	c := cell.makecopy()
+	cell.South = []*Cell{c}
+	c.South, c.North = []*Cell{c}, []*Cell{c} // boundary cells are adjacent to themselves.
+	c.Boundary = true
+	c.VAvg = cell.VAvg
+	d.southBoundary = append(d.southBoundary, c)
+}
+
+// addNorthBoundary adds a cell to the northern boundary of the domain.
+func (d *InMAPdata) addNorthBoundary(cell *Cell) {
+	c := cell.makecopy()
+	cell.North = []*Cell{c}
+	c.South, c.North = []*Cell{c}, []*Cell{c} // boundary cells are adjacent to themselves.
+	c.Boundary = true
+	c.VAvg = cell.VAvg
+	d.northBoundary = append(d.northBoundary, c)
+}
+
+// addTopBoundary adds a cell to the top boundary of the domain.
+func (d *InMAPdata) addTopBoundary(cell *Cell) {
+	c := cell.makecopy()
+	cell.Above = []*Cell{c}
+	c.Below, c.Above = []*Cell{c}, []*Cell{c} // boundary cells are adjacent to themselves.
+	c.Boundary = true
+	c.WAvg = cell.WAvg
+	d.topBoundary = append(d.topBoundary, c)
 }
 
 // Calculate center-to-center cell distance,
 // fractions of grid cell covered by each neighbor
 // and harmonic mean staggered-grid diffusivities.
-func (cell *Cell) neighborInfo() {
-	cell.DxPlusHalf = make([]float64, len(cell.East))
-	cell.EastFrac = make([]float64, len(cell.East))
-	cell.KxxEast = make([]float64, len(cell.East))
-	for i, c := range cell.East {
-		cell.DxPlusHalf[i] = (cell.Dx + c.Dx) / 2.
-		cell.EastFrac[i] = min(c.Dy/cell.Dy, 1.)
-		cell.KxxEast[i] = harmonicMean(cell.Kxxyy, c.Kxxyy)
+func (c *Cell) neighborInfo() {
+	c.DxPlusHalf = make([]float64, len(c.East))
+	c.EastFrac = make([]float64, len(c.East))
+	c.KxxEast = make([]float64, len(c.East))
+	for i, e := range c.East {
+		c.DxPlusHalf[i] = (c.Dx + e.Dx) / 2.
+		c.EastFrac[i] = min(e.Dy/c.Dy, 1.)
+		c.KxxEast[i] = harmonicMean(c.Kxxyy, e.Kxxyy)
 	}
-	cell.DxMinusHalf = make([]float64, len(cell.West))
-	cell.WestFrac = make([]float64, len(cell.West))
-	cell.KxxWest = make([]float64, len(cell.West))
-	for i, c := range cell.West {
-		cell.DxMinusHalf[i] = (cell.Dx + c.Dx) / 2.
-		cell.WestFrac[i] = min(c.Dy/cell.Dy, 1.)
-		cell.KxxWest[i] = harmonicMean(cell.Kxxyy, c.Kxxyy)
+	c.DxMinusHalf = make([]float64, len(c.West))
+	c.WestFrac = make([]float64, len(c.West))
+	c.KxxWest = make([]float64, len(c.West))
+	for i, w := range c.West {
+		c.DxMinusHalf[i] = (c.Dx + w.Dx) / 2.
+		c.WestFrac[i] = min(w.Dy/c.Dy, 1.)
+		c.KxxWest[i] = harmonicMean(c.Kxxyy, w.Kxxyy)
 	}
-	cell.DyPlusHalf = make([]float64, len(cell.North))
-	cell.NorthFrac = make([]float64, len(cell.North))
-	cell.KyyNorth = make([]float64, len(cell.North))
-	for i, c := range cell.North {
-		cell.DyPlusHalf[i] = (cell.Dy + c.Dy) / 2.
-		cell.NorthFrac[i] = min(c.Dx/cell.Dx, 1.)
-		cell.KyyNorth[i] = harmonicMean(cell.Kxxyy, c.Kxxyy)
+	c.DyPlusHalf = make([]float64, len(c.North))
+	c.NorthFrac = make([]float64, len(c.North))
+	c.KyyNorth = make([]float64, len(c.North))
+	for i, n := range c.North {
+		c.DyPlusHalf[i] = (c.Dy + n.Dy) / 2.
+		c.NorthFrac[i] = min(n.Dx/c.Dx, 1.)
+		c.KyyNorth[i] = harmonicMean(c.Kxxyy, n.Kxxyy)
 	}
-	cell.DyMinusHalf = make([]float64, len(cell.South))
-	cell.SouthFrac = make([]float64, len(cell.South))
-	cell.KyySouth = make([]float64, len(cell.South))
-	for i, c := range cell.South {
-		cell.DyMinusHalf[i] = (cell.Dy + c.Dy) / 2.
-		cell.SouthFrac[i] = min(c.Dx/cell.Dx, 1.)
-		cell.KyySouth[i] = harmonicMean(cell.Kxxyy, c.Kxxyy)
+	c.DyMinusHalf = make([]float64, len(c.South))
+	c.SouthFrac = make([]float64, len(c.South))
+	c.KyySouth = make([]float64, len(c.South))
+	for i, s := range c.South {
+		c.DyMinusHalf[i] = (c.Dy + s.Dy) / 2.
+		c.SouthFrac[i] = min(s.Dx/c.Dx, 1.)
+		c.KyySouth[i] = harmonicMean(c.Kxxyy, s.Kxxyy)
 	}
-	cell.DzPlusHalf = make([]float64, len(cell.Above))
-	cell.AboveFrac = make([]float64, len(cell.Above))
-	cell.KzzAbove = make([]float64, len(cell.Above))
-	for i, c := range cell.Above {
-		cell.DzPlusHalf[i] = (cell.Dz + c.Dz) / 2.
-		cell.AboveFrac[i] = min((c.Dx*c.Dy)/(cell.Dx*cell.Dy), 1.)
-		cell.KzzAbove[i] = harmonicMean(cell.Kzz, c.Kzz)
+	c.DzPlusHalf = make([]float64, len(c.Above))
+	c.AboveFrac = make([]float64, len(c.Above))
+	c.KzzAbove = make([]float64, len(c.Above))
+	for i, a := range c.Above {
+		c.DzPlusHalf[i] = (c.Dz + a.Dz) / 2.
+		c.AboveFrac[i] = min((a.Dx*a.Dy)/(c.Dx*c.Dy), 1.)
+		c.KzzAbove[i] = harmonicMean(c.Kzz, a.Kzz)
 	}
-	cell.DzMinusHalf = make([]float64, len(cell.Below))
-	cell.BelowFrac = make([]float64, len(cell.Below))
-	cell.KzzBelow = make([]float64, len(cell.Below))
-	for i, c := range cell.Below {
-		cell.DzMinusHalf[i] = (cell.Dz + c.Dz) / 2.
-		cell.BelowFrac[i] = min((c.Dx*c.Dy)/(cell.Dx*cell.Dy), 1.)
-		cell.KzzBelow[i] = harmonicMean(cell.Kzz, c.Kzz)
+	c.DzMinusHalf = make([]float64, len(c.Below))
+	c.BelowFrac = make([]float64, len(c.Below))
+	c.KzzBelow = make([]float64, len(c.Below))
+	for i, b := range c.Below {
+		c.DzMinusHalf[i] = (c.Dz + b.Dz) / 2.
+		c.BelowFrac[i] = min((b.Dx*b.Dy)/(c.Dx*c.Dy), 1.)
+		c.KzzBelow[i] = harmonicMean(c.Kzz, b.Kzz)
 	}
-	cell.GroundLevelFrac = make([]float64, len(cell.GroundLevel))
-	for i, c := range cell.GroundLevel {
-		cell.GroundLevelFrac[i] = min((c.Dx*c.Dy)/(cell.Dx*cell.Dy), 1.)
+	c.GroundLevelFrac = make([]float64, len(c.GroundLevel))
+	for i, g := range c.GroundLevel {
+		c.GroundLevelFrac[i] = min((g.Dx*g.Dy)/(c.Dx*c.Dy), 1.)
+	}
+	c.addMeanderCells()
+}
+
+// meanderCells is a recursive function to find all of the cells within the
+// deviation length of c in the direction specified by field.
+func meanderCells(c, mCell *Cell, cLoc geom.Point, field string) []*Cell {
+	if mCell.Boundary {
+		return nil
+	}
+	var mCells []*Cell
+	mcLoc, err := op.Centroid(mCell.T)
+	if err != nil {
+		panic(err)
+	}
+	if math.Abs(cLoc.X-mcLoc.X) < c.UDevLength {
+		mCells = append(mCells, mCell)
+		nextCells := reflect.ValueOf(mCell).Elem().FieldByName(field).Interface().([]*Cell)
+		for _, mc := range nextCells {
+			mCells = append(mCells, meanderCells(c, mc, cLoc, field)...)
+		}
+	}
+	return mCells
+}
+
+func (c *Cell) addMeanderCells() {
+	cLoc, err := op.Centroid(c.T)
+	if err != nil {
+		panic(err)
+	}
+	// Find cells for east-west nonlocal advection
+	for _, w := range c.West {
+		c.EWMeanderCells = append(c.EWMeanderCells,
+			meanderCells(c, w, cLoc, "West")...)
+	}
+	for _, e := range c.East {
+		c.EWMeanderCells = append(c.EWMeanderCells,
+			meanderCells(c, e, cLoc, "East")...)
+	}
+	// calculate volume fractions for each cell
+	c.EWMeanderFrac = make([]float64, len(c.EWMeanderCells))
+	v := 0.
+	for _, cc := range c.EWMeanderCells {
+		v += cc.Volume
+	}
+	for i, cc := range c.EWMeanderCells {
+		c.EWMeanderFrac[i] = cc.Volume / v
+	}
+	for _, s := range c.South {
+		c.NSMeanderCells = append(c.NSMeanderCells,
+			meanderCells(c, s, cLoc, "South")...)
+	}
+	for _, n := range c.North {
+		c.NSMeanderCells = append(c.NSMeanderCells,
+			meanderCells(c, n, cLoc, "North")...)
+	}
+	// calculate volume fractions for each cell
+	c.NSMeanderFrac = make([]float64, len(c.NSMeanderCells))
+	v = 0.
+	for _, cc := range c.NSMeanderCells {
+		v += cc.Volume
+	}
+	for i, cc := range c.NSMeanderCells {
+		c.NSMeanderFrac[i] = cc.Volume / v
 	}
 }
 
-// Add in emissions flux to each cell at every time step, also
-// set initial concentrations to final concentrations from previous
-// time step, and set old velocities to velocities from previous time
-// step.
+// addEmissionsFlux adds emissions to c. It should be run once for each timestep.
 func (c *Cell) addEmissionsFlux(d *InMAPdata) {
 	for i := range polNames {
 		c.Cf[i] += c.emisFlux[i] * d.Dt
@@ -528,9 +639,11 @@ func (c *Cell) addEmissionsFlux(d *InMAPdata) {
 func (d *InMAPdata) setTstepCFL() {
 	const Cmax = 1.
 	for i, c := range d.Data {
+
 		// Advection time step
 		dt1 := Cmax / math.Pow(3., 0.5) /
-			max(math.Abs(c.UAvg)/c.Dx, math.Abs(c.VAvg)/c.Dy, math.Abs(c.WAvg)/c.Dz)
+			max(math.Abs(c.UAvg)/c.Dx, math.Abs(c.VAvg)/c.Dy, math.Abs(c.WAvg)/c.Dz,
+				c.UDeviation/c.Dx, c.VDeviation/c.Dy)
 		// vertical diffusion time step
 		dt2 := Cmax * c.Dz * c.Dz / 2. / c.Kzz
 		// horizontal diffusion time step
@@ -542,11 +655,6 @@ func (d *InMAPdata) setTstepCFL() {
 			d.Dt = amin(d.Dt, dt1, dt2, dt3, dt4) // seconds
 		}
 	}
-}
-
-//  Set the time step using the WRF rule of thumb.
-func (d *InMAPdata) setTstepRuleOfThumb() {
-	d.Dt = d.Data[0].Dx / 1000. * 6
 }
 
 func harmonicMean(a, b float64) float64 {

@@ -312,7 +312,7 @@ func chemPrint(t *testing.T, vals []float64, c *Cell) {
 
 // Test whether mass is conserved during advection.
 func TestAdvection(t *testing.T) {
-	const tolerance = 1.e-8
+	const tolerance = 1.e-7
 	nsteps := 10
 	var cellGroups = [][]*Cell{d.Data, d.westBoundary, d.eastBoundary,
 		d.northBoundary, d.southBoundary, d.topBoundary}
@@ -348,7 +348,7 @@ func TestAdvection(t *testing.T) {
 			}
 		}
 		if different(sum, E*float64(nsteps), tolerance) {
-			t.Fatalf("row %d emis: sum=%.12g (it should equal %v)\n", testRow, sum, E*float64(nsteps))
+			t.Errorf("row %d emis: sum=%.12g (it should equal %v)\n", testRow, sum, E*float64(nsteps))
 		}
 	}
 }
@@ -385,7 +385,7 @@ func TestMeanderMixing(t *testing.T) {
 			layerSum[c.Layer] += val
 		}
 		if different(sum, E*float64(nsteps), tolerance) {
-			t.Fatalf("row %d emis: sum=%.12g (it should equal %v)\n", testRow, sum, E*float64(nsteps))
+			t.Errorf("row %d emis: sum=%.12g (it should equal %v)\n", testRow, sum, E*float64(nsteps))
 		}
 	}
 }

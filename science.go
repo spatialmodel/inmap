@@ -25,6 +25,7 @@ import "github.com/ctessum/atmos/advect"
 // boundary layer and based on Wilson (2004) for above the boundary layer.
 // Also calculate horizontal mixing.
 func (c *Cell) Mixing(Δt float64) {
+	c.Lock()
 	for ii := range c.Cf {
 		// Pleim (2007) Equation 10.
 		for i, g := range c.GroundLevel { // Upward convection
@@ -60,6 +61,7 @@ func (c *Cell) Mixing(Δt float64) {
 				(n.Ci[ii] - c.Ci[ii]) / c.DyPlusHalf[i]) * Δt * c.NorthFrac[i]
 		}
 	}
+	c.Unlock()
 }
 
 // UpwindAdvection calculates advection in the cell based
@@ -69,102 +71,84 @@ func (c *Cell) UpwindAdvection(Δt float64) {
 		for i, w := range c.West {
 			flux := advect.UpwindFlux(c.UAvg, w.Ci[ii], c.Ci[ii], c.Dx) *
 				c.WestFrac[i] * Δt
-			c.Cf[ii] += flux
-			w.Cf[ii] -= flux * c.Volume / w.Volume
+			massTransfer(c, w, ii, flux)
 		}
+
+		// Only calculate east advection when there is a boundary. Otherwise
+		// east advection is calculated as west advection for another cell.
 		for i, e := range c.East {
 			if e.Boundary {
-				c.Cf[ii] -= advect.UpwindFlux(e.UAvg, c.Ci[ii], e.Ci[ii], c.Dx) *
+				flux := advect.UpwindFlux(e.UAvg, c.Ci[ii], e.Ci[ii], c.Dx) *
 					c.EastFrac[i] * Δt
+				massTransfer(c, e, ii, -flux)
 			}
 		}
 
 		for i, s := range c.South {
 			flux := advect.UpwindFlux(c.VAvg, s.Ci[ii], c.Ci[ii], c.Dy) *
 				c.SouthFrac[i] * Δt
-			c.Cf[ii] += flux
-			s.Cf[ii] -= flux * c.Volume / s.Volume
+			massTransfer(c, s, ii, flux)
 		}
+
+		// Only calculate north advection when there is a boundary. Otherwise
+		// north advection is calculated as south advection for another cell.
 		for i, n := range c.North {
 			if n.Boundary {
-				c.Cf[ii] -= advect.UpwindFlux(n.VAvg, c.Ci[ii], n.Ci[ii], c.Dy) *
+				flux := advect.UpwindFlux(n.VAvg, c.Ci[ii], n.Ci[ii], c.Dy) *
 					c.NorthFrac[i] * Δt
+				massTransfer(c, n, ii, -flux)
 			}
 		}
 
 		for i, b := range c.Below {
-			flux := advect.UpwindFlux(c.WAvg, b.Ci[ii], c.Ci[ii], c.Dz) *
-				c.BelowFrac[i] * Δt
 			if c.Layer > 0 {
-				c.Cf[ii] += flux
-				b.Cf[ii] -= flux * c.Volume / b.Volume
+				flux := advect.UpwindFlux(c.WAvg, b.Ci[ii], c.Ci[ii], c.Dz) *
+					c.BelowFrac[i] * Δt
+				massTransfer(c, b, ii, flux)
 			}
 		}
+
+		// Only calculate above advection when there is a boundary. Otherwise
+		// above advection is calculated as below advection for another cell.
 		for i, a := range c.Above {
 			if a.Boundary {
-				c.Cf[ii] -= advect.UpwindFlux(a.WAvg, c.Ci[ii], a.Ci[ii], c.Dz) *
+				flux := advect.UpwindFlux(a.WAvg, c.Ci[ii], a.Ci[ii], c.Dz) *
 					c.AboveFrac[i] * Δt
+				massTransfer(c, a, ii, -flux)
 			}
 		}
 	}
 }
 
-// TODO: These shouldn't be hard coded.
-const (
-	CTMDx = 12000.
-	CTMDy = 12000.
-)
-
-func (c *Cell) meanderFluxWest(wc *Cell, distance float64, pi int) float64 {
-	if wc.Boundary {
-		return 0.
-	}
-	var flux float64
-	devI := int(distance / CTMDx)
-	if devI < len(c.UDeviation) {
-		westFrac := min(wc.Dx/c.Dx, 1.)
-		f := advect.UpwindFlux(wc.UDeviation[devI], wc.Ci[pi], c.Ci[pi], c.Dx) * westFrac
-		flux += f
-		for i, w := range wc.West {
-			flux += c.meanderFluxWest(w, distance+wc.DxMinusHalf[i], pi)
-		}
-	}
-	return flux
-}
-
-func (c *Cell) meanderFluxEast(ec *Cell, distance float64, pi int) float64 {
-	if ec.Boundary {
-		return 0.
-	}
-	var flux float64
-	devI := int(distance / CTMDx)
-	if devI < len(c.UDeviation) {
-		eastFrac := min(ec.Dx/c.Dx, 1.)
-		f := advect.UpwindFlux(c.UDeviation[devI], c.Ci[pi], ec.Ci[pi], c.Dx) * eastFrac
-		flux += f
-		for i, e := range ec.East {
-			flux += c.meanderFluxEast(e, distance+ec.DxPlusHalf[i], pi)
-		}
-	}
-	return flux
+// massTransfer transfers mass between two cells, where flux is the
+// concentration leaving c1 and pi is the pollutant index.
+func massTransfer(c1, c2 *Cell, pi int, flux float64) {
+	c1.Lock()
+	c1.Cf[pi] += flux
+	c1.Unlock()
+	c2.Lock()
+	c2.Cf[pi] -= flux * c1.Volume / c2.Volume
+	c2.Unlock()
 }
 
 // MeanderMixing calculates changes in concentrations caused by meanders:
 // adevection that is resolved by the underlying comprehensive chemical
-// transport model but is not resolved by InMAP.
-// The algorithm is an adaptation of the Spectral Diffusivity nonlocal turbulence
-// closure method described in:
-// TODO: add citations.
+// transport model but is not resolved by InMAP. It assumes that mass is evenly
+// distributed among the cells within the previously calculated deviation distance.
 func (c *Cell) MeanderMixing(Δt float64) {
 	for pi := range c.Ci {
-		flux := 0.
-		for i, w := range c.West {
-			flux += c.meanderFluxWest(w, c.DxMinusHalf[i], pi)
+		for i, m := range c.EWMeanderCells {
+			if c.Ci[pi] > m.Ci[pi] {
+				flux := c.UDeviation * (m.Ci[pi] - c.Ci[pi]) / c.Dx * c.EWMeanderFrac[i] * Δt
+				massTransfer(c, m, pi, flux)
+			}
 		}
-		for i, e := range c.East {
-			flux -= c.meanderFluxEast(e, c.DxPlusHalf[i], pi)
+		for i, m := range c.NSMeanderCells {
+			if c.Ci[pi] > m.Ci[pi] {
+				flux := c.VDeviation * (m.Ci[pi] - c.Ci[pi]) / c.Dy * c.NSMeanderFrac[i] * Δt
+				massTransfer(c, m, pi, flux)
+			}
 		}
-		c.Cf[pi] += flux * Δt
 	}
 }
 
@@ -178,7 +162,7 @@ const ammoniaFactor = 4.
 // "pNH) between gaseous and particulate phase
 // based on the spatially explicit partioning present in the baseline data.
 func (c *Cell) Chemistry(d *InMAPdata) {
-
+	c.Lock()
 	// All SO4 forms particles, so sulfur particle formation is limited by the
 	// SO2 -> SO4 reaction.
 	ΔS := c.SO2oxidation * c.Cf[igS] * d.Dt
@@ -212,6 +196,7 @@ func (c *Cell) Chemistry(d *InMAPdata) {
 	totalOrg := c.Cf[igOrg] + c.Cf[ipOrg]
 	c.Cf[ipOrg] = totalOrg * c.AOrgPartitioning
 	c.Cf[igOrg] = totalOrg * (1 - c.AOrgPartitioning)
+	c.Unlock()
 }
 
 // DryDeposition calculates particle removal by dry deposition
@@ -223,6 +208,7 @@ func (c *Cell) DryDeposition(d *InMAPdata) {
 		vocfac := 1 - c.VOCDryDep*fac
 		nh3fac := 1 - c.NH3DryDep*fac
 		pm25fac := 1 - c.ParticleDryDep*fac
+		c.Lock()
 		c.Cf[igOrg] *= vocfac
 		c.Cf[ipOrg] *= pm25fac
 		c.Cf[iPM2_5] *= pm25fac
@@ -232,6 +218,7 @@ func (c *Cell) DryDeposition(d *InMAPdata) {
 		c.Cf[ipS] *= pm25fac
 		c.Cf[igNO] *= noxfac
 		c.Cf[ipNO] *= pm25fac
+		c.Unlock()
 	}
 }
 
@@ -240,6 +227,7 @@ func (c *Cell) WetDeposition(Δt float64) {
 	particleFrac := 1. - c.ParticleWetDep*Δt
 	SO2Frac := 1. - c.SO2WetDep*Δt
 	otherGasFrac := 1 - c.OtherGasWetDep*Δt
+	c.Lock()
 	c.Cf[igOrg] *= otherGasFrac
 	c.Cf[ipOrg] *= particleFrac
 	c.Cf[iPM2_5] *= particleFrac
@@ -249,6 +237,7 @@ func (c *Cell) WetDeposition(Δt float64) {
 	c.Cf[ipS] *= particleFrac
 	c.Cf[igNO] *= otherGasFrac
 	c.Cf[ipNO] *= particleFrac
+	c.Unlock()
 }
 
 // convert float to int (rounding)

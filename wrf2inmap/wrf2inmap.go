@@ -286,7 +286,11 @@ func main() {
 	deviationChanU <- nil
 	deviationChanV <- nil
 	uDeviation := <-deviationChanU
+	uDevLength := <-deviationChanU
+	uDevLength.Scale(config.CtmGridDx)
 	vDeviation := <-deviationChanV
+	vDevLength := <-deviationChanV
+	vDevLength.Scale(config.CtmGridDy)
 
 	// partitioning results
 	aVOCchan <- nil
@@ -349,9 +353,9 @@ func main() {
 	outputFile := filepath.Join(config.OutputDir, config.OutputFilePrefix+".ncf")
 	fmt.Printf("Writing out data to %v...\n", outputFile)
 	h := cdf.NewHeader(
-		[]string{"x", "y", "z", "xStagger", "yStagger", "zStagger", "xdeviation", "ydeviation"},
+		[]string{"x", "y", "z", "xStagger", "yStagger", "zStagger"},
 		[]int{windSpeed.Shape[2], windSpeed.Shape[1], windSpeed.Shape[0],
-			uAvg.Shape[2], vAvg.Shape[1], wAvg.Shape[0], numNonLocalX, numNonLocalY})
+			uAvg.Shape[2], vAvg.Shape[1], wAvg.Shape[0]})
 	h.AddAttribute("", "comment", "InMAP meteorology and baseline chemistry data file")
 
 	data := map[string]dataHolder{
@@ -361,10 +365,14 @@ func main() {
 			"Annual average y velocity", "m/s", vAvg},
 		"WAvg": dataHolder{[]string{"zStagger", "y", "x"},
 			"Annual average z velocity", "m/s", wAvg},
-		"UDeviation": dataHolder{[]string{"z", "y", "xStagger", "xdeviation"},
-			"Spectral deviations from average x velocity", "m/s", uDeviation},
-		"VDeviation": dataHolder{[]string{"z", "yStagger", "x", "ydeviation"},
-			"Spectral deviations from average y velocity", "m/s", vDeviation},
+		"UDeviation": dataHolder{[]string{"z", "y", "xStagger"},
+			"Average deviation from average x velocity", "m/s", uDeviation},
+		"UDevLength": dataHolder{[]string{"z", "y", "xStagger"},
+			"Average length of deviation from average x velocity", "m", uDevLength},
+		"VDeviation": dataHolder{[]string{"z", "yStagger", "x"},
+			"Average deviation from average y velocity", "m/s", vDeviation},
+		"VDevLength": dataHolder{[]string{"z", "yStagger", "x"},
+			"Average length of deviation from average y velocity", "m", vDevLength},
 		"aOrgPartitioning": dataHolder{[]string{"z", "y", "x"},
 			"Mass fraction of anthropogenic organic matter in particle {vs. gas} phase",
 			"fraction", aOrgPartitioning},
@@ -820,16 +828,18 @@ func calcWetDeposition(layerHeights *sparse.DenseArray, qrainChan,
 // closure method described in:
 // TODO: add citations.
 func windDeviation(uAvg *sparse.DenseArray, uChan chan *sparse.DenseArray, numNonlocal, index int) {
-	var uDeviation *sparse.DenseArray
+	var uDeviation, uDevLength *sparse.DenseArray
 	firstData := true
 	for {
 		u := <-uChan
 		if u == nil {
 			uChan <- arrayAverage(uDeviation)
+			uChan <- arrayAverage(uDevLength)
 			return
 		}
 		if firstData {
-			uDeviation = sparse.ZerosDense(append(u.Shape, numNonlocal)...)
+			uDeviation = sparse.ZerosDense(u.Shape...)
+			uDevLength = sparse.ZerosDense(u.Shape...)
 			firstData = false
 		}
 		for k := 0; k < u.Shape[0]; k++ {
@@ -859,8 +869,8 @@ func windDeviation(uAvg *sparse.DenseArray, uChan chan *sparse.DenseArray, numNo
 					// meander and is the average deviation velocity of all grid cells
 					// within the meander.
 					if valCount != 0 {
-						uDeviation.AddVal(coeff/float64(valCount), k, j, i,
-							meanderLength)
+						uDevLength.AddVal(float64(meanderLength)/float64(valCount), k, j, i)
+						uDeviation.AddVal(coeff/float64(valCount), k, j, i)
 					}
 				}
 			}

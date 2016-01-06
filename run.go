@@ -156,6 +156,7 @@ func (d *InMAPdata) Run(emissions map[string][]float64, outputAllLayers bool) (
 		func(c *Cell, d *InMAPdata) {
 			c.UpwindAdvection(d.Dt)
 			c.Mixing(d.Dt)
+			c.MeanderMixing(d.Dt)
 			c.Chemistry(d)
 			c.DryDeposition(d)
 			c.WetDeposition(d.Dt)
@@ -243,11 +244,9 @@ func (d *InMAPdata) doScience(nprocs, procNum int,
 	for f := range funcChan {
 		for ii := procNum; ii < len(d.Data); ii += nprocs {
 			c = d.Data[ii]
-			c.Lock() // Lock the cell to avoid race conditions
 			if c.Layer <= topLayerToCalc {
 				f(c, d) // run function
 			}
-			c.Unlock() // Unlock the cell: we're done editing it
 		}
 		wg.Done()
 	}

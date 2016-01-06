@@ -37,8 +37,8 @@ type gridCell struct {
 	MortalityRate                                   float64            // mortalities per year per 100,000
 	IWest, IEast, INorth, ISouth, IAbove, IBelow    []int
 	IGroundLevel                                    []int
-	UAvg, VAvg, WAvg                                float64   // Average velocities
-	UDeviation, VDeviation                          []float64 // Spectral deviations from average velocity
+	UAvg, VAvg, WAvg                                float64 // Average velocities
+	UDeviation, VDeviation, UDevLength, VDevLength  float64 // Average deviations from average velocity
 	AOrgPartitioning, BOrgPartitioning              float64
 	NOPartitioning, SPartitioning                   float64
 	NHPartitioning                                  float64
@@ -564,7 +564,6 @@ func loadMortality(sr proj.SR) (
 
 func getData(cells []*gridCell, data map[string]dataHolder, k int) {
 	ctmtree := makeCTMgrid()
-	numNonlocal := data["UDeviation"].data.Shape[3]
 	for _, cell := range cells {
 		cell.Layer = k
 		ctmcells := ctmtree.SearchIntersect(cell.Bounds(nil))
@@ -584,14 +583,14 @@ func getData(cells []*gridCell, data map[string]dataHolder, k int) {
 			cell.VAvg += data["VAvg"].data.Get(k, ctmrow, ctmcol) / ncells
 			cell.WAvg += data["WAvg"].data.Get(k, ctmrow, ctmcol) / ncells
 
-			cell.UDeviation = make([]float64, numNonlocal)
-			cell.VDeviation = make([]float64, numNonlocal)
-			for d := 0; d < numNonlocal; d++ {
-				cell.UDeviation[d] += data["UDeviation"].data.Get(
-					k, ctmrow, ctmcol, d) / ncells
-				cell.VDeviation[d] += data["VDeviation"].data.Get(
-					k, ctmrow, ctmcol, d) / ncells
-			}
+			cell.UDeviation += data["UDeviation"].data.Get(
+				k, ctmrow, ctmcol) / ncells
+			cell.VDeviation += data["VDeviation"].data.Get(
+				k, ctmrow, ctmcol) / ncells
+			cell.UDevLength += data["UDevLength"].data.Get(
+				k, ctmrow, ctmcol) / ncells
+			cell.VDevLength += data["VDevLength"].data.Get(
+				k, ctmrow, ctmcol) / ncells
 
 			cell.AOrgPartitioning += data["aOrgPartitioning"].data.Get(
 				k, ctmrow, ctmcol) / ncells

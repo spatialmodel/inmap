@@ -33,6 +33,8 @@ import (
 	"github.com/gonum/plot/plotter"
 	"github.com/gonum/plot/plotutil"
 	"github.com/gonum/plot/vg"
+	"github.com/gonum/plot/vg/draw"
+	"github.com/gonum/plot/vg/vgimg"
 )
 
 //  Descriptions of web server map variables
@@ -148,7 +150,7 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 	const body1 = `
 	<div id="mapdiv"></div>
 	<div id="legendholder">
-		<embed id=legenddiv src="/legend/TotalPM2_5/0" type="image/svg+xml" />
+		<embed src="/legend/TotalPM2_5/0" alt="legend" />
 	</div>
 	<div id="varholder">
 		<h5>Select variable</h5>
@@ -346,13 +348,17 @@ func (d *InMAPdata) legendHandler(w http.ResponseWriter, r *http.Request) {
 	cmap.LegendHeight = 0.2
 	cmap.LineWidth = 0.2
 	cmap.FontSize = 3.5
-	c := carto.NewDefaultLegendCanvas()
-	err = cmap.Legend(&c.Canvas, fmt.Sprintf("%v (%v)", name, d.getUnits(name)))
+
+	const LegendWidth = 3.70 * vg.Inch
+	const LegendHeight = LegendWidth * 0.1067
+	c := vgimg.New(LegendWidth, LegendHeight)
+	dc := draw.New(c)
+	err = cmap.Legend(&dc, fmt.Sprintf("%v (%v)", name, d.getUnits(name)))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	err = c.WriteTo(w)
+	_, err = vgimg.PngCanvas{Canvas: c}.WriteTo(w)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
