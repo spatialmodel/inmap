@@ -42,7 +42,6 @@ import (
 
 	"bitbucket.org/ctessum/aqhealth"
 	"github.com/ctessum/geom"
-	"github.com/ctessum/geom/op"
 )
 
 // InMAPdata is holds the current state of the model.
@@ -380,10 +379,10 @@ func InitInMAPdata(option InitOption, numIterations int, httpPort string) (*InMA
 		}(procNum)
 	}*/
 	//wg.Wait()
-	d.setTstepCFL() // Set time step
 	if httpPort != "" {
 		go d.WebServer(httpPort)
 	}
+	d.setTstepCFL() // Set time step
 	return d, nil
 }
 
@@ -563,38 +562,41 @@ func (c *Cell) neighborInfo() {
 
 // meanderCells is a recursive function to find all of the cells within the
 // deviation length of c in the direction specified by field.
-func meanderCells(c, mCell *Cell, cLoc geom.Point, field string) []*Cell {
+func meanderCells(c, mCell *Cell, locFunc func(m geom.Point) float64, nextCellFunc func(m *Cell) []*Cell) []*Cell {
 	if mCell.Boundary {
 		return nil
 	}
 	var mCells []*Cell
-	mcLoc, err := op.Centroid(mCell.T)
-	if err != nil {
-		panic(err)
-	}
-	if math.Abs(cLoc.X-mcLoc.X) < c.UDevLength {
+	mcLoc := mCell.T.Bounds(nil).Min
+	if locFunc(mcLoc) < c.UDevLength*5 { // TODO: remove constant
 		mCells = append(mCells, mCell)
-		nextCells := reflect.ValueOf(mCell).Elem().FieldByName(field).Interface().([]*Cell)
-		for _, mc := range nextCells {
-			mCells = append(mCells, meanderCells(c, mc, cLoc, field)...)
+		for _, mc := range nextCellFunc(mCell) {
+			mCells = append(mCells, meanderCells(c, mc, locFunc, nextCellFunc)...)
 		}
 	}
 	return mCells
 }
 
 func (c *Cell) addMeanderCells() {
-	cLoc, err := op.Centroid(c.T)
-	if err != nil {
-		panic(err)
+	cLoc := c.T.Bounds(nil).Min
+	xDiff := func(mcLoc geom.Point) float64 {
+		return math.Abs(cLoc.X - mcLoc.X)
+	}
+	yDiff := func(mcLoc geom.Point) float64 {
+		return math.Abs(cLoc.Y - mcLoc.Y)
 	}
 	// Find cells for east-west nonlocal advection
 	for _, w := range c.West {
 		c.EWMeanderCells = append(c.EWMeanderCells,
-			meanderCells(c, w, cLoc, "West")...)
+			meanderCells(c, w, xDiff, func(m *Cell) []*Cell {
+				return m.West
+			})...)
 	}
 	for _, e := range c.East {
 		c.EWMeanderCells = append(c.EWMeanderCells,
-			meanderCells(c, e, cLoc, "East")...)
+			meanderCells(c, e, xDiff, func(m *Cell) []*Cell {
+				return m.East
+			})...)
 	}
 	// calculate volume fractions for each cell
 	c.EWMeanderFrac = make([]float64, len(c.EWMeanderCells))
@@ -607,11 +609,15 @@ func (c *Cell) addMeanderCells() {
 	}
 	for _, s := range c.South {
 		c.NSMeanderCells = append(c.NSMeanderCells,
-			meanderCells(c, s, cLoc, "South")...)
+			meanderCells(c, s, yDiff, func(m *Cell) []*Cell {
+				return m.South
+			})...)
 	}
 	for _, n := range c.North {
 		c.NSMeanderCells = append(c.NSMeanderCells,
-			meanderCells(c, n, cLoc, "North")...)
+			meanderCells(c, n, yDiff, func(m *Cell) []*Cell {
+				return m.North
+			})...)
 	}
 	// calculate volume fractions for each cell
 	c.NSMeanderFrac = make([]float64, len(c.NSMeanderCells))

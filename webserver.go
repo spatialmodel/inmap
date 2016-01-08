@@ -150,7 +150,7 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 	const body1 = `
 	<div id="mapdiv"></div>
 	<div id="legendholder">
-		<embed src="/legend/TotalPM2_5/0" alt="legend" />
+		<img id="legend" src="/legend/TotalPM2_5/0" alt="legend" align="middle"/>
 	</div>
 	<div id="varholder">
 		<h5>Select variable</h5>
@@ -251,10 +251,7 @@ function updateMap() {
 	map.overlayMapTypes.insertAt(0, customMapType);
 	document.getElementById("maptitle").innerHTML = window.mapvar+
 		" layer "+layer+" status";
-	var elem = document.getElementsByTagName("embed")[0],
-	copy = elem.cloneNode();
-	copy.src = "legend/"+window.mapvar+"/"+layer;
-	elem.parentNode.replaceChild(copy, elem);
+	$("#legend").attr('src', "legend/"+window.mapvar+"/"+layer);
 }
 google.maps.event.addDomListener(window, 'load', loadmap("TotalPM2_5",0,"mapdiv"))
 </script>`
@@ -339,18 +336,18 @@ func (d *InMAPdata) legendHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Type", "image/svg+xml")
+	w.Header().Set("Content-Type", "image/png")
 	vals := d.toArray(name, layer)
 	cmap := carto.NewColorMap(carto.LinCutoff)
 	cmap.AddArray(vals)
 	cmap.Set()
-	cmap.LegendWidth = 2.1
-	cmap.LegendHeight = 0.2
-	cmap.LineWidth = 0.2
-	cmap.FontSize = 3.5
-
-	const LegendWidth = 3.70 * vg.Inch
+	const LegendWidth = 6.2 * vg.Inch
 	const LegendHeight = LegendWidth * 0.1067
+	cmap.LegendWidth = LegendWidth
+	cmap.LegendHeight = LegendHeight
+	cmap.LineWidth = 0.5
+	cmap.FontSize = 8
+
 	c := vgimg.New(LegendWidth, LegendHeight)
 	dc := draw.New(c)
 	err = cmap.Legend(&dc, fmt.Sprintf("%v (%v)", name, d.getUnits(name)))

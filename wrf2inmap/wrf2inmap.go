@@ -822,11 +822,9 @@ func calcWetDeposition(layerHeights *sparse.DenseArray, qrainChan,
 // average wind speed. Output is based on a staggered grid.
 // numNonlocal is the number of grid cells to create nonlocal diffusion
 // coefficients for. index dictates which directional index (i, j, or k) that
-// we are calculating devaitions in.
-//
-// This algorithm is an adaptation of the Spectral Diffusivity nonlocal turbulence
-// closure method described in:
-// TODO: add citations.
+// we are calculating deviations in. Deviations are calculated in both the
+// positive and negative directions but the resulting average is assumed to
+// be symmetrical.
 func windDeviation(uAvg *sparse.DenseArray, uChan chan *sparse.DenseArray, numNonlocal, index int) {
 	var uDeviation, uDevLength *sparse.DenseArray
 	firstData := true
@@ -847,30 +845,31 @@ func windDeviation(uAvg *sparse.DenseArray, uChan chan *sparse.DenseArray, numNo
 				for i := 0; i < u.Shape[2]; i++ {
 					centerDeviation := u.Get(k, j, i) - uAvg.Get(k, j, i) // Cell we're diffusing from
 					centerDeviationSign := math.Signbit(centerDeviation)
-					// Only look forward from cell of interest. Negative direction is
-					// covered by calculations for other cells.
-					var valCount int
-					var coeff float64
-					var meanderLength int // number of grid cells with deviation in same direction.
-					elems, deltas := getDeviationIndexRange(k, j, i, numNonlocal, index, u)
-					for id, elem := range elems {
-						deviation := u.Elements[elem] - uAvg.Elements[elem] // Cell we're potentially diffusing to.
-						if math.Signbit(deviation) != centerDeviationSign {
-							// if the deviation isn't in the same direction as the deviation
-							// of cell [k,j,i], it means that we've reached the end of the
-							// meander so we're done.
-							break
+					for _, direction := range []int{1, -1} {
+						var valCount int
+						var coeff float64
+						var meanderLength float64 // number of grid cells with deviation in same direction.
+						elems, deltas := getDeviationIndexRange(k, j, i, numNonlocal,
+							index, direction, u)
+						for id, elem := range elems {
+							deviation := u.Elements[elem] - uAvg.Elements[elem] // Cell we're potentially diffusing to.
+							if math.Signbit(deviation) != centerDeviationSign {
+								// if the deviation isn't in the same direction as the deviation
+								// of cell [k,j,i], it means that we've reached the end of the
+								// meander so we're done.
+								break
+							}
+							meanderLength = float64(deltas[id]) / 2 // divide by 2 for average of pos. and neg.
+							valCount++
+							coeff += math.Abs(deviation) / 2.
 						}
-						meanderLength = deltas[id]
-						valCount++
-						coeff += math.Abs(deviation)
-					}
-					// The transfer coefficient is placed at the maximum length of the
-					// meander and is the average deviation velocity of all grid cells
-					// within the meander.
-					if valCount != 0 {
-						uDevLength.AddVal(float64(meanderLength)/float64(valCount), k, j, i)
-						uDeviation.AddVal(coeff/float64(valCount), k, j, i)
+						// The transfer coefficient is placed at the maximum length of the
+						// meander and is the average deviation velocity of all grid cells
+						// within the meander.
+						if valCount != 0 {
+							uDevLength.AddVal(meanderLength, k, j, i)
+							uDeviation.AddVal(coeff/float64(valCount), k, j, i)
+						}
 					}
 				}
 			}
@@ -880,8 +879,11 @@ func windDeviation(uAvg *sparse.DenseArray, uChan chan *sparse.DenseArray, numNo
 
 // getDeviationIndexRange gets the array indexes of deviations within numNonlocal
 // grid cells from cell [k,j,i].
-func getDeviationIndexRange(k, j, i, numNonlocal, index int, u *sparse.DenseArray) (elems, deltas []int) {
-	for ii := 1; ii <= numNonlocal; ii++ {
+func getDeviationIndexRange(k, j, i, numNonlocal, index, direction int, u *sparse.DenseArray) (elems, deltas []int) {
+	if direction != 1 && direction != -1 {
+		panic("invalid direction")
+	}
+	for ii := 1 * direction; ii*direction <= numNonlocal; ii += direction {
 		iiIndex := []int{k, j, i}
 		iiIndex[index] += ii
 		if err := u.CheckIndex(iiIndex); err != nil {
@@ -889,7 +891,7 @@ func getDeviationIndexRange(k, j, i, numNonlocal, index int, u *sparse.DenseArra
 			continue
 		}
 		elems = append(elems, u.Index1d(iiIndex...))
-		deltas = append(deltas, ii-1) // the neighbor grid cell has a delta of zero.
+		deltas = append(deltas, ii*direction)
 	}
 	return
 }
