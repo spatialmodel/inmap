@@ -40,7 +40,6 @@ type ConfigInfo struct {
 	Xnests              []int   // Nesting multiples in the X direction
 	Ynests              []int   // Nesting multiples in the Y direction
 	HiResLayers         int     // number of layers to do in high resolution (layers above this will be lowest resolution.
-	NonlocalDistance    float64 // Distance (in CTM grid units) over which to consider nonlocal advection.
 	CtmGridXo           float64 // lower left of Chemical Transport Model (CTM) grid, x
 	CtmGridYo           float64 // lower left of grid, y
 	CtmGridDx           float64 // m
@@ -199,10 +198,8 @@ func main() {
 	// Only calculate horizontal deviations.
 	deviationChanU := make(chan *sparse.DenseArray)
 	deviationChanV := make(chan *sparse.DenseArray)
-	numNonLocalX := int(config.NonlocalDistance / config.CtmGridDx)
-	numNonLocalY := int(config.NonlocalDistance / config.CtmGridDy)
-	go windDeviation(uAvg, deviationChanU, numNonLocalX, 2)
-	go windDeviation(vAvg, deviationChanV, numNonLocalY, 1)
+	go windDeviation(uAvg, deviationChanU, 2)
+	go windDeviation(vAvg, deviationChanV, 1)
 
 	// calculate gas/particle partitioning
 	aVOCchan := make(chan *sparse.DenseArray)
@@ -286,11 +283,7 @@ func main() {
 	deviationChanU <- nil
 	deviationChanV <- nil
 	uDeviation := <-deviationChanU
-	uDevLength := <-deviationChanU
-	uDevLength.Scale(config.CtmGridDx)
 	vDeviation := <-deviationChanV
-	vDevLength := <-deviationChanV
-	vDevLength.Scale(config.CtmGridDy)
 
 	// partitioning results
 	aVOCchan <- nil
@@ -367,12 +360,8 @@ func main() {
 			"Annual average z velocity", "m/s", wAvg},
 		"UDeviation": dataHolder{[]string{"z", "y", "xStagger"},
 			"Average deviation from average x velocity", "m/s", uDeviation},
-		"UDevLength": dataHolder{[]string{"z", "y", "xStagger"},
-			"Average length of deviation from average x velocity", "m", uDevLength},
 		"VDeviation": dataHolder{[]string{"z", "yStagger", "x"},
 			"Average deviation from average y velocity", "m/s", vDeviation},
-		"VDevLength": dataHolder{[]string{"z", "yStagger", "x"},
-			"Average length of deviation from average y velocity", "m", vDevLength},
 		"aOrgPartitioning": dataHolder{[]string{"z", "y", "x"},
 			"Mass fraction of anthropogenic organic matter in particle {vs. gas} phase",
 			"fraction", aOrgPartitioning},
@@ -818,82 +807,28 @@ func calcWetDeposition(layerHeights *sparse.DenseArray, qrainChan,
 	}
 }
 
-// windDeviation calculates the spectral intensity of deviations from
-// average wind speed. Output is based on a staggered grid.
-// numNonlocal is the number of grid cells to create nonlocal diffusion
-// coefficients for. index dictates which directional index (i, j, or k) that
-// we are calculating deviations in. Deviations are calculated in both the
-// positive and negative directions but the resulting average is assumed to
-// be symmetrical.
-func windDeviation(uAvg *sparse.DenseArray, uChan chan *sparse.DenseArray, numNonlocal, index int) {
-	var uDeviation, uDevLength *sparse.DenseArray
+// windDeviation calculates the average absolute deviation of the wind velocity.
+// Output is based on a staggered grid.
+// index dictates which directional index (i, j, or k) that
+// we are calculating deviations in.
+func windDeviation(uAvg *sparse.DenseArray, uChan chan *sparse.DenseArray, index int) {
+	var uDeviation *sparse.DenseArray
 	firstData := true
 	for {
 		u := <-uChan
 		if u == nil {
 			uChan <- arrayAverage(uDeviation)
-			uChan <- arrayAverage(uDevLength)
 			return
 		}
 		if firstData {
 			uDeviation = sparse.ZerosDense(u.Shape...)
-			uDevLength = sparse.ZerosDense(u.Shape...)
 			firstData = false
 		}
-		for k := 0; k < u.Shape[0]; k++ {
-			for j := 0; j < u.Shape[1]; j++ {
-				for i := 0; i < u.Shape[2]; i++ {
-					centerDeviation := u.Get(k, j, i) - uAvg.Get(k, j, i) // Cell we're diffusing from
-					centerDeviationSign := math.Signbit(centerDeviation)
-					for _, direction := range []int{1, -1} {
-						var valCount int
-						var coeff float64
-						var meanderLength float64 // number of grid cells with deviation in same direction.
-						elems, deltas := getDeviationIndexRange(k, j, i, numNonlocal,
-							index, direction, u)
-						for id, elem := range elems {
-							deviation := u.Elements[elem] - uAvg.Elements[elem] // Cell we're potentially diffusing to.
-							if math.Signbit(deviation) != centerDeviationSign {
-								// if the deviation isn't in the same direction as the deviation
-								// of cell [k,j,i], it means that we've reached the end of the
-								// meander so we're done.
-								break
-							}
-							meanderLength = float64(deltas[id]) / 2 // divide by 2 for average of pos. and neg.
-							valCount++
-							coeff += math.Abs(deviation) / 2.
-						}
-						// The transfer coefficient is placed at the maximum length of the
-						// meander and is the average deviation velocity of all grid cells
-						// within the meander.
-						if valCount != 0 {
-							uDevLength.AddVal(meanderLength, k, j, i)
-							uDeviation.AddVal(coeff/float64(valCount), k, j, i)
-						}
-					}
-				}
-			}
+		for i, uV := range u.Elements {
+			avgV := uAvg.Elements[i]
+			uDeviation.Elements[i] += math.Abs(uV - avgV)
 		}
 	}
-}
-
-// getDeviationIndexRange gets the array indexes of deviations within numNonlocal
-// grid cells from cell [k,j,i].
-func getDeviationIndexRange(k, j, i, numNonlocal, index, direction int, u *sparse.DenseArray) (elems, deltas []int) {
-	if direction != 1 && direction != -1 {
-		panic("invalid direction")
-	}
-	for ii := 1 * direction; ii*direction <= numNonlocal; ii += direction {
-		iiIndex := []int{k, j, i}
-		iiIndex[index] += ii
-		if err := u.CheckIndex(iiIndex); err != nil {
-			// don't include the index if it's outside the bounds of the grid.
-			continue
-		}
-		elems = append(elems, u.Index1d(iiIndex...))
-		deltas = append(deltas, ii*direction)
-	}
-	return
 }
 
 func arrayAverage(s *sparse.DenseArray) *sparse.DenseArray {

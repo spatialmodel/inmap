@@ -26,9 +26,8 @@ import (
 	"time"
 )
 
-// Chemical mass conversions
+// Molar masses [grams per mole]
 const (
-	// grams per mole
 	mwNOx = 46.0055
 	mwN   = 14.0067
 	mwNO3 = 62.00501
@@ -37,8 +36,10 @@ const (
 	mwS   = 32.0655
 	mwSO2 = 64.0644
 	mwSO4 = 96.0632
+)
 
-	// ratios
+// Chemical mass conversions [ratios]
+const (
 	NOxToN = mwN / mwNOx
 	NtoNO3 = mwNO3 / mwN
 	SOxToS = mwSO2 / mwS
@@ -157,9 +158,9 @@ func (d *InMAPdata) Run(emissions map[string][]float64, outputAllLayers bool) (
 			c.UpwindAdvection(d.Dt)
 			c.Mixing(d.Dt)
 			c.MeanderMixing(d.Dt)
-			c.Chemistry(d)
 			c.DryDeposition(d)
 			c.WetDeposition(d.Dt)
+			c.Chemistry(d) // Run chemistry last because it does instantaneous partitioning.
 		}}
 
 	for { // Run main calculation loop until pollutant concentrations stabilize
@@ -244,9 +245,11 @@ func (d *InMAPdata) doScience(nprocs, procNum int,
 	for f := range funcChan {
 		for ii := procNum; ii < len(d.Data); ii += nprocs {
 			c = d.Data[ii]
+			c.Lock() // Lock the cell to avoid race conditions
 			if c.Layer <= topLayerToCalc {
 				f(c, d) // run function
 			}
+			c.Unlock() // Unlock the cell: we're done editing it
 		}
 		wg.Done()
 	}

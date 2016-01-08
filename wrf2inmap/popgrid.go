@@ -38,7 +38,7 @@ type gridCell struct {
 	IWest, IEast, INorth, ISouth, IAbove, IBelow    []int
 	IGroundLevel                                    []int
 	UAvg, VAvg, WAvg                                float64 // Average velocities
-	UDeviation, VDeviation, UDevLength, VDevLength  float64 // Average deviations from average velocity
+	UDeviation, VDeviation                          float64 // Average deviations from average velocity
 	AOrgPartitioning, BOrgPartitioning              float64
 	NOPartitioning, SPartitioning                   float64
 	NHPartitioning                                  float64
@@ -586,10 +586,6 @@ func getData(cells []*gridCell, data map[string]dataHolder, k int) {
 			cell.UDeviation += data["UDeviation"].data.Get(
 				k, ctmrow, ctmcol) / ncells
 			cell.VDeviation += data["VDeviation"].data.Get(
-				k, ctmrow, ctmcol) / ncells
-			cell.UDevLength += data["UDevLength"].data.Get(
-				k, ctmrow, ctmcol) / ncells
-			cell.VDevLength += data["VDevLength"].data.Get(
 				k, ctmrow, ctmcol) / ncells
 
 			cell.AOrgPartitioning += data["aOrgPartitioning"].data.Get(

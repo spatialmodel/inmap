@@ -79,8 +79,6 @@ type Cell struct {
 	WAvg       float64 `desc:"Average up-down wind speed" units:"m/s"`
 	UDeviation float64 `desc:"Average deviation from East-West velocity" units:"m/s"`
 	VDeviation float64 `desc:"Average deviation from North-South velocity" units:"m/s"`
-	UDevLength float64 `desc:"Length of average East-West velocity deviation" units:"m"`
-	VDevLength float64 `desc:"Length of average North-South velocity deviation" units:"m"`
 
 	AOrgPartitioning float64 `desc:"Organic particle partitioning" units:"fraction particles"`
 	BOrgPartitioning float64 // particle fraction
@@ -140,11 +138,6 @@ type Cell struct {
 	IBelow       []int // Row indexes of neighbors below
 	IAbove       []int // Row indexes of neighbors above
 	IGroundLevel []int // Row indexes of neighbors at ground level
-
-	NSMeanderCells []*Cell   // Cells for nonlocal advection
-	EWMeanderCells []*Cell   // Cells for nonlocal advection
-	NSMeanderFrac  []float64 // Volume fractions of each nonlocal cell
-	EWMeanderFrac  []float64 // Volume fractions of each nonlocal cell
 
 	DxPlusHalf  []float64 // Distance between centers of cell and East [m]
 	DxMinusHalf []float64 // Distance between centers of cell and West [m]
@@ -557,77 +550,6 @@ func (c *Cell) neighborInfo() {
 	for i, g := range c.GroundLevel {
 		c.GroundLevelFrac[i] = min((g.Dx*g.Dy)/(c.Dx*c.Dy), 1.)
 	}
-	c.addMeanderCells()
-}
-
-// meanderCells is a recursive function to find all of the cells within the
-// deviation length of c in the direction specified by field.
-func meanderCells(c, mCell *Cell, locFunc func(m geom.Point) float64, nextCellFunc func(m *Cell) []*Cell) []*Cell {
-	if mCell.Boundary {
-		return nil
-	}
-	var mCells []*Cell
-	mcLoc := mCell.T.Bounds(nil).Min
-	if locFunc(mcLoc) < c.UDevLength*5 { // TODO: remove constant
-		mCells = append(mCells, mCell)
-		for _, mc := range nextCellFunc(mCell) {
-			mCells = append(mCells, meanderCells(c, mc, locFunc, nextCellFunc)...)
-		}
-	}
-	return mCells
-}
-
-func (c *Cell) addMeanderCells() {
-	cLoc := c.T.Bounds(nil).Min
-	xDiff := func(mcLoc geom.Point) float64 {
-		return math.Abs(cLoc.X - mcLoc.X)
-	}
-	yDiff := func(mcLoc geom.Point) float64 {
-		return math.Abs(cLoc.Y - mcLoc.Y)
-	}
-	// Find cells for east-west nonlocal advection
-	for _, w := range c.West {
-		c.EWMeanderCells = append(c.EWMeanderCells,
-			meanderCells(c, w, xDiff, func(m *Cell) []*Cell {
-				return m.West
-			})...)
-	}
-	for _, e := range c.East {
-		c.EWMeanderCells = append(c.EWMeanderCells,
-			meanderCells(c, e, xDiff, func(m *Cell) []*Cell {
-				return m.East
-			})...)
-	}
-	// calculate volume fractions for each cell
-	c.EWMeanderFrac = make([]float64, len(c.EWMeanderCells))
-	v := 0.
-	for _, cc := range c.EWMeanderCells {
-		v += cc.Volume
-	}
-	for i, cc := range c.EWMeanderCells {
-		c.EWMeanderFrac[i] = cc.Volume / v
-	}
-	for _, s := range c.South {
-		c.NSMeanderCells = append(c.NSMeanderCells,
-			meanderCells(c, s, yDiff, func(m *Cell) []*Cell {
-				return m.South
-			})...)
-	}
-	for _, n := range c.North {
-		c.NSMeanderCells = append(c.NSMeanderCells,
-			meanderCells(c, n, yDiff, func(m *Cell) []*Cell {
-				return m.North
-			})...)
-	}
-	// calculate volume fractions for each cell
-	c.NSMeanderFrac = make([]float64, len(c.NSMeanderCells))
-	v = 0.
-	for _, cc := range c.NSMeanderCells {
-		v += cc.Volume
-	}
-	for i, cc := range c.NSMeanderCells {
-		c.NSMeanderFrac[i] = cc.Volume / v
-	}
 }
 
 // addEmissionsFlux adds emissions to c. It should be run once for each timestep.
@@ -648,8 +570,9 @@ func (d *InMAPdata) setTstepCFL() {
 
 		// Advection time step
 		dt1 := Cmax / math.Pow(3., 0.5) /
-			max(math.Abs(c.UAvg)/c.Dx, math.Abs(c.VAvg)/c.Dy, math.Abs(c.WAvg)/c.Dz,
-				c.UDeviation/c.Dx, c.VDeviation/c.Dy)
+			max((math.Abs(c.UAvg)+c.UDeviation*2)/c.Dx,
+				(math.Abs(c.VAvg)+c.VDeviation*2)/c.Dy,
+				math.Abs(c.WAvg)/c.Dz)
 		// vertical diffusion time step
 		dt2 := Cmax * c.Dz * c.Dz / 2. / c.Kzz
 		// horizontal diffusion time step

@@ -312,7 +312,7 @@ func chemPrint(t *testing.T, vals []float64, c *Cell) {
 
 // Test whether mass is conserved during advection.
 func TestAdvection(t *testing.T) {
-	const tolerance = 1.e-7
+	const tolerance = 1.e-3
 	nsteps := 10
 	var cellGroups = [][]*Cell{d.Data, d.westBoundary, d.eastBoundary,
 		d.northBoundary, d.southBoundary, d.topBoundary}
@@ -355,13 +355,17 @@ func TestAdvection(t *testing.T) {
 
 // Test whether mass is conserved during meander mixing.
 func TestMeanderMixing(t *testing.T) {
-	const tolerance = 1.e-7
+	const tolerance = 1.e-3
 	nsteps := 10
+	var cellGroups = [][]*Cell{d.Data, d.westBoundary, d.eastBoundary,
+		d.northBoundary, d.southBoundary, d.topBoundary}
 	// Test emissions from every thirtieth row.
 	for testRow := 0; testRow < len(d.Data); testRow += 30 {
-		for _, c := range d.Data {
-			c.Ci[0] = 0
-			c.Cf[0] = 0
+		for _, group := range cellGroups {
+			for _, c := range group {
+				c.Ci[0] = 0
+				c.Cf[0] = 0
+			}
 		}
 		for tt := 0; tt < nsteps; tt++ {
 			c := d.Data[testRow]
@@ -376,13 +380,15 @@ func TestMeanderMixing(t *testing.T) {
 		}
 		sum := 0.
 		layerSum := make(map[int]float64)
-		for _, c := range d.Data {
-			val := c.Cf[0] * c.Dy * c.Dx * c.Dz
-			if val < 0 {
-				t.Fatalf("row %d emis: negative concentration", testRow)
+		for _, group := range cellGroups {
+			for _, c := range group {
+				val := c.Cf[0] * c.Dy * c.Dx * c.Dz
+				if val < 0 {
+					t.Fatalf("row %d emis: negative concentration", testRow)
+				}
+				sum += val
+				layerSum[c.Layer] += val
 			}
-			sum += val
-			layerSum[c.Layer] += val
 		}
 		if different(sum, E*float64(nsteps), tolerance) {
 			t.Errorf("row %d emis: sum=%.12g (it should equal %v)\n", testRow, sum, E*float64(nsteps))
