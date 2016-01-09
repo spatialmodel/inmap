@@ -151,7 +151,7 @@ func main() {
 		panic(err)
 	}
 	end = end.AddDate(0, 0, 1) // add 1 day to the end
-	numTsteps = end.Sub(start).Hours()
+	numTsteps = math.NaN()     // We will set the correct number later.
 
 	go func() {
 		http.ListenAndServe("localhost:6060", nil)
@@ -494,6 +494,7 @@ type dataHolder struct {
 func iterateTimeSteps(msg string, funcs ...cdfReaderFunc) {
 	filechan := make(chan string)
 	finishchan := make(chan int)
+	numTsteps = 0
 	for i := 0; i < runtime.GOMAXPROCS(0); i++ {
 		go processFile(filechan, finishchan, funcs...)
 	}
@@ -506,7 +507,7 @@ func iterateTimeSteps(msg string, funcs ...cdfReaderFunc) {
 	}
 	close(filechan)
 	for i := 0; i < runtime.GOMAXPROCS(0); i++ {
-		<-finishchan
+		numTsteps += float64(<-finishchan)
 	}
 }
 
@@ -514,10 +515,12 @@ func processFile(filechan chan string, finishchan chan int,
 	funcs ...cdfReaderFunc) {
 	f := new(cdfFile)
 	var err error
+	tsteps := 0
 	for filename := range filechan {
 		f.ff, err = os.Open(filename)
 		if err != nil {
-			panic(err)
+			log.Printf("WARNING: couldn't read file %s", filename)
+			continue
 		}
 		f.f, err = cdf.Open(f.ff)
 		if err != nil {
@@ -531,9 +534,10 @@ func processFile(filechan chan string, finishchan chan int,
 			}
 			wg.Wait()
 		}
+		tsteps += 24
 		f.ff.Close()
 	}
-	finishchan <- 0
+	finishchan <- tsteps
 }
 
 type cdfReaderFunc func(*cdfFile, int, *sync.WaitGroup)
