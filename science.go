@@ -162,12 +162,10 @@ func (c *Cell) MeanderMixing(Δt float64) {
 	}
 }
 
-const ammoniaFactor = 4.
-
 // Chemistry calculates the secondary formation of PM2.5.
-// Explicitely calculates formation of particulate sulfate
+// It explicitely calculates formation of particulate sulfate
 // from gaseous and aqueous SO2.
-// Partitions organic matter ("gOrg" and "pOrg"), the
+// It partitions organic matter ("gOrg" and "pOrg"), the
 // nitrogen in nitrate ("gNO and pNO"), and the nitrogen in ammonia ("gNH" and
 // "pNH) between gaseous and particulate phase
 // based on the spatially explicit partioning present in the baseline data.
@@ -178,23 +176,10 @@ func (c *Cell) Chemistry(d *InMAPdata) {
 	c.Cf[ipS] += ΔS
 	c.Cf[igS] -= ΔS
 
-	// NH3 / NH4 partitioning
+	// NH3 / pNH4 partitioning
 	totalNH := c.Cf[igNH] + c.Cf[ipNH]
-	// Caclulate difference from equilibrium particulate NH conc.
-	eqNHpDistance := totalNH*c.NHPartitioning - c.Cf[ipNH]
-	if c.Cf[igS] != 0. && eqNHpDistance > 0. { // particles will form
-		// If ΔSOx is present and pNH4 concentration is below
-		// equilibrium, assume that pNH4 formation
-		// is limited by SO4 formation.
-		ΔNH := min(max(ammoniaFactor*ΔS*mwN/mwS, 0.), eqNHpDistance)
-		c.Cf[ipNH] += ΔNH
-		c.Cf[igNH] -= ΔNH
-	} else {
-		// If pNH4 concentration is above equilibrium or if there is
-		// no change in SOx present, assume instantaneous equilibration.
-		c.Cf[ipNH] += eqNHpDistance
-		c.Cf[igNH] -= eqNHpDistance
-	}
+	c.Cf[ipNH] = totalNH * c.NHPartitioning
+	c.Cf[igNH] = totalNH * (1 - c.NHPartitioning)
 
 	// NOx / pN0 partitioning
 	totalNO := c.Cf[igNO] + c.Cf[ipNO]
