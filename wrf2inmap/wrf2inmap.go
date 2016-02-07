@@ -21,7 +21,7 @@ import (
 	"bitbucket.org/ctessum/sparse"
 	"github.com/ctessum/atmos/acm2"
 	"github.com/ctessum/atmos/emep"
-	"github.com/ctessum/atmos/gocart"
+	//"github.com/ctessum/atmos/gocart"
 	"github.com/ctessum/atmos/seinfeld"
 	"github.com/ctessum/atmos/wesely1989"
 )
@@ -1132,27 +1132,27 @@ func StabilityMixingChemistry(LayerHeights *sparse.DenseArray,
 					// z: [m] surface layer; assumed to be top of first model layer.
 					//z := LayerHeights.Get(1, j, i)
 					lu := f2i(luIndex.Get(j, i))
-					gocartObk := gocart.ObhukovLen(hflux, ρ, To, u)
+					//gocartObk := gocart.ObhukovLen(hflux, ρ, To, u)
 					zo := USGSz0[lu]         // roughness length [m]
 					const dParticle = 0.3e-6 // [m], Seinfeld & Pandis fig 8.11
 					const ρparticle = 1830.  // [kg/m3] Jacobson (2005) Ex. 13.5
 					const Θsurface = 0.      // surface slope [rad]; Assume surface is flat.
 
 					// This is not the best way to tell what season it is.
-					//var iSeasonP seinfeld.SeasonalCategory // for particles
+					var iSeasonP seinfeld.SeasonalCategory // for particles
 					var iSeasonG wesely1989.SeasonCategory // for gases
 					switch {
 					case To > 273.+20.:
-						//iSeasonP = seinfeld.Midsummer
+						iSeasonP = seinfeld.Midsummer
 						iSeasonG = wesely1989.Midsummer
 					case To <= 273.+20 && To > 273.+10.:
-						//iSeasonP = seinfeld.Autumn
+						iSeasonP = seinfeld.Autumn
 						iSeasonG = wesely1989.Autumn
 					case To <= 273.+10 && To > 273.+0.:
-						//iSeasonP = seinfeld.LateAutumn
+						iSeasonP = seinfeld.LateAutumn
 						iSeasonG = wesely1989.LateAutumn
 					default:
-						//iSeasonP = seinfeld.Winter
+						iSeasonP = seinfeld.Winter
 						iSeasonG = wesely1989.Winter
 					}
 					const dew = false // don't know if there's dew.
@@ -1160,11 +1160,11 @@ func StabilityMixingChemistry(LayerHeights *sparse.DenseArray,
 
 					G := swDown.Get(j, i) + glw.Get(j, i) // irradiation [W/m2]
 					particleDryDep.AddVal(
-						gocart.ParticleDryDep(gocartObk, u, To, h,
-							zo, dParticle/2., ρparticle, p), 0, j, i)
-					//seinfeld.DryDepParticle(z, zo, u, L, dParticle,
-					//	To, p, ρparticle,
-					//	ρ, iSeasonP, USGSseinfeld[lu]), 0, j, i)
+						//gocart.ParticleDryDep(gocartObk, u, To, h,
+						//	zo, dParticle/2., ρparticle, p), 0, j, i)
+						seinfeld.DryDepParticle(z, zo, u, L, dParticle,
+							To, p, ρparticle,
+							ρ, iSeasonP, USGSseinfeld[lu]), 0, j, i)
 					SO2DryDep.AddVal(
 						seinfeld.DryDepGas(z, zo, u, L, To, ρ,
 							G, Θsurface,
