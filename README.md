@@ -12,7 +12,7 @@ Figure 1: InMAP spatial discretization of the model domain into variable resolut
 
 ## Getting InMAP
 
-Go to [releases](https://github.com/ctessum/inmap/releases) to download the most recent release for your type of computer. You will need both the executable program and the input data.
+Go to [releases](https://github.com/ctessum/inmap/releases) to download the most recent release for your type of computer. For Mac systems, download the file with "darwin" in the name. You will need both the executable program and the input data ("inmapData_xxx.zip"). All of the versions of the program are labeled "amd64" to denote that they are for 64-bit processors (i.e., all relatively recent notebook and desktop computers). It doesn't matter whether your computer processor is made by AMD or another brand, it should work either way.
 
 ### Compiling from source
 
@@ -31,7 +31,7 @@ You can also compile InMAP from its source code. It should work on most types of
 
 ## Running the InMAP example case
 
-From the [testdata](https://github.com/ctessum/inmap/tree/master/testdata) directory in this website, download all of the files that match the pattern "inmap_\*.gob" or "testEmis.\*", where \* is a wildcard that can match any set of characters. If you have followed the instructions in the "Compiling from source" section above you will already have downloaded these files. Next, download the file [configExample.json](https://raw.githubusercontent.com/ctessum/inmap/master/inmap/configExample.json) and the [InMAP executable program](https://github.com/ctessum/inmap/releases) in the same directory. Next, open the file "configExample.json" with a text editor and delete the text "../testdata/" anywhere you see it. Finally, open a command prompt window, navigate to the directory where you saved the aforementioned files, and run the command `inmap -config=configExample.json` on Mac or Linux systems and `inmap.exe -config=configExample.json` on windows systems to run the program. The program should run without any error messages and create a file called "output_0.shp" (along with supporting files like "output_0.dbf") which can be viewed with any program that can view shapefiles. Refer to the next section for additional details.
+From the [testdata](https://github.com/ctessum/inmap/tree/master/testdata) directory, download all of the files that match the pattern "inmap_\*.gob" or "testEmis.\*", where \* is a wildcard that can match any set of characters. If you have followed the instructions in the "Compiling from source" section above you will already have downloaded these files. Next, download the file [configExample.json](https://raw.githubusercontent.com/ctessum/inmap/master/inmap/configExample.json) and the [InMAP executable program](https://github.com/ctessum/inmap/releases) in the same directory. Next, open the file "configExample.json" with a text editor and delete the text "../testdata/" anywhere you see it. Finally, open a command prompt window, navigate to the directory where you saved the aforementioned files, and run the command `inmap1.1.0linux-amd64 -config=configExample.json` on Linux systems, `inmap1.1.0darwin-amd64 -config=configExample.json` on Mac systems, or `inmap1.1.0windows-amd64.exe -config=configExample.json` on Windows systems to run the program. The program should run without any error messages and create a file called "output_0.shp" (along with supporting files like "output_0.dbf") which can be viewed with any program that can view shapefiles. Refer to the next section for additional details.
 
 ## Running InMAP
 
@@ -55,7 +55,7 @@ From the [testdata](https://github.com/ctessum/inmap/tree/master/testdata) direc
 		inmap -config=/path/to/configfile.json
 	for Mac or Linux systems, and
 		inmap.exe -config=/path/to/configfile.json
-	for windows systems. While the program is running, you can open a web browser and navigate to `localhost:8080` to view status and diagnostic information.
+	for windows systems. If you are using the precompiled version of the program downloaded from the website, you will need type "inmap1.1.0windows-amd64.exe" instead of "inmap.exe" etc. as described above. While the program is running, you can open a web browser and navigate to `localhost:8080` to view status and diagnostic information.
 
 3. View the program output. The output files are in [shapefile](http://en.wikipedia.org/wiki/Shapefile) format which can be viewed in most GIS programs. One free GIS program is [QGIS](http://www.qgis.org/). Output from each model layer is put into a separate file. Layer 0 is the one closest to the ground and will probably be of the most interest. By default, the InMAP only outputs results from layer zero, but this can be changed using the configuration file.
   The output shapefiles have a number of attribute columns. They include:
