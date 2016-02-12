@@ -4,6 +4,6 @@
 	"EmissionsShapefiles":[
 		"../testdata/testEmis.shp"
 	],
-	"OutputTemplate":"../testdata/output_[layer].geojson",
+	"OutputTemplate":"../testdata/output_[layer].shp",
 	"HTTPport":"8080"
 }
