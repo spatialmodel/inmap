@@ -15,7 +15,6 @@ import (
 	"github.com/ctessum/geom/encoding/geojson"
 	"github.com/ctessum/geom/encoding/shp"
 	"github.com/ctessum/geom/index/rtree"
-	"github.com/ctessum/geom/op"
 	"github.com/ctessum/geom/proj"
 	goshp "github.com/jonas-p/go-shp"
 )
@@ -28,8 +27,8 @@ func init() {
 }
 
 type gridCell struct {
-	geom.T
-	WebMapGeom                                      geom.T
+	geom.Polygonal
+	WebMapGeom                                      geom.Polygonal
 	Row, Col, Layer                                 int
 	Dx, Dy, Dz                                      float64
 	index                                           [][2]int
@@ -56,7 +55,7 @@ type gridCell struct {
 
 func (c *gridCell) copyCell() *gridCell {
 	o := new(gridCell)
-	o.T = c.T
+	o.Polygonal = c.Polygonal
 	o.WebMapGeom = c.WebMapGeom
 	o.PopData = make(map[string]float64)
 	for key, val := range c.PopData {
@@ -71,7 +70,7 @@ func (c *gridCell) copyCell() *gridCell {
 }
 
 func variableGrid(data map[string]dataHolder) {
-	sr, err := proj.FromProj4(config.GridProj)
+	sr, err := proj.Parse(config.GridProj)
 	handle(err)
 	log.Println("Loading population")
 	pop := loadPopulation(sr)
@@ -194,7 +193,7 @@ func (c *cellsSorter) Less(i, j int) bool {
 
 func getNeighborsHorizontal(cells []*gridCell, cellTree *rtree.Rtree) {
 	for _, cell := range cells {
-		b := cell.Bounds(nil)
+		b := cell.Bounds()
 		bboxOffset := config.BboxOffset
 		westbox := newRect(b.Min.X-2*bboxOffset, b.Min.Y+bboxOffset,
 			b.Min.X-bboxOffset, b.Max.Y-bboxOffset)
@@ -213,7 +212,7 @@ func getNeighborsHorizontal(cells []*gridCell, cellTree *rtree.Rtree) {
 
 func getNeighborsAbove(cells []*gridCell, aboveCellTree *rtree.Rtree) {
 	for _, cell := range cells {
-		b := cell.Bounds(nil)
+		b := cell.Bounds()
 		bboxOffset := config.BboxOffset
 		abovebox := newRect(b.Min.X+bboxOffset, b.Min.Y+bboxOffset,
 			b.Max.X-bboxOffset, b.Max.Y-bboxOffset)
@@ -222,7 +221,7 @@ func getNeighborsAbove(cells []*gridCell, aboveCellTree *rtree.Rtree) {
 }
 func getNeighborsBelow(cells []*gridCell, belowCellTree *rtree.Rtree) {
 	for _, cell := range cells {
-		b := cell.Bounds(nil)
+		b := cell.Bounds()
 		bboxOffset := config.BboxOffset
 		belowbox := newRect(b.Min.X+bboxOffset, b.Min.Y+bboxOffset,
 			b.Max.X-bboxOffset, b.Max.Y-bboxOffset)
@@ -231,7 +230,7 @@ func getNeighborsBelow(cells []*gridCell, belowCellTree *rtree.Rtree) {
 }
 func getNeighborsGroundLevel(cells []*gridCell, groundlevelCellTree *rtree.Rtree) {
 	for _, cell := range cells {
-		b := cell.Bounds(nil)
+		b := cell.Bounds()
 		bboxOffset := config.BboxOffset
 		groundlevelbox := newRect(b.Min.X+bboxOffset, b.Min.Y+bboxOffset,
 			b.Max.X-bboxOffset, b.Max.Y-bboxOffset)
@@ -249,10 +248,10 @@ func getIndexes(cellTree *rtree.Rtree, box *geom.Bounds) []int {
 }
 
 func newRect(xmin, ymin, xmax, ymax float64) *geom.Bounds {
-	p := geom.NewBounds()
-	p.ExtendPoint(geom.Point{X: xmin, Y: ymin})
-	p.ExtendPoint(geom.Point{X: xmax, Y: ymax})
-	return p
+	return &geom.Bounds{
+		Min: geom.Point{X: xmin, Y: ymin},
+		Max: geom.Point{X: xmax, Y: ymax},
+	}
 }
 
 // JSONHolder holds GeoJSON information
@@ -277,7 +276,7 @@ func writeJSONAndGob(cells []*gridCell, k int) {
 	for i, cell := range cells {
 		x := new(JSONHolder)
 		x.Type = "Feature"
-		x.Geometry, err = geojson.ToGeoJSON(cell.T)
+		x.Geometry, err = geojson.ToGeoJSON(cell.Polygonal)
 		if err != nil {
 			panic(err)
 		}
@@ -300,23 +299,24 @@ func writeJSONAndGob(cells []*gridCell, k int) {
 	f.Close()
 
 	// Convert to google maps projection
-	src, err := proj.FromProj4(config.GridProj)
+	src, err := proj.Parse(config.GridProj)
 	if err != nil {
 		panic(err)
 	}
-	dst, err := proj.FromProj4(webMapProj)
+	dst, err := proj.Parse(webMapProj)
 	if err != nil {
 		panic(err)
 	}
-	ct, err := proj.NewCoordinateTransform(src, dst)
+	trans, err := src.NewTransform(dst)
 	if err != nil {
 		panic(err)
 	}
 	for _, cell := range cells {
-		cell.WebMapGeom, err = ct.Reproject(cell.T)
-		if err != nil {
-			panic(err)
+		g, err2 := cell.Transform(trans)
+		if err2 != nil {
+			panic(err2)
 		}
+		cell.WebMapGeom = g.(geom.Polygonal)
 	}
 
 	fname = fmt.Sprintf("%v_%v.gob", config.OutputFilePrefix, k)
@@ -417,19 +417,12 @@ func createCell(pop, mort *rtree.Rtree, index [][2]int) *gridCell {
 	cell.PopData = make(map[string]float64)
 	cell.index = index
 	// Polygon must go counter-clockwise
-	cell.T = geom.Polygon([][]geom.Point{{{l, b}, {r, b}, {r, u}, {l, u}, {l, b}}})
-	for _, pInterface := range pop.SearchIntersect(cell.Bounds(nil)) {
+	cell.Polygonal = geom.Polygon([][]geom.Point{{{l, b}, {r, b}, {r, u}, {l, u}, {l, b}}})
+	for _, pInterface := range pop.SearchIntersect(cell.Bounds()) {
 		p := pInterface.(*population)
-		intersection, err := op.Construct(
-			cell.T, p.T, op.INTERSECTION)
-		if err != nil {
-			panic(err)
-		}
-		area1 := op.Area(intersection)
-		area2 := op.Area(p.T) // we want to conserve the total population
-		if err != nil {
-			panic(err)
-		}
+		intersection := cell.Intersection(p)
+		area1 := intersection.Area()
+		area2 := p.Area() // we want to conserve the total population
 		if area2 == 0. {
 			panic("divide by zero")
 		}
@@ -444,15 +437,11 @@ func createCell(pop, mort *rtree.Rtree, index [][2]int) *gridCell {
 			cell.aboveDensityThreshold = true
 		}
 	}
-	for _, mInterface := range mort.SearchIntersect(cell.Bounds(nil)) {
+	for _, mInterface := range mort.SearchIntersect(cell.Bounds()) {
 		m := mInterface.(*mortality)
-		intersection, err := op.Construct(
-			cell.T, m.T, op.INTERSECTION)
-		if err != nil {
-			panic(err)
-		}
-		area1 := op.Area(intersection)
-		area2 := op.Area(cell.T) // we want to conserve the average rate here, not the total
+		intersection := cell.Intersection(m)
+		area1 := intersection.Area()
+		area2 := cell.Area() // we want to conserve the average rate here, not the total
 		if area2 == 0. {
 			panic("divide by zero")
 		}
@@ -477,31 +466,28 @@ func writeCell(shpf *shp.Encoder, cell *gridCell) {
 		outData[i+2] = cell.PopData[col]
 	}
 	outData[len(config.CensusPopColumns)+2] = cell.MortalityRate
-	err := shpf.EncodeFields(cell.T, outData...)
+	err := shpf.EncodeFields(cell.Polygonal, outData...)
 	handle(err)
 }
 
 type population struct {
-	geom.T
+	geom.Polygonal
 	PopData map[string]float64
 }
 
 type mortality struct {
-	geom.T
+	geom.Polygonal
 	AllCause float64 // Deaths per 100,000 people per year
 }
 
-func loadPopulation(sr proj.SR) (
+func loadPopulation(sr *proj.SR) (
 	pop *rtree.Rtree) {
 	var err error
 	popshp, err := shp.NewDecoder(config.CensusFile)
 	handle(err)
-	extension := filepath.Ext(config.CensusFile)
-	prjf, err := os.Open(config.CensusFile[0:len(config.CensusFile)-
-		len(extension)] + ".prj")
-	popsr, err := proj.ReadPrj(prjf)
+	popsr, err := popshp.SR()
 	handle(err)
-	ct, err := proj.NewCoordinateTransform(popsr, sr)
+	trans, err := popsr.NewTransform(sr)
 	handle(err)
 
 	pop = rtree.NewTree(25, 50)
@@ -521,8 +507,9 @@ func loadPopulation(sr proj.SR) (
 		if p.PopData[config.PopGridColumn] == 0. {
 			continue
 		}
-		p.T, err = ct.Reproject(g)
+		gg, err := g.Transform(trans)
 		handle(err)
+		p.Polygonal = gg.(geom.Polygonal)
 		pop.Insert(p)
 	}
 	handle(popshp.Error())
@@ -530,16 +517,14 @@ func loadPopulation(sr proj.SR) (
 	return
 }
 
-func loadMortality(sr proj.SR) (
+func loadMortality(sr *proj.SR) (
 	mort *rtree.Rtree) {
 	mortshp, err := shp.NewDecoder(config.MortalityRateFile)
 	handle(err)
-	extension := filepath.Ext(config.MortalityRateFile)
-	prjf, err := os.Open(config.MortalityRateFile[0:len(config.MortalityRateFile)-
-		len(extension)] + ".prj")
-	mortshpSR, err := proj.ReadPrj(prjf)
+
+	mortshpSR, err := mortshp.SR()
 	handle(err)
-	ct, err := proj.NewCoordinateTransform(mortshpSR, sr)
+	trans, err := mortshpSR.NewTransform(sr)
 	handle(err)
 
 	mort = rtree.NewTree(25, 50)
@@ -553,10 +538,11 @@ func loadMortality(sr proj.SR) (
 		if math.IsNaN(m.AllCause) {
 			panic("NaN!")
 		}
-		m.T, err = ct.Reproject(g)
+		gg, err := g.Transform(trans)
 		if err != nil {
 			panic(err)
 		}
+		m.Polygonal = gg.(geom.Polygonal)
 		mort.Insert(m)
 	}
 	return
@@ -566,10 +552,10 @@ func getData(cells []*gridCell, data map[string]dataHolder, k int) {
 	ctmtree := makeCTMgrid()
 	for _, cell := range cells {
 		cell.Layer = k
-		ctmcells := ctmtree.SearchIntersect(cell.Bounds(nil))
+		ctmcells := ctmtree.SearchIntersect(cell.Bounds())
 		ncells := float64(len(ctmcells))
 		if len(ctmcells) == 0. {
-			fmt.Println("geom", cell.T)
+			fmt.Println("geom", cell.Polygonal)
 			fmt.Println("index", cell.index)
 			panic("No matching cells!")
 		}
@@ -657,7 +643,7 @@ func makeCTMgrid() *rtree.Rtree {
 			x1 := config.CtmGridXo + config.CtmGridDx*float64(ix+1)
 			y0 := config.CtmGridYo + config.CtmGridDy*float64(iy)
 			y1 := config.CtmGridYo + config.CtmGridDy*float64(iy+1)
-			cell.T = geom.Polygon{[]geom.Point{
+			cell.Polygonal = geom.Polygon{[]geom.Point{
 				geom.Point{X: x0, Y: y0},
 				geom.Point{X: x1, Y: y0},
 				geom.Point{X: x1, Y: y1},
@@ -673,7 +659,7 @@ func makeCTMgrid() *rtree.Rtree {
 }
 
 type gridCellLight struct {
-	geom.T
+	geom.Polygonal
 	Row, Col int
 }
 

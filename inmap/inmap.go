@@ -38,6 +38,7 @@ import (
 	"github.com/ctessum/geom/encoding/shp"
 	"github.com/ctessum/geom/index/rtree"
 	"github.com/ctessum/geom/op"
+	"github.com/ctessum/geom/proj"
 	"github.com/ctessum/inmap"
 	goshp "github.com/jonas-p/go-shp"
 )
@@ -82,6 +83,10 @@ type configData struct {
 	// would be viewed by visiting `localhost:8080` in a web browser.
 	// If HTTPport is "", then the web server doesn't run.
 	HTTPport string
+
+	// InMAPProj specifies the spatial projection of the InMAP computational grid.
+	InMAPProj string
+	sr        *proj.SR
 }
 
 func main() {
@@ -127,13 +132,32 @@ func main() {
 		fname = strings.Replace(fname, ".shp", "", -1)
 		f, err := shp.NewDecoder(fname + ".shp")
 		if err != nil {
-			panic(err)
+			log.Fatalf("There was a problem reading the emissions shapefile '%s'. "+
+				"The error message was %v.", fname, err)
 		}
+		sr, err := f.SR()
+		if err != nil {
+			log.Fatalf("There was a problem reading the projection information for "+
+				"the emissions shapefile '%s'. The error message was %v.", fname, err)
+		}
+		trans, err := sr.NewTransform(config.sr)
+		if err != nil {
+			log.Fatalf("There was a problem creating a spatial reprojector for "+
+				"the emissions shapefile '%s'. The error message was %v.", fname, err)
+		}
+		i := 0
 		for {
 			var e emisRecord
 			if ok := f.DecodeRow(&e); !ok {
 				break
 			}
+
+			e.Geom, err = e.Transform(trans)
+			if err != nil {
+				log.Fatalf("There was a problem spatially reprojecting row %d in "+
+					"emissions file %s. The error message was %v", i, fname, err)
+			}
+			i++
 
 			// Input units = tons/year; output units = μg/s
 			const massConv = 907184740000.       // μg per short ton
@@ -168,45 +192,50 @@ func main() {
 		}
 	}
 
-	fmt.Println("Allocating emissions to grid cells...")
+	log.Println("Allocating emissions to grid cells...")
 	// allocate emissions to appropriate grid cells
 	for i := d.LayerStart[0]; i < d.LayerEnd[0]; i++ {
 		cell := d.Data[i]
-		for _, eTemp := range emisTree.SearchIntersect(cell.Bounds(nil)) {
+		for _, eTemp := range emisTree.SearchIntersect(cell.Bounds()) {
 			e := eTemp.(emisRecord)
-			var intersection geom.T
+			var intersection geom.Geom
 			var err error
-			switch e.T.(type) {
-			case geom.Point:
-				in, err := op.Within(e.T, cell.T)
-				if err != nil {
-					panic(err)
-				}
-				if in {
-					intersection = e.T
+			switch e.Geom.(type) {
+			case geom.PointLike:
+				if e.Within(cell) {
+					intersection = e.Geom
 				} else {
 					continue
 				}
-			default:
-				intersection, err = op.Construct(e.T, cell.T,
+			case geom.Polygonal:
+				poly := e.Geom.(geom.Polygonal)
+				intersection = poly.Intersection(cell)
+			case geom.Linear:
+				intersection, err = op.Construct(e.Geom, cell.Polygonal,
 					op.INTERSECTION)
 				if err != nil {
-					panic(err)
+					log.Fatalf("while allocating emissions to grid: %v", err)
 				}
+			default:
+				log.Fatalf("unsupported geometry type: %v", e.Geom)
 			}
 			if intersection == nil {
 				continue
 			}
 			var weightFactor float64 // fraction of geometry in grid cell
-			switch e.T.(type) {
-			case geom.Polygon, geom.MultiPolygon:
-				weightFactor = op.Area(intersection) / op.Area(e.T)
-			case geom.LineString, geom.MultiLineString:
-				weightFactor = op.Length(intersection) / op.Length(e.T)
+			switch e.Geom.(type) {
+			case geom.Polygonal:
+				ep := e.Geom.(geom.Polygonal)
+				ip := intersection.(geom.Polygonal)
+				weightFactor = ip.Area() / ep.Area()
+			case geom.Linear:
+				el := e.Geom.(geom.Linear)
+				il := intersection.(geom.Linear)
+				weightFactor = il.Length() / el.Length()
 			case geom.Point:
 				weightFactor = 1.
 			default:
-				panic(op.UnsupportedGeometryError{intersection})
+				log.Fatalf("unsupported geometry type: %v", e.Geom)
 			}
 			var plumeRow int
 			if e.Height > 0. { // calculate plume rise
@@ -269,7 +298,7 @@ func main() {
 }
 
 type emisRecord struct {
-	geom.T
+	geom.Geom
 	VOC, NOx, NH3, SOx, PM2_5 float64 // emissions [tons/year]
 	Height                    float64 // stack height [m]
 	Diam                      float64 // stack diameter [m]
@@ -283,6 +312,8 @@ func writeOutput(results map[string][][]float64, d *inmap.InMAPdata,
 
 	// Projection definition. This may need to be changed for a different
 	// spatial domain.
+	// TODO: Make this settable by the user, or at least check to make sure it
+	// matches the InMAPProj configuration variable.
 	const proj4 = `PROJCS["Lambert_Conformal_Conic",GEOGCS["GCS_unnamed ellipse",DATUM["D_unknown",SPHEROID["Unknown",6370997,0]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],PROJECTION["Lambert_Conformal_Conic"],PARAMETER["standard_parallel_1",33],PARAMETER["standard_parallel_2",45],PARAMETER["latitude_of_origin",40],PARAMETER["central_meridian",-97],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]`
 
 	vars := make([]string, 0, len(results))
@@ -323,7 +354,7 @@ func writeOutput(results map[string][][]float64, d *inmap.InMAPdata,
 			for j, v := range vars {
 				outFields[j] = results[v][k][i]
 			}
-			err := shape.EncodeFields(d.Data[row].T, outFields...)
+			err = shape.EncodeFields(d.Data[row].Polygonal, outFields...)
 			if err != nil {
 				log.Fatalf("error writing output shapefile: %v", err)
 			}
@@ -402,6 +433,16 @@ func readConfigFile(filename string) (config *configData) {
 			"configuration file(for example: " +
 			"\"OutputTemplate\":\"output_[layer].geojson\"")
 		os.Exit(1)
+	}
+
+	if config.InMAPProj == "" {
+		log.Fatal("You need to specify the InMAP grid projection in the " +
+			"'InMAPProj configuration variable.'")
+	}
+	config.sr, err = proj.Parse(config.InMAPProj)
+	if err != nil {
+		log.Fatalf("The following error occured while parsing the InMAP grid"+
+			"projection (the InMAPProj variable): %v", err)
 	}
 
 	outdir := filepath.Dir(config.OutputTemplate)

@@ -71,8 +71,8 @@ func init() {
 
 // Cell holds the state of a single grid cell.
 type Cell struct {
-	geom.T            // Cell geometry
-	WebMapGeom geom.T // Cell geometry in web map (mercator) coordinate system
+	geom.Polygonal                // Cell geometry
+	WebMapGeom     geom.Polygonal // Cell geometry in web map (mercator) coordinate system
 
 	UAvg       float64 `desc:"Average East-West wind speed" units:"m/s"`
 	VAvg       float64 `desc:"Average North-South wind speed" units:"m/s"`
@@ -650,8 +650,8 @@ func (d *InMAPdata) getUnits(varName string) string {
 }
 
 // GetGeometry returns the cell geometry for the given layer.
-func (d *InMAPdata) GetGeometry(layer int) []geom.T {
-	o := make([]geom.T, d.LayerEnd[layer]-d.LayerStart[layer])
+func (d *InMAPdata) GetGeometry(layer int) []geom.Geom {
+	o := make([]geom.Geom, d.LayerEnd[layer]-d.LayerStart[layer])
 	for i, c := range d.Data[d.LayerStart[layer]:d.LayerEnd[layer]] {
 		o[i] = c.WebMapGeom
 	}

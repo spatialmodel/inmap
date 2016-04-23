@@ -913,13 +913,13 @@ func windSpeed(uChan, vChan, wChan chan *sparse.DenseArray) {
 	}
 }
 
-// Roughness lengths for USGS land classes ([m]), from WRF file
+// USGSz0 holds Roughness lengths for USGS land classes ([m]), from WRF file
 // VEGPARM.TBL.
 var USGSz0 = []float64{.50, .1, .06, .1, 0.095, .20, .11,
 	.03, .035, .15, .50, .50, .50, .50, .35, 0.0001, .20, .40,
 	.01, .10, .30, .15, .075, 0.001, .01, .15, .01}
 
-// lookup table to go from USGS land classes to land classes for
+// USGSseinfeld lookup table to go from USGS land classes to land classes for
 // particle dry deposition.
 var USGSseinfeld = []seinfeld.LandUseCategory{
 	seinfeld.Desert,    //'Urban and Built-Up Land'
@@ -950,7 +950,7 @@ var USGSseinfeld = []seinfeld.LandUseCategory{
 	seinfeld.Desert,    //'Lava'
 	seinfeld.Desert}    //'White Sand'
 
-// lookup table to go from USGS land classes to land classes for
+// USGSwesely lookup table to go from USGS land classes to land classes for
 // gas dry deposition.
 var USGSwesely = []wesely1989.LandUseCategory{
 	wesely1989.Urban,        //'Urban and Built-Up Land'

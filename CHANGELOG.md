@@ -1,3 +1,6 @@
+# Release 1.1.1 (?)
+* Allowed the input emissions data shapefiles to have arbitrary spatial projections instead of requiring them to be the same as the InMAP grid
+
 # Release 1.1.0 (2016-2-12)
 * Fixed a bug related to molar mass conversions
 * Changed the advection algorithim to use Reynolds averaging instead of an empirical adjustment coefficient

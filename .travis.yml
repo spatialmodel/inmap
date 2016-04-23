@@ -6,10 +6,8 @@ before_install:
       - go get github.com/axw/gocov/gocov
       - go get github.com/mattn/goveralls
       - go get golang.org/x/tools/cmd/cover
-      - go get github.com/github/git-lfs
-      - git lfs install
-      - git lfs init
-      - git lfs pull
+      - wget https://github.com/ctessum/inmap/releases/download/v1.1.0/testdata_dev.zip
+      - unzip testdata_dev.zip
 
 install:
       - go get -d -t ./...
