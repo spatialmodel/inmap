@@ -48,8 +48,8 @@
      fit-margin-right="0"
      fit-margin-bottom="0"
      inkscape:zoom="1.3885006"
-     inkscape:cx="121.83157"
-     inkscape:cy="32.052976"
+     inkscape:cx="365.93657"
+     inkscape:cy="147.28519"
      inkscape:window-x="53"
      inkscape:window-y="24"
      inkscape:window-maximized="1"
@@ -738,7 +738,7 @@ fill: #FFFFFF;
      style="font-size:20.75px;font-family:BXJRPT-Clarke-Medium3;fill:#961c3c">
     <tspan
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.25px;font-family:Helvetica;-inkscape-font-specification:Helvetica"
-       id="tspan4510">health Impacts</tspan>
+       id="tspan4510">health impacts</tspan>
   </text>
   <text
      dx="0"
@@ -969,7 +969,7 @@ fill: #FFFFFF;
          x="424.68155"
          y="262.81079"
          style="font-size:15px;text-align:start;text-anchor:start;"
-         id="tspan4381"> </tspan></tspan><tspan
+         id="tspan4381" /></tspan><tspan
        sodipodi:role="line"
        x="256.03702"
        y="0"
