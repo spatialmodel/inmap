@@ -28,33 +28,18 @@ import (
 
 // ConfigInfo holds the configuration information for the program run.
 type ConfigInfo struct {
-	Wrfout              string  // Location of WRF output files. [DATE] is a wild card for the simulation date.
-	OutputDir           string  // Directory to put the output files in
-	OutputFilePrefix    string  // name for output files
-	StartDate           string  // Format = "YYYYMMDD"
-	EndDate             string  // Format = "YYYYMMDD"
-	VariableGridXo      float64 // lower left of output grid, x
-	VariableGridYo      float64 // lower left of output grid, y
-	VariableGridDx      float64 // m
-	VariableGridDy      float64 // m
-	Xnests              []int   // Nesting multiples in the X direction
-	Ynests              []int   // Nesting multiples in the Y direction
-	HiResLayers         int     // number of layers to do in high resolution (layers above this will be lowest resolution.
-	CtmGridXo           float64 // lower left of Chemical Transport Model (CTM) grid, x
-	CtmGridYo           float64 // lower left of grid, y
-	CtmGridDx           float64 // m
-	CtmGridDy           float64 // m
-	CtmGridNx           int
-	CtmGridNy           int
-	GridProj            string   // projection info for CTM grid; Proj4 format
-	PopDensityCutoff    float64  // limit for people per unit area in the grid cell
-	PopCutoff           float64  // limit for total number of people in the grid cell
-	BboxOffset          float64  // A number significantly less than the smallest grid size but not small enough to be confused with zero.
-	CensusFile          string   // Path to census shapefile
-	CensusPopColumns    []string // Shapefile fields containing populations for multiple demographics
-	PopGridColumn       string   // Name of field in shapefile to be used for determining variable grid resolution
-	MortalityRateFile   string   // Path to the mortality rate shapefile
-	MortalityRateColumn string   // Name of field in mortality rate shapefiel containing the mortality rate.
+	Wrfout           string  // Location of WRF output files. [DATE] is a wild card for the simulation date.
+	OutputDir        string  // Directory to put the output files in
+	OutputFilePrefix string  // name for output files
+	StartDate        string  // Format = "YYYYMMDD"
+	EndDate          string  // Format = "YYYYMMDD"
+	CtmGridXo        float64 // lower left of Chemical Transport Model (CTM) grid, x
+	CtmGridYo        float64 // lower left of grid, y
+	CtmGridDx        float64 // m
+	CtmGridDy        float64 // m
+	CtmGridNx        int
+	CtmGridNy        int
+	GridProj         string // projection info for CTM grid; Proj4 format
 }
 
 // WRF variables currently used:
@@ -351,6 +336,13 @@ func main() {
 			uAvg.Shape[2], vAvg.Shape[1], wAvg.Shape[0]})
 	h.AddAttribute("", "comment", "InMAP meteorology and baseline chemistry data file")
 
+	h.AddAttribute("", "X0", config.CtmGridXo)
+	h.AddAttribute("", "Y0", config.CtmGridYo)
+	h.AddAttribute("", "dx", config.CtmGridDx)
+	h.AddAttribute("", "dy", config.CtmGridDy)
+	h.AddAttribute("", "nx", config.CtmGridNx)
+	h.AddAttribute("", "ny", config.CtmGridNy)
+
 	data := map[string]dataHolder{
 		"UAvg": dataHolder{[]string{"z", "y", "xStagger"},
 			"Annual average x velocity", "m/s", uAvg},
@@ -481,7 +473,6 @@ func main() {
 		panic(err)
 	}
 	ff.Close()
-	variableGrid(data)
 }
 
 type dataHolder struct {

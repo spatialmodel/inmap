@@ -19,36 +19,30 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package inmap
 
 import (
-	"archive/zip"
-	"bytes"
-	"encoding/gob"
 	"fmt"
-	"io"
-	"io/ioutil"
-	"log"
 	"math"
-	"net/http"
-	"os"
-	"path/filepath"
 	"reflect"
 	"strings"
 	"sync"
 
-	"golang.org/x/net/context"
-	"golang.org/x/oauth2/google"
-
-	"google.golang.org/cloud"
-	"google.golang.org/cloud/storage"
-
 	"bitbucket.org/ctessum/aqhealth"
 	"github.com/ctessum/geom"
+	"github.com/ctessum/geom/index/rtree"
+	"github.com/ctessum/geom/proj"
 )
 
 // InMAPdata is holds the current state of the model.
 type InMAPdata struct {
-	Data    []*Cell // One data holder for each grid cell
+	VarGridConfig
+
+	Cells   []*Cell // One data holder for each grid cell
 	Dt      float64 // seconds
 	Nlayers int     // number of model layers
+
+	// VariableDescriptions gives descriptions of the model variables.
+	VariableDescriptions map[string]string
+	// VariableUnits gives the units of the model variables.
+	VariableUnits map[string]string
 
 	// Number of iterations to calculate. If < 1,
 	// calculate convergence automatically.
@@ -63,10 +57,14 @@ type InMAPdata struct {
 
 	// boundary cells; assume bottom boundary is the same as lowest layer
 	topBoundary []*Cell
-}
 
-func init() {
-	gob.Register(geom.Polygon{})
+	index *rtree.Rtree
+
+	population, mortalityrate *rtree.Rtree
+
+	sr *proj.SR
+
+	cellCache map[string]*Cell
 }
 
 // Cell holds the state of a single grid cell.
@@ -131,14 +129,6 @@ type Cell struct {
 	AboveFrac, BelowFrac []float64 // Fraction of cell covered by each neighbor (adds up to 1).
 	GroundLevelFrac      []float64 // Fraction of cell above to each ground level cell (adds up to 1).
 
-	IWest        []int // Row indexes of neighbors to the East
-	IEast        []int // Row indexes of neighbors to the West
-	ISouth       []int // Row indexes of neighbors to the South
-	INorth       []int // Row indexes of neighbors to the north
-	IBelow       []int // Row indexes of neighbors below
-	IAbove       []int // Row indexes of neighbors above
-	IGroundLevel []int // Row indexes of neighbors at ground level
-
 	DxPlusHalf  []float64 // Distance between centers of cell and East [m]
 	DxMinusHalf []float64 // Distance between centers of cell and West [m]
 	DyPlusHalf  []float64 // Distance between centers of cell and North [m]
@@ -146,7 +136,8 @@ type Cell struct {
 	DzPlusHalf  []float64 // Distance between centers of cell and Above [m]
 	DzMinusHalf []float64 // Distance between centers of cell and Below [m]
 
-	Layer int // layer index of grid cell
+	Layer       int     // layer index of grid cell
+	LayerHeight float64 // The height at the edge of this layer
 
 	Temperature                float64 `desc:"Average temperature" units:"K"`
 	WindSpeed                  float64 `desc:"RMS wind speed" units:"m/s"`
@@ -156,7 +147,12 @@ type Cell struct {
 	S1                         float64 `desc:"Stability parameter" units:"?"`
 	SClass                     float64 `desc:"Stability class" units:"0=Unstable; 1=Stable"`
 
+	TotalPM25 float64 // Total baseline PM2.5 concentration.
+
 	sync.RWMutex // Avoid cell being written by one subroutine and read by another at the same time.
+
+	index                 [][2]int
+	aboveDensityThreshold bool
 }
 
 func (c *Cell) prepare() {
@@ -166,331 +162,51 @@ func (c *Cell) prepare() {
 	c.emisFlux = make([]float64, len(polNames))
 }
 
-func (c *Cell) makecopy() *Cell {
+func (c *Cell) boundaryCopy() *Cell {
 	c2 := new(Cell)
 	c2.Dx, c2.Dy, c2.Dz = c.Dx, c.Dy, c.Dz
-	c2.Kxxyy = c.Kxxyy
+	c2.UAvg, c2.VAvg, c2.WAvg = c.UAvg, c.VAvg, c.WAvg
+	c2.UDeviation, c2.VDeviation = c.UDeviation, c.VDeviation
+	c2.Kxxyy, c2.Kzz = c.Kxxyy, c.Kzz
+	c2.M2u, c2.M2d = c.M2u, c.M2d
+	c2.Layer, c2.LayerHeight = c.Layer, c.LayerHeight
+	c2.Boundary = true
 	c2.prepare()
 	return c2
 }
 
-// InitOption allows options of different ways to initialize
-// the model.
-type InitOption func(*InMAPdata) error
-
-// UseFileTemplate initializes the model with data from a local disk,
-// where `filetemplate` is the path to
-// the Gob files with meteorology and background concentration data
-// (where `[layer]` is a stand-in for the layer number), and
-// `nLayers` is the number of vertical layers in the model.
-func UseFileTemplate(filetemplate string, nLayers int) InitOption {
-	return func(d *InMAPdata) error {
-		readers := make([]io.ReadCloser, nLayers)
-		var err error
-		for k := 0; k < nLayers; k++ {
-			filename := strings.Replace(filetemplate, "[layer]",
-				fmt.Sprintf("%v", k), -1)
-			if readers[k], err = os.Open(filename); err != nil {
-				return fmt.Errorf("Problem opening InMAP data file: %v",
-					err.Error())
-			}
-		}
-		return UseReaders(readers)(d)
-	}
-}
-
-// UseWebArchive initializes the model with data from a network,
-// where `url` is the network address, `fileNameTemplate` is the template for
-// the names of the Gob files with meteorology and background concentration data
-// (where `[layer]` is a stand-in for the layer number), and
-// `nLayers` is the number of vertical layers in the model. It is assumed
-// that the input files are contained in a single zip archive.
-func UseWebArchive(url, fileNameTemplate string, nLayers int) InitOption {
-	return func(d *InMAPdata) error {
-		fmt.Printf("Downloading data from %v...\n", url)
-		response, err := http.Get(url)
-		if err != nil {
-			return fmt.Errorf("error while downloading %v: %v", url, err)
-		}
-		defer response.Body.Close()
-		b, err := ioutil.ReadAll(response.Body)
-		if err != nil {
-			panic(err)
-		}
-		zr, err := zip.NewReader(bytes.NewReader(b), int64(len(b)))
-		if err != nil {
-			panic(err)
-		}
-		readers := make([]io.ReadCloser, nLayers)
-		for k := 0; k < nLayers; k++ {
-			found := false
-			filename := strings.Replace(fileNameTemplate, "[layer]",
-				fmt.Sprintf("%v", k), -1)
-			for _, f := range zr.File {
-				_, file := filepath.Split(f.Name)
-				if file == filename {
-					found = true
-					if readers[k], err = f.Open(); err != nil {
-						return fmt.Errorf(
-							"error while opening web archive: %v", err)
-					}
-				}
-			}
-			if !found {
-				return fmt.Errorf("could not file file %v in web archive", filename)
-
-			}
-		}
-		return UseReaders(readers)(d)
-	}
-}
-
-// UseCloudStorage initializes the model with data from Google Cloud Storage,
-// where ctx is the Context, `bucket` is the name of the bucket,
-// `fileNameTemplate` is the template for
-// the names of the Gob files with meteorology and background concentration data
-// (where `[layer]` is a stand-in for the layer number), and
-// `nLayers` is the number of vertical layers in the model. To minimize individual
-// download sizes, the input files
-// must be enclosed in zip files, with one input file per zip file.
-// ctx must include any authentication needed for acessing the files.
-func UseCloudStorage(ctx context.Context, bucket string, fileNameTemplate string,
-	nLayers int) InitOption {
-	return func(d *InMAPdata) error {
-		readers := make([]io.ReadCloser, nLayers)
-		ts, err := google.DefaultTokenSource(ctx, storage.ScopeReadOnly)
-		if err != nil {
-			return fmt.Errorf("could not retrieve default token source: %v", err)
-		}
-		client, err := storage.NewClient(ctx, cloud.WithTokenSource(ts))
-		if err != nil {
-			return fmt.Errorf("unable to get default client: %v", err)
-		}
-		bh := client.Bucket(bucket)
-		for k := 0; k < nLayers; k++ {
-			filename := strings.Replace(fileNameTemplate, "[layer]",
-				fmt.Sprintf("%v", k), -1)
-			obj := bh.Object(filename)
-			rc, err := obj.NewReader(ctx)
-			if err != nil {
-				log.Printf("In UseCloudStorage, retrieving file "+
-					"%v: %v", filename, err)
-				return err
-			}
-			b, err := ioutil.ReadAll(rc)
-			if err != nil {
-				log.Printf(
-					"UseCloudStorage: error while opening zip file: %v", err)
-				return err
-			}
-			zr, err := zip.NewReader(bytes.NewReader(b), int64(len(b)))
-			if err != nil {
-				panic(err)
-			}
-			if readers[k], err = zr.File[0].Open(); err != nil {
-				log.Printf(
-					"UseCloudStorage: error while opening zip file: %v", err)
-				return err
-			}
-		}
-		log.Printf("got readers")
-		return UseReaders(readers)(d)
-	}
-}
-
-// UseReaders initializes the model with data from `readers`,
-// with one reader for the data for each model layer. The
-// readers must be input in order with the ground-level
-// data first.
-func UseReaders(readers []io.ReadCloser) InitOption {
-	return func(d *InMAPdata) error {
-		d.Nlayers = len(readers)
-		inputData := make([][]*Cell, d.Nlayers)
-		d.LayerStart = make([]int, d.Nlayers)
-		d.LayerEnd = make([]int, d.Nlayers)
-		var wg sync.WaitGroup
-		wg.Add(d.Nlayers)
-		for k := 0; k < d.Nlayers; k++ {
-			go func(k int) {
-				f := readers[k]
-				g := gob.NewDecoder(f)
-				if err := g.Decode(&inputData[k]); err != nil {
-					panic(err)
-				}
-				d.LayerStart[k] = 0
-				d.LayerEnd[k] = len(inputData[k])
-				f.Close()
-				wg.Done()
-			}(k)
-		}
-		wg.Wait()
-		ncells := 0
-		// Adjust so beginning of layer is at end of previous layer
-		for k := 0; k < d.Nlayers; k++ {
-			d.LayerStart[k] += ncells
-			d.LayerEnd[k] += ncells
-			ncells += len(inputData[k])
-		}
-		// set up data holders
-		d.Data = make([]*Cell, ncells)
-		for _, indata := range inputData {
-			for _, c := range indata {
-				c.prepare()
-				d.Data[c.Row] = c
-			}
-		}
-		return nil
-	}
-}
-
-// InitInMAPdata initializes the model where
-// `option` is the selected option for retrieving the input data,
-// `numIterations` is the number of iterations to calculate
-// (if `numIterations` < 1, convergence is calculated automatically),
-// and `httpPort` is the port number for hosting the html GUI
-// (if `httpPort` is "", then the GUI doesn't run).
-func InitInMAPdata(option InitOption, numIterations int, httpPort string) (*InMAPdata, error) {
-	d := new(InMAPdata)
-	d.NumIterations = numIterations
-	err := option(d)
-	if err != nil {
-		return nil, err
-	}
-	for _, cell := range d.Data {
-		cell.setup(d)
-	}
-	/*nprocs := runtime.GOMAXPROCS(0)
-	var wg sync.WaitGroup
-	wg.Add(nprocs)
-	for procNum := 0; procNum < nprocs; procNum++ {
-		go func(procNum int) {
-			for ii := procNum; ii < len(d.Data); ii += nprocs {
-				cell := d.Data[ii]
-				cell.setup(d)
-			}
-			wg.Done()
-		}(procNum)
-	}*/
-	//wg.Wait()
-	if httpPort != "" {
-		go d.WebServer(httpPort)
-	}
-	d.setTstepCFL() // Set time step
-	return d, nil
-}
-
-func (c *Cell) setup(d *InMAPdata) {
-	// Link cells to neighbors or boundaries.
-	if len(c.IWest) == 0 {
-		d.addWestBoundary(c)
-	} else {
-		c.West = make([]*Cell, len(c.IWest))
-		for i, row := range c.IWest {
-			c.West[i] = d.Data[row]
-		}
-		c.IWest = nil
-	}
-	if len(c.IEast) == 0 {
-		d.addEastBoundary(c)
-	} else {
-		c.East = make([]*Cell, len(c.IEast))
-		for i, row := range c.IEast {
-			c.East[i] = d.Data[row]
-		}
-		c.IEast = nil
-	}
-	if len(c.ISouth) == 0 {
-		d.addSouthBoundary(c)
-	} else {
-		c.South = make([]*Cell, len(c.ISouth))
-		for i, row := range c.ISouth {
-			c.South[i] = d.Data[row]
-		}
-		c.ISouth = nil
-	}
-	if len(c.INorth) == 0 {
-		d.addNorthBoundary(c)
-	} else {
-		c.North = make([]*Cell, len(c.INorth))
-		for i, row := range c.INorth {
-			c.North[i] = d.Data[row]
-		}
-		c.INorth = nil
-	}
-	if len(c.IAbove) == 0 || c.Layer == d.Nlayers-1 {
-		d.addTopBoundary(c)
-	} else {
-		c.Above = make([]*Cell, len(c.IAbove))
-		for i, row := range c.IAbove {
-			c.Above[i] = d.Data[row]
-		}
-		c.IAbove = nil
-	}
-	if c.Layer != 0 {
-		c.Below = make([]*Cell, len(c.IBelow))
-		c.GroundLevel = make([]*Cell, len(c.IGroundLevel))
-		for i, row := range c.IBelow {
-			c.Below[i] = d.Data[row]
-		}
-		for i, row := range c.IGroundLevel {
-			c.GroundLevel[i] = d.Data[row]
-		}
-		c.IBelow = nil
-		c.IGroundLevel = nil
-	} else { // assume bottom boundary is the same as lowest layer.
-		c.Below = []*Cell{d.Data[c.Row]}
-		c.GroundLevel = []*Cell{d.Data[c.Row]}
-	}
-	c.neighborInfo()
-}
-
 // addWestBoundary adds a cell to the western boundary of the domain.
 func (d *InMAPdata) addWestBoundary(cell *Cell) {
-	c := cell.makecopy()
+	c := cell.boundaryCopy()
 	cell.West = []*Cell{c}
-	c.West, c.East = []*Cell{c}, []*Cell{c} // boundary cells are adjacent to themselves.
-	c.Boundary = true
-	c.UAvg = cell.UAvg
 	d.westBoundary = append(d.westBoundary, c)
 }
 
 // addEastBoundary adds a cell to the eastern boundary of the domain.
 func (d *InMAPdata) addEastBoundary(cell *Cell) {
-	c := cell.makecopy()
+	c := cell.boundaryCopy()
 	cell.East = []*Cell{c}
-	c.West, c.East = []*Cell{c}, []*Cell{c} // boundary cells are adjacent to themselves.
-	c.Boundary = true
-	c.UAvg = cell.UAvg
 	d.eastBoundary = append(d.eastBoundary, c)
 }
 
 // addSouthBoundary adds a cell to the southern boundary of the domain.
 func (d *InMAPdata) addSouthBoundary(cell *Cell) {
-	c := cell.makecopy()
+	c := cell.boundaryCopy()
 	cell.South = []*Cell{c}
-	c.South, c.North = []*Cell{c}, []*Cell{c} // boundary cells are adjacent to themselves.
-	c.Boundary = true
-	c.VAvg = cell.VAvg
 	d.southBoundary = append(d.southBoundary, c)
 }
 
 // addNorthBoundary adds a cell to the northern boundary of the domain.
 func (d *InMAPdata) addNorthBoundary(cell *Cell) {
-	c := cell.makecopy()
+	c := cell.boundaryCopy()
 	cell.North = []*Cell{c}
-	c.South, c.North = []*Cell{c}, []*Cell{c} // boundary cells are adjacent to themselves.
-	c.Boundary = true
-	c.VAvg = cell.VAvg
 	d.northBoundary = append(d.northBoundary, c)
 }
 
 // addTopBoundary adds a cell to the top boundary of the domain.
 func (d *InMAPdata) addTopBoundary(cell *Cell) {
-	c := cell.makecopy()
+	c := cell.boundaryCopy()
 	cell.Above = []*Cell{c}
-	c.Below, c.Above = []*Cell{c}, []*Cell{c} // boundary cells are adjacent to themselves.
-	c.Boundary = true
-	c.WAvg = cell.WAvg
 	d.topBoundary = append(d.topBoundary, c)
 }
 
@@ -560,16 +276,16 @@ func (c *Cell) addEmissionsFlux(d *InMAPdata) {
 	}
 }
 
-// Set the time step using the Courant–Friedrichs–Lewy (CFL) condition.
+// setTstepCFL sets the time step using the Courant–Friedrichs–Lewy (CFL) condition.
 // for advection or Von Neumann stability analysis
 // (http://en.wikipedia.org/wiki/Von_Neumann_stability_analysis) for
 // diffusion, whichever one yields a smaller time step.
 func (d *InMAPdata) setTstepCFL() {
 	const Cmax = 1.
-	for i, c := range d.Data {
-
+	sqrt3 := math.Pow(3., 0.5)
+	for i, c := range d.Cells {
 		// Advection time step
-		dt1 := Cmax / math.Pow(3., 0.5) /
+		dt1 := Cmax / sqrt3 /
 			max((math.Abs(c.UAvg)+c.UDeviation*2)/c.Dx,
 				(math.Abs(c.VAvg)+c.VDeviation*2)/c.Dy,
 				math.Abs(c.WAvg)/c.Dz)
@@ -593,7 +309,7 @@ func harmonicMean(a, b float64) float64 {
 // Convert cell data into a regular array
 func (d *InMAPdata) toArray(pol string, layer int) []float64 {
 	o := make([]float64, d.LayerEnd[layer]-d.LayerStart[layer])
-	for i, c := range d.Data[d.LayerStart[layer]:d.LayerEnd[layer]] {
+	for i, c := range d.Cells[d.LayerStart[layer]:d.LayerEnd[layer]] {
 		c.RLock()
 		o[i] = c.getValue(pol)
 		c.RUnlock()
@@ -640,7 +356,7 @@ func (d *InMAPdata) getUnits(varName string) string {
 		// Mortalities
 		return "deaths/grid cell"
 	} else { // Everything else
-		t := reflect.TypeOf(*d.Data[0])
+		t := reflect.TypeOf(*d.Cells[0])
 		ftype, ok := t.FieldByName(varName)
 		if ok {
 			return ftype.Tag.Get("units")
@@ -652,7 +368,7 @@ func (d *InMAPdata) getUnits(varName string) string {
 // GetGeometry returns the cell geometry for the given layer.
 func (d *InMAPdata) GetGeometry(layer int) []geom.Geom {
 	o := make([]geom.Geom, d.LayerEnd[layer]-d.LayerStart[layer])
-	for i, c := range d.Data[d.LayerStart[layer]:d.LayerEnd[layer]] {
+	for i, c := range d.Cells[d.LayerStart[layer]:d.LayerEnd[layer]] {
 		o[i] = c.WebMapGeom
 	}
 	return o

@@ -41,7 +41,7 @@ func (d *InMAPdata) CalcPlumeRise(stackHeight, stackDiam, stackTemp,
 	sClass := make([]float64, d.Nlayers)
 	s1 := make([]float64, d.Nlayers)
 
-	cell := d.Data[row]
+	cell := d.Cells[row]
 	for i := 0; i < d.Nlayers; i++ {
 		layerHeights[i+1] = layerHeights[i] + cell.Dz
 		windSpeed[i] = cell.WindSpeed
@@ -73,7 +73,7 @@ func (d *InMAPdata) CalcPlumeRise(stackHeight, stackDiam, stackTemp,
 		}
 	}
 
-	plumeCell := d.Data[row]
+	plumeCell := d.Cells[row]
 	for i := 0; i < plumeIndex; i++ {
 		plumeCell = plumeCell.Above[0]
 	}

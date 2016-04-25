@@ -27,30 +27,14 @@ import (
 	"time"
 )
 
-var d *InMAPdata
-
-const (
-	testRow          = 92 // in the middle of the grid
-	testTolerance    = 1e-3
-	Δt               = 6.   // seconds
-	E                = 0.01 // emissions
-	numRunIterations = 100  // number of iterations for Run to run
-
-	dataPath = "testdata/inmapData_[layer].gob"
-)
-
-func init() {
-	var err error
-	d, err = InitInMAPdata(UseFileTemplate(dataPath, 27), numRunIterations, "")
-	if err != nil {
-		panic(err)
-	}
-	d.Dt = Δt
-}
+const E = 0.01 // emissions
 
 // Tests whether the cells correctly reference each other
 func TestCellAlignment(t *testing.T) {
-	for row, cell := range d.Data {
+	const testTolerance = 1.e-8
+	d := CreateVarGrid()
+
+	for row, cell := range d.Cells {
 		if cell.Row != row {
 			t.Logf("Failed for Row %v (layer %v) index", cell.Row, cell.Layer)
 			t.FailNow()
@@ -236,47 +220,57 @@ func TestCellAlignment(t *testing.T) {
 // Test whether convective mixing coeffecients are balanced in
 // a way that conserves mass
 func TestConvectiveMixing(t *testing.T) {
-	for i, c := range d.Data {
+	const testTolerance = 1.e-8
+	d := CreateVarGrid()
+	for i, c := range d.Cells {
 		val := c.M2u - c.M2d + c.Above[0].M2d*c.Above[0].Dz/c.Dz
-		if absDifferent(val, 0) {
-			t.Log(i, c.Layer, val, c.M2u, c.M2d, c.Above[0].M2d)
-			t.FailNow()
+		if absDifferent(val, 0, testTolerance) {
+			t.Error(i, c.Layer, val, c.M2u, c.M2d, c.Above[0].M2d)
 		}
 	}
 }
 
 // Test whether the mixing mechanisms are properly conserving mass
 func TestMixing(t *testing.T) {
-	nsteps := 100
-	for tt := 0; tt < nsteps; tt++ {
-		d.Data[testRow].Ci[0] += E / d.Data[testRow].Dz // ground level emissions
-		d.Data[testRow].Cf[0] += E / d.Data[testRow].Dz // ground level emissions
-		for _, cell := range d.Data {
-			cell.Mixing(Δt)
-		}
-		for _, cell := range d.Data {
-			cell.Ci[0] = cell.Cf[0]
-		}
+	const (
+		testTolerance = 1.e-7 // TODO: This should pass with a lower tolerance.
+		testRow       = 0
+	)
+	d := CreateVarGrid()
+	d.Cells[testRow].Ci[0] += E / d.Cells[testRow].Volume // ground level emissions
+	d.Cells[testRow].Cf[0] += E / d.Cells[testRow].Volume // ground level emissions
+	for _, cell := range d.Cells {
+		cell.Mixing(d.Dt)
+	}
+	for _, cell := range d.Cells {
+		cell.Ci[0] = cell.Cf[0]
 	}
 	sum := 0.
 	maxval := 0.
-	for _, cell := range d.Data {
-		sum += cell.Cf[0] * cell.Dz
-		maxval = max(maxval, cell.Cf[0])
+	for _, group := range [][]*Cell{d.Cells, d.westBoundary, d.eastBoundary,
+		d.northBoundary, d.southBoundary, d.topBoundary} {
+		for _, cell := range group {
+			sum += cell.Cf[0] * cell.Volume
+			maxval = max(maxval, cell.Cf[0])
+		}
 	}
-	t.Logf("sum=%.12g (it should equal %v)\n", sum, E*float64(nsteps))
-	if different(sum, E*float64(nsteps), testTolerance) {
-		t.FailNow()
+	if different(sum, E, testTolerance) {
+		t.Errorf("sum=%.12g (it should equal %v)\n", sum, E)
 	}
 	if !different(sum, maxval, testTolerance) {
-		t.Log("All of the mass is in one cell--it didn't mix")
-		t.FailNow()
+		t.Error("All of the mass is in one cell--it didn't mix")
 	}
 }
 
 // Test whether mass is conserved during chemical reactions.
 func TestChemistry(t *testing.T) {
-	c := d.Data[testRow]
+	const (
+		testTolerance = 1.e-8
+		testRow       = 2
+	)
+	d := CreateVarGrid()
+
+	c := d.Cells[testRow]
 	nsteps := 10
 	vals := make([]float64, len(polNames))
 	for tt := 0; tt < nsteps; tt++ {
@@ -294,11 +288,11 @@ func TestChemistry(t *testing.T) {
 			finalSum += val
 			if val < 0 {
 				chemPrint(t, vals, c)
-				t.FailNow()
+				t.Fail()
 			}
 		}
 		if different(finalSum, sum, testTolerance) {
-			t.FailNow()
+			t.Error("different")
 		}
 		//chemPrint(t, vals, c)
 	}
@@ -312,29 +306,35 @@ func chemPrint(t *testing.T, vals []float64, c *Cell) {
 
 // Test whether mass is conserved during advection.
 func TestAdvection(t *testing.T) {
+	d := CreateVarGrid()
+	// TODO: The difference in height among grid cells of the same layer causes
+	// a loss of mass conservation.
 	const tolerance = 1.e-3
-	nsteps := 10
-	var cellGroups = [][]*Cell{d.Data, d.westBoundary, d.eastBoundary,
+	var cellGroups = [][]*Cell{d.Cells, d.westBoundary, d.eastBoundary,
 		d.northBoundary, d.southBoundary, d.topBoundary}
-	// Test emissions from every thirtieth row.
-	for testRow := 0; testRow < len(d.Data); testRow += 30 {
+
+	for testRow := 0; testRow < len(d.Cells); testRow++ {
 		for _, cellGroup := range cellGroups {
 			for _, c := range cellGroup {
 				c.Ci[0] = 0
 				c.Cf[0] = 0
 			}
 		}
-		for tt := 0; tt < nsteps; tt++ {
-			c := d.Data[testRow]
-			c.Ci[0] += E / c.Dz / c.Dy / c.Dx // ground level emissions
-			c.Cf[0] += E / c.Dz / c.Dy / c.Dx // ground level emissions
-			for _, c := range d.Data {
-				c.UpwindAdvection(Δt)
-			}
-			for _, c := range d.Data {
+
+		// Add emissions
+		c := d.Cells[testRow]
+		c.Ci[0] += E / c.Dz / c.Dy / c.Dx
+		c.Cf[0] += E / c.Dz / c.Dy / c.Dx
+		// Calculate advection
+		for _, c := range d.Cells {
+			c.UpwindAdvection(d.Dt)
+		}
+		for _, cellGroup := range cellGroups {
+			for _, c := range cellGroup {
 				c.Ci[0] = c.Cf[0]
 			}
 		}
+
 		sum := 0.
 		layerSum := make(map[int]float64)
 		for _, cellGroup := range cellGroups {
@@ -347,8 +347,8 @@ func TestAdvection(t *testing.T) {
 				layerSum[c.Layer] += val
 			}
 		}
-		if different(sum, E*float64(nsteps), tolerance) {
-			t.Errorf("row %d emis: sum=%.12g (it should equal %v)\n", testRow, sum, E*float64(nsteps))
+		if different(sum, E, tolerance) {
+			t.Errorf("row %d emis: sum=%.12g (it should equal %v)\n", testRow, sum, E)
 		}
 	}
 }
@@ -357,10 +357,12 @@ func TestAdvection(t *testing.T) {
 func TestMeanderMixing(t *testing.T) {
 	const tolerance = 1.e-3
 	nsteps := 10
-	var cellGroups = [][]*Cell{d.Data, d.westBoundary, d.eastBoundary,
+	d := CreateVarGrid()
+
+	var cellGroups = [][]*Cell{d.Cells, d.westBoundary, d.eastBoundary,
 		d.northBoundary, d.southBoundary, d.topBoundary}
 	// Test emissions from every thirtieth row.
-	for testRow := 0; testRow < len(d.Data); testRow += 30 {
+	for testRow := 0; testRow < len(d.Cells); testRow += 30 {
 		for _, group := range cellGroups {
 			for _, c := range group {
 				c.Ci[0] = 0
@@ -368,13 +370,13 @@ func TestMeanderMixing(t *testing.T) {
 			}
 		}
 		for tt := 0; tt < nsteps; tt++ {
-			c := d.Data[testRow]
+			c := d.Cells[testRow]
 			c.Ci[0] += E / c.Dz / c.Dy / c.Dx // ground level emissions
 			c.Cf[0] += E / c.Dz / c.Dy / c.Dx // ground level emissions
-			for _, c := range d.Data {
-				c.MeanderMixing(Δt)
+			for _, c := range d.Cells {
+				c.MeanderMixing(d.Dt)
 			}
-			for _, c := range d.Data {
+			for _, c := range d.Cells {
 				c.Ci[0] = c.Cf[0]
 			}
 		}
@@ -391,18 +393,25 @@ func TestMeanderMixing(t *testing.T) {
 			}
 		}
 		if different(sum, E*float64(nsteps), tolerance) {
+			fmt.Println("qqq", testRow, d.Cells[testRow].Polygonal, d.Cells[testRow].Layer)
 			t.Errorf("row %d emis: sum=%.12g (it should equal %v)\n", testRow, sum, E*float64(nsteps))
 		}
 	}
 }
 
 func BenchmarkRun(b *testing.B) {
+	const (
+		testTolerance = 1.e-8
+		testRow       = 2
+	)
+	d := CreateVarGrid()
+
 	var timing []time.Duration
 	var procs = []int{1, 2, 4, 8, 16, 24, 36, 48}
 	for _, nprocs := range procs {
 		runtime.GOMAXPROCS(nprocs)
 		emissions := make(map[string][]float64)
-		emissions["SOx"] = make([]float64, len(d.Data))
+		emissions["SOx"] = make([]float64, len(d.Cells))
 		emissions["SOx"][testRow] = 100.
 		var results []float64
 		start := time.Now()
@@ -431,8 +440,8 @@ func different(a, b, tolerance float64) bool {
 	return false
 }
 
-func absDifferent(a, b float64) bool {
-	if math.Abs(a-b) > testTolerance {
+func absDifferent(a, b, tolerance float64) bool {
+	if math.Abs(a-b) > tolerance {
 		return true
 	}
 	return false

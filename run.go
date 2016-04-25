@@ -52,9 +52,8 @@ const tolerance = 0.005 // tolerance for convergence
 //const tolerance = 0.5     // tolerance for convergence
 const checkPeriod = 3600. // seconds, how often to check for convergence
 const daysPerSecond = 1. / 3600. / 24.
-const topLayerToCalc = 28 // The top layer to do calculations for
 
-// These are the names of pollutants accepted as emissions [μg/s]
+// EmisNames are the names of pollutants accepted as emissions [μg/s]
 var EmisNames = []string{"VOC", "NOx", "NH3", "SOx", "PM2_5"}
 
 var emisLabels = map[string]int{"VOC Emissions": igOrg,
@@ -110,7 +109,7 @@ var polLabels = map[string]polConv{
 func (d *InMAPdata) Run(emissions map[string][]float64, outputAllLayers bool) (
 	outputConc map[string][][]float64) {
 
-	for _, c := range d.Data {
+	for _, c := range d.Cells {
 		c.Ci = make([]float64, len(polNames))
 		c.Cf = make([]float64, len(polNames))
 		c.emisFlux = make([]float64, len(polNames))
@@ -200,7 +199,7 @@ func (d *InMAPdata) Run(emissions map[string][]float64, outputAllLayers bool) (
 			timeSinceLastCheck = 0.
 			for ii, pol := range polNames {
 				var sum float64
-				for _, c := range d.Data {
+				for _, c := range d.Cells {
 					sum += c.Cf[ii]
 				}
 				if !checkConvergence(sum, oldSum[ii], pol) {
@@ -243,12 +242,10 @@ func (d *InMAPdata) doScience(nprocs, procNum int,
 	funcChan chan func(*Cell, *InMAPdata), wg *sync.WaitGroup) {
 	var c *Cell
 	for f := range funcChan {
-		for ii := procNum; ii < len(d.Data); ii += nprocs {
-			c = d.Data[ii]
-			c.Lock() // Lock the cell to avoid race conditions
-			if c.Layer <= topLayerToCalc {
-				f(c, d) // run function
-			}
+		for ii := procNum; ii < len(d.Cells); ii += nprocs {
+			c = d.Cells[ii]
+			c.Lock()   // Lock the cell to avoid race conditions
+			f(c, d)    // run function
 			c.Unlock() // Unlock the cell: we're done editing it
 		}
 		wg.Done()
@@ -259,9 +256,9 @@ func (d *InMAPdata) doScience(nprocs, procNum int,
 // and a scale for molecular mass conversion.
 func (d *InMAPdata) addEmisFlux(arr []float64, scale float64, iPol int) {
 	for row, val := range arr {
-		fluxScale := 1. / d.Data[row].Dx / d.Data[row].Dy /
-			d.Data[row].Dz // μg/s /m/m/m = μg/m3/s
-		d.Data[row].emisFlux[iPol] = val * scale * fluxScale
+		fluxScale := 1. / d.Cells[row].Dx / d.Cells[row].Dy /
+			d.Cells[row].Dz // μg/s /m/m/m = μg/m3/s
+		d.Cells[row].emisFlux[iPol] = val * scale * fluxScale
 	}
 	return
 }

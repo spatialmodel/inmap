@@ -44,20 +44,48 @@ func (c *Cell) Mixing(Δt float64) {
 		}
 		// Horizontal mixing
 		for i, w := range c.West { // Mixing with West
-			c.Cf[ii] += 1. / c.Dx * (c.KxxWest[i] *
+			flux := 1. / c.Dx * (c.KxxWest[i] *
 				(w.Ci[ii] - c.Ci[ii]) / c.DxMinusHalf[i]) * Δt * c.WestFrac[i]
+			c.Cf[ii] += flux
+			if w.Boundary { // keep track of mass that leaves the domain.
+				volumeRatio := (c.Dx * c.Dy) / (w.Dx * w.Dy) // This is a ratio of areas
+				// instead of volumes because the otherwise the use of pressure
+				// coordinates in the underlying CTM causes the loss of mass conservation.
+				w.Cf[ii] -= flux * volumeRatio
+			}
 		}
 		for i, e := range c.East { // Mixing with East
-			c.Cf[ii] += 1. / c.Dx * (c.KxxEast[i] *
+			flux := 1. / c.Dx * (c.KxxEast[i] *
 				(e.Ci[ii] - c.Ci[ii]) / c.DxPlusHalf[i]) * Δt * c.EastFrac[i]
+			c.Cf[ii] += flux
+			if e.Boundary { // keep track of mass that leaves the domain.
+				volumeRatio := (c.Dx * c.Dy) / (e.Dx * e.Dy) // This is a ratio of areas
+				// instead of volumes because the otherwise the use of pressure
+				// coordinates in the underlying CTM causes the loss of mass conservation.
+				e.Cf[ii] -= flux * volumeRatio
+			}
 		}
 		for i, s := range c.South { // Mixing with South
-			c.Cf[ii] += 1. / c.Dy * (c.KyySouth[i] *
+			flux := 1. / c.Dy * (c.KyySouth[i] *
 				(s.Ci[ii] - c.Ci[ii]) / c.DyMinusHalf[i]) * Δt * c.SouthFrac[i]
+			c.Cf[ii] += flux
+			if s.Boundary { // keep track of mass that leaves the domain.
+				volumeRatio := (c.Dx * c.Dy) / (s.Dx * s.Dy) // This is a ratio of areas
+				// instead of volumes because the otherwise the use of pressure
+				// coordinates in the underlying CTM causes the loss of mass conservation.
+				s.Cf[ii] -= flux * volumeRatio
+			}
 		}
 		for i, n := range c.North { // Mixing with North
-			c.Cf[ii] += 1. / c.Dy * (c.KyyNorth[i] *
+			flux := 1. / c.Dy * (c.KyyNorth[i] *
 				(n.Ci[ii] - c.Ci[ii]) / c.DyPlusHalf[i]) * Δt * c.NorthFrac[i]
+			c.Cf[ii] += flux
+			if n.Boundary { // keep track of mass that leaves the domain.
+				volumeRatio := (c.Dx * c.Dy) / (n.Dx * n.Dy) // This is a ratio of areas
+				// instead of volumes because the otherwise the use of pressure
+				// coordinates in the underlying CTM causes the loss of mass conservation.
+				n.Cf[ii] -= flux * volumeRatio
+			}
 		}
 	}
 }
@@ -116,8 +144,8 @@ func (c *Cell) UpwindAdvection(Δt float64) {
 			if a.Boundary { // keep track of mass that leaves the domain.
 				a.Cf[ii] += flux * c.Volume / a.Volume
 			}
-
 		}
+
 	}
 }
 

@@ -120,7 +120,7 @@ func main() {
 	emissions := make(map[string][]float64)
 	for _, pol := range inmap.EmisNames {
 		if _, ok := emissions[pol]; !ok {
-			emissions[pol] = make([]float64, len(d.Data))
+			emissions[pol] = make([]float64, len(d.Cells))
 		}
 	}
 
@@ -195,7 +195,7 @@ func main() {
 	log.Println("Allocating emissions to grid cells...")
 	// allocate emissions to appropriate grid cells
 	for i := d.LayerStart[0]; i < d.LayerEnd[0]; i++ {
-		cell := d.Data[i]
+		cell := d.Cells[i]
 		for _, eTemp := range emisTree.SearchIntersect(cell.Bounds()) {
 			e := eTemp.(emisRecord)
 			var intersection geom.Geom
@@ -354,7 +354,7 @@ func writeOutput(results map[string][][]float64, d *inmap.InMAPdata,
 			for j, v := range vars {
 				outFields[j] = results[v][k][i]
 			}
-			err = shape.EncodeFields(d.Data[row].Polygonal, outFields...)
+			err = shape.EncodeFields(d.Cells[row].Polygonal, outFields...)
 			if err != nil {
 				log.Fatalf("error writing output shapefile: %v", err)
 			}

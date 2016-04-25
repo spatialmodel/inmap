@@ -61,7 +61,7 @@ func (d *InMAPdata) WebServer(httpPort string) {
 		mapOptions[emis] = emis
 	}
 	popNames = make(map[string]string)
-	for _, c := range d.Data { // Population and mortalities
+	for _, c := range d.Cells { // Population and mortalities
 		if len(c.PopData) != 0 {
 			for pop := range c.PopData {
 				popNames[pop] = ""
@@ -73,7 +73,7 @@ func (d *InMAPdata) WebServer(httpPort string) {
 			break
 		}
 	}
-	t := reflect.TypeOf(*d.Data[0]) // Everything else
+	t := reflect.TypeOf(*d.Cells[0]) // Everything else
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
 		v := f.Name
@@ -428,7 +428,7 @@ func (d *InMAPdata) VerticalProfile(variable string, lon, lat float64) (
 	vals = make([]float64, d.Nlayers)
 	x, y := carto.Degrees2meters(lon, lat)
 	loc := geom.Point{X: x, Y: y}
-	for _, cell := range d.Data {
+	for _, cell := range d.Cells {
 		in, err := op.Within(loc, cell.WebMapGeom)
 		if err != nil {
 			panic(err)
