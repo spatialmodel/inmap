@@ -1,18 +1,18 @@
 language: go
 go:
-      - 1.5.2
-      - 1.6.2
-
+- 1.5.2
+- 1.6.2
 before_install:
-      - go get github.com/axw/gocov/gocov
-      - go get github.com/mattn/goveralls
-      - go get golang.org/x/tools/cmd/cover
-      - wget https://github.com/ctessum/inmap/releases/download/v1.1.0/testdata_dev.zip
-      - unzip testdata_dev.zip
-
+- go get github.com/axw/gocov/gocov
+- go get github.com/mattn/goveralls
+- go get golang.org/x/tools/cmd/cover
+- wget https://github.com/ctessum/inmap/releases/download/v1.1.0/testdata_dev.zip
+- unzip testdata_dev.zip
 install:
-      - go get -d -t ./...
-
+- go get -d -t ./...
 script:
-      - go test ./...
-      - bash ./.travis/test_coverage.sh
+- go test ./...
+- bash ./.travis/test_coverage.sh
+env:
+  global:
+    secure: OUETgcxA3SBK5LfVCh3tdQwIlJotpy2nnDXZE51YlFcx66pcqwPyyvr3jnczewIBE+cwYaaWnwKiB0ZDIV+I4OMgfYCjGdqXY7NKnPQZR/BOHh9mmTThCC3E3arv1AegF273w2RGc9eUg4kglKwNKeQfO+lBTkrAgtYSP+HzcUwMrXvQ8QZk3bhJWHeP1lPz+/PX4QoAWg2G9LSZfzuntf4t1wyrysxmWm2Gb0bWIbaN+A6WTev5pvFif29yVHqKKTAA/JE2grrlAAOjA7CzIwlLLpInR9O2tZ8bvGMrrJheps6xowJqUSUm8mVFEGRbqLoqE+r9Kj1lmmh+aKspBcV4eQnEJZ+Gb1iuM8VbmVKd+UgrFpK4AHQYBRDTLdSJMr/D+pzBWWdhLSURQTRyOdMNDspYWHJIkXQPmDVwXyRLswFOYB75pdrsnUObP1QnZZm03lN3EEWi0Hi4Ie9VAPkO9N8eBVoJz3nd/wkOrhnT3DlBpyuWLId9jpDR2C4JDV7tMFOVbhCfuRJJbTJ+1ITff5to+mMmEgIWFSIS4VrXJ112ya4bOj6lNIMAjT7gCRU959+3ttJadVnvQxVfZxPDrIMTAsyz657gibjqb3/B6bKBL9ExolxOKeAn1Ds8CA+1rjJik8Yvp7sYAl3QmX0yqQhd4wkxtBbUx1m4Z9Q=
