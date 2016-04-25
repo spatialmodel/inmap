@@ -36,7 +36,7 @@ do
 done
 if [ -n "$COVERALLS_TOKEN" ]
 then
-  $HOME/gopath/bin/goveralls -coverprofile=acc.out -service=travis-ci -package=github.com/ctessum/inmap
+  $HOME/gopath/bin/goveralls -coverprofile=acc.out -service=travis-ci
 fi
 
 rm -rf ./profile.out
