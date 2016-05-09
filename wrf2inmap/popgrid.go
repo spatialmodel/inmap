@@ -670,6 +670,10 @@ func handle(err error) {
 }
 
 func s2f(s string) float64 {
+	if s == "************************" {
+		// null shapefile value
+		return 0
+	}
 	f, err := strconv.ParseFloat(s, 64)
 	handle(err)
 	return f
