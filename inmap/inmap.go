@@ -39,8 +39,8 @@ import (
 	"github.com/ctessum/geom/index/rtree"
 	"github.com/ctessum/geom/op"
 	"github.com/ctessum/geom/proj"
-	"github.com/spatialmodel/inmap"
 	goshp "github.com/jonas-p/go-shp"
+	"github.com/spatialmodel/inmap"
 )
 
 var configFile = flag.String("config", "none", "Path to configuration file")
