@@ -39,7 +39,7 @@ import (
 	"github.com/ctessum/geom/index/rtree"
 	"github.com/ctessum/geom/op"
 	"github.com/ctessum/geom/proj"
-	"github.com/ctessum/inmap"
+	"github.com/spatialmodel/inmap"
 	goshp "github.com/jonas-p/go-shp"
 )
 
@@ -202,7 +202,7 @@ func main() {
 			var err error
 			switch e.Geom.(type) {
 			case geom.PointLike:
-				if e.Within(cell) {
+				if e.Geom.(geom.PointLike).Within(cell) {
 					intersection = e.Geom
 				} else {
 					continue
