@@ -1,12 +1,104 @@
 package inmap
 
 import (
+	"os"
+	"strings"
 	"testing"
+
+	"github.com/ctessum/geom"
+	"github.com/ctessum/geom/encoding/shp"
 
 	"bitbucket.org/ctessum/sparse"
 )
 
 func CreateVarGrid() *InMAPdata {
+
+	const (
+		prj      = `PROJCS["Lambert_Conformal_Conic_2SP",GEOGCS["GCS_unnamed ellipse",DATUM["D_unknown",SPHEROID["Unknown",6370997,0]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],PROJECTION["Lambert_Conformal_Conic_2SP"],PARAMETER["standard_parallel_1",33],PARAMETER["standard_parallel_2",45],PARAMETER["latitude_of_origin",40],PARAMETER["central_meridian",-97],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]`
+		popFile  = "tempPopulation.shp"
+		mortFile = "tempMortality.shp"
+	)
+
+	// holder for test population data.
+	type pop struct {
+		geom.Polygon
+		TotalPop, WhiteNoLat, Black, Native, Asian, Latino float64
+	}
+
+	// write out test population data.
+	popData := []pop{
+		pop{
+			Polygon: [][]geom.Point{{
+				geom.Point{X: -2000, Y: -2000},
+				geom.Point{X: -1000, Y: -2000},
+				geom.Point{X: -1000, Y: -1000},
+				geom.Point{X: -2000, Y: -1000},
+				geom.Point{X: -2000, Y: -2000},
+			}},
+			TotalPop:   10., // not enough to split grid cell
+			WhiteNoLat: 50000.,
+			Black:      20000.,
+			Native:     2000,
+			Latino:     30000,
+		},
+	}
+	e, err := shp.NewEncoder(popFile, pop{})
+	if err != nil {
+		panic(err)
+	}
+	for _, p := range popData {
+		if err = e.Encode(p); err != nil {
+			panic(err)
+		}
+	}
+	e.Close()
+	f, err := os.Create(strings.TrimRight(popFile, ".shp") + ".prj")
+	if err != nil {
+		panic(err)
+	}
+	if _, err = f.Write([]byte(prj)); err != nil {
+		panic(err)
+	}
+	f.Close()
+
+	// holder for test mortality data.
+	type mort struct {
+		geom.Polygon
+		AllCause float64
+	}
+
+	// write out test mortality rate data.
+	mortData := []mort{
+		mort{
+			Polygon: [][]geom.Point{{
+				geom.Point{X: -2000, Y: -2000},
+				geom.Point{X: -1000, Y: -2000},
+				geom.Point{X: -1000, Y: -1000},
+				geom.Point{X: -2000, Y: -1000},
+				geom.Point{X: -2000, Y: -2000},
+			}},
+			AllCause: 800.,
+		},
+	}
+	e, err = shp.NewEncoder(mortFile, mort{})
+	if err != nil {
+		panic(err)
+	}
+	for _, m := range mortData {
+		if err = e.Encode(m); err != nil {
+			panic(err)
+		}
+	}
+	e.Close()
+	f, err = os.Create(strings.TrimRight(mortFile, ".shp") + ".prj")
+	if err != nil {
+		panic(err)
+	}
+	if _, err = f.Write([]byte(prj)); err != nil {
+		panic(err)
+	}
+	f.Close()
+
 	cfg := VarGridConfig{
 		VariableGridXo:      -4000,
 		VariableGridYo:      -4000,
@@ -25,10 +117,10 @@ func CreateVarGrid() *InMAPdata {
 		PopDensityCutoff:    0.001,
 		PopCutoff:           25000,
 		BboxOffset:          1,
-		CensusFile:          "testdata/census2012.shp",
+		CensusFile:          popFile,
 		CensusPopColumns:    []string{"TotalPop", "WhiteNoLat", "Black", "Native", "Asian", "Latino"},
 		PopGridColumn:       "TotalPop",
-		MortalityRateFile:   "testdata/MortalityRate.shp",
+		MortalityRateFile:   mortFile,
 		MortalityRateColumn: "AllCause",
 	}
 
@@ -266,9 +358,7 @@ func CreateVarGrid() *InMAPdata {
 	}
 
 	// Data extracted from a file created by the WRF-Chem preprocessor
-	// TODO: There is a problem here: differences in Dz cause a mass conservation problem.
 	ctmData["Dz"].data.Elements = []float64{55.616737365722656, 55.60960006713867, 55.558589935302734, 55.63689422607422, 80.05044555664062, 80.0164566040039, 79.99669647216797, 80.07341003417969, 105.04544067382812, 104.97071075439453, 104.981201171875, 105.04759216308594, 130.77992248535156, 130.65481567382812, 130.7270050048828, 130.7596435546875, 165.87161254882812, 165.6465301513672, 165.8095703125, 165.7937774658203, 211.19100952148438, 210.81178283691406, 210.9864959716797, 210.94813537597656, 250.37254333496094, 249.94908142089844, 250.0945587158203, 250.04212951660156, 450.19708251953125, 449.4986877441406, 449.73907470703125, 449.6775207519531, 471.3617858886719, 470.7438659667969, 470.8647155761719, 470.8252868652344, 496.6903991699219, 495.80023193359375, 495.7990417480469, 495.63519287109375}
-	//ctmData["Dz"].data.Elements = []float64{55, 55, 55, 55, 80, 80, 80, 80, 105, 105, 105, 105, 130, 130, 130, 130, 166, 166, 166, 166, 211, 211, 211, 211, 250, 250, 250, 250, 450, 450, 450, 450, 471., 471, 471., 471, 496., 496, 496., 496}
 	ctmData["WAvg"].data.Elements = []float64{-0.0031770633067935705, -0.03131113201379776, -0.0016643835697323084, -0.022064168006181717, 0.006579460576176643, -0.008502744138240814, 0.0039610546082258224, -0.0008686335058882833, 0.013467869721353054, 0.0042756046168506145, 0.008733110502362251, 0.006209260318428278, 0.01728512905538082, 0.014318481087684631, 0.01065493281930685, 0.008901089429855347, 0.016626669093966484, 0.01868339814245701, 0.00920271035283804, 0.007909671403467655, 0.012121721170842648, 0.017389992251992226, 0.0059646242298185825, 0.005230602342635393, 0.005212655756622553, 0.012798762880265713, 0.0025486990343779325, 0.0049898698925971985, 0.0002958668628707528, 0.010805307887494564, 0.0007378551526926458, 0.010255983099341393, 0.0048363772220909595, 0.008727352134883404, 0.0052039166912436485, 0.016550913453102112, 0.018345091491937637, 0.017693055793642998, 0.0141964852809906, 0.019544612616300583}
 	ctmData["Temperature"].data.Elements = []float64{281.7968444824219, 281.8467102050781, 281.4716796875, 281.91217041015625, 281.6050109863281, 281.5710144042969, 281.3937683105469, 281.6999816894531, 281.0885314941406, 280.9794006347656, 280.8974609375, 281.1159362792969, 280.289794921875, 280.1217956542969, 280.1652526855469, 280.2762756347656, 279.3124084472656, 279.05828857421875, 279.225341796875, 279.2402648925781, 278.082763671875, 277.7137756347656, 277.8447570800781, 277.838134765625, 276.3756103515625, 276.03662109375, 276.10333251953125, 276.07647705078125, 273.9061584472656, 273.6038818359375, 273.66888427734375, 273.643310546875, 271.0890808105469, 270.8735046386719, 270.8675231933594, 270.8497619628906, 269.2445983886719, 268.8931579589844, 268.8183288574219, 268.7208251953125}
 	ctmData["WindSpeedMinusOnePointFour"].data.Elements = []float64{0.7428295612335205, 0.5058742165565491, 0.934855043888092, 0.5119651556015015, 0.6354432106018066, 0.5275496244430542, 1.0058796405792236, 0.5661730170249939, 0.636940598487854, 0.6686421036720276, 0.8879344463348389, 0.9787752032279968, 0.8092939257621765, 0.9098353981971741, 1.020829439163208, 0.8001529574394226, 0.7081223726272583, 0.7041523456573486, 0.8658035397529602, 0.739102840423584, 0.5948684215545654, 0.559593677520752, 0.6883410215377808, 0.6498873233795166, 0.5875554084777832, 0.5690711736679077, 1.1264561414718628, 0.8045519590377808, 0.41173169016838074, 0.367610901594162, 0.4526044428348541, 0.2955501675605774, 0.134508416056633, 0.13035288453102112, 0.10757080465555191, 0.11621700972318649, 0.06143762543797493, 0.05990791693329811, 0.061796411871910095, 0.061518121510744095}
@@ -319,6 +409,15 @@ func CreateVarGrid() *InMAPdata {
 	if err != nil {
 		panic(err)
 	}
+
+	for _, fname := range []string{popFile, mortFile} {
+		for _, ext := range []string{".dbf", ".prj", ".shp", ".shx"} {
+			if err = os.Remove(strings.TrimRight(fname, ".shp") + ext); err != nil {
+				panic(err)
+			}
+		}
+	}
+
 	return d
 }
 

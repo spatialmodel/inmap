@@ -233,7 +233,7 @@ func TestConvectiveMixing(t *testing.T) {
 // Test whether the mixing mechanisms are properly conserving mass
 func TestMixing(t *testing.T) {
 	const (
-		testTolerance = 1.e-7 // TODO: This should pass with a lower tolerance.
+		testTolerance = 1.e-8
 		testRow       = 0
 	)
 	d := CreateVarGrid()
@@ -307,9 +307,7 @@ func chemPrint(t *testing.T, vals []float64, c *Cell) {
 // Test whether mass is conserved during advection.
 func TestAdvection(t *testing.T) {
 	d := CreateVarGrid()
-	// TODO: The difference in height among grid cells of the same layer causes
-	// a loss of mass conservation.
-	const tolerance = 1.e-3
+	const tolerance = 1.e-8
 	var cellGroups = [][]*Cell{d.Cells, d.westBoundary, d.eastBoundary,
 		d.northBoundary, d.southBoundary, d.topBoundary}
 
