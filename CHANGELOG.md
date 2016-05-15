@@ -1,5 +1,7 @@
-# Release 1.1.1 (?)
+# Release 1.2.0 (?)
 * Allowed the input emissions data shapefiles to have arbitrary spatial projections instead of requiring them to be the same as the InMAP grid
+* Changed the program to create the variable grid at runtime from user supplied population and mortality data
+* Fixed a bug involving the the loss of mass conservation in adjacent cells with different heights
 
 # Release 1.1.0 (2016-2-12)
 * Fixed a bug related to molar mass conversions

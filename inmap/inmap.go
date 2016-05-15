@@ -20,7 +20,6 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -28,12 +27,12 @@ import (
 	"math"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
 	"text/tabwriter"
 
+	"github.com/BurntSushi/toml"
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/encoding/shp"
 	"github.com/ctessum/geom/index/rtree"
@@ -45,19 +44,19 @@ import (
 
 var configFile = flag.String("config", "none", "Path to configuration file")
 
-const version = "1.1.0"
+const version = "1.2.0-dev"
 
 type configData struct {
-	// Path to location of baseline meteorology and pollutant data,
-	// where [layer] is a stand-in for the model layer number. The files
-	// should be in Gob format (http://golang.org/pkg/encoding/gob/).
-	// Can include environment variables.
-	InMAPdataTemplate string
 
-	NumLayers     int // Number of vertical layers to use in the model
-	NumProcessors int // Number of processors to use for calculations
+	// VarGridConfig provides information for specifying the variable resolution
+	// grid.
+	VarGrid inmap.VarGridConfig
 
-	// Paths to emissions shapefiles.
+	// InMAPData is the path to location of baseline meteorology and pollutant data.
+	// The path can include environment variables.
+	InMAPData string
+
+	// EmissionsShapefiles are the paths to any emissions shapefiles.
 	// Can be elevated or ground level; elevated files need to have columns
 	// labeled "height", "diam", "temp", and "velocity" containing stack
 	// information in units of m, m, K, and m/s, respectively.
@@ -71,11 +70,11 @@ type configData struct {
 	// for the model layer number. Can include environment variables.
 	OutputTemplate string
 
-	// If true, output data for all model layers. If false, only output
+	// If OutputAllLayers is true, output data for all model layers. If false, only output
 	// the lowest layer.
 	OutputAllLayers bool
 
-	// Number of iterations to calculate. If < 1, convergence
+	// NumIterations is the number of iterations to calculate. If < 1, convergence
 	// is automatically calculated.
 	NumIterations int
 
@@ -84,9 +83,7 @@ type configData struct {
 	// If HTTPport is "", then the web server doesn't run.
 	HTTPport string
 
-	// InMAPProj specifies the spatial projection of the InMAP computational grid.
-	InMAPProj string
-	sr        *proj.SR
+	sr *proj.SR
 }
 
 func main() {
@@ -107,14 +104,24 @@ func main() {
 		"     Regents of the University of Minnesota     \n" +
 		"------------------------------------------------\n")
 
-	runtime.GOMAXPROCS(config.NumProcessors)
-
 	fmt.Println("Reading input data...")
-	d, err := inmap.InitInMAPdata(
-		inmap.UseFileTemplate(config.InMAPdataTemplate, config.NumLayers),
-		config.NumIterations, config.HTTPport)
+
+	f, err := os.Open(config.InMAPData)
 	if err != nil {
 		log.Fatalf("Problem loading input data: %v\n", err)
+	}
+	ctmData, err := config.VarGrid.LoadCTMData(f)
+	if err != nil {
+		log.Fatalf("Problem loading input data: %v\n", err)
+	}
+
+	d, err := config.VarGrid.NewInMAPData(ctmData, config.NumIterations)
+	if err != nil {
+		log.Fatalf("Problem loading input data: %v\n", err)
+	}
+
+	if config.HTTPport != "" {
+		go d.WebServer(config.HTTPport)
 	}
 
 	emissions := make(map[string][]float64)
@@ -201,8 +208,8 @@ func main() {
 			var intersection geom.Geom
 			var err error
 			switch e.Geom.(type) {
-			case geom.PointLike:
-				if e.Geom.(geom.PointLike).Within(cell) {
+			case geom.Point:
+				if e.Geom.(geom.Point).Within(cell) {
 					intersection = e.Geom
 				} else {
 					continue
@@ -387,7 +394,7 @@ func s2f(s string) float64 {
 	return f
 }
 
-// readConfigFile reads and parses a json configuration file.
+// readConfigFile reads and parses a TOML configuration file.
 // See below for the required variables.
 func readConfigFile(filename string) (config *configData) {
 	// Open the configuration file
@@ -410,7 +417,7 @@ func readConfigFile(filename string) (config *configData) {
 	}
 
 	config = new(configData)
-	err = json.Unmarshal(bytes, config)
+	_, err = toml.Decode(string(bytes), config)
 	if err != nil {
 		fmt.Printf(
 			"There has been an error parsing the configuration file.\n"+
@@ -420,7 +427,7 @@ func readConfigFile(filename string) (config *configData) {
 		os.Exit(1)
 	}
 
-	config.InMAPdataTemplate = os.ExpandEnv(config.InMAPdataTemplate)
+	config.InMAPData = os.ExpandEnv(config.InMAPData)
 	config.OutputTemplate = os.ExpandEnv(config.OutputTemplate)
 
 	for i := 0; i < len(config.EmissionsShapefiles); i++ {
@@ -435,11 +442,11 @@ func readConfigFile(filename string) (config *configData) {
 		os.Exit(1)
 	}
 
-	if config.InMAPProj == "" {
+	if config.VarGrid.GridProj == "" {
 		log.Fatal("You need to specify the InMAP grid projection in the " +
-			"'InMAPProj configuration variable.'")
+			"'GridProj' configuration variable.")
 	}
-	config.sr, err = proj.Parse(config.InMAPProj)
+	config.sr, err = proj.Parse(config.VarGrid.GridProj)
 	if err != nil {
 		log.Fatalf("The following error occured while parsing the InMAP grid"+
 			"projection (the InMAPProj variable): %v", err)

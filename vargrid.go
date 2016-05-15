@@ -2,7 +2,6 @@ package inmap
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"sort"
 
@@ -29,12 +28,12 @@ type VarGridConfig struct {
 	Ynests         []int   // Nesting multiples in the Y direction
 	HiResLayers    int     // number of layers to do in high resolution (layers above this will be lowest resolution.
 
-	CtmGridXo float64 // lower left of Chemical Transport Model (CTM) grid, x
-	CtmGridYo float64 // lower left of grid, y
-	CtmGridDx float64 // m
-	CtmGridDy float64 // m
-	CtmGridNx int
-	CtmGridNy int
+	ctmGridXo float64 // lower left of Chemical Transport Model (CTM) grid, x
+	ctmGridYo float64 // lower left of grid, y
+	ctmGridDx float64 // m
+	ctmGridDy float64 // m
+	ctmGridNx int
+	ctmGridNy int
 
 	PopDensityCutoff    float64  // limit for people per unit area in the grid cell
 	PopCutoff           float64  // limit for total number of people in the grid cell
@@ -56,11 +55,20 @@ type CTMData struct {
 }
 
 // LoadCTMData loads CTM data from a netcdf file.
-func LoadCTMData(rw cdf.ReaderWriterAt) (map[string]CTMData, error) {
+func (config *VarGridConfig) LoadCTMData(rw cdf.ReaderWriterAt) (map[string]CTMData, error) {
 	f, err := cdf.Open(rw)
 	if err != nil {
 		return nil, fmt.Errorf("inmap.LoadCTMData: %v", err)
 	}
+
+	// Get CTM grid attributes
+	config.ctmGridDx = f.Header.GetAttribute("", "dx").([]float64)[0]
+	config.ctmGridDy = f.Header.GetAttribute("", "dy").([]float64)[0]
+	config.ctmGridNx = int(f.Header.GetAttribute("", "nx").([]int32)[0])
+	config.ctmGridNy = int(f.Header.GetAttribute("", "ny").([]int32)[0])
+	config.ctmGridXo = f.Header.GetAttribute("", "x0").([]float64)[0]
+	config.ctmGridYo = f.Header.GetAttribute("", "y0").([]float64)[0]
+
 	o := make(map[string]CTMData)
 	for _, v := range f.Header.Variables() {
 		d := CTMData{}
@@ -99,11 +107,9 @@ func (c *Cell) clonePartial() *Cell {
 }
 
 func (d *InMAPdata) loadPopMort() error {
-	log.Println("Loading population")
 	if err := d.loadPopulation(d.sr); err != nil {
 		return fmt.Errorf("inmap: while loading population: %v", err)
 	}
-	log.Println("Loading mortality")
 	if err := d.loadMortality(d.sr); err != nil {
 		return fmt.Errorf("inmap: while loading mortality rate: %v", err)
 	}
@@ -114,9 +120,9 @@ func (d *InMAPdata) loadPopMort() error {
 // output data from a chemical transport model,
 // and `numIterations` is the number of iterations to calculate.
 // If `numIterations` < 1, convergence is calculated automatically.
-func NewInMAPData(config VarGridConfig, data map[string]CTMData, numIterations int) (*InMAPdata, error) {
+func (config *VarGridConfig) NewInMAPData(data map[string]CTMData, numIterations int) (*InMAPdata, error) {
 	d := new(InMAPdata)
-	d.VarGridConfig = config
+	d.VarGridConfig = *config
 	d.NumIterations = numIterations
 
 	var err error
@@ -140,7 +146,6 @@ func NewInMAPData(config VarGridConfig, data map[string]CTMData, numIterations i
 
 	var layerDivisionIndex int
 	for k := 0; k < kmax; k++ {
-		log.Println("Creating variable grid for layer ", k)
 
 		var layerCells []*Cell
 		if k < config.HiResLayers {
@@ -622,13 +627,13 @@ func (c *Cell) loadData(ctmtree *rtree.Rtree, data map[string]CTMData, k int) {
 func (config *VarGridConfig) makeCTMgrid(nlayers int) *rtree.Rtree {
 	tree := rtree.NewTree(25, 50)
 	for k := 0; k < nlayers; k++ {
-		for ix := 0; ix < config.CtmGridNx; ix++ {
-			for iy := 0; iy < config.CtmGridNy; iy++ {
+		for ix := 0; ix < config.ctmGridNx; ix++ {
+			for iy := 0; iy < config.ctmGridNy; iy++ {
 				cell := new(gridCellLight)
-				x0 := config.CtmGridXo + config.CtmGridDx*float64(ix)
-				x1 := config.CtmGridXo + config.CtmGridDx*float64(ix+1)
-				y0 := config.CtmGridYo + config.CtmGridDy*float64(iy)
-				y1 := config.CtmGridYo + config.CtmGridDy*float64(iy+1)
+				x0 := config.ctmGridXo + config.ctmGridDx*float64(ix)
+				x1 := config.ctmGridXo + config.ctmGridDx*float64(ix+1)
+				y0 := config.ctmGridYo + config.ctmGridDy*float64(iy)
+				y1 := config.ctmGridYo + config.ctmGridDy*float64(iy+1)
 				cell.Polygonal = geom.Polygon{[]geom.Point{
 					geom.Point{X: x0, Y: y0},
 					geom.Point{X: x1, Y: y0},
@@ -649,10 +654,4 @@ func (config *VarGridConfig) makeCTMgrid(nlayers int) *rtree.Rtree {
 type gridCellLight struct {
 	geom.Polygonal
 	Row, Col, layer int
-}
-
-func handle(err error) {
-	if err != nil {
-		panic(err)
-	}
 }

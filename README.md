@@ -1,6 +1,6 @@
 # (In)tervention (M)odel for (A)ir (P)ollution
 
-[![Build Status](https://travis-ci.org/ctessum/inmap.svg?branch=master)](https://travis-ci.org/ctessum/inmap) [![Coverage Status](https://img.shields.io/coveralls/ctessum/inmap.svg)](https://coveralls.io/r/ctessum/inmap) [![GoDoc](http://godoc.org/github.com/ctessum/inmap/lib.inmap?status.svg)](http://godoc.org/github.com/ctessum/inmap/lib.inmap)
+[![Build Status](https://travis-ci.org/spatialmodel/inmap.svg?branch=master)](https://travis-ci.org/spatialmodel/inmap) [![Coverage Status](https://img.shields.io/coveralls/spatialmodel/inmap.svg)](https://coveralls.io/r/spatialmodel/inmap) [![GoDoc](http://godoc.org/github.com/spatialmodel/inmap?status.svg)](http://godoc.org/github.com/spatialmodel/inmap)
 
 ## About InMAP
 
@@ -12,7 +12,7 @@ Figure 1: InMAP spatial discretization of the model domain into variable resolut
 
 ## Getting InMAP
 
-Go to [releases](https://github.com/ctessum/inmap/releases) to download the most recent release for your type of computer. For Mac systems, download the file with "darwin" in the name. You will need both the executable program and the input data ("inmapData_xxx.zip"). All of the versions of the program are labeled "amd64" to denote that they are for 64-bit processors (i.e., all relatively recent notebook and desktop computers). It doesn't matter whether your computer processor is made by AMD or another brand, it should work either way.
+Go to [releases](https://github.com/spatialmodel/inmap/releases) to download the most recent release for your type of computer. For Mac systems, download the file with "darwin" in the name. You will need both the executable program and the input data ("inmapData_xxx.zip"). All of the versions of the program are labeled "amd64" to denote that they are for 64-bit processors (i.e., all relatively recent notebook and desktop computers). It doesn't matter whether your computer processor is made by AMD or another brand, it should work either way.
 
 ### Compiling from source
 
@@ -26,18 +26,18 @@ You can also compile InMAP from its source code. It should work on most types of
 
 4. Download and install the main program:
 
-		go get github.com/ctessum/inmap/inmap
+		go get github.com/spatialmodel/inmap/inmap
 	The Go language has an automatic system for finding and installing library dependencies; you may want to refer [here](http://golang.org/doc/code.html) to understand how it works.
 
 ## Running the InMAP example case
 
-From the [testdata](https://github.com/ctessum/inmap/tree/master/testdata) directory, download all of the files that match the pattern "inmap_\*.gob" or "testEmis.\*", where \* is a wildcard that can match any set of characters. If you have followed the instructions in the "Compiling from source" section above you will already have downloaded these files. Next, download the file [configExample.json](https://raw.githubusercontent.com/ctessum/inmap/master/inmap/configExample.json) and the [InMAP executable program](https://github.com/ctessum/inmap/releases) in the same directory. Next, open the file "configExample.json" with a text editor and delete the text "../testdata/" anywhere you see it. Finally, open a command prompt window, navigate to the directory where you saved the aforementioned files, and run the command `inmap1.1.0linux-amd64 -config=configExample.json` on Linux systems, `inmap1.1.0darwin-amd64 -config=configExample.json` on Mac systems, or `inmap1.1.0windows-amd64.exe -config=configExample.json` on Windows systems to run the program. The program should run without any error messages and create a file called "output_0.shp" (along with supporting files like "output_0.dbf") which can be viewed with any program that can view shapefiles. Refer to the next section for additional details.
+From the [testdata](https://github.com/spatialmodel/inmap/tree/master/testdata) directory, download all of the files that match the pattern "inmap_\*.gob" or "testEmis.\*", where \* is a wildcard that can match any set of characters. If you have followed the instructions in the "Compiling from source" section above you will already have downloaded these files. Next, download the file [configExample.json](https://raw.githubusercontent.com/spatialmodel/inmap/master/inmap/configExample.json) and the [InMAP executable program](https://github.com/spatialmodel/inmap/releases) in the same directory. Next, open the file "configExample.json" with a text editor and delete the text "../testdata/" anywhere you see it. Finally, open a command prompt window, navigate to the directory where you saved the aforementioned files, and run the command `inmap1.1.0linux-amd64 -config=configExample.json` on Linux systems, `inmap1.1.0darwin-amd64 -config=configExample.json` on Mac systems, or `inmap1.1.0windows-amd64.exe -config=configExample.json` on Windows systems to run the program. The program should run without any error messages and create a file called "output_0.shp" (along with supporting files like "output_0.dbf") which can be viewed with any program that can view shapefiles. Refer to the next section for additional details.
 
 ## Running InMAP
 
 1. Make sure that you have downloaded the general input files (`InMAPData`). It is important to download the version of the input files that match the version of InMAP you are using.
 
-3. Create an emissions scenario. Emissions files should be in [shapefile](http://en.wikipedia.org/wiki/Shapefile) format where the attribute columns correspond to the names of emitted pollutants. Refer [here](http://godoc.org/github.com/ctessum/inmap#pkg-variables) (the `EmisNames` variable) for acceptable pollutant names. Emissions should be in units of short tons per year. The model can handle multiple input emissions files, and emissions can be either elevated or ground level. Files with elevated emissions need to have attribute columns labeled "height", "diam", "temp", and "velocity" containing stack information in units of m, m, K, and m/s, respectively.
+3. Create an emissions scenario. Emissions files should be in [shapefile](http://en.wikipedia.org/wiki/Shapefile) format where the attribute columns correspond to the names of emitted pollutants. Refer [here](http://godoc.org/github.com/spatialmodel/inmap#pkg-variables) (the `EmisNames` variable) for acceptable pollutant names. Emissions should be in units of short tons per year. The model can handle multiple input emissions files, and emissions can be either elevated or ground level. Files with elevated emissions need to have attribute columns labeled "height", "diam", "temp", and "velocity" containing stack information in units of m, m, K, and m/s, respectively.
 
 	Emissions will be allocated from the geometries in the shape file to the InMAP computational grid, but currently the mapping projection of the shapefile must be the same as the projection InMAP uses. In ESRI format, this projection is:
 
@@ -79,4 +79,4 @@ From the [testdata](https://github.com/ctessum/inmap/tree/master/testdata) direc
 
 ## API
 
-The InMAP package is split into an executable program and an application programming interface (API). The documentation [here](http://godoc.org/github.com/ctessum/inmap) shows the functions available in the API and how they work.
+The InMAP package is split into an executable program and an application programming interface (API). The documentation [here](http://godoc.org/github.com/spatialmodel/inmap) shows the functions available in the API and how they work.

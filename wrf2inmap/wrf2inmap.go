@@ -336,12 +336,12 @@ func main() {
 			uAvg.Shape[2], vAvg.Shape[1], wAvg.Shape[0]})
 	h.AddAttribute("", "comment", "InMAP meteorology and baseline chemistry data file")
 
-	h.AddAttribute("", "X0", config.CtmGridXo)
-	h.AddAttribute("", "Y0", config.CtmGridYo)
-	h.AddAttribute("", "dx", config.CtmGridDx)
-	h.AddAttribute("", "dy", config.CtmGridDy)
-	h.AddAttribute("", "nx", config.CtmGridNx)
-	h.AddAttribute("", "ny", config.CtmGridNy)
+	h.AddAttribute("", "x0", []float64{config.CtmGridXo})
+	h.AddAttribute("", "y0", []float64{config.CtmGridYo})
+	h.AddAttribute("", "dx", []float64{config.CtmGridDx})
+	h.AddAttribute("", "dy", []float64{config.CtmGridDy})
+	h.AddAttribute("", "nx", []int32{int32(config.CtmGridNx)})
+	h.AddAttribute("", "ny", []int32{int32(config.CtmGridNy)})
 
 	data := map[string]dataHolder{
 		"UAvg": dataHolder{[]string{"z", "y", "xStagger"},

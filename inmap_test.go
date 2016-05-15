@@ -391,7 +391,6 @@ func TestMeanderMixing(t *testing.T) {
 			}
 		}
 		if different(sum, E*float64(nsteps), tolerance) {
-			fmt.Println("qqq", testRow, d.Cells[testRow].Polygonal, d.Cells[testRow].Layer)
 			t.Errorf("row %d emis: sum=%.12g (it should equal %v)\n", testRow, sum, E*float64(nsteps))
 		}
 	}

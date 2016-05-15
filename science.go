@@ -249,11 +249,6 @@ func (c *Cell) WetDeposition(Δt float64) {
 	c.Cf[ipNO] -= c.Ci[ipNO] * particleFrac
 }
 
-// convert float to int (rounding)
-func f2i(f float64) int {
-	return int(f + 0.5)
-}
-
 func max(vals ...float64) float64 {
 	m := vals[0]
 	for _, v := range vals {
