@@ -90,7 +90,7 @@ func main() {
 	flag.Parse()
 	if *configFile == "" {
 		fmt.Println("Need to specify configuration file as in " +
-			"`inmap -config=configFile.json`")
+			"`inmap -config=configFile.toml`")
 		os.Exit(1)
 	}
 	config := readConfigFile(*configFile)
@@ -420,10 +420,7 @@ func readConfigFile(filename string) (config *configData) {
 	_, err = toml.Decode(string(bytes), config)
 	if err != nil {
 		fmt.Printf(
-			"There has been an error parsing the configuration file.\n"+
-				"Please ensure that the file is in valid JSON format\n"+
-				"(you can check for errors at http://jsonlint.com/)\n"+
-				"and try again!\n\n%v\n\n", err.Error())
+			"There has been an error parsing the configuration file: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -438,7 +435,7 @@ func readConfigFile(filename string) (config *configData) {
 	if config.OutputTemplate == "" {
 		fmt.Println("You need to specify an output template in the " +
 			"configuration file(for example: " +
-			"\"OutputTemplate\":\"output_[layer].geojson\"")
+			"\"OutputTemplate\":\"output_[layer].shp\"")
 		os.Exit(1)
 	}
 
