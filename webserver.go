@@ -288,6 +288,9 @@ func s2i(s string) (int, error) {
 }
 
 func s2f(s string) (float64, error) {
+	if s == "************************" { // Null value
+		return 0., nil
+	}
 	f, err := strconv.ParseFloat(s, 64)
 	return f, err
 }
