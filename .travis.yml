@@ -6,8 +6,8 @@ before_install:
 - go get github.com/axw/gocov/gocov
 - go get github.com/mattn/goveralls
 - go get golang.org/x/tools/cmd/cover
-- wget https://github.com/spatialmodel/inmap/releases/download/v1.1.0/testdata_v1.1.0.zip
-- unzip testdata_v1.1.0.zip
+- wget https://github.com/spatialmodel/inmap/releases/download/v1.1.0/testdata_v1.2.0-dev.zip
+- unzip testdata_v1.2.0-dev.zip
 
 install:
 - go get -d -t ./...
