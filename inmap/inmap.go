@@ -201,8 +201,11 @@ func main() {
 
 	log.Println("Allocating emissions to grid cells...")
 	// allocate emissions to appropriate grid cells
-	for i := d.LayerStart[0]; i < d.LayerEnd[0]; i++ {
+	for i := 0; i < len(d.Cells); i++ {
 		cell := d.Cells[i]
+		if cell.Layer > 0 {
+			break // only allocate to ground level cells.
+		}
 		for _, eTemp := range emisTree.SearchIntersect(cell.Bounds()) {
 			e := eTemp.(emisRecord)
 			var intersection geom.Geom

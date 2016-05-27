@@ -33,8 +33,6 @@ import (
 
 // InMAPdata is holds the current state of the model.
 type InMAPdata struct {
-	VarGridConfig
-
 	Cells   []*Cell // One data holder for each grid cell
 	Dt      float64 // seconds
 	Nlayers int     // number of model layers
@@ -48,8 +46,6 @@ type InMAPdata struct {
 	// calculate convergence automatically.
 	NumIterations int
 
-	LayerStart    []int   // start index of each layer (inclusive)
-	LayerEnd      []int   // end index of each layer (exclusive)
 	westBoundary  []*Cell // boundary cells
 	eastBoundary  []*Cell // boundary cells
 	northBoundary []*Cell // boundary cells
@@ -63,8 +59,6 @@ type InMAPdata struct {
 	population, mortalityrate *rtree.Rtree
 
 	sr *proj.SR
-
-	cellCache map[string]*Cell
 }
 
 // Cell holds the state of a single grid cell.
@@ -154,6 +148,13 @@ type Cell struct {
 	index                 [][2]int
 	aboveDensityThreshold bool
 }
+
+// DomainManipulator is a class of functions that operate on the entire InMAP
+// domain.
+type DomainManipulator func(d *InMAPdata) error
+
+// CellManipulator is a class of functions that operate on a single grid cell.
+type CellManipulator func(c *Cell)
 
 func (c *Cell) prepare() {
 	c.Volume = c.Dx * c.Dy * c.Dz
@@ -308,10 +309,17 @@ func harmonicMean(a, b float64) float64 {
 
 // Convert cell data into a regular array
 func (d *InMAPdata) toArray(pol string, layer int) []float64 {
-	o := make([]float64, d.LayerEnd[layer]-d.LayerStart[layer])
-	for i, c := range d.Cells[d.LayerStart[layer]:d.LayerEnd[layer]] {
+	o := make([]float64, 0, len(d.Cells))
+	for _, c := range d.Cells {
 		c.RLock()
-		o[i] = c.getValue(pol)
+		if c.Layer > layer {
+			// The cells should be sorted with the lower layers first, so we
+			// should be done here.
+			return o
+		}
+		if c.Layer == layer {
+			o = append(o, c.getValue(pol))
+		}
 		c.RUnlock()
 	}
 	return o
@@ -367,9 +375,18 @@ func (d *InMAPdata) getUnits(varName string) string {
 
 // GetGeometry returns the cell geometry for the given layer.
 func (d *InMAPdata) GetGeometry(layer int) []geom.Geom {
-	o := make([]geom.Geom, d.LayerEnd[layer]-d.LayerStart[layer])
-	for i, c := range d.Cells[d.LayerStart[layer]:d.LayerEnd[layer]] {
-		o[i] = c.WebMapGeom
+	o := make([]geom.Geom, 0, len(d.Cells))
+	for _, c := range d.Cells {
+		c.RLock()
+		if c.Layer > layer {
+			// The cells should be sorted with the lower layers first, so we
+			// should be done here.
+			return o
+		}
+		if c.Layer == layer {
+			o = append(o, c.WebMapGeom)
+		}
+		c.RUnlock()
 	}
 	return o
 }
