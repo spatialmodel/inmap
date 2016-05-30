@@ -427,8 +427,8 @@ func (d *InMAPdata) verticalProfileHandler(w http.ResponseWriter,
 // variable at a given location.
 func (d *InMAPdata) VerticalProfile(variable string, lon, lat float64) (
 	height, vals []float64) {
-	height = make([]float64, d.Nlayers)
-	vals = make([]float64, d.Nlayers)
+	height = make([]float64, d.nlayers)
+	vals = make([]float64, d.nlayers)
 	x, y := carto.Degrees2meters(lon, lat)
 	loc := geom.Point{X: x, Y: y}
 	for _, cell := range d.Cells {
@@ -437,7 +437,7 @@ func (d *InMAPdata) VerticalProfile(variable string, lon, lat float64) (
 			panic(err)
 		}
 		if in {
-			for i := 0; i < d.Nlayers; i++ {
+			for i := 0; i < d.nlayers; i++ {
 				vals[i] = cell.getValue(variable)
 				height[i] = float64(i)
 				//if i == 0 {

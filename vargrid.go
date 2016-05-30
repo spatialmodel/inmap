@@ -116,7 +116,27 @@ func (c *Cell) clonePartial() *Cell {
 	return o
 }
 
-func (config *VarGridConfig) loadPopMort(gridSR *proj.SR) (*rtree.Rtree, *rtree.Rtree, error) {
+// Population is a holder for information about the human population in
+// the model domain.
+type Population struct {
+	tree *rtree.Rtree
+}
+
+// MortalityRates is a holder for information about the average human
+// mortality rate (in units of deaths per 100,000 people per year) in the
+// model domain
+type MortalityRates struct {
+	tree *rtree.Rtree
+}
+
+// LoadPopMort loads the population and mortality rate data from the shapefiles
+// specified in config.
+func (config *VarGridConfig) LoadPopMort() (*Population, *MortalityRates, error) {
+	gridSR, err := proj.Parse(config.GridProj)
+	if err != nil {
+		return nil, nil, fmt.Errorf("inmap: while parsing GridProj: %v", err)
+	}
+
 	pop, err := config.loadPopulation(gridSR)
 	if err != nil {
 		return nil, nil, fmt.Errorf("inmap: while loading population: %v", err)
@@ -125,50 +145,19 @@ func (config *VarGridConfig) loadPopMort(gridSR *proj.SR) (*rtree.Rtree, *rtree.
 	if err != nil {
 		return nil, nil, fmt.Errorf("inmap: while loading mortality rate: %v", err)
 	}
-	return pop, mort, nil
+	return &Population{tree: pop}, &MortalityRates{tree: mort}, nil
 }
 
-// NewInMAPData initializes the model where `data` is preprocessed
-// output data from a chemical transport model,
-// and `numIterations` is the number of iterations to calculate.
-// If `numIterations` < 1, convergence is calculated automatically.
-func (config *VarGridConfig) NewInMAPData(data *CTMData, numIterations int) (*InMAPdata, error) {
-	d := new(InMAPdata)
-	d.NumIterations = numIterations
-
-	var err error
-	gridSR, err := proj.Parse(config.GridProj)
-	if err != nil {
-		return nil, fmt.Errorf("inmap: while parsing GridProj: %v", err)
-	}
-
-	pop, mort, err := config.loadPopMort(gridSR)
-	if err != nil {
-		return nil, err
-	}
-
-	err = config.RegularGrid(data, pop, mort)(d)
-	if err != nil {
-		return nil, err
-	}
-	err = config.StaticVariableGrid(data, pop, mort)(d)
-	if err != nil {
-		return nil, err
-	}
-
+func (d *InMAPdata) sort() {
 	sortCells(d.Cells)
-	d.setupTree()
-	for i, c := range d.Cells {
-		c.Row = i
-		d.setNeighbors(c, config.BboxOffset)
-	}
-
-	d.setTstepCFL() // Set time step
-
-	return d, nil
+	sortCells(d.westBoundary)
+	sortCells(d.eastBoundary)
+	sortCells(d.northBoundary)
+	sortCells(d.southBoundary)
+	sortCells(d.topBoundary)
 }
 
-// sort the cells so that the order doesn't change between program runs.
+// sortCells sorts the cells by layer, x centroid, and y centroid.
 func sortCells(cells []*Cell) {
 	sc := &cellsSorter{
 		cells: cells,
@@ -211,72 +200,6 @@ func (c *cellsSorter) Less(i, j int) bool {
 		ci.Polygonal, ci.Layer, cj.Polygonal, cj.Layer))
 }
 
-func (d *InMAPdata) setupTree() {
-	d.index = rtree.NewTree(25, 50)
-	for _, c := range d.Cells {
-		d.index.Insert(c)
-	}
-}
-
-func (d *InMAPdata) setNeighbors(c *Cell, bboxOffset float64) {
-	d.neighbors(c, bboxOffset)
-
-	if len(c.West) == 0 {
-		d.addWestBoundary(c)
-	}
-	if len(c.East) == 0 {
-		d.addEastBoundary(c)
-	}
-	if len(c.North) == 0 {
-		d.addNorthBoundary(c)
-	}
-	if len(c.South) == 0 {
-		d.addSouthBoundary(c)
-	}
-	if len(c.Above) == 0 {
-		d.addTopBoundary(c)
-	}
-	if c.Layer == 0 {
-		c.Below = []*Cell{c}
-		c.GroundLevel = []*Cell{c}
-	}
-
-	c.neighborInfo()
-}
-
-func (d *InMAPdata) neighbors(c *Cell, bboxOffset float64) {
-	b := c.Bounds()
-
-	// Horizontal
-	westbox := newRect(b.Min.X-2*bboxOffset, b.Min.Y+bboxOffset,
-		b.Min.X-bboxOffset, b.Max.Y-bboxOffset)
-	c.West = getCells(d.index, westbox, c.Layer)
-	eastbox := newRect(b.Max.X+bboxOffset, b.Min.Y+bboxOffset,
-		b.Max.X+2*bboxOffset, b.Max.Y-bboxOffset)
-	c.East = getCells(d.index, eastbox, c.Layer)
-	southbox := newRect(b.Min.X+bboxOffset, b.Min.Y-2*bboxOffset,
-		b.Max.X-bboxOffset, b.Min.Y-bboxOffset)
-	c.South = getCells(d.index, southbox, c.Layer)
-	northbox := newRect(b.Min.X+bboxOffset, b.Max.Y+bboxOffset,
-		b.Max.X-bboxOffset, b.Max.Y+2*bboxOffset)
-	c.North = getCells(d.index, northbox, c.Layer)
-
-	// Above
-	abovebox := newRect(b.Min.X+bboxOffset, b.Min.Y+bboxOffset,
-		b.Max.X-bboxOffset, b.Max.Y-bboxOffset)
-	c.Above = getCells(d.index, abovebox, c.Layer+1)
-
-	// Below
-	belowbox := newRect(b.Min.X+bboxOffset, b.Min.Y+bboxOffset,
-		b.Max.X-bboxOffset, b.Max.Y-bboxOffset)
-	c.Below = getCells(d.index, belowbox, c.Layer-1)
-
-	// Ground level.
-	groundlevelbox := newRect(b.Min.X+bboxOffset, b.Min.Y+bboxOffset,
-		b.Max.X-bboxOffset, b.Max.Y-bboxOffset)
-	c.GroundLevel = getCells(d.index, groundlevelbox, 0)
-}
-
 // getCells returns all the grid cells in cellTree that are within box
 // and at vertical layer layer.
 func getCells(cellTree *rtree.Rtree, box *geom.Bounds, layer int) []*Cell {
@@ -291,34 +214,26 @@ func getCells(cellTree *rtree.Rtree, box *geom.Bounds, layer int) []*Cell {
 	return cells
 }
 
-func newRect(xmin, ymin, xmax, ymax float64) *geom.Bounds {
-	return &geom.Bounds{
-		Min: geom.Point{X: xmin, Y: ymin},
-		Max: geom.Point{X: xmax, Y: ymax},
-	}
-}
-
 // RegularGrid returns a function that creates a new regular
 // (i.e., not variable resolution) grid
 // as specified by the information in c.
-func (config *VarGridConfig) RegularGrid(data *CTMData, pop, mort *rtree.Rtree) DomainManipulator {
+func (config *VarGridConfig) RegularGrid(data *CTMData, pop *Population, mort *MortalityRates, emis *Emissions) DomainManipulator {
 	return func(d *InMAPdata) error {
 
 		nz := data.data["UAvg"].data.Shape[0]
-		d.Nlayers = nz
+		d.nlayers = nz
+		d.index = rtree.NewTree(25, 50)
 
 		nx := config.Xnests[0]
 		ny := config.Ynests[0]
-		d.Cells = make([]*Cell, nx*ny*nz)
+		d.Cells = make([]*Cell, 0, nx*ny*nz)
 		// Iterate through indices and create the cells in the outermost nest.
-		ii := 0
 		for k := 0; k < nz; k++ {
 			for j := 0; j < ny; j++ {
 				for i := 0; i < nx; i++ {
 					index := [][2]int{{i, j}}
 					// Create the cell
-					d.Cells[ii] = config.createCell(data, pop, mort, index, k)
-					ii++
+					d.AddCells(config.createCell(data, pop, mort, emis, index, k))
 				}
 			}
 		}
@@ -330,13 +245,14 @@ func (config *VarGridConfig) RegularGrid(data *CTMData, pop, mort *rtree.Rtree) 
 // resolution grid (i.e., one that does not change during the simulation)
 // by dividing cells in the previously created grid
 // based on the population and population density cutoffs in config.
-func (config *VarGridConfig) StaticVariableGrid(data *CTMData, pop, mort *rtree.Rtree) DomainManipulator {
+func (config *VarGridConfig) StaticVariableGrid(data *CTMData, pop *Population, mort *MortalityRates, emis *Emissions) DomainManipulator {
 	return func(d *InMAPdata) error {
 
 		continueSplitting := true
 		for continueSplitting {
 			continueSplitting = false
-			var newCells []*Cell
+			var newCellIndices [][][2]int
+			var newCellLayers []int
 			var indicesToDelete []int
 			for i, cell := range d.Cells {
 				if len(cell.index) < len(config.Xnests) {
@@ -354,32 +270,56 @@ func (config *VarGridConfig) StaticVariableGrid(data *CTMData, pop, mort *rtree.
 						for ii := 0; ii < config.Xnests[len(cell.index)]; ii++ {
 							for jj := 0; jj < config.Ynests[len(cell.index)]; jj++ {
 								newIndex := append(cell.index, [2]int{ii, jj})
-								newCells = append(newCells, config.createCell(data, pop, mort, newIndex, cell.Layer))
+								newCellIndices = append(newCellIndices, newIndex)
+								newCellLayers = append(newCellLayers, cell.Layer)
 							}
 						}
 					}
 				}
 			}
 			// Delete the cells that were split.
-			indexToSubtract := 0
-			for _, ii := range indicesToDelete {
-				i := ii - indexToSubtract
-				copy(d.Cells[i:], d.Cells[i+1:])
-				d.Cells[len(d.Cells)-1] = nil
-				d.Cells = d.Cells[:len(d.Cells)-1]
-				indexToSubtract++
-			}
+			d.DeleteCells(indicesToDelete...)
 			// Add the new cells.
-			d.Cells = append(d.Cells, newCells...)
+			for i, ii := range newCellIndices {
+				d.AddCells(config.createCell(data, pop, mort, emis, ii, newCellLayers[i]))
+			}
 		}
 		return nil
+	}
+}
+
+// AddCells adds a new cell to the grid. The function will take the necessary
+// steps to fit the new cell in with existing cells, but it is the caller's
+// reponsibility that the new cell doesn't overlap any existing cells.
+func (d *InMAPdata) AddCells(cells ...*Cell) {
+	for _, c := range cells {
+		d.Cells = append(d.Cells, c)
+		d.index.Insert(c)
+		const bboxOffset = 1.e-10
+		d.setNeighbors(c, bboxOffset)
+	}
+}
+
+// DeleteCells deletes the cell with index i from the grid and removes any
+// references to it from other cells.
+func (d *InMAPdata) DeleteCells(indicesToDelete ...int) {
+	indexToSubtract := 0
+	for _, ii := range indicesToDelete {
+		i := ii - indexToSubtract
+		c := d.Cells[i]
+		copy(d.Cells[i:], d.Cells[i+1:])
+		d.Cells[len(d.Cells)-1] = nil
+		d.Cells = d.Cells[:len(d.Cells)-1]
+		d.index.Delete(c)
+		c.dereferenceNeighbors(d)
+		indexToSubtract++
 	}
 }
 
 // createCell creates a new grid cell. If any of the census shapes
 // that intersect the cell are above the population density threshold,
 // then the grid cell is also set to being above the density threshold.
-func (config *VarGridConfig) createCell(data *CTMData, pop, mort *rtree.Rtree, index [][2]int, layer int) *Cell {
+func (config *VarGridConfig) createCell(data *CTMData, pop *Population, mort *MortalityRates, emis *Emissions, index [][2]int, layer int) *Cell {
 
 	xResFac, yResFac := 1., 1.
 	l := config.VariableGridXo
@@ -400,7 +340,7 @@ func (config *VarGridConfig) createCell(data *CTMData, pop, mort *rtree.Rtree, i
 	cell.index = index
 	// Polygon must go counter-clockwise
 	cell.Polygonal = geom.Polygon([][]geom.Point{{{l, b}, {r, b}, {r, u}, {l, u}, {l, b}}})
-	for _, pInterface := range pop.SearchIntersect(cell.Bounds()) {
+	for _, pInterface := range pop.tree.SearchIntersect(cell.Bounds()) {
 		p := pInterface.(*population)
 		intersection := cell.Intersection(p)
 		area1 := intersection.Area()
@@ -419,7 +359,7 @@ func (config *VarGridConfig) createCell(data *CTMData, pop, mort *rtree.Rtree, i
 			cell.aboveDensityThreshold = true
 		}
 	}
-	for _, mInterface := range mort.SearchIntersect(cell.Bounds()) {
+	for _, mInterface := range mort.tree.SearchIntersect(cell.Bounds()) {
 		m := mInterface.(*mortality)
 		intersection := cell.Intersection(m)
 		area1 := intersection.Area()
@@ -435,6 +375,8 @@ func (config *VarGridConfig) createCell(data *CTMData, pop, mort *rtree.Rtree, i
 
 	cell.loadData(data, layer)
 	cell.prepare()
+
+	cell.setEmissionsFlux(emis)
 
 	return cell
 }

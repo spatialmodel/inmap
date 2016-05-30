@@ -7,11 +7,12 @@ import (
 
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/encoding/shp"
+	"github.com/ctessum/geom/index/rtree"
 
 	"bitbucket.org/ctessum/sparse"
 )
 
-func CreateVarGrid() *InMAPdata {
+func VarGridData() (*VarGridConfig, *CTMData, *Population, *MortalityRates) {
 
 	const (
 		prj      = `PROJCS["Lambert_Conformal_Conic_2SP",GEOGCS["GCS_unnamed ellipse",DATUM["D_unknown",SPHEROID["Unknown",6370997,0]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],PROJECTION["Lambert_Conformal_Conic_2SP"],PARAMETER["standard_parallel_1",33],PARAMETER["standard_parallel_2",45],PARAMETER["latitude_of_origin",40],PARAMETER["central_meridian",-97],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]`
@@ -410,7 +411,7 @@ func CreateVarGrid() *InMAPdata {
 		gridTree: cfg.makeCTMgrid(10),
 	}
 
-	d, err := cfg.NewInMAPData(data, -1)
+	population, mortalityRates, err := cfg.LoadPopMort()
 	if err != nil {
 		panic(err)
 	}
@@ -423,12 +424,26 @@ func CreateVarGrid() *InMAPdata {
 		}
 	}
 
-	return d
+	return &cfg, data, population, mortalityRates
 }
 
 func TestVarGridCreate(t *testing.T) {
 
-	d := CreateVarGrid()
+	cfg, ctmdata, pop, mr := VarGridData()
+	emis := &Emissions{
+		data: rtree.NewTree(25, 50),
+	}
+
+	d := &InMAPdata{
+		InitFuncs: []DomainManipulator{
+			cfg.RegularGrid(ctmdata, pop, mr, emis),
+			cfg.StaticVariableGrid(ctmdata, pop, mr, emis),
+		},
+	}
+	if err := d.Init(); err != nil {
+		t.Error(err)
+	}
+	d.sort()
 
 	// Cell 0
 	if len(d.Cells[0].West) != 1 || d.Cells[0].West[0] != d.westBoundary[0] {
@@ -449,6 +464,9 @@ func TestVarGridCreate(t *testing.T) {
 	if len(d.Cells[0].Below) != 1 || d.Cells[0].Below[0] != d.Cells[0] {
 		t.Error("Incorrect alignment cell 0 Below")
 	}
+	if len(d.Cells[0].GroundLevel) != 1 || d.Cells[0].GroundLevel[0] != d.Cells[0] {
+		t.Error("Incorrect alignment cell 0 GroundLevel")
+	}
 
 	// Cell 1
 	if len(d.Cells[1].West) != 1 || d.Cells[1].West[0] != d.westBoundary[1] {
@@ -468,6 +486,9 @@ func TestVarGridCreate(t *testing.T) {
 	}
 	if len(d.Cells[1].Below) != 1 || d.Cells[1].Below[0] != d.Cells[1] {
 		t.Error("Incorrect alignment cell 1 Below")
+	}
+	if len(d.Cells[1].GroundLevel) != 1 || d.Cells[1].GroundLevel[0] != d.Cells[1] {
+		t.Error("Incorrect alignment cell 1 GroundLevel")
 	}
 
 	// Cell 2
@@ -490,6 +511,9 @@ func TestVarGridCreate(t *testing.T) {
 	if len(d.Cells[2].Below) != 1 || d.Cells[2].Below[0] != d.Cells[2] {
 		t.Error("Incorrect alignment cell 2 Below")
 	}
+	if len(d.Cells[2].GroundLevel) != 1 || d.Cells[2].GroundLevel[0] != d.Cells[2] {
+		t.Error("Incorrect alignment cell 2 GroundLevel")
+	}
 
 	// Cell 3
 	if len(d.Cells[3].West) != 1 || d.Cells[3].West[0] != d.Cells[0] {
@@ -510,6 +534,9 @@ func TestVarGridCreate(t *testing.T) {
 	if len(d.Cells[3].Below) != 1 || d.Cells[3].Below[0] != d.Cells[3] {
 		t.Error("Incorrect alignment cell 3 Below")
 	}
+	if len(d.Cells[3].GroundLevel) != 1 || d.Cells[3].GroundLevel[0] != d.Cells[3] {
+		t.Error("Incorrect alignment cell 3 GroundLevel")
+	}
 
 	// Cell 4
 	if len(d.Cells[4].West) != 1 || d.Cells[4].West[0] != d.Cells[1] {
@@ -529,6 +556,9 @@ func TestVarGridCreate(t *testing.T) {
 	}
 	if len(d.Cells[4].Below) != 1 || d.Cells[4].Below[0] != d.Cells[4] {
 		t.Error("Incorrect alignment cell 4 Below")
+	}
+	if len(d.Cells[4].GroundLevel) != 1 || d.Cells[4].GroundLevel[0] != d.Cells[4] {
+		t.Error("Incorrect alignment cell 4 GroundLevel")
 	}
 
 	// Cell 5
@@ -551,6 +581,9 @@ func TestVarGridCreate(t *testing.T) {
 	if len(d.Cells[5].Below) != 1 || d.Cells[5].Below[0] != d.Cells[5] {
 		t.Error("Incorrect alignment cell 5 Below")
 	}
+	if len(d.Cells[5].GroundLevel) != 1 || d.Cells[5].GroundLevel[0] != d.Cells[5] {
+		t.Error("Incorrect alignment cell 5 GroundLevel")
+	}
 
 	// Cell 6
 	if len(d.Cells[6].West) != 2 || d.Cells[6].West[0] != d.Cells[3] ||
@@ -572,6 +605,9 @@ func TestVarGridCreate(t *testing.T) {
 	if len(d.Cells[6].Below) != 1 || d.Cells[6].Below[0] != d.Cells[6] {
 		t.Error("Incorrect alignment cell 6 Below")
 	}
+	if len(d.Cells[6].GroundLevel) != 1 || d.Cells[6].GroundLevel[0] != d.Cells[6] {
+		t.Error("Incorrect alignment cell 6 GroundLevel")
+	}
 
 	// Cell 7
 	if len(d.Cells[7].West) != 1 || d.Cells[7].West[0] != d.Cells[2] {
@@ -591,6 +627,9 @@ func TestVarGridCreate(t *testing.T) {
 	}
 	if len(d.Cells[7].Below) != 1 || d.Cells[7].Below[0] != d.Cells[7] {
 		t.Error("Incorrect alignment cell 7 Below")
+	}
+	if len(d.Cells[7].GroundLevel) != 1 || d.Cells[7].GroundLevel[0] != d.Cells[7] {
+		t.Error("Incorrect alignment cell 7 GroundLevel")
 	}
 
 	// Cell 8
@@ -613,6 +652,9 @@ func TestVarGridCreate(t *testing.T) {
 	if len(d.Cells[8].Below) != 1 || d.Cells[8].Below[0] != d.Cells[8] {
 		t.Error("Incorrect alignment cell 8 Below")
 	}
+	if len(d.Cells[8].GroundLevel) != 1 || d.Cells[8].GroundLevel[0] != d.Cells[8] {
+		t.Error("Incorrect alignment cell 8 GroundLevel")
+	}
 
 	// Cell 9
 	if len(d.Cells[9].West) != 1 || d.Cells[9].West[0] != d.Cells[5] {
@@ -633,6 +675,9 @@ func TestVarGridCreate(t *testing.T) {
 	if len(d.Cells[9].Below) != 1 || d.Cells[9].Below[0] != d.Cells[9] {
 		t.Error("Incorrect alignment cell 9 Below")
 	}
+	if len(d.Cells[9].GroundLevel) != 1 || d.Cells[9].GroundLevel[0] != d.Cells[9] {
+		t.Error("Incorrect alignment cell 0 GroundLevel")
+	}
 
 	// Cell 10
 	if len(d.Cells[10].West) != 1 || d.Cells[10].West[0] != d.westBoundary[4] {
@@ -650,6 +695,7 @@ func TestVarGridCreate(t *testing.T) {
 	if len(d.Cells[10].Above) != 1 || d.Cells[10].Above[0] != d.Cells[14] {
 		t.Error("Incorrect alignment cell 10 Above")
 	}
+	sortCells(d.Cells[10].Below)
 	if len(d.Cells[10].Below) != 7 || d.Cells[10].Below[0] != d.Cells[0] ||
 		d.Cells[10].Below[1] != d.Cells[1] ||
 		d.Cells[10].Below[2] != d.Cells[2] ||
@@ -658,6 +704,16 @@ func TestVarGridCreate(t *testing.T) {
 		d.Cells[10].Below[5] != d.Cells[6] ||
 		d.Cells[10].Below[6] != d.Cells[7] {
 		t.Error("Incorrect alignment cell 10 Below")
+	}
+	sortCells(d.Cells[10].GroundLevel)
+	if len(d.Cells[10].GroundLevel) != 7 || d.Cells[10].GroundLevel[0] != d.Cells[0] ||
+		d.Cells[10].GroundLevel[1] != d.Cells[1] ||
+		d.Cells[10].GroundLevel[2] != d.Cells[2] ||
+		d.Cells[10].GroundLevel[3] != d.Cells[3] ||
+		d.Cells[10].GroundLevel[4] != d.Cells[4] ||
+		d.Cells[10].GroundLevel[5] != d.Cells[6] ||
+		d.Cells[10].GroundLevel[6] != d.Cells[7] {
+		t.Error("Incorrect alignment cell 10 GroundLevel")
 	}
 
 	// Cell 11
@@ -679,6 +735,9 @@ func TestVarGridCreate(t *testing.T) {
 	if len(d.Cells[11].Below) != 1 || d.Cells[11].Below[0] != d.Cells[5] {
 		t.Error("Incorrect alignment cell 11 Below")
 	}
+	if len(d.Cells[11].GroundLevel) != 1 || d.Cells[11].GroundLevel[0] != d.Cells[5] {
+		t.Error("Incorrect alignment cell 11 GroundLevel")
+	}
 
 	// Cell 12
 	if len(d.Cells[12].West) != 1 || d.Cells[12].West[0] != d.Cells[10] {
@@ -699,6 +758,9 @@ func TestVarGridCreate(t *testing.T) {
 	if len(d.Cells[12].Below) != 1 || d.Cells[12].Below[0] != d.Cells[8] {
 		t.Error("Incorrect alignment cell 12 Below")
 	}
+	if len(d.Cells[12].GroundLevel) != 1 || d.Cells[12].GroundLevel[0] != d.Cells[8] {
+		t.Error("Incorrect alignment cell 12 GroundLevel")
+	}
 
 	// Cell 13
 	if len(d.Cells[13].West) != 1 || d.Cells[13].West[0] != d.Cells[11] {
@@ -718,6 +780,9 @@ func TestVarGridCreate(t *testing.T) {
 	}
 	if len(d.Cells[13].Below) != 1 || d.Cells[13].Below[0] != d.Cells[9] {
 		t.Error("Incorrect alignment cell 13 Below")
+	}
+	if len(d.Cells[13].GroundLevel) != 1 || d.Cells[13].GroundLevel[0] != d.Cells[9] {
+		t.Error("Incorrect alignment cell 13 GroundLevel")
 	}
 
 	// Skip to the top layer
@@ -740,6 +805,16 @@ func TestVarGridCreate(t *testing.T) {
 	if len(d.Cells[42].Below) != 1 || d.Cells[42].Below[0] != d.Cells[38] {
 		t.Error("Incorrect alignment cell 42 Below")
 	}
+	sortCells(d.Cells[42].GroundLevel)
+	if len(d.Cells[42].GroundLevel) != 7 || d.Cells[42].GroundLevel[0] != d.Cells[0] ||
+		d.Cells[42].GroundLevel[1] != d.Cells[1] ||
+		d.Cells[42].GroundLevel[2] != d.Cells[2] ||
+		d.Cells[42].GroundLevel[3] != d.Cells[3] ||
+		d.Cells[42].GroundLevel[4] != d.Cells[4] ||
+		d.Cells[42].GroundLevel[5] != d.Cells[6] ||
+		d.Cells[42].GroundLevel[6] != d.Cells[7] {
+		t.Error("Incorrect alignment cell 42 GroundLevel")
+	}
 
 	// Cell 43
 	if len(d.Cells[43].West) != 1 || d.Cells[43].West[0] != d.westBoundary[21] {
@@ -759,6 +834,9 @@ func TestVarGridCreate(t *testing.T) {
 	}
 	if len(d.Cells[43].Below) != 1 || d.Cells[43].Below[0] != d.Cells[39] {
 		t.Error("Incorrect alignment cell 43 Below")
+	}
+	if len(d.Cells[43].GroundLevel) != 1 || d.Cells[43].GroundLevel[0] != d.Cells[5] {
+		t.Error("Incorrect alignment cell 43 GroundLevel")
 	}
 
 	// Cell 44
@@ -780,6 +858,9 @@ func TestVarGridCreate(t *testing.T) {
 	if len(d.Cells[44].Below) != 1 || d.Cells[44].Below[0] != d.Cells[40] {
 		t.Error("Incorrect alignment cell 44 Below")
 	}
+	if len(d.Cells[44].GroundLevel) != 1 || d.Cells[44].GroundLevel[0] != d.Cells[8] {
+		t.Error("Incorrect alignment cell 44 GroundLevel")
+	}
 
 	// Cell 45
 	if len(d.Cells[45].West) != 1 || d.Cells[45].West[0] != d.Cells[43] {
@@ -799,6 +880,9 @@ func TestVarGridCreate(t *testing.T) {
 	}
 	if len(d.Cells[45].Below) != 1 || d.Cells[45].Below[0] != d.Cells[41] {
 		t.Error("Incorrect alignment cell 45 Below")
+	}
+	if len(d.Cells[45].GroundLevel) != 1 || d.Cells[45].GroundLevel[0] != d.Cells[9] {
+		t.Error("Incorrect alignment cell 45 GroundLevel")
 	}
 
 }

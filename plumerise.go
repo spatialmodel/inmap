@@ -18,31 +18,39 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 
 package inmap
 
-import (
-	"fmt"
+import "github.com/ctessum/atmos/plumerise"
 
-	"github.com/ctessum/atmos/plumerise"
-)
+// IsPlumeIn calculates whether the plume rise from an emission is at the height
+// of c when given stack information
+// (see github.com/ctessum/atmos/plumerise for required units).
+func (c *Cell) IsPlumeIn(stackHeight, stackDiam, stackTemp, stackVel float64) (bool, error) {
 
-// CalcPlumeRise calculates plume rise when given stack information
-// (see github.com/ctessum/atmos/plumerise for required units)
-// and the index of the (ground level) grid cell (called `row`).
-// Returns the index of the cell the emissions should be added to.
-// This function assumes that when one grid cell is above another
-// grid cell, the upper cell is never smaller than the lower cell.
-func (d *InMAPdata) CalcPlumeRise(stackHeight, stackDiam, stackTemp,
-	stackVel float64, row int) (plumeRow int, plumeHeight float64, err error) {
-	layerHeights := make([]float64, d.Nlayers+1)
-	temperature := make([]float64, d.Nlayers)
-	windSpeed := make([]float64, d.Nlayers)
-	windSpeedInverse := make([]float64, d.Nlayers)
-	windSpeedMinusThird := make([]float64, d.Nlayers)
-	windSpeedMinusOnePointFour := make([]float64, d.Nlayers)
-	sClass := make([]float64, d.Nlayers)
-	s1 := make([]float64, d.Nlayers)
+	// Find the cells in the vertical column below c.
+	var cellStack []*Cell
+	cc := c
+	for {
+		if cc.GroundLevel[0] != cc {
+			cellStack = append(cellStack, cc)
+		} else {
+			break
+		}
+		cc = cc.Below[0]
+	}
+	// reverse the order of the stack so it starts at ground level.
+	for left, right := 0, len(cellStack)-1; left < right; left, right = left+1, right-1 {
+		cellStack[left], cellStack[right] = cellStack[right], cellStack[left]
+	}
 
-	cell := d.Cells[row]
-	for i := 0; i < d.Nlayers; i++ {
+	layerHeights := make([]float64, len(cellStack)+1)
+	temperature := make([]float64, len(cellStack))
+	windSpeed := make([]float64, len(cellStack))
+	windSpeedInverse := make([]float64, len(cellStack))
+	windSpeedMinusThird := make([]float64, len(cellStack))
+	windSpeedMinusOnePointFour := make([]float64, len(cellStack))
+	sClass := make([]float64, len(cellStack))
+	s1 := make([]float64, len(cellStack))
+
+	for i, cell := range cellStack {
 		layerHeights[i+1] = layerHeights[i] + cell.Dz
 		windSpeed[i] = cell.WindSpeed
 		windSpeedInverse[i] = cell.WindSpeedInverse
@@ -50,33 +58,30 @@ func (d *InMAPdata) CalcPlumeRise(stackHeight, stackDiam, stackTemp,
 		windSpeedMinusOnePointFour[i] = cell.WindSpeedMinusOnePointFour
 		sClass[i] = cell.SClass
 		s1[i] = cell.S1
-		if len(cell.Above) > 0 {
-			cell = cell.Above[0]
-		} else {
-			err = fmt.Errorf("Plume rise is above top layer for height=%g, "+
-				"diameter=%g, temperature=%g, velocity=%g.", stackHeight,
-				stackDiam, stackTemp, stackVel)
-			return
-		}
 	}
-	var plumeIndex int
-	plumeIndex, plumeHeight, err = plumerise.ASMEPrecomputed(stackHeight, stackDiam,
+
+	plumeIndex, _, err := plumerise.ASMEPrecomputed(stackHeight, stackDiam,
 		stackTemp, stackVel, layerHeights, temperature, windSpeed,
 		sClass, s1, windSpeedMinusOnePointFour, windSpeedMinusThird,
 		windSpeedInverse)
 	if err != nil {
 		if err == plumerise.ErrAboveModelTop {
-			plumeIndex = d.Nlayers - 1
-			err = nil
-		} else {
-			return
+			// If the plume is above the top of our stack, return true if c is
+			// in the top model layer (because we want to put the plume in the
+			// top layer even if it should technically go above it),
+			//  otherwise return false.
+			if c.Above[0].Boundary {
+				return true, nil
+			}
+			return false, nil
 		}
+		return false, err
 	}
 
-	plumeCell := d.Cells[row]
-	for i := 0; i < plumeIndex; i++ {
-		plumeCell = plumeCell.Above[0]
+	// if the index of the plume is at the end of the cell stack,
+	// that means that the plume should go in this cell.
+	if plumeIndex == len(cellStack)-1 {
+		return true, nil
 	}
-	plumeRow = plumeCell.Row
-	return
+	return false, nil
 }

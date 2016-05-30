@@ -20,6 +20,7 @@ package inmap
 
 import (
 	"fmt"
+	"io"
 	"math"
 	"runtime"
 	"sync"
@@ -48,9 +49,6 @@ const (
 	NtoNH4 = mwNH4 / mwN
 )
 
-const tolerance = 0.005 // tolerance for convergence
-//const tolerance = 0.5     // tolerance for convergence
-const checkPeriod = 3600. // seconds, how often to check for convergence
 const daysPerSecond = 1. / 3600. / 24.
 
 // EmisNames are the names of pollutants accepted as emissions [μg/s]
@@ -100,101 +98,82 @@ var polLabels = map[string]polConv{
 	"pNO3":         polConv{[]int{ipNO}, []float64{NtoNO3}},
 }
 
-// Run air quality model. Emissions are assumed to be in units
-// of μg/s, and must only include the pollutants listed in "EmisNames".
-// Output is in the form of map[pollutant][layer][row]concentration,
-// in units of μg/m3.
-// If `outputAllLayers` is true, write all of the vertical layers to the
-// output, otherwise only output the ground-level layer.
-func (d *InMAPdata) Run(emissions map[string][]float64, outputAllLayers bool) (
-	outputConc map[string][][]float64) {
-
-	for _, c := range d.Cells {
-		c.Ci = make([]float64, len(polNames))
-		c.Cf = make([]float64, len(polNames))
-		c.emisFlux = make([]float64, len(polNames))
-	}
-
-	startTime := time.Now()
-	timeStepTime := time.Now()
-
-	// Emissions: all except PM2.5 go to gas phase
-	for pol, arr := range emissions {
-		switch pol {
-		case "VOC":
-			d.addEmisFlux(arr, 1., igOrg)
-		case "NOx":
-			d.addEmisFlux(arr, NOxToN, igNO)
-		case "NH3":
-			d.addEmisFlux(arr, NH3ToN, igNH)
-		case "SOx":
-			d.addEmisFlux(arr, SOxToS, igS)
-		case "PM2_5":
-			d.addEmisFlux(arr, 1., iPM2_5)
-		default:
-			panic(fmt.Sprintf("Unknown emissions pollutant %v.", pol))
-		}
-	}
-
-	oldSum := make([]float64, len(polNames))
-	iteration := 0
-	nDaysRun := 0.
-	timeSinceLastCheck := 0.
-	nprocs := runtime.GOMAXPROCS(0) // number of processors
-	funcChan := make([]chan func(*Cell, *InMAPdata), nprocs)
-	var wg sync.WaitGroup
-
-	for procNum := 0; procNum < nprocs; procNum++ {
-		funcChan[procNum] = make(chan func(*Cell, *InMAPdata), 1)
-		// Start thread for concurrent computations
-		go d.doScience(nprocs, procNum, funcChan[procNum], &wg)
-	}
-
-	// make list of science functions to run at each timestep
-	scienceFuncs := []func(c *Cell, d *InMAPdata){
-		func(c *Cell, d *InMAPdata) { c.addEmissionsFlux(d) },
-		func(c *Cell, d *InMAPdata) {
-			c.UpwindAdvection(d.Dt)
-			c.Mixing(d.Dt)
-			c.MeanderMixing(d.Dt)
-			c.DryDeposition(d)
-			c.WetDeposition(d.Dt)
-			c.Chemistry(d) // Run chemistry last because it does instantaneous partitioning.
-		}}
-
-	for { // Run main calculation loop until pollutant concentrations stabilize
-
-		// Send all of the science functions to the concurrent
-		// processors for calculating
-		wg.Add(len(scienceFuncs) * nprocs)
-		for _, function := range scienceFuncs {
-			for pp := 0; pp < nprocs; pp++ {
-				funcChan[pp] <- function
+// ResetCells clears concentration and emissions information from all of the
+// grid cells and boundary cells.
+func ResetCells() DomainManipulator {
+	return func(d *InMAPdata) error {
+		for _, g := range [][]*Cell{d.Cells, d.westBoundary, d.eastBoundary,
+			d.northBoundary, d.southBoundary, d.topBoundary} {
+			for _, c := range g {
+				c.Ci = make([]float64, len(polNames))
+				c.Cf = make([]float64, len(polNames))
+				c.emisFlux = make([]float64, len(polNames))
 			}
 		}
+		return nil
+	}
+}
 
-		// do some things while waiting for the science to finish
-		iteration++
-		nDaysRun += d.Dt * daysPerSecond
-		fmt.Printf("Iteration %-4d  walltime=%6.3gh  Δwalltime=%4.2gs  "+
-			"timestep=%2.0fs  day=%.3g\n",
-			iteration, time.Since(startTime).Hours(),
-			time.Since(timeStepTime).Seconds(), d.Dt, nDaysRun)
-		timeStepTime = time.Now()
+// Calculations returns a function that concurrently runs a series of calculations
+// on all of the model grid cells.
+func Calculations(calculators ...CellManipulator) DomainManipulator {
+
+	nprocs := runtime.GOMAXPROCS(0) // number of processors
+	var wg sync.WaitGroup
+
+	return func(d *InMAPdata) error {
+		// Concurrently run all of the calculators on all of the cells.
+		wg.Add(nprocs)
+		for pp := 0; pp < nprocs; pp++ {
+			go func(pp int) {
+				var c *Cell
+				for ii := pp; ii < len(d.Cells); ii += nprocs {
+					c = d.Cells[ii]
+					c.Lock() // Lock the cell to avoid race conditions
+					// run functions
+					for _, f := range calculators {
+						f(c, d.Dt)
+					}
+					c.Unlock() // Unlock the cell: we're done editing it
+				}
+				wg.Done()
+			}(pp)
+		}
+		wg.Wait()
+		return nil
+	}
+}
+
+// SteadyStateConvergenceCheck checks whether a steady-state
+// simulation is finished and sets the Done
+// flag if it is. If numIterations > 0, the simulation is finished after
+// that number of iterations have completed. Otherwise, the simulation has
+// finished if the change in mass in the domain since the last check is less
+// than 5%.
+func SteadyStateConvergenceCheck(numIterations int) DomainManipulator {
+
+	const tolerance = 0.005   // tolerance for convergence
+	const checkPeriod = 3600. // seconds, how often to check for convergence
+
+	// oldSum is the sum of mass in the domain at the last check
+	oldSum := make([]float64, len(polNames))
+
+	timeSinceLastCheck := 0.
+	iteration := 0
+
+	return func(d *InMAPdata) error {
 		timeSinceLastCheck += d.Dt
+		iteration++
 
 		// If NumIterations has been set, used it to determine when to
-		// stop the model
-		if d.NumIterations > 0 {
-			if iteration >= d.NumIterations {
-				wg.Wait() // Wait for the science to finish
-				break     // finished
+		// stop the model.
+		if numIterations > 0 {
+			if iteration >= numIterations {
+				d.Done = true
 			}
 			// Otherwise, occasionally check to see if the pollutant
 			// concentrations have converged
 		} else if timeSinceLastCheck >= checkPeriod {
-			wg.Wait() // Wait for the science to finish, only when we need to check
-			// for convergence.
 			timeToQuit := true
 			timeSinceLastCheck = 0.
 			for ii, pol := range polNames {
@@ -202,68 +181,20 @@ func (d *InMAPdata) Run(emissions map[string][]float64, outputAllLayers bool) (
 				for _, c := range d.Cells {
 					sum += c.Cf[ii]
 				}
-				if !checkConvergence(sum, oldSum[ii], pol) {
+				if !checkConvergence(sum, oldSum[ii], tolerance, pol) {
 					timeToQuit = false
 				}
 				oldSum[ii] = sum
 			}
 			if timeToQuit {
-				break // leave calculation loop because we're finished
+				d.Done = true
 			}
 		}
-	}
-	// Prepare output data
-	outputConc = make(map[string][][]float64)
-	var outputVariables []string
-	for pol := range polLabels {
-		outputVariables = append(outputVariables, pol)
-	}
-	for pop := range popNames {
-		outputVariables = append(outputVariables, pop, pop+" deaths")
-	}
-	outputVariables = append(outputVariables, "MortalityRate")
-	var outputLay int
-	if outputAllLayers {
-		outputLay = d.Nlayers
-	} else {
-		outputLay = 1
-	}
-	for _, name := range outputVariables {
-		outputConc[name] = make([][]float64, d.Nlayers)
-		for k := 0; k < outputLay; k++ {
-			outputConc[name][k] = d.toArray(name, k)
-		}
-	}
-	return
-}
-
-// Carry out the atmospheric chemistry and physics calculations
-func (d *InMAPdata) doScience(nprocs, procNum int,
-	funcChan chan func(*Cell, *InMAPdata), wg *sync.WaitGroup) {
-	var c *Cell
-	for f := range funcChan {
-		for ii := procNum; ii < len(d.Cells); ii += nprocs {
-			c = d.Cells[ii]
-			c.Lock()   // Lock the cell to avoid race conditions
-			f(c, d)    // run function
-			c.Unlock() // Unlock the cell: we're done editing it
-		}
-		wg.Done()
+		return nil
 	}
 }
 
-// Calculate emissions flux given emissions array in units of μg/s
-// and a scale for molecular mass conversion.
-func (d *InMAPdata) addEmisFlux(arr []float64, scale float64, iPol int) {
-	for row, val := range arr {
-		fluxScale := 1. / d.Cells[row].Dx / d.Cells[row].Dy /
-			d.Cells[row].Dz // μg/s /m/m/m = μg/m3/s
-		d.Cells[row].emisFlux[iPol] = val * scale * fluxScale
-	}
-	return
-}
-
-func checkConvergence(newSum, oldSum float64, Var string) bool {
+func checkConvergence(newSum, oldSum, tolerance float64, Var string) bool {
 	bias := (newSum - oldSum) / oldSum
 	fmt.Printf("%v: total mass difference = %3.2g%% from last check.\n",
 		Var, bias*100)
@@ -271,4 +202,58 @@ func checkConvergence(newSum, oldSum float64, Var string) bool {
 		return false
 	}
 	return true
+}
+
+// Log writes simulation status messages to w.
+func Log(w io.Writer) DomainManipulator {
+	startTime := time.Now()
+	timeStepTime := time.Now()
+
+	iteration := 0
+	nDaysRun := 0.
+
+	return func(d *InMAPdata) error {
+		iteration++
+		nDaysRun += d.Dt * daysPerSecond
+		fmt.Fprintf(w, "Iteration %-4d  walltime=%6.3gh  Δwalltime=%4.2gs  "+
+			"timestep=%2.0fs  day=%.3g\n",
+			iteration, time.Since(startTime).Hours(),
+			time.Since(timeStepTime).Seconds(), d.Dt, nDaysRun)
+		timeStepTime = time.Now()
+		return nil
+	}
+}
+
+// Results returns the simulation results.
+// Output is in the form of map[pollutant][layer][row]concentration,
+// in units of μg/m3.
+// If  allLayers` is true, the function returns data for all of the vertical
+// layers, otherwise only the ground-level layer is returned.
+// outputVariables is a list of the names of the variables for which data should be
+// returned.
+func (d *InMAPdata) Results(allLayers bool, outputVariables ...string) map[string][][]float64 {
+
+	// Prepare output data
+	outputConc := make(map[string][][]float64)
+	/*var outputVariables []string
+	for pol := range polLabels {
+		outputVariables = append(outputVariables, pol)
+	}
+	for pop := range popNames {
+		outputVariables = append(outputVariables, pop, pop+" deaths")
+	}
+	outputVariables = append(outputVariables, "MortalityRate")*/
+	var outputLay int
+	if allLayers {
+		outputLay = d.nlayers
+	} else {
+		outputLay = 1
+	}
+	for _, name := range outputVariables {
+		outputConc[name] = make([][]float64, d.nlayers)
+		for k := 0; k < outputLay; k++ {
+			outputConc[name][k] = d.toArray(name, k)
+		}
+	}
+	return outputConc
 }

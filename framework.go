@@ -28,23 +28,35 @@ import (
 	"bitbucket.org/ctessum/aqhealth"
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/index/rtree"
-	"github.com/ctessum/geom/proj"
 )
 
-// InMAPdata is holds the current state of the model.
+// InMAPdata holds the current state of the model.
 type InMAPdata struct {
+
+	// InitFuncs are functions to be called in the given order
+	//  at the beginning of the simulation.
+	InitFuncs []DomainManipulator
+
+	// RunFuncs are functions to be called in the given order repeatedly
+	// until "Done" is true. Therefore, the simulation will not end until
+	// one of RunFuncs sets "Done" to true.
+	RunFuncs []DomainManipulator
+
+	// CleanupFuncs are functions to be run in the given order after the
+	// simulation has completed.
+	CleanupFuncs []DomainManipulator
+
 	Cells   []*Cell // One data holder for each grid cell
 	Dt      float64 // seconds
-	Nlayers int     // number of model layers
+	nlayers int     // number of model layers
+
+	// Done specifies whether the simulation is finished.
+	Done bool
 
 	// VariableDescriptions gives descriptions of the model variables.
 	VariableDescriptions map[string]string
 	// VariableUnits gives the units of the model variables.
 	VariableUnits map[string]string
-
-	// Number of iterations to calculate. If < 1,
-	// calculate convergence automatically.
-	NumIterations int
 
 	westBoundary  []*Cell // boundary cells
 	eastBoundary  []*Cell // boundary cells
@@ -54,11 +66,40 @@ type InMAPdata struct {
 	// boundary cells; assume bottom boundary is the same as lowest layer
 	topBoundary []*Cell
 
+	// index is a spatial index of Cells.
 	index *rtree.Rtree
+}
 
-	population, mortalityrate *rtree.Rtree
+// Init initializes the simulation by running d.InitFuncs.
+func (d *InMAPdata) Init() error {
+	for _, f := range d.InitFuncs {
+		if err := f(d); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
-	sr *proj.SR
+// Run carries out the simulation by running d.RunFuncs until d.Done is true.
+func (d *InMAPdata) Run() error {
+	for !d.Done {
+		for _, f := range d.RunFuncs {
+			if err := f(d); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// Cleanup finishes the simulation by running d.CleanupFuncs.
+func (d *InMAPdata) Cleanup() error {
+	for _, f := range d.CleanupFuncs {
+		if err := f(d); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Cell holds the state of a single grid cell.
@@ -103,7 +144,6 @@ type Cell struct {
 
 	Dx, Dy, Dz float64 // grid size [meters]
 	Volume     float64 `desc:"Cell volume" units:"m³"`
-	Row        int     // master cell index
 
 	Ci       []float64 // concentrations at beginning of time step [μg/m³]
 	Cf       []float64 // concentrations at end of time step [μg/m³]
@@ -153,8 +193,9 @@ type Cell struct {
 // domain.
 type DomainManipulator func(d *InMAPdata) error
 
-// CellManipulator is a class of functions that operate on a single grid cell.
-type CellManipulator func(c *Cell)
+// CellManipulator is a class of functions that operate on a single grid cell,
+// using the given timestep Dt.
+type CellManipulator func(c *Cell, Dt float64)
 
 func (c *Cell) prepare() {
 	c.Volume = c.Dx * c.Dy * c.Dz
@@ -165,6 +206,7 @@ func (c *Cell) prepare() {
 
 func (c *Cell) boundaryCopy() *Cell {
 	c2 := new(Cell)
+	c2.Polygonal = c.Polygonal
 	c2.Dx, c2.Dy, c2.Dz = c.Dx, c.Dy, c.Dz
 	c2.UAvg, c2.VAvg, c2.WAvg = c.UAvg, c.VAvg, c.WAvg
 	c2.UDeviation, c2.VDeviation = c.UDeviation, c.VDeviation
@@ -211,95 +253,33 @@ func (d *InMAPdata) addTopBoundary(cell *Cell) {
 	d.topBoundary = append(d.topBoundary, c)
 }
 
-// Calculate center-to-center cell distance,
-// fractions of grid cell covered by each neighbor
-// and harmonic mean staggered-grid diffusivities.
-func (c *Cell) neighborInfo() {
-	c.DxPlusHalf = make([]float64, len(c.East))
-	c.EastFrac = make([]float64, len(c.East))
-	c.KxxEast = make([]float64, len(c.East))
-	for i, e := range c.East {
-		c.DxPlusHalf[i] = (c.Dx + e.Dx) / 2.
-		c.EastFrac[i] = min(e.Dy/c.Dy, 1.)
-		c.KxxEast[i] = harmonicMean(c.Kxxyy, e.Kxxyy)
-	}
-	c.DxMinusHalf = make([]float64, len(c.West))
-	c.WestFrac = make([]float64, len(c.West))
-	c.KxxWest = make([]float64, len(c.West))
-	for i, w := range c.West {
-		c.DxMinusHalf[i] = (c.Dx + w.Dx) / 2.
-		c.WestFrac[i] = min(w.Dy/c.Dy, 1.)
-		c.KxxWest[i] = harmonicMean(c.Kxxyy, w.Kxxyy)
-	}
-	c.DyPlusHalf = make([]float64, len(c.North))
-	c.NorthFrac = make([]float64, len(c.North))
-	c.KyyNorth = make([]float64, len(c.North))
-	for i, n := range c.North {
-		c.DyPlusHalf[i] = (c.Dy + n.Dy) / 2.
-		c.NorthFrac[i] = min(n.Dx/c.Dx, 1.)
-		c.KyyNorth[i] = harmonicMean(c.Kxxyy, n.Kxxyy)
-	}
-	c.DyMinusHalf = make([]float64, len(c.South))
-	c.SouthFrac = make([]float64, len(c.South))
-	c.KyySouth = make([]float64, len(c.South))
-	for i, s := range c.South {
-		c.DyMinusHalf[i] = (c.Dy + s.Dy) / 2.
-		c.SouthFrac[i] = min(s.Dx/c.Dx, 1.)
-		c.KyySouth[i] = harmonicMean(c.Kxxyy, s.Kxxyy)
-	}
-	c.DzPlusHalf = make([]float64, len(c.Above))
-	c.AboveFrac = make([]float64, len(c.Above))
-	c.KzzAbove = make([]float64, len(c.Above))
-	for i, a := range c.Above {
-		c.DzPlusHalf[i] = (c.Dz + a.Dz) / 2.
-		c.AboveFrac[i] = min((a.Dx*a.Dy)/(c.Dx*c.Dy), 1.)
-		c.KzzAbove[i] = harmonicMean(c.Kzz, a.Kzz)
-	}
-	c.DzMinusHalf = make([]float64, len(c.Below))
-	c.BelowFrac = make([]float64, len(c.Below))
-	c.KzzBelow = make([]float64, len(c.Below))
-	for i, b := range c.Below {
-		c.DzMinusHalf[i] = (c.Dz + b.Dz) / 2.
-		c.BelowFrac[i] = min((b.Dx*b.Dy)/(c.Dx*c.Dy), 1.)
-		c.KzzBelow[i] = harmonicMean(c.Kzz, b.Kzz)
-	}
-	c.GroundLevelFrac = make([]float64, len(c.GroundLevel))
-	for i, g := range c.GroundLevel {
-		c.GroundLevelFrac[i] = min((g.Dx*g.Dy)/(c.Dx*c.Dy), 1.)
-	}
-}
-
-// addEmissionsFlux adds emissions to c. It should be run once for each timestep.
-func (c *Cell) addEmissionsFlux(d *InMAPdata) {
-	for i := range polNames {
-		c.Cf[i] += c.emisFlux[i] * d.Dt
-		c.Ci[i] = c.Cf[i]
-	}
-}
-
-// setTstepCFL sets the time step using the Courant–Friedrichs–Lewy (CFL) condition.
+// SetTimestepCFL returns a function that sets the time step using the
+// Courant–Friedrichs–Lewy (CFL) condition
 // for advection or Von Neumann stability analysis
 // (http://en.wikipedia.org/wiki/Von_Neumann_stability_analysis) for
 // diffusion, whichever one yields a smaller time step.
-func (d *InMAPdata) setTstepCFL() {
-	const Cmax = 1.
-	sqrt3 := math.Pow(3., 0.5)
-	for i, c := range d.Cells {
-		// Advection time step
-		dt1 := Cmax / sqrt3 /
-			max((math.Abs(c.UAvg)+c.UDeviation*2)/c.Dx,
-				(math.Abs(c.VAvg)+c.VDeviation*2)/c.Dy,
-				math.Abs(c.WAvg)/c.Dz)
-		// vertical diffusion time step
-		dt2 := Cmax * c.Dz * c.Dz / 2. / c.Kzz
-		// horizontal diffusion time step
-		dt3 := Cmax * c.Dx * c.Dx / 2. / c.Kxxyy
-		dt4 := Cmax * c.Dy * c.Dy / 2. / c.Kxxyy
-		if i == 0 {
-			d.Dt = amin(dt1, dt2, dt3, dt4) // seconds
-		} else {
-			d.Dt = amin(d.Dt, dt1, dt2, dt3, dt4) // seconds
+func SetTimestepCFL() DomainManipulator {
+	return func(d *InMAPdata) error {
+		const Cmax = 1.
+		sqrt3 := math.Pow(3., 0.5)
+		for i, c := range d.Cells {
+			// Advection time step
+			dt1 := Cmax / sqrt3 /
+				max((math.Abs(c.UAvg)+c.UDeviation*2)/c.Dx,
+					(math.Abs(c.VAvg)+c.VDeviation*2)/c.Dy,
+					math.Abs(c.WAvg)/c.Dz)
+			// vertical diffusion time step
+			dt2 := Cmax * c.Dz * c.Dz / 2. / c.Kzz
+			// horizontal diffusion time step
+			dt3 := Cmax * c.Dx * c.Dx / 2. / c.Kxxyy
+			dt4 := Cmax * c.Dy * c.Dy / 2. / c.Kxxyy
+			if i == 0 {
+				d.Dt = amin(dt1, dt2, dt3, dt4) // seconds
+			} else {
+				d.Dt = amin(d.Dt, dt1, dt2, dt3, dt4) // seconds
+			}
 		}
+		return nil
 	}
 }
 
