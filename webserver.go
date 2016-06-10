@@ -22,10 +22,10 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 
-	"bitbucket.org/ctessum/webframework"
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/carto"
 	"github.com/ctessum/geom/op"
@@ -37,226 +37,65 @@ import (
 	"github.com/gonum/plot/vg/vgimg"
 )
 
-//  Descriptions of web server map variables
-var mapDescriptions []string
+// OutputOptions returns the options for output variable names and their
+// descriptions.
+func (d *InMAPdata) OutputOptions() (names []string, descriptions []string) {
 
-// Variable names that go along with descriptions (map[description]variable)
-var mapOptions map[string]string
-
-// Names of population types.
-var popNames map[string]string
-
-// WebServer provides a HTML user interface for the model.
-func (d *InMAPdata) WebServer(httpPort string) {
-
-	// First, set up the options of variables to make maps of
-	mapOptions = make(map[string]string)
-	mapDescriptions = make([]string, 0)
-	for pol := range polLabels { // Concentrations
-		mapOptions[pol] = pol
-		mapDescriptions = append(mapDescriptions, pol)
+	// Model pollutant concentrations
+	for pol := range polLabels {
+		names = append(names, pol)
 	}
-	for emis := range emisLabels { // Emissions
-		mapDescriptions = append(mapDescriptions, emis)
-		mapOptions[emis] = emis
+	sort.Strings(names)
+	descriptions = append(descriptions, names...)
+
+	// Baseline pollutant concentrations
+	var tempBaseline []string
+	for pol := range baselinePolLabels {
+		tempBaseline = append(tempBaseline, pol)
 	}
-	popNames = make(map[string]string)
-	for _, c := range d.Cells { // Population and mortalities
-		if len(c.PopData) != 0 {
-			for pop := range c.PopData {
-				popNames[pop] = ""
-				mapDescriptions = append(mapDescriptions, pop)
-				mapOptions[pop] = pop
-				mapDescriptions = append(mapDescriptions, pop+" deaths")
-				mapOptions[pop+" deaths"] = pop + " deaths"
-			}
-			break
-		}
+	sort.Strings(tempBaseline)
+	names = append(names, tempBaseline...)
+	descriptions = append(descriptions, tempBaseline...)
+
+	// Population and deaths
+	var tempPop []string
+	var tempDeaths []string
+	for pop := range d.popIndices {
+		tempPop = append(tempPop, pop)
+		tempDeaths = append(tempDeaths, pop+" deaths")
 	}
-	t := reflect.TypeOf(*d.Cells[0]) // Everything else
+	sort.Strings(tempPop)
+	names = append(names, tempPop...)
+	names = append(names, tempDeaths...)
+	descriptions = append(descriptions, tempPop...)
+	descriptions = append(descriptions, tempDeaths...)
+
+	// Emissions.
+	var tempEmis []string
+	for pol := range emisLabels {
+		tempEmis = append(tempEmis, pol)
+	}
+	sort.Strings(tempEmis)
+	names = append(names, tempEmis...)
+	descriptions = append(descriptions, tempEmis...)
+
+	// Eveything else
+	t := reflect.TypeOf(*d.Cells[0])
+	var tempNames []string
+	var tempDescriptions []string
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
 		v := f.Name
 		desc := f.Tag.Get("desc")
 		if desc != "" {
-			mapDescriptions = append(mapDescriptions, desc)
-			mapOptions[desc] = v
+			tempDescriptions = append(tempDescriptions, desc)
+			tempNames = append(tempNames, v)
 		}
 	}
+	names = append(names, tempNames...)
+	descriptions = append(descriptions, tempDescriptions...)
 
-	http.HandleFunc("/js/bootstrap.min.js", webframework.ServeJSmin)
-	http.HandleFunc("/css/bootstrap.min.css", webframework.ServeCSS)
-	http.HandleFunc("/css/bootstrap-responsive.min.css",
-		webframework.ServeCSSresponsive)
-	http.HandleFunc("/map/", d.mapHandler)
-	http.HandleFunc("/legend/", d.legendHandler)
-	http.HandleFunc("/verticalProfile/", d.verticalProfileHandler)
-	http.HandleFunc("/proc/", webframework.ProcessorProf)
-	http.HandleFunc("/heap/", webframework.HeapProf)
-	http.HandleFunc("/", reportHandler)
-	http.ListenAndServe(":"+httpPort, nil)
-}
-
-func reportHandler(w http.ResponseWriter, r *http.Request) {
-	const mapStyle = `
-<style>
-#mapdiv {
-	width: 100%;
-	height: 600px;
-	position: absolute;
-	top: 40px;
-	z-index: -2;
-}
-#legendholder {
-	position: fixed;
-	bottom: 0;
-	width: 630px;
-	left: 50%;
-	margin-left: -315px;
-	background:rgba(255,255,255,0.8);
-	border-radius:10px;
-	z-index: -1;
-}
-#titleholder {
-	position: fixed;
-	top: 50px;
-	width: 630px;
-	left: 50%;
-	margin-left: -315px;
-	background:rgba(255,255,255,0.8);
-	border-radius:10px;
-	z-index: -1;
-}
-#varholder {
-	position: fixed;
-	left: 80px;
-	top: 50px;
-	z-index: -1;
-}
-#layerholder {
-	position: fixed;
-	left: 80px;
-	top: 130px;
-	z-index: -1;
-}
-#mapdiv img {
-	max-width: none;
-}
-</style>`
-	webframework.RenderHeader(w, "InMAP status", mapStyle)
-	webframework.RenderNav(w, "InMAP", []string{"Home", "Processor", "Memory"},
-		[]string{"/", "/proc/", "/heap/"}, "Home", "")
-
-	const body1 = `
-	<div id="mapdiv"></div>
-	<div id="legendholder">
-		<img id="legend" src="/legend/TotalPM2_5/0" alt="legend" align="middle"/>
-	</div>
-	<div id="varholder">
-		<h5>Select variable</h5>
-		<form>
-			<select class="span3" id="mapvar" onchange=updateMap()>`
-	fmt.Fprintln(w, body1)
-	for i, desc := range mapDescriptions {
-		if i == 0 {
-			fmt.Fprintf(w, "<option value='%v' SELECTED>%v</option>", mapOptions[desc], desc)
-		} else {
-			fmt.Fprintf(w, "<option value='%v'>%v</option>", mapOptions[desc], desc)
-		}
-	}
-	const body2 = `
-			</select>
-		</form>
-	</div>
-	<div id="layerholder">
-		<h5>Select layer</h5>
-		<form>
-			<select class="span1" id="layer" onchange=updateMap()>`
-	fmt.Fprintln(w, body2)
-	for k := 0; k < 27; k++ {
-		if k == 0 {
-			fmt.Fprintf(w, "<option SELECTED>%v</option>", k)
-		} else {
-			fmt.Fprintf(w, "<option>%v</option>", k)
-		}
-	}
-	const body3 = `
-			</select>
-		</form>
-	</div>
-	<div id="titleholder">
-		<h4 id="maptitle" style="text-align:center">TotalPM2_5 layer 0 status</h4>
-	</div>`
-	fmt.Fprintln(w, body3)
-
-	const mapJS = `
-<script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
-<script>
-var map;
-function tileOptions(layer) {
-	var myMapOptions = {
-	   getTileUrl: function(coord, zoom) {
-	   return "/map/"+window.mapvar+"&"+layer+"&"+zoom+"&"+(coord.x)+"&"+(coord.y);
-	   },
-	tileSize: new google.maps.Size(256, 256),
-	isPng: true,
-	opacity: 1,
-	name: "custom"
-	};
-	var customMapType = new google.maps.ImageMapType(myMapOptions);
-	return customMapType;
-}
-function loadmap(mapvar,layer,id) {
-	window.mapvar = mapvar
-	var windowheight = $(window).height();
-	$('#mapdiv').css('height', windowheight-40);
-	var customMapType = tileOptions(layer);
-	var labelTiles = {
-		getTileUrl: function(coord, zoom) {
-			return "http://mt0.google.com/vt/v=apt.116&hl=en-US&" +
-			"z=" + zoom + "&x=" + coord.x + "&y=" + coord.y + "&client=api";
-		},
-		tileSize: new google.maps.Size(256, 256),
-		isPng: true
-	};
-	var googleLabelLayer = new google.maps.ImageMapType(labelTiles);
-
-	var latlng = new google.maps.LatLng(40, -97);
-	var mapOptions = {
-		zoom: 5,
-		center: latlng,
-		mapTypeId: google.maps.MapTypeId.ROADMAP,
-		panControl: true,
-		zoomControl: true,
-		streetViewControl: false
-	}
-	map = new google.maps.Map(document.getElementById(id), mapOptions);
-	map.overlayMapTypes.insertAt(0, customMapType);
-	map.overlayMapTypes.insertAt(1, googleLabelLayer);
-
-	google.maps.event.addListener(map, 'click', function(event) {
-		var infoString = '<img src=/verticalProfile/'+window.mapvar+'/'+
-			event.latLng.lng()+'/'+event.latLng.lat()+'>'
-		new google.maps.InfoWindow({
-			position: event.latLng,
-			content: infoString
-		}).open(map);
-	});
-}
-function updateMap() {
-	window.mapvar=document.getElementById("mapvar").value;
-	var layer=document.getElementById("layer").value;
-	var customMapType = tileOptions(layer);
-	map.overlayMapTypes.removeAt(0);
-	map.overlayMapTypes.insertAt(0, customMapType);
-	document.getElementById("maptitle").innerHTML = window.mapvar+
-		" layer "+layer+" status";
-	$("#legend").attr('src', "legend/"+window.mapvar+"/"+layer);
-}
-google.maps.event.addDomListener(window, 'load', loadmap("TotalPM2_5",0,"mapdiv"))
-</script>`
-
-	webframework.RenderFooter(w, mapJS)
+	return
 }
 
 func parseMapRequest(base string, r *http.Request) (name string,
@@ -332,8 +171,8 @@ func parseLegendRequest(base string, r *http.Request) (name string,
 	return
 }
 
-// Creates a legend and serves it.
-func (d *InMAPdata) legendHandler(w http.ResponseWriter, r *http.Request) {
+// LegendHandler creates a legend and serves it.
+func (d *InMAPdata) LegendHandler(w http.ResponseWriter, r *http.Request) {
 	name, layer, err := parseLegendRequest("/legend/", r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -425,8 +264,7 @@ func (d *InMAPdata) verticalProfileHandler(w http.ResponseWriter,
 
 // VerticalProfile retrieves the vertical profile for a given
 // variable at a given location.
-func (d *InMAPdata) VerticalProfile(variable string, lon, lat float64) (
-	height, vals []float64) {
+func (d *InMAPdata) VerticalProfile(variable string, lon, lat float64) (height, vals []float64) {
 	height = make([]float64, d.nlayers)
 	vals = make([]float64, d.nlayers)
 	x, y := carto.Degrees2meters(lon, lat)
@@ -438,7 +276,7 @@ func (d *InMAPdata) VerticalProfile(variable string, lon, lat float64) (
 		}
 		if in {
 			for i := 0; i < d.nlayers; i++ {
-				vals[i] = cell.getValue(variable)
+				vals[i] = cell.getValue(variable, d.popIndices)
 				height[i] = float64(i)
 				//if i == 0 {
 				//	height[i] = cell.Dz / 2.

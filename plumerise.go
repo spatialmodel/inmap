@@ -29,9 +29,8 @@ func (c *Cell) IsPlumeIn(stackHeight, stackDiam, stackTemp, stackVel float64) (b
 	var cellStack []*Cell
 	cc := c
 	for {
-		if cc.GroundLevel[0] != cc {
-			cellStack = append(cellStack, cc)
-		} else {
+		cellStack = append(cellStack, cc)
+		if cc.GroundLevel[0] == cc {
 			break
 		}
 		cc = cc.Below[0]
@@ -52,6 +51,7 @@ func (c *Cell) IsPlumeIn(stackHeight, stackDiam, stackTemp, stackVel float64) (b
 
 	for i, cell := range cellStack {
 		layerHeights[i+1] = layerHeights[i] + cell.Dz
+		temperature[i] = cell.Temperature
 		windSpeed[i] = cell.WindSpeed
 		windSpeedInverse[i] = cell.WindSpeedInverse
 		windSpeedMinusThird[i] = cell.WindSpeedMinusThird
@@ -80,7 +80,7 @@ func (c *Cell) IsPlumeIn(stackHeight, stackDiam, stackTemp, stackVel float64) (b
 
 	// if the index of the plume is at the end of the cell stack,
 	// that means that the plume should go in this cell.
-	if plumeIndex == len(cellStack)-1 {
+	if plumeIndex == c.Layer {
 		return true, nil
 	}
 	return false, nil

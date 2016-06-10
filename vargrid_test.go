@@ -2,6 +2,7 @@ package inmap
 
 import (
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -12,13 +13,15 @@ import (
 	"bitbucket.org/ctessum/sparse"
 )
 
-func VarGridData() (*VarGridConfig, *CTMData, *Population, *MortalityRates) {
+const (
+	TestGridSR              = `PROJCS["Lambert_Conformal_Conic_2SP",GEOGCS["GCS_unnamed ellipse",DATUM["D_unknown",SPHEROID["Unknown",6370997,0]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],PROJECTION["Lambert_Conformal_Conic_2SP"],PARAMETER["standard_parallel_1",33],PARAMETER["standard_parallel_2",45],PARAMETER["latitude_of_origin",40],PARAMETER["central_meridian",-97],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]`
+	TestPopulationShapefile = "tempPopulation.shp"
+	TestMortalityShapefile  = "tempMortality.shp"
+	TestCTMDataFile         = "tempCTMData.ncf"
+)
 
-	const (
-		prj      = `PROJCS["Lambert_Conformal_Conic_2SP",GEOGCS["GCS_unnamed ellipse",DATUM["D_unknown",SPHEROID["Unknown",6370997,0]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],PROJECTION["Lambert_Conformal_Conic_2SP"],PARAMETER["standard_parallel_1",33],PARAMETER["standard_parallel_2",45],PARAMETER["latitude_of_origin",40],PARAMETER["central_meridian",-97],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]`
-		popFile  = "tempPopulation.shp"
-		mortFile = "tempMortality.shp"
-	)
+// VarGridData returns some test data for variable grid generation.
+func VarGridData() (*VarGridConfig, *CTMData, *Population, PopIndices, *MortalityRates) {
 
 	// holder for test population data.
 	type pop struct {
@@ -43,7 +46,7 @@ func VarGridData() (*VarGridConfig, *CTMData, *Population, *MortalityRates) {
 			Latino:     30000,
 		},
 	}
-	e, err := shp.NewEncoder(popFile, pop{})
+	e, err := shp.NewEncoder(TestPopulationShapefile, pop{})
 	if err != nil {
 		panic(err)
 	}
@@ -53,11 +56,11 @@ func VarGridData() (*VarGridConfig, *CTMData, *Population, *MortalityRates) {
 		}
 	}
 	e.Close()
-	f, err := os.Create(strings.TrimRight(popFile, ".shp") + ".prj")
+	f, err := os.Create(strings.TrimRight(TestPopulationShapefile, ".shp") + ".prj")
 	if err != nil {
 		panic(err)
 	}
-	if _, err = f.Write([]byte(prj)); err != nil {
+	if _, err = f.Write([]byte(TestGridSR)); err != nil {
 		panic(err)
 	}
 	f.Close()
@@ -81,7 +84,7 @@ func VarGridData() (*VarGridConfig, *CTMData, *Population, *MortalityRates) {
 			AllCause: 800.,
 		},
 	}
-	e, err = shp.NewEncoder(mortFile, mort{})
+	e, err = shp.NewEncoder(TestMortalityShapefile, mort{})
 	if err != nil {
 		panic(err)
 	}
@@ -91,11 +94,11 @@ func VarGridData() (*VarGridConfig, *CTMData, *Population, *MortalityRates) {
 		}
 	}
 	e.Close()
-	f, err = os.Create(strings.TrimRight(mortFile, ".shp") + ".prj")
+	f, err = os.Create(strings.TrimRight(TestMortalityShapefile, ".shp") + ".prj")
 	if err != nil {
 		panic(err)
 	}
-	if _, err = f.Write([]byte(prj)); err != nil {
+	if _, err = f.Write([]byte(TestGridSR)); err != nil {
 		panic(err)
 	}
 	f.Close()
@@ -118,240 +121,286 @@ func VarGridData() (*VarGridConfig, *CTMData, *Population, *MortalityRates) {
 		PopDensityCutoff:    0.001,
 		PopCutoff:           25000,
 		BboxOffset:          1,
-		CensusFile:          popFile,
+		CensusFile:          TestPopulationShapefile,
 		CensusPopColumns:    []string{"TotalPop", "WhiteNoLat", "Black", "Native", "Asian", "Latino"},
 		PopGridColumn:       "TotalPop",
-		MortalityRateFile:   mortFile,
+		MortalityRateFile:   TestMortalityShapefile,
 		MortalityRateColumn: "AllCause",
 	}
 
-	ctmdata := map[string]ctmData{
-		"WindSpeedMinusOnePointFour": ctmData{
+	ctmdata := map[string]ctmVariable{
+		"WindSpeedMinusOnePointFour": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "RMS wind speed^(-1.4)",
 			units:       "(m s-1)^(-1.4)",
 		},
-		"ParticleDryDep": ctmData{
+		"ParticleDryDep": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Dry deposition velocity for particles",
 			units:       "m s-1",
 		},
-		"Dz": ctmData{
+		"Dz": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Vertical grid size",
 			units:       "m",
 		},
-		"WAvg": ctmData{
+		"WAvg": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Annual average z velocity",
 			units:       "m/s",
 		},
-		"Temperature": ctmData{
+		"Temperature": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Average Temperature",
 			units:       "K",
 		},
-		"VOCDryDep": ctmData{
+		"VOCDryDep": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Dry deposition velocity for VOCs",
 			units:       "m s-1",
 		},
-		"alt": ctmData{
+		"alt": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Inverse density",
 			units:       "m3 kg-1",
 		},
-		"UDeviation": ctmData{
+		"UDeviation": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Average deviation from average x velocity",
 			units:       "m/s",
 		},
-		"gNO": ctmData{
+		"gNO": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Average concentration of nitrogen fraction of gaseous NOx",
 			units:       "ug m-3",
 		},
-		"bVOC": ctmData{
+		"bVOC": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Average biogenic VOC concentration",
 			units:       "ug m-3",
 		},
-		"SPartitioning": ctmData{
+		"SPartitioning": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Mass fraction of S from SOx in particle {vs. gas} phase",
 			units:       "fraction",
 		},
-		"Sclass": ctmData{
+		"Sclass": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Stability parameter",
 			units:       "0=Unstable; 1=Stable",
 		},
-		"Kzz": ctmData{
+		"Kzz": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Vertical turbulent diffusivity",
 			units:       "m2 s-1",
 		},
-		"VDeviation": ctmData{
+		"VDeviation": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Average deviation from average y velocity",
 			units:       "m/s",
 		},
-		"VAvg": ctmData{
+		"VAvg": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Annual average y velocity",
 			units:       "m/s",
 		},
-		"pNH": ctmData{
+		"pNH": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Average concentration of nitrogen fraction of particulate ammonium",
 			units:       "ug m-3",
 		},
-		"SO2DryDep": ctmData{
+		"SO2DryDep": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Dry deposition velocity for SO2",
 			units:       "m s-1",
 		},
-		"NOxDryDep": ctmData{
+		"NOxDryDep": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Dry deposition velocity for NOx",
 			units:       "m s-1",
 		},
-		"NHPartitioning": ctmData{
+		"NHPartitioning": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Mass fraction of N from NH3 in particle {vs. gas} phase",
 			units:       "fraction",
 		},
-		"Kxxyy": ctmData{
+		"Kxxyy": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Horizontal eddy diffusion coefficient",
 			units:       "m2 s-1",
 		},
-		"WindSpeed": ctmData{
+		"WindSpeed": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "RMS wind speed",
 			units:       "m s-1",
 		},
-		"SO2WetDep": ctmData{
+		"SO2WetDep": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Wet deposition rate constant for SO2 gas",
 			units:       "s-1",
 		},
-		"LayerHeights": ctmData{
+		"LayerHeights": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Height at edge of layer",
 			units:       "m",
 		},
-		"WindSpeedMinusThird": ctmData{
+		"WindSpeedMinusThird": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "RMS wind speed^(-1/3)",
 			units:       "(m s-1)^(-1/3)",
 		},
-		"gS": ctmData{
+		"gS": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Average concentration of sulfur fraction of gaseous SOx",
 			units:       "ug m-3",
 		},
-		"gNH": ctmData{
+		"gNH": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Average concentration of nitrogen fraction of gaseous ammonia",
 			units:       "ug m-3",
 		},
-		"aOrgPartitioning": ctmData{
+		"aOrgPartitioning": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Mass fraction of anthropogenic organic matter in particle {vs. gas} phase",
 			units:       "fraction",
 		},
-		"TotalPM25": ctmData{
+		"TotalPM25": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Total PM2.5 concentration",
 			units:       "ug m-3",
 		},
-		"aVOC": ctmData{
+		"aVOC": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Average anthropogenic VOC concentration",
 			units:       "ug m-3",
 		},
-		"NH3DryDep": ctmData{
+		"NH3DryDep": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Dry deposition velocity for NH3",
 			units:       "m s-1",
 		},
-		"pS": ctmData{
+		"pS": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Average concentration of sulfur fraction of particulate sulfate",
 			units:       "ug m-3",
 		},
-		"bOrgPartitioning": ctmData{
+		"bOrgPartitioning": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Mass fraction of biogenic organic matter in particle {vs. gas} phase",
 			units:       "fraction",
 		},
-		"Pblh": ctmData{
-			data:        sparse.ZerosDense([]int{1, 2}...),
+		"Pblh": ctmVariable{
+			dims:        []string{"y", "x"},
+			data:        sparse.ZerosDense([]int{2, 2}...),
 			description: "Planetary boundary layer height",
 			units:       "m",
 		},
-		"bSOA": ctmData{
+		"bSOA": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Average biogenic secondary organic aerosol concentration",
 			units:       "ug m-3",
 		},
-		"pNO": ctmData{
+		"pNO": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Average concentration of nitrogen fraction of particulate NO3",
 			units:       "ug m-3",
 		},
-		"M2u": ctmData{
+		"M2u": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "ACM2 nonlocal upward mixing {Pleim 2007}",
 			units:       "s-1",
 		},
-		"SO2oxidation": ctmData{
+		"SO2oxidation": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Rate of SO2 oxidation to SO4 by hydroxyl radical and H2O2",
 			units:       "s-1",
 		},
-		"OtherGasWetDep": ctmData{
+		"OtherGasWetDep": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Wet deposition rate constant for other gases",
 			units:       "s-1",
 		},
-		"WindSpeedInverse": ctmData{
+		"WindSpeedInverse": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "RMS wind speed^(-1)",
 			units:       "(m s-1)^(-1)",
 		},
-		"NO_NO2partitioning": ctmData{
+		"NO_NO2partitioning": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Mass fraction of N in NOx that exists as NO.",
 			units:       "fraction",
 		},
-		"ParticleWetDep": ctmData{
+		"ParticleWetDep": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Wet deposition rate constant for fine particles",
 			units:       "s-1",
 		},
-		"aSOA": ctmData{
+		"aSOA": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Average anthropogenic secondary organic aerosol concentration",
 			units:       "ug m-3",
 		},
-		"NOPartitioning": ctmData{
+		"NOPartitioning": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Mass fraction of N from NOx in particle {vs. gas} phase",
 			units:       "fraction",
 		},
-		"M2d": ctmData{
+		"M2d": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "ACM2 nonlocal downward mixing {Pleim 2007}",
 			units:       "s-1",
 		},
-		"S1": ctmData{
+		"S1": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Stability parameter",
 			units:       "?",
 		},
-		"UAvg": ctmData{
+		"UAvg": ctmVariable{
+			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Annual average x velocity",
 			units:       "m/s",
@@ -359,6 +408,7 @@ func VarGridData() (*VarGridConfig, *CTMData, *Population, *MortalityRates) {
 	}
 
 	// Data extracted from a file created by the WRF-Chem preprocessor
+	// TODO: This data is missing the staggered information, and should be fixed.
 	ctmdata["Dz"].data.Elements = []float64{55.616737365722656, 55.60960006713867, 55.558589935302734, 55.63689422607422, 80.05044555664062, 80.0164566040039, 79.99669647216797, 80.07341003417969, 105.04544067382812, 104.97071075439453, 104.981201171875, 105.04759216308594, 130.77992248535156, 130.65481567382812, 130.7270050048828, 130.7596435546875, 165.87161254882812, 165.6465301513672, 165.8095703125, 165.7937774658203, 211.19100952148438, 210.81178283691406, 210.9864959716797, 210.94813537597656, 250.37254333496094, 249.94908142089844, 250.0945587158203, 250.04212951660156, 450.19708251953125, 449.4986877441406, 449.73907470703125, 449.6775207519531, 471.3617858886719, 470.7438659667969, 470.8647155761719, 470.8252868652344, 496.6903991699219, 495.80023193359375, 495.7990417480469, 495.63519287109375}
 	ctmdata["WAvg"].data.Elements = []float64{-0.0031770633067935705, -0.03131113201379776, -0.0016643835697323084, -0.022064168006181717, 0.006579460576176643, -0.008502744138240814, 0.0039610546082258224, -0.0008686335058882833, 0.013467869721353054, 0.0042756046168506145, 0.008733110502362251, 0.006209260318428278, 0.01728512905538082, 0.014318481087684631, 0.01065493281930685, 0.008901089429855347, 0.016626669093966484, 0.01868339814245701, 0.00920271035283804, 0.007909671403467655, 0.012121721170842648, 0.017389992251992226, 0.0059646242298185825, 0.005230602342635393, 0.005212655756622553, 0.012798762880265713, 0.0025486990343779325, 0.0049898698925971985, 0.0002958668628707528, 0.010805307887494564, 0.0007378551526926458, 0.010255983099341393, 0.0048363772220909595, 0.008727352134883404, 0.0052039166912436485, 0.016550913453102112, 0.018345091491937637, 0.017693055793642998, 0.0141964852809906, 0.019544612616300583}
 	ctmdata["Temperature"].data.Elements = []float64{281.7968444824219, 281.8467102050781, 281.4716796875, 281.91217041015625, 281.6050109863281, 281.5710144042969, 281.3937683105469, 281.6999816894531, 281.0885314941406, 280.9794006347656, 280.8974609375, 281.1159362792969, 280.289794921875, 280.1217956542969, 280.1652526855469, 280.2762756347656, 279.3124084472656, 279.05828857421875, 279.225341796875, 279.2402648925781, 278.082763671875, 277.7137756347656, 277.8447570800781, 277.838134765625, 276.3756103515625, 276.03662109375, 276.10333251953125, 276.07647705078125, 273.9061584472656, 273.6038818359375, 273.66888427734375, 273.643310546875, 271.0890808105469, 270.8735046386719, 270.8675231933594, 270.8497619628906, 269.2445983886719, 268.8931579589844, 268.8183288574219, 268.7208251953125}
@@ -411,39 +461,42 @@ func VarGridData() (*VarGridConfig, *CTMData, *Population, *MortalityRates) {
 		gridTree: cfg.makeCTMgrid(10),
 	}
 
-	population, mortalityRates, err := cfg.LoadPopMort()
+	population, popIndices, mortalityRates, err := cfg.LoadPopMort()
 	if err != nil {
 		panic(err)
 	}
 
-	for _, fname := range []string{popFile, mortFile} {
-		for _, ext := range []string{".dbf", ".prj", ".shp", ".shx"} {
-			if err = os.Remove(strings.TrimRight(fname, ".shp") + ext); err != nil {
-				panic(err)
-			}
-		}
+	for _, fname := range []string{TestPopulationShapefile, TestMortalityShapefile} {
+		DeleteShapefile(fname)
 	}
 
-	return &cfg, data, population, mortalityRates
+	return &cfg, data, population, popIndices, mortalityRates
+}
+
+func DeleteShapefile(fname string) {
+	for _, ext := range []string{".dbf", ".prj", ".shp", ".shx"} {
+		if err := os.Remove(strings.TrimSuffix(fname, ".shp") + ext); err != nil {
+			panic(err)
+		}
+	}
 }
 
 func TestVarGridCreate(t *testing.T) {
 
-	cfg, ctmdata, pop, mr := VarGridData()
+	cfg, ctmdata, pop, popIndices, mr := VarGridData()
 	emis := &Emissions{
 		data: rtree.NewTree(25, 50),
 	}
 
 	d := &InMAPdata{
 		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, mr, emis),
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
 			cfg.StaticVariableGrid(ctmdata, pop, mr, emis),
 		},
 	}
 	if err := d.Init(); err != nil {
 		t.Error(err)
 	}
-	d.sort()
 
 	// Cell 0
 	if len(d.Cells[0].West) != 1 || d.Cells[0].West[0] != d.westBoundary[0] {
@@ -885,4 +938,186 @@ func TestVarGridCreate(t *testing.T) {
 		t.Error("Incorrect alignment cell 45 GroundLevel")
 	}
 
+}
+
+func TestGetGeometry(t *testing.T) {
+	cfg, ctmdata, pop, popIndices, mr := VarGridData()
+	emis := &Emissions{
+		data: rtree.NewTree(25, 50),
+	}
+
+	d := &InMAPdata{
+		InitFuncs: []DomainManipulator{
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
+			cfg.StaticVariableGrid(ctmdata, pop, mr, emis),
+		},
+	}
+	if err := d.Init(); err != nil {
+		t.Error(err)
+	}
+	g0 := d.GetGeometry(0)
+	g5 := d.GetGeometry(5)
+
+	want0 := []geom.Geom{
+		geom.Polygon{[]geom.Point{
+			geom.Point{X: -1.0803243503695702e+07, Y: 4.860686654254725e+06},
+			geom.Point{X: -1.0801930279663565e+07, Y: 4.860687250907495e+06},
+			geom.Point{X: -1.0801930791146653e+07, Y: 4.862000560256863e+06},
+			geom.Point{X: -1.080324418567307e+07, Y: 4.861999963449156e+06},
+			geom.Point{X: -1.0803243503695702e+07, Y: 4.860686654254725e+06}},
+		},
+		geom.Polygon{[]geom.Point{
+			geom.Point{X: -1.080324418567307e+07, Y: 4.861999963449156e+06},
+			geom.Point{X: -1.0801930791146653e+07, Y: 4.862000560256863e+06},
+			geom.Point{X: -1.0801931302762568e+07, Y: 4.8633140401226785e+06},
+			geom.Point{X: -1.0803244867827544e+07, Y: 4.863313443159976e+06},
+			geom.Point{X: -1.080324418567307e+07, Y: 4.861999963449156e+06}},
+		},
+		geom.Polygon{[]geom.Point{
+			geom.Point{X: -1.0803244867827544e+07, Y: 4.863313443159976e+06},
+			geom.Point{X: -1.080061773756471e+07, Y: 4.86331446652465e+06},
+			geom.Point{X: -1.0800618419985117e+07, Y: 4.865941938204324e+06},
+			geom.Point{X: -1.0803246232668078e+07, Y: 4.865940914307926e+06},
+			geom.Point{X: -1.0803244867827544e+07, Y: 4.863313443159976e+06}},
+		},
+		geom.Polygon{[]geom.Point{
+			geom.Point{X: -1.0801930279663565e+07, Y: 4.860687250907495e+06},
+			geom.Point{X: -1.0800617055498654e+07, Y: 4.86068767708809e+06},
+			geom.Point{X: -1.0800617396487407e+07, Y: 4.862000986548126e+06},
+			geom.Point{X: -1.0801930791146653e+07, Y: 4.862000560256863e+06},
+			geom.Point{X: -1.0801930279663565e+07, Y: 4.860687250907495e+06}},
+		},
+		geom.Polygon{[]geom.Point{
+			geom.Point{X: -1.0801930791146653e+07, Y: 4.862000560256863e+06},
+			geom.Point{X: -1.0800617396487407e+07, Y: 4.862000986548126e+06},
+			geom.Point{X: -1.080061773756471e+07, Y: 4.86331446652465e+06},
+			geom.Point{X: -1.0801931302762568e+07, Y: 4.8633140401226785e+06},
+			geom.Point{X: -1.0801930791146653e+07, Y: 4.862000560256863e+06}},
+		},
+		geom.Polygon{[]geom.Point{
+			geom.Point{X: -1.0803246232668078e+07, Y: 4.865940914307926e+06},
+			geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06},
+			geom.Point{X: -1.0797990606947536e+07, Y: 4.871199271364988e+06},
+			geom.Point{X: -1.0803248964477425e+07, Y: 4.87119790475015e+06},
+			geom.Point{X: -1.0803246232668078e+07, Y: 4.865940914307926e+06}},
+		},
+		geom.Polygon{[]geom.Point{
+			geom.Point{X: -1.0800617055498654e+07, Y: 4.86068767708809e+06},
+			geom.Point{X: -1.0797990606947536e+07, Y: 4.860688018032593e+06},
+			geom.Point{X: -1.0797990606947536e+07, Y: 4.863314807646255e+06},
+			geom.Point{X: -1.080061773756471e+07, Y: 4.86331446652465e+06},
+			geom.Point{X: -1.0800617055498654e+07, Y: 4.86068767708809e+06}},
+		},
+		geom.Polygon{[]geom.Point{
+			geom.Point{X: -1.080061773756471e+07, Y: 4.86331446652465e+06},
+			geom.Point{X: -1.0797990606947536e+07, Y: 4.863314807646255e+06},
+			geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06},
+			geom.Point{X: -1.0800618419985117e+07, Y: 4.865941938204324e+06},
+			geom.Point{X: -1.080061773756471e+07, Y: 4.86331446652465e+06}},
+		},
+		geom.Polygon{[]geom.Point{
+			geom.Point{X: -1.0797990606947536e+07, Y: 4.860688018032593e+06},
+			geom.Point{X: -1.0792737710199371e+07, Y: 4.860686654254725e+06},
+			geom.Point{X: -1.0792734981226994e+07, Y: 4.865940914307926e+06},
+			geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06},
+			geom.Point{X: -1.0797990606947536e+07, Y: 4.860688018032593e+06}},
+		},
+		geom.Polygon{[]geom.Point{
+			geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06},
+			geom.Point{X: -1.0792734981226994e+07, Y: 4.865940914307926e+06},
+			geom.Point{X: -1.0792732249417646e+07, Y: 4.87119790475015e+06},
+			geom.Point{X: -1.0797990606947536e+07, Y: 4.871199271364988e+06},
+			geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06}},
+		},
+	}
+	want5 := []geom.Geom{
+		geom.Polygon{[]geom.Point{
+			geom.Point{X: -1.0803243503695702e+07, Y: 4.860686654254725e+06},
+			geom.Point{X: -1.0797990606947536e+07, Y: 4.860688018032593e+06},
+			geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06},
+			geom.Point{X: -1.0803246232668078e+07, Y: 4.865940914307926e+06},
+			geom.Point{X: -1.0803243503695702e+07, Y: 4.860686654254725e+06}},
+		},
+		geom.Polygon{[]geom.Point{
+			geom.Point{X: -1.0803246232668078e+07, Y: 4.865940914307926e+06},
+			geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06},
+			geom.Point{X: -1.0797990606947536e+07, Y: 4.871199271364988e+06},
+			geom.Point{X: -1.0803248964477425e+07, Y: 4.87119790475015e+06},
+			geom.Point{X: -1.0803246232668078e+07, Y: 4.865940914307926e+06}},
+		},
+		geom.Polygon{[]geom.Point{
+			geom.Point{X: -1.0797990606947536e+07, Y: 4.860688018032593e+06},
+			geom.Point{X: -1.0792737710199371e+07, Y: 4.860686654254725e+06},
+			geom.Point{X: -1.0792734981226994e+07, Y: 4.865940914307926e+06},
+			geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06},
+			geom.Point{X: -1.0797990606947536e+07, Y: 4.860688018032593e+06}},
+		},
+		geom.Polygon{[]geom.Point{
+			geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06},
+			geom.Point{X: -1.0792734981226994e+07, Y: 4.865940914307926e+06},
+			geom.Point{X: -1.0792732249417646e+07, Y: 4.87119790475015e+06},
+			geom.Point{X: -1.0797990606947536e+07, Y: 4.871199271364988e+06},
+			geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06}},
+		},
+	}
+	if !reflect.DeepEqual(g0, want0) {
+		t.Errorf("layer 0 not matching")
+	}
+	if !reflect.DeepEqual(g5, want5) {
+		t.Errorf("layer 5 not matching")
+	}
+}
+
+func TestReadWriteCTMData(t *testing.T) {
+	cfg, ctmdata, _, _, _ := VarGridData()
+
+	f, err := os.Create(TestCTMDataFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err = ctmdata.Write(f, cfg); err != nil {
+		t.Fatal(err)
+	}
+
+	f.Close()
+	f, err = os.Open(TestCTMDataFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctmdata2, err := cfg.LoadCTMData(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(ctmdata.data) != len(ctmdata2.data) {
+		t.Fatalf("new and old ctmdata have different number of variables (%d vs. %d)",
+			len(ctmdata2.data), len(ctmdata.data))
+	}
+	for name, dd1 := range ctmdata.data {
+		if _, ok := ctmdata2.data[name]; !ok {
+			t.Errorf("ctmdata2 doesn't have variable %s", name)
+			continue
+		}
+		dd2 := ctmdata2.data[name]
+		if !reflect.DeepEqual(dd1.dims, dd2.dims) {
+			t.Errorf("%s dims problem: %v != %v", name, dd1.dims, dd2.dims)
+		}
+		if dd1.description != dd2.description {
+			t.Errorf("%s description problem: %s != %s", name, dd1.description, dd2.description)
+		}
+		if dd1.units != dd2.units {
+			t.Errorf("%s units problem: %s != %s", name, dd1.units, dd2.units)
+		}
+		if !reflect.DeepEqual(dd1.data.Shape, dd2.data.Shape) {
+			t.Errorf("%s data shape problem: %v != %v", name, dd1.data.Shape, dd2.data.Shape)
+		}
+		if !reflect.DeepEqual(dd1.data.Elements, dd2.data.Elements) {
+			t.Errorf("%s data problem: %v != %v", name, dd1.data.Elements, dd2.data.Elements)
+		}
+	}
+
+	f.Close()
+	os.Remove(TestCTMDataFile)
 }

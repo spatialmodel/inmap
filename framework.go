@@ -66,6 +66,10 @@ type InMAPdata struct {
 	// boundary cells; assume bottom boundary is the same as lowest layer
 	topBoundary []*Cell
 
+	// popIndices give the array index of each population type in the PopData
+	// field in each Cell.
+	popIndices map[string]int
+
 	// index is a spatial index of Cells.
 	index *rtree.Rtree
 }
@@ -139,15 +143,16 @@ type Cell struct {
 	M2u float64 `desc:"ACM2 upward mixing (Pleim 2007)" units:"1/s"`
 	M2d float64 `desc:"ACM2 downward mixing (Pleim 2007)" units:"1/s"`
 
-	PopData       map[string]float64 // Population for multiple demographics [people/grid cell]
-	MortalityRate float64            `desc:"Baseline mortalities rate" units:"Deaths per 100,000 people per year"`
+	PopData       []float64 // Population for multiple demographics [people/grid cell]
+	MortalityRate float64   `desc:"Baseline mortalities rate" units:"Deaths per 100,000 people per year"`
 
 	Dx, Dy, Dz float64 // grid size [meters]
 	Volume     float64 `desc:"Cell volume" units:"m³"`
 
-	Ci       []float64 // concentrations at beginning of time step [μg/m³]
-	Cf       []float64 // concentrations at end of time step [μg/m³]
-	emisFlux []float64 // emissions [μg/m³/s]
+	Ci        []float64 // concentrations at beginning of time step [μg/m³]
+	Cf        []float64 // concentrations at end of time step [μg/m³]
+	emisFlux  []float64 // emissions [μg/m³/s]
+	CBaseline []float64 // Total baseline PM2.5 concentration.
 
 	West        []*Cell // Neighbors to the East
 	East        []*Cell // Neighbors to the West
@@ -181,8 +186,6 @@ type Cell struct {
 	S1                         float64 `desc:"Stability parameter" units:"?"`
 	SClass                     float64 `desc:"Stability class" units:"0=Unstable; 1=Stable"`
 
-	TotalPM25 float64 // Total baseline PM2.5 concentration.
-
 	sync.RWMutex // Avoid cell being written by one subroutine and read by another at the same time.
 
 	index                 [][2]int
@@ -197,10 +200,10 @@ type DomainManipulator func(d *InMAPdata) error
 // using the given timestep Dt.
 type CellManipulator func(c *Cell, Dt float64)
 
-func (c *Cell) prepare() {
-	c.Volume = c.Dx * c.Dy * c.Dz
+func (c *Cell) make() {
 	c.Ci = make([]float64, len(polNames))
 	c.Cf = make([]float64, len(polNames))
+	c.CBaseline = make([]float64, len(polNames))
 	c.emisFlux = make([]float64, len(polNames))
 }
 
@@ -214,7 +217,8 @@ func (c *Cell) boundaryCopy() *Cell {
 	c2.M2u, c2.M2d = c.M2u, c.M2d
 	c2.Layer, c2.LayerHeight = c.Layer, c.LayerHeight
 	c2.Boundary = true
-	c2.prepare()
+	c2.make()
+	c2.Volume = c2.Dx * c2.Dy * c2.Dz
 	return c2
 }
 
@@ -298,15 +302,16 @@ func (d *InMAPdata) toArray(pol string, layer int) []float64 {
 			return o
 		}
 		if c.Layer == layer {
-			o = append(o, c.getValue(pol))
+			o = append(o, c.getValue(pol, d.popIndices))
 		}
 		c.RUnlock()
 	}
 	return o
 }
 
-// Get the value in the current cell of the specified variable.
-func (c *Cell) getValue(varName string) float64 {
+// Get the value in the current cell of the specified variable, where popIndices
+// are array indices of each population type.
+func (c *Cell) getValue(varName string, popIndices map[string]int) float64 {
 	if index, ok := emisLabels[varName]; ok { // Emissions
 		return c.emisFlux[index]
 
@@ -317,19 +322,24 @@ func (c *Cell) getValue(varName string) float64 {
 		}
 		return o
 
-	} else if _, ok := popNames[varName]; ok { // Population
-		return c.PopData[varName] / c.Dx / c.Dy // divide by cell area
+	} else if polConv, ok := baselinePolLabels[varName]; ok { // Baseline concentrations
+		var o float64
+		for i, ii := range polConv.index {
+			o += c.CBaseline[ii] * polConv.conversion[i]
+		}
+		return o
 
-	} else if _, ok := popNames[strings.Replace(varName, " deaths", "", 1)]; ok {
+	} else if i, ok := popIndices[varName]; ok { // Population
+		return c.PopData[i]
+
+	} else if i, ok := popIndices[strings.Replace(varName, " deaths", "", 1)]; ok {
 		// Mortalities
-		v := strings.Replace(varName, " deaths", "", 1)
-		rr := aqhealth.RRpm25Linear(c.getValue("TotalPM2_5"))
-		return aqhealth.Deaths(rr, c.PopData[v], c.MortalityRate)
+		rr := aqhealth.RRpm25Linear(c.getValue("Total PM2.5", popIndices))
+		return aqhealth.Deaths(rr, c.PopData[i], c.MortalityRate)
 
-	} else { // Everything else
-		val := reflect.Indirect(reflect.ValueOf(c))
-		return val.FieldByName(varName).Float()
-	}
+	} // Everything else
+	val := reflect.Indirect(reflect.ValueOf(c))
+	return val.FieldByName(varName).Float()
 }
 
 // Get the units of a variable
@@ -338,19 +348,21 @@ func (d *InMAPdata) getUnits(varName string) string {
 		return "μg/m³/s"
 	} else if _, ok := polLabels[varName]; ok { // Concentrations
 		return "μg/m³"
-	} else if _, ok := popNames[varName]; ok { // Population
-		return "people/m²"
-	} else if _, ok := popNames[strings.Replace(varName, " deaths", "", 1)]; ok {
+	} else if _, ok := baselinePolLabels[varName]; ok { // Concentrations
+		return "μg/m³"
+	} else if _, ok := d.popIndices[varName]; ok { // Population
+		return "people/grid cell"
+	} else if _, ok := d.popIndices[strings.Replace(varName, " deaths", "", 1)]; ok {
 		// Mortalities
 		return "deaths/grid cell"
-	} else { // Everything else
-		t := reflect.TypeOf(*d.Cells[0])
-		ftype, ok := t.FieldByName(varName)
-		if ok {
-			return ftype.Tag.Get("units")
-		}
-		panic(fmt.Sprintf("Unknown variable %v.", varName))
 	}
+	// Everything else
+	t := reflect.TypeOf(*d.Cells[0])
+	ftype, ok := t.FieldByName(varName)
+	if ok {
+		return ftype.Tag.Get("units")
+	}
+	panic(fmt.Sprintf("Unknown variable %v.", varName))
 }
 
 // GetGeometry returns the cell geometry for the given layer.

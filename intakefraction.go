@@ -16,13 +16,13 @@ func (d *InMAPdata) IntakeFraction(
 	for l, ie := range emisLabels {
 		iF[l] = make(map[string]float64)
 		ic := gasParticleMap[ie]
-		for p := range popNames {
+		for p, i := range d.popIndices {
 			erate := 0. // emissions rate [μg/s]
 			irate := 0. // inhalation rate [μg/s]
 			for _, c := range d.Cells {
 				erate += c.emisFlux[ie] * c.Volume
 				if c.Layer == 0 { // We only care about ground level concentrations
-					irate += c.Cf[ic] * Qb * c.PopData[p]
+					irate += c.Cf[ic] * Qb * c.PopData[i]
 				}
 			}
 			// Intake fraction is the rate of intake divided by

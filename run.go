@@ -20,7 +20,6 @@ package inmap
 
 import (
 	"fmt"
-	"io"
 	"math"
 	"runtime"
 	"sync"
@@ -85,17 +84,32 @@ type polConv struct {
 
 // Labels and conversions for pollutants.
 var polLabels = map[string]polConv{
-	"TotalPM2_5": polConv{[]int{iPM2_5, ipOrg, ipNH, ipS, ipNO},
+	"Total PM2.5": polConv{[]int{iPM2_5, ipOrg, ipNH, ipS, ipNO},
 		[]float64{1, 1, NtoNH4, StoSO4, NtoNO3}},
-	"VOC":          polConv{[]int{igOrg}, []float64{1.}},
-	"SOA":          polConv{[]int{ipOrg}, []float64{1.}},
-	"PrimaryPM2_5": polConv{[]int{iPM2_5}, []float64{1.}},
-	"NH3":          polConv{[]int{igNH}, []float64{1. / NH3ToN}},
-	"pNH4":         polConv{[]int{ipNH}, []float64{NtoNH4}},
-	"SOx":          polConv{[]int{igS}, []float64{1. / SOxToS}},
-	"pSO4":         polConv{[]int{ipS}, []float64{StoSO4}},
-	"NOx":          polConv{[]int{igNO}, []float64{1. / NOxToN}},
-	"pNO3":         polConv{[]int{ipNO}, []float64{NtoNO3}},
+	"VOC":           polConv{[]int{igOrg}, []float64{1.}},
+	"SOA":           polConv{[]int{ipOrg}, []float64{1.}},
+	"Primary PM2.5": polConv{[]int{iPM2_5}, []float64{1.}},
+	"NH3":           polConv{[]int{igNH}, []float64{1. / NH3ToN}},
+	"pNH4":          polConv{[]int{ipNH}, []float64{NtoNH4}},
+	"SOx":           polConv{[]int{igS}, []float64{1. / SOxToS}},
+	"pSO4":          polConv{[]int{ipS}, []float64{StoSO4}},
+	"NOx":           polConv{[]int{igNO}, []float64{1. / NOxToN}},
+	"pNO3":          polConv{[]int{ipNO}, []float64{NtoNO3}},
+}
+
+// baselinePolLabels specifies labels for the baseline (i.e., background
+// concentrations) pollutant species. It is different than polLabels in that
+// TotalPM2_5 is its own category and there is no PrimaryPM2_5.
+var baselinePolLabels = map[string]polConv{
+	"Baseline Total PM2.5": polConv{[]int{iPM2_5}, []float64{1}},
+	"Baseline VOC":         polConv{[]int{igOrg}, []float64{1.}},
+	"Baseline SOA":         polConv{[]int{ipOrg}, []float64{1.}},
+	"Baseline NH3":         polConv{[]int{igNH}, []float64{1. / NH3ToN}},
+	"Baseline pNH4":        polConv{[]int{ipNH}, []float64{NtoNH4}},
+	"Baseline SOx":         polConv{[]int{igS}, []float64{1. / SOxToS}},
+	"Baseline pSO4":        polConv{[]int{ipS}, []float64{StoSO4}},
+	"Baseline NOx":         polConv{[]int{igNO}, []float64{1. / NOxToN}},
+	"Baseline pNO3":        polConv{[]int{ipNO}, []float64{NtoNO3}},
 }
 
 // ResetCells clears concentration and emissions information from all of the
@@ -144,13 +158,18 @@ func Calculations(calculators ...CellManipulator) DomainManipulator {
 	}
 }
 
+// ConvergenceStatus holds the percent difference for each pollutant between
+// the last convergence check and this one.
+type ConvergenceStatus []float64
+
 // SteadyStateConvergenceCheck checks whether a steady-state
 // simulation is finished and sets the Done
 // flag if it is. If numIterations > 0, the simulation is finished after
 // that number of iterations have completed. Otherwise, the simulation has
 // finished if the change in mass in the domain since the last check is less
-// than 5%.
-func SteadyStateConvergenceCheck(numIterations int) DomainManipulator {
+// than 5%. c is a channel over which the percent change between checks is
+// sent. If c is nil, no status updates will be sent.
+func SteadyStateConvergenceCheck(numIterations int, c chan ConvergenceStatus) DomainManipulator {
 
 	const tolerance = 0.005   // tolerance for convergence
 	const checkPeriod = 3600. // seconds, how often to check for convergence
@@ -162,9 +181,13 @@ func SteadyStateConvergenceCheck(numIterations int) DomainManipulator {
 	iteration := 0
 
 	return func(d *InMAPdata) error {
+
+		if d.Dt == 0 {
+			return fmt.Errorf("inmap: timestep is zero")
+		}
+
 		timeSinceLastCheck += d.Dt
 		iteration++
-
 		// If NumIterations has been set, used it to determine when to
 		// stop the model.
 		if numIterations > 0 {
@@ -176,15 +199,21 @@ func SteadyStateConvergenceCheck(numIterations int) DomainManipulator {
 		} else if timeSinceLastCheck >= checkPeriod {
 			timeToQuit := true
 			timeSinceLastCheck = 0.
-			for ii, pol := range polNames {
+			status := make(ConvergenceStatus, len(polNames))
+			for ii := range polNames {
 				var sum float64
 				for _, c := range d.Cells {
 					sum += c.Cf[ii]
 				}
-				if !checkConvergence(sum, oldSum[ii], tolerance, pol) {
+				bias, converged := checkConvergence(sum, oldSum[ii], tolerance)
+				if !converged {
 					timeToQuit = false
 				}
+				status[ii] = bias
 				oldSum[ii] = sum
+			}
+			if c != nil {
+				c <- status
 			}
 			if timeToQuit {
 				d.Done = true
@@ -194,18 +223,41 @@ func SteadyStateConvergenceCheck(numIterations int) DomainManipulator {
 	}
 }
 
-func checkConvergence(newSum, oldSum, tolerance float64, Var string) bool {
+func checkConvergence(newSum, oldSum, tolerance float64) (float64, bool) {
 	bias := (newSum - oldSum) / oldSum
-	fmt.Printf("%v: total mass difference = %3.2g%% from last check.\n",
-		Var, bias*100)
 	if math.Abs(bias) > tolerance || math.IsInf(bias, 0) {
-		return false
+		return bias, false
 	}
-	return true
+	return bias, true
 }
 
-// Log writes simulation status messages to w.
-func Log(w io.Writer) DomainManipulator {
+// SimulationStatus holds information about the progress of a simulation.
+type SimulationStatus struct {
+	// SimulationDays is the number of days in simulation time since the
+	// start of the simulation.
+	SimulationDays float64
+
+	// Iteration is the current iteration number.
+	Iteration int
+
+	// Walltime is the total wall time since the beginning of the simulation.
+	Walltime time.Duration
+
+	// StepWalltime is the wall time that elapsed during the most recent time step.
+	StepWalltime time.Duration
+
+	// Dt is the timestep in seconds.
+	Dt float64
+}
+
+func (s SimulationStatus) String() string {
+	return fmt.Sprintf("iteration %-4d  walltime=%6.3gh  Δwalltime=%4.2gs  "+
+		"timestep=%2.0fs  day=%.3g\n", s.Iteration, s.Walltime.Hours(),
+		s.StepWalltime.Hours(), s.Dt, s.SimulationDays)
+}
+
+// Log sends simulation status messages to c.
+func Log(c chan *SimulationStatus) DomainManipulator {
 	startTime := time.Now()
 	timeStepTime := time.Now()
 
@@ -215,10 +267,14 @@ func Log(w io.Writer) DomainManipulator {
 	return func(d *InMAPdata) error {
 		iteration++
 		nDaysRun += d.Dt * daysPerSecond
-		fmt.Fprintf(w, "Iteration %-4d  walltime=%6.3gh  Δwalltime=%4.2gs  "+
-			"timestep=%2.0fs  day=%.3g\n",
-			iteration, time.Since(startTime).Hours(),
-			time.Since(timeStepTime).Seconds(), d.Dt, nDaysRun)
+
+		c <- &SimulationStatus{
+			Iteration:      iteration,
+			Walltime:       time.Since(startTime),
+			StepWalltime:   time.Since(timeStepTime),
+			Dt:             d.Dt,
+			SimulationDays: nDaysRun,
+		}
 		timeStepTime = time.Now()
 		return nil
 	}
@@ -231,18 +287,21 @@ func Log(w io.Writer) DomainManipulator {
 // layers, otherwise only the ground-level layer is returned.
 // outputVariables is a list of the names of the variables for which data should be
 // returned.
-func (d *InMAPdata) Results(allLayers bool, outputVariables ...string) map[string][][]float64 {
+func (d *InMAPdata) Results(allLayers bool, outputVariables ...string) (map[string][][]float64, error) {
+
+	tempOutputNames, _ := d.OutputOptions()
+	outputNames := make(map[string]uint8)
+	for _, n := range tempOutputNames {
+		outputNames[n] = 0
+	}
+	for _, v := range outputVariables {
+		if _, ok := outputNames[v]; !ok {
+			return nil, fmt.Errorf("inmap: unsupported output variable name '%s'", v)
+		}
+	}
 
 	// Prepare output data
 	outputConc := make(map[string][][]float64)
-	/*var outputVariables []string
-	for pol := range polLabels {
-		outputVariables = append(outputVariables, pol)
-	}
-	for pop := range popNames {
-		outputVariables = append(outputVariables, pop, pop+" deaths")
-	}
-	outputVariables = append(outputVariables, "MortalityRate")*/
 	var outputLay int
 	if allLayers {
 		outputLay = d.nlayers
@@ -255,5 +314,5 @@ func (d *InMAPdata) Results(allLayers bool, outputVariables ...string) map[strin
 			outputConc[name][k] = d.toArray(name, k)
 		}
 	}
-	return outputConc
+	return outputConc, nil
 }

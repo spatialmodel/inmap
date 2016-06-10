@@ -21,6 +21,7 @@ import (
 	"bitbucket.org/ctessum/sparse"
 	"github.com/ctessum/atmos/acm2"
 	"github.com/ctessum/atmos/emep"
+	"github.com/spatialmodel/inmap"
 	//"github.com/ctessum/atmos/gocart"
 	"github.com/ctessum/atmos/seinfeld"
 	"github.com/ctessum/atmos/wesely1989"
@@ -330,156 +331,120 @@ func main() {
 	// write out data to file
 	outputFile := filepath.Join(config.OutputDir, config.OutputFilePrefix+".ncf")
 	fmt.Printf("Writing out data to %v...\n", outputFile)
-	h := cdf.NewHeader(
-		[]string{"x", "y", "z", "xStagger", "yStagger", "zStagger"},
-		[]int{windSpeed.Shape[2], windSpeed.Shape[1], windSpeed.Shape[0],
-			uAvg.Shape[2], vAvg.Shape[1], wAvg.Shape[0]})
-	h.AddAttribute("", "comment", "InMAP meteorology and baseline chemistry data file")
 
-	h.AddAttribute("", "x0", []float64{config.CtmGridXo})
-	h.AddAttribute("", "y0", []float64{config.CtmGridYo})
-	h.AddAttribute("", "dx", []float64{config.CtmGridDx})
-	h.AddAttribute("", "dy", []float64{config.CtmGridDy})
-	h.AddAttribute("", "nx", []int32{int32(config.CtmGridNx)})
-	h.AddAttribute("", "ny", []int32{int32(config.CtmGridNy)})
+	data := new(inmap.CTMData)
+	data.AddVariable("UAvg", []string{"z", "y", "xStagger"},
+		"Annual average x velocity", "m/s", uAvg)
+	data.AddVariable("VAvg", []string{"z", "yStagger", "x"},
+		"Annual average y velocity", "m/s", vAvg)
+	data.AddVariable("WAvg", []string{"zStagger", "y", "x"},
+		"Annual average z velocity", "m/s", wAvg)
+	data.AddVariable("UDeviation", []string{"z", "y", "xStagger"},
+		"Average deviation from average x velocity", "m/s", uDeviation)
+	data.AddVariable("VDeviation", []string{"z", "yStagger", "x"},
+		"Average deviation from average y velocity", "m/s", vDeviation)
+	data.AddVariable("aOrgPartitioning", []string{"z", "y", "x"},
+		"Mass fraction of anthropogenic organic matter in particle {vs. gas} phase",
+		"fraction", aOrgPartitioning)
+	data.AddVariable("aVOC", []string{"z", "y", "x"},
+		"Average anthropogenic VOC concentration", "ug m-3", aVOC)
+	data.AddVariable("aSOA", []string{"z", "y", "x"},
+		"Average anthropogenic secondary organic aerosol concentration", "ug m-3", aSOA)
+	data.AddVariable("bOrgPartitioning", []string{"z", "y", "x"},
+		"Mass fraction of biogenic organic matter in particle {vs. gas} phase",
+		"fraction", bOrgPartitioning)
+	data.AddVariable("bVOC", []string{"z", "y", "x"},
+		"Average biogenic VOC concentration", "ug m-3", bVOC)
+	data.AddVariable("bSOA", []string{"z", "y", "x"},
+		"Average biogenic secondary organic aerosol concentration", "ug m-3", bSOA)
+	data.AddVariable("NOPartitioning", []string{"z", "y", "x"},
+		"Mass fraction of N from NOx in particle {vs. gas} phase", "fraction",
+		NOPartitioning)
+	data.AddVariable("gNO", []string{"z", "y", "x"},
+		"Average concentration of nitrogen fraction of gaseous NOx", "ug m-3",
+		gNO)
+	data.AddVariable("pNO", []string{"z", "y", "x"},
+		"Average concentration of nitrogen fraction of particulate NO3",
+		"ug m-3", pNO)
+	data.AddVariable("SPartitioning", []string{"z", "y", "x"},
+		"Mass fraction of S from SOx in particle {vs. gas} phase", "fraction",
+		SPartitioning)
+	data.AddVariable("gS", []string{"z", "y", "x"},
+		"Average concentration of sulfur fraction of gaseous SOx", "ug m-3",
+		gS)
+	data.AddVariable("pS", []string{"z", "y", "x"},
+		"Average concentration of sulfur fraction of particulate sulfate",
+		"ug m-3", pS)
+	data.AddVariable("NHPartitioning", []string{"z", "y", "x"},
+		"Mass fraction of N from NH3 in particle {vs. gas} phase", "fraction",
+		NHPartitioning)
+	data.AddVariable("gNH", []string{"z", "y", "x"},
+		"Average concentration of nitrogen fraction of gaseous ammonia",
+		"ug m-3", gNH)
+	data.AddVariable("pNH", []string{"z", "y", "x"},
+		"Average concentration of nitrogen fraction of particulate ammonium",
+		"ug m-3", pNH)
+	data.AddVariable("NO_NO2partitioning", []string{"z", "y", "x"},
+		"Mass fraction of N in NOx that exists as NO.", "fraction",
+		NONO2partitioning)
+	data.AddVariable("SO2oxidation", []string{"z", "y", "x"},
+		"Rate of SO2 oxidation to SO4 by hydroxyl radical and H2O2",
+		"s-1", SO2oxidation)
+	data.AddVariable("ParticleDryDep", []string{"z", "y", "x"},
+		"Dry deposition velocity for particles", "m s-1", particleDryDep)
+	data.AddVariable("SO2DryDep", []string{"z", "y", "x"},
+		"Dry deposition velocity for SO2", "m s-1", SO2DryDep)
+	data.AddVariable("NOxDryDep", []string{"z", "y", "x"},
+		"Dry deposition velocity for NOx", "m s-1", NOxDryDep)
+	data.AddVariable("NH3DryDep", []string{"z", "y", "x"},
+		"Dry deposition velocity for NH3", "m s-1", NH3DryDep)
+	data.AddVariable("VOCDryDep", []string{"z", "y", "x"},
+		"Dry deposition velocity for VOCs", "m s-1", VOCDryDep)
+	data.AddVariable("Kxxyy", []string{"z", "y", "x"},
+		"Horizontal eddy diffusion coefficient", "m2 s-1", Kxxyy)
+	data.AddVariable("LayerHeights", []string{"zStagger", "y", "x"},
+		"Height at edge of layer", "m", layerHeights)
+	data.AddVariable("Dz", []string{"z", "y", "x"},
+		"Vertical grid size", "m", Dz)
+	data.AddVariable("ParticleWetDep", []string{"z", "y", "x"},
+		"Wet deposition rate constant for fine particles",
+		"s-1", particleWetDep)
+	data.AddVariable("SO2WetDep", []string{"z", "y", "x"},
+		"Wet deposition rate constant for SO2 gas", "s-1", SO2WetDep)
+	data.AddVariable("OtherGasWetDep", []string{"z", "y", "x"},
+		"Wet deposition rate constant for other gases", "s-1", otherGasWetDep)
+	data.AddVariable("Kzz", []string{"zStagger", "y", "x"},
+		"Vertical turbulent diffusivity", "m2 s-1", Kzz)
+	data.AddVariable("M2u", []string{"z", "y", "x"},
+		"ACM2 nonlocal upward mixing {Pleim 2007}", "s-1", M2u)
+	data.AddVariable("M2d", []string{"z", "y", "x"},
+		"ACM2 nonlocal downward mixing {Pleim 2007}", "s-1", M2d)
+	data.AddVariable("Pblh", []string{"y", "x"},
+		"Planetary boundary layer height", "m", pblh)
+	data.AddVariable("WindSpeed", []string{"z", "y", "x"},
+		"RMS wind speed", "m s-1", windSpeed)
+	data.AddVariable("WindSpeedInverse", []string{"z", "y", "x"},
+		"RMS wind speed^(-1)", "(m s-1)^(-1)", windSpeedInverse)
+	data.AddVariable("WindSpeedMinusThird", []string{"z", "y", "x"},
+		"RMS wind speed^(-1/3)", "(m s-1)^(-1/3)", windSpeedMinusThird)
+	data.AddVariable("WindSpeedMinusOnePointFour", []string{"z", "y", "x"},
+		"RMS wind speed^(-1.4)", "(m s-1)^(-1.4)", windSpeedMinusOnePointFour)
+	data.AddVariable("Temperature", []string{"z", "y", "x"},
+		"Average Temperature", "K", temperature)
+	data.AddVariable("S1", []string{"z", "y", "x"},
+		"Stability parameter", "?", S1)
+	data.AddVariable("Sclass", []string{"z", "y", "x"},
+		"Stability parameter", "0=Unstable; 1=Stable", Sclass)
+	data.AddVariable("alt", []string{"z", "y", "x"},
+		"Inverse density", "m3 kg-1", alt)
+	data.AddVariable("TotalPM25", []string{"z", "y", "x"},
+		"Total PM2.5 concentration", "ug m-3", totalpm25)
 
-	data := map[string]dataHolder{
-		"UAvg": dataHolder{[]string{"z", "y", "xStagger"},
-			"Annual average x velocity", "m/s", uAvg},
-		"VAvg": dataHolder{[]string{"z", "yStagger", "x"},
-			"Annual average y velocity", "m/s", vAvg},
-		"WAvg": dataHolder{[]string{"zStagger", "y", "x"},
-			"Annual average z velocity", "m/s", wAvg},
-		"UDeviation": dataHolder{[]string{"z", "y", "xStagger"},
-			"Average deviation from average x velocity", "m/s", uDeviation},
-		"VDeviation": dataHolder{[]string{"z", "yStagger", "x"},
-			"Average deviation from average y velocity", "m/s", vDeviation},
-		"aOrgPartitioning": dataHolder{[]string{"z", "y", "x"},
-			"Mass fraction of anthropogenic organic matter in particle {vs. gas} phase",
-			"fraction", aOrgPartitioning},
-		"aVOC": dataHolder{[]string{"z", "y", "x"},
-			"Average anthropogenic VOC concentration", "ug m-3", aVOC},
-		"aSOA": dataHolder{[]string{"z", "y", "x"},
-			"Average anthropogenic secondary organic aerosol concentration", "ug m-3", aSOA},
-		"bOrgPartitioning": dataHolder{[]string{"z", "y", "x"},
-			"Mass fraction of biogenic organic matter in particle {vs. gas} phase",
-			"fraction", bOrgPartitioning},
-		"bVOC": dataHolder{[]string{"z", "y", "x"},
-			"Average biogenic VOC concentration", "ug m-3", bVOC},
-		"bSOA": dataHolder{[]string{"z", "y", "x"},
-			"Average biogenic secondary organic aerosol concentration", "ug m-3", bSOA},
-		"NOPartitioning": dataHolder{[]string{"z", "y", "x"},
-			"Mass fraction of N from NOx in particle {vs. gas} phase", "fraction",
-			NOPartitioning},
-		"gNO": dataHolder{[]string{"z", "y", "x"},
-			"Average concentration of nitrogen fraction of gaseous NOx", "ug m-3",
-			gNO},
-		"pNO": dataHolder{[]string{"z", "y", "x"},
-			"Average concentration of nitrogen fraction of particulate NO3",
-			"ug m-3", pNO},
-		"SPartitioning": dataHolder{[]string{"z", "y", "x"},
-			"Mass fraction of S from SOx in particle {vs. gas} phase", "fraction",
-			SPartitioning},
-		"gS": dataHolder{[]string{"z", "y", "x"},
-			"Average concentration of sulfur fraction of gaseous SOx", "ug m-3",
-			gS},
-		"pS": dataHolder{[]string{"z", "y", "x"},
-			"Average concentration of sulfur fraction of particulate sulfate",
-			"ug m-3", pS},
-		"NHPartitioning": dataHolder{[]string{"z", "y", "x"},
-			"Mass fraction of N from NH3 in particle {vs. gas} phase", "fraction",
-			NHPartitioning},
-		"gNH": dataHolder{[]string{"z", "y", "x"},
-			"Average concentration of nitrogen fraction of gaseous ammonia",
-			"ug m-3", gNH},
-		"pNH": dataHolder{[]string{"z", "y", "x"},
-			"Average concentration of nitrogen fraction of particulate ammonium",
-			"ug m-3", pNH},
-		"NO_NO2partitioning": dataHolder{[]string{"z", "y", "x"},
-			"Mass fraction of N in NOx that exists as NO.", "fraction",
-			NONO2partitioning},
-		"SO2oxidation": dataHolder{[]string{"z", "y", "x"},
-			"Rate of SO2 oxidation to SO4 by hydroxyl radical and H2O2",
-			"s-1", SO2oxidation},
-		"ParticleDryDep": dataHolder{[]string{"z", "y", "x"},
-			"Dry deposition velocity for particles", "m s-1", particleDryDep},
-		"SO2DryDep": dataHolder{[]string{"z", "y", "x"},
-			"Dry deposition velocity for SO2", "m s-1", SO2DryDep},
-		"NOxDryDep": dataHolder{[]string{"z", "y", "x"},
-			"Dry deposition velocity for NOx", "m s-1", NOxDryDep},
-		"NH3DryDep": dataHolder{[]string{"z", "y", "x"},
-			"Dry deposition velocity for NH3", "m s-1", NH3DryDep},
-		"VOCDryDep": dataHolder{[]string{"z", "y", "x"},
-			"Dry deposition velocity for VOCs", "m s-1", VOCDryDep},
-		"Kxxyy": dataHolder{[]string{"z", "y", "x"},
-			"Horizontal eddy diffusion coefficient", "m2 s-1", Kxxyy},
-		"LayerHeights": dataHolder{[]string{"zStagger", "y", "x"},
-			"Height at edge of layer", "m", layerHeights},
-		"Dz": dataHolder{[]string{"z", "y", "x"},
-			"Vertical grid size", "m", Dz},
-		"ParticleWetDep": dataHolder{[]string{"z", "y", "x"},
-			"Wet deposition rate constant for fine particles",
-			"s-1", particleWetDep},
-		"SO2WetDep": dataHolder{[]string{"z", "y", "x"},
-			"Wet deposition rate constant for SO2 gas", "s-1", SO2WetDep},
-		"OtherGasWetDep": dataHolder{[]string{"z", "y", "x"},
-			"Wet deposition rate constant for other gases", "s-1", otherGasWetDep},
-		"Kzz": dataHolder{[]string{"zStagger", "y", "x"},
-			"Vertical turbulent diffusivity", "m2 s-1", Kzz},
-		"M2u": dataHolder{[]string{"z", "y", "x"},
-			"ACM2 nonlocal upward mixing {Pleim 2007}", "s-1", M2u},
-		"M2d": dataHolder{[]string{"z", "y", "x"},
-			"ACM2 nonlocal downward mixing {Pleim 2007}", "s-1", M2d},
-		"Pblh": dataHolder{[]string{"y", "x"},
-			"Planetary boundary layer height", "m", pblh},
-		"WindSpeed": dataHolder{[]string{"z", "y", "x"},
-			"RMS wind speed", "m s-1", windSpeed},
-		"WindSpeedInverse": dataHolder{[]string{"z", "y", "x"},
-			"RMS wind speed^(-1)", "(m s-1)^(-1)", windSpeedInverse},
-		"WindSpeedMinusThird": dataHolder{[]string{"z", "y", "x"},
-			"RMS wind speed^(-1/3)", "(m s-1)^(-1/3)", windSpeedMinusThird},
-		"WindSpeedMinusOnePointFour": dataHolder{[]string{"z", "y", "x"},
-			"RMS wind speed^(-1.4)", "(m s-1)^(-1.4)", windSpeedMinusOnePointFour},
-		"Temperature": dataHolder{[]string{"z", "y", "x"},
-			"Average Temperature", "K", temperature},
-		"S1": dataHolder{[]string{"z", "y", "x"},
-			"Stability parameter", "?", S1},
-		"Sclass": dataHolder{[]string{"z", "y", "x"},
-			"Stability parameter", "0=Unstable; 1=Stable", Sclass},
-		"alt": dataHolder{[]string{"z", "y", "x"},
-			"Inverse density", "m3 kg-1", alt},
-		"TotalPM25": dataHolder{[]string{"z", "y", "x"},
-			"Total PM2.5 concentration", "ug m-3", totalpm25}}
-
-	for name, d := range data {
-		h.AddVariable(name, d.dims, []float32{0})
-		h.AddAttribute(name, "description", d.Description)
-		h.AddAttribute(name, "units", d.Units)
-	}
-	h.Define()
 	ff, err := os.Create(outputFile)
 	if err != nil {
 		panic(err)
 	}
-	f, err := cdf.Create(ff, h) // writes the header to ff
-	if err != nil {
-		panic(err)
-	}
-	for name, d := range data {
-		writeNCF(f, name, d.data)
-	}
-	err = cdf.UpdateNumRecs(ff)
-	if err != nil {
-		panic(err)
-	}
 	ff.Close()
-}
-
-type dataHolder struct {
-	dims        []string
-	Description string
-	Units       string
-	data        *sparse.DenseArray
 }
 
 func iterateTimeSteps(msg string, funcs ...cdfReaderFunc) {
@@ -623,20 +588,6 @@ func readParticleGroup(Vars map[string]float64, datachans ...chan *sparse.DenseA
 		for _, datachan := range datachans {
 			datachan <- out
 		}
-	}
-}
-
-func writeNCF(f *cdf.File, Var string, data *sparse.DenseArray) {
-	data32 := make([]float32, len(data.Elements))
-	for i, e := range data.Elements {
-		data32[i] = float32(e)
-	}
-	end := f.Header.Lengths(Var)
-	start := make([]int, len(end))
-	w := f.Writer(Var, start, end)
-	_, err := w.Write(data32)
-	if err != nil {
-		panic(err)
 	}
 }
 

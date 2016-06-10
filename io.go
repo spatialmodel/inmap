@@ -46,7 +46,9 @@ type emisRecord struct {
 // ReadEmissionShapefiles returns the emissions data in the specified shapefiles,
 // and converts them to the spatial reference gridSR. Input units are specified
 // by units; options are tons/year and kg/year. Output units = μg/s.
-func ReadEmissionShapefiles(gridSR *proj.SR, units string, shapefiles ...string) (*Emissions, error) {
+// c is a channel over which status updates will be sent. If c is nil,
+// no updates will be sent.
+func ReadEmissionShapefiles(gridSR *proj.SR, units string, c chan string, shapefiles ...string) (*Emissions, error) {
 
 	var emisConv float64
 	switch units {
@@ -68,7 +70,9 @@ func ReadEmissionShapefiles(gridSR *proj.SR, units string, shapefiles ...string)
 		data: rtree.NewTree(25, 50),
 	}
 	for _, fname := range shapefiles {
-		log.Printf("Loading emissions shapefile: %s.", fname)
+		if c != nil {
+			c <- fmt.Sprintf("Loading emissions shapefile: %s.", fname)
+		}
 		fname = strings.Replace(fname, ".shp", "", -1)
 		f, err := shp.NewDecoder(fname + ".shp")
 		if err != nil {
@@ -184,11 +188,6 @@ func (c *Cell) setEmissionsFlux(e *Emissions) {
 	c.emisFlux = make([]float64, len(polNames))
 	for _, eTemp := range e.data.SearchIntersect(c.Bounds()) {
 		e := eTemp.(emisRecord)
-		intersection := calcIntersection(e.Geom, c)
-		if intersection == nil {
-			continue
-		}
-		weightFactor := calcWeightFactor(e.Geom, intersection)
 		if e.Height > 0. {
 			// Figure out if this cell is at the right hight for the plume.
 			in, err := c.IsPlumeIn(e.Height, e.Diam, e.Temp, e.Velocity)
@@ -201,6 +200,11 @@ func (c *Cell) setEmissionsFlux(e *Emissions) {
 		} else if c.Layer != 0 {
 			continue
 		}
+		intersection := calcIntersection(e.Geom, c)
+		if intersection == nil {
+			continue
+		}
+		weightFactor := calcWeightFactor(e.Geom, intersection)
 
 		// Emissions: all except PM2.5 go to gas phase
 		c.addEmisFlux(e.VOC, 1.*weightFactor, igOrg)
@@ -225,7 +229,10 @@ func Output(fileTemplate string, allLayers bool, outputVariables ...string) Doma
 		// matches the InMAPProj configuration variable.
 		const proj4 = `PROJCS["Lambert_Conformal_Conic",GEOGCS["GCS_unnamed ellipse",DATUM["D_unknown",SPHEROID["Unknown",6370997,0]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],PROJECTION["Lambert_Conformal_Conic"],PARAMETER["standard_parallel_1",33],PARAMETER["standard_parallel_2",45],PARAMETER["latitude_of_origin",40],PARAMETER["central_meridian",-97],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]`
 
-		results := d.Results(allLayers, outputVariables...)
+		results, err := d.Results(allLayers, outputVariables...)
+		if err != nil {
+			return err
+		}
 
 		vars := make([]string, 0, len(results))
 		for v := range results {
