@@ -27,7 +27,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 	"text/tabwriter"
 
@@ -220,21 +219,6 @@ func main() {
 		"------------------------------------\n" +
 		"           InMAP Completed!\n" +
 		"------------------------------------\n")
-}
-
-func s2i(s string) int {
-	i, err := strconv.ParseInt(s, 0, 64)
-	if err != nil {
-		panic(err)
-	}
-	return int(i)
-}
-func s2f(s string) float64 {
-	f, err := strconv.ParseFloat(s, 64)
-	if err != nil {
-		panic(err)
-	}
-	return f
 }
 
 // readConfigFile reads and parses a TOML configuration file.
