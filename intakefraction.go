@@ -6,7 +6,7 @@ package inmap
 // pollutant and population type (map[pollutant][population]iF).
 // This function will only give the correct results if run
 // after InMAP finishes calculating.
-func (d *InMAPdata) IntakeFraction(
+func (d *InMAP) IntakeFraction(
 	breathingRate float64) map[string]map[string]float64 {
 
 	Qb := breathingRate / (24 * 60 * 60) // [m³/s]
@@ -20,7 +20,7 @@ func (d *InMAPdata) IntakeFraction(
 			erate := 0. // emissions rate [μg/s]
 			irate := 0. // inhalation rate [μg/s]
 			for _, c := range d.Cells {
-				erate += c.emisFlux[ie] * c.Volume
+				erate += c.EmisFlux[ie] * c.Volume
 				if c.Layer == 0 { // We only care about ground level concentrations
 					irate += c.Cf[ic] * Qb * c.PopData[i]
 				}

@@ -2,7 +2,23 @@ InMAPData = "../testdata/inmapData.ncf"
 EmissionsShapefiles = [
 	"../testdata/testEmis.shp"
 ]
+EmissionUnits = "tons/year"
+
 OutputTemplate = "../testdata/output_[layer].shp"
+OutputVariables = [
+  "TotalPop deaths",
+	"WhiteNoLat deaths",
+	"Black deaths",
+	"Native deaths",
+	"Asian deaths",
+	"Latino deaths",
+  "TotalPop",
+	"Total PM2.5",
+	"PM2.5 emissions",
+	"Baseline Total PM2.5",
+	"WindSpeed"
+]
+
 HTTPport = "8080"
 
 [VarGrid]
@@ -13,12 +29,6 @@ VariableGridDy= 12000.0
 Xnests= [12, 2, 2]
 Ynests= [10, 2, 2]
 HiResLayers= 8
-CtmGridXo= -2004000.0
-CtmGridYo= -540000.0
-CtmGridDx= 12000.0
-CtmGridDy= 12000.0
-CtmGridNx= 24
-CtmGridNy= 20
 GridProj= "+proj=lcc +lat_1=33.000000 +lat_2=45.000000 +lat_0=40.000000 +lon_0=-97.000000 +x_0=0 +y_0=0 +a=6370997.000000 +b=6370997.000000 +to_meter=1"
 PopDensityCutoff= 0.001
 PopCutoff= 25000.0

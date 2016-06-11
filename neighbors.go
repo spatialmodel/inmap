@@ -2,7 +2,7 @@ package inmap
 
 import "github.com/ctessum/geom"
 
-func (d *InMAPdata) setNeighbors(c *Cell, bboxOffset float64) {
+func (d *InMAP) setNeighbors(c *Cell, bboxOffset float64) {
 	d.neighbors(c, bboxOffset)
 
 	if len(c.West) == 0 {
@@ -28,7 +28,7 @@ func (d *InMAPdata) setNeighbors(c *Cell, bboxOffset float64) {
 	c.neighborInfo()
 }
 
-func (d *InMAPdata) neighbors(c *Cell, bboxOffset float64) {
+func (d *InMAP) neighbors(c *Cell, bboxOffset float64) {
 	b := c.Bounds()
 
 	// Horizontal
@@ -200,7 +200,7 @@ func (c *Cell) neighborInfo() {
 
 // dereferenceNeighbors removes any references to this cell that exist in its
 // neighbors.
-func (c *Cell) dereferenceNeighbors(d *InMAPdata) {
+func (c *Cell) dereferenceNeighbors(d *InMAP) {
 	for _, w := range c.West {
 		if w.Boundary {
 			deleteCellFromSlice(w, &d.westBoundary)

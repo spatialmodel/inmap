@@ -124,8 +124,10 @@ func (config *VarGridConfig) LoadCTMData(rw cdf.ReaderWriterAt) (*CTMData, error
 	return o, nil
 }
 
-// Write writes d to w.
-func (d *CTMData) Write(w *os.File, config *VarGridConfig) error {
+// Write writes d to w. x0 and y0 are the left and y coordinates of the
+// lower-left corner of the domain, and dx and dy are the x and y edge
+// lengths of the grid cells, respectively.
+func (d *CTMData) Write(w *os.File, x0, y0, dx, dy float64) error {
 	windSpeed := d.data["WindSpeed"].data
 	uAvg := d.data["UAvg"].data
 	vAvg := d.data["VAvg"].data
@@ -136,12 +138,12 @@ func (d *CTMData) Write(w *os.File, config *VarGridConfig) error {
 			uAvg.Shape[2], vAvg.Shape[1], wAvg.Shape[0]})
 	h.AddAttribute("", "comment", "InMAP meteorology and baseline chemistry data file")
 
-	h.AddAttribute("", "x0", []float64{config.ctmGridXo})
-	h.AddAttribute("", "y0", []float64{config.ctmGridYo})
-	h.AddAttribute("", "dx", []float64{config.ctmGridDx})
-	h.AddAttribute("", "dy", []float64{config.ctmGridDy})
-	h.AddAttribute("", "nx", []int32{int32(config.ctmGridNx)})
-	h.AddAttribute("", "ny", []int32{int32(config.ctmGridNy)})
+	h.AddAttribute("", "x0", []float64{x0})
+	h.AddAttribute("", "y0", []float64{y0})
+	h.AddAttribute("", "dx", []float64{dx})
+	h.AddAttribute("", "dy", []float64{dy})
+	h.AddAttribute("", "nx", []int32{int32(windSpeed.Shape[2])})
+	h.AddAttribute("", "ny", []int32{int32(windSpeed.Shape[1])})
 
 	for name, dd := range d.data {
 		h.AddVariable(name, dd.dims, []float32{0})
@@ -226,7 +228,7 @@ func (config *VarGridConfig) LoadPopMort() (*Population, PopIndices, *MortalityR
 	return &Population{tree: pop}, PopIndices(popIndex), &MortalityRates{tree: mort}, nil
 }
 
-func (d *InMAPdata) sort() {
+func (d *InMAP) sort() {
 	sortCells(d.Cells)
 	sortCells(d.westBoundary)
 	sortCells(d.eastBoundary)
@@ -317,7 +319,7 @@ func (config *VarGridConfig) webMapTrans() (proj.Transformer, error) {
 // (i.e., not variable resolution) grid
 // as specified by the information in c.
 func (config *VarGridConfig) RegularGrid(data *CTMData, pop *Population, popIndex PopIndices, mort *MortalityRates, emis *Emissions) DomainManipulator {
-	return func(d *InMAPdata) error {
+	return func(d *InMAP) error {
 
 		webMapTrans, err := config.webMapTrans()
 		if err != nil {
@@ -360,7 +362,7 @@ func (config *VarGridConfig) RegularGrid(data *CTMData, pop *Population, popInde
 // by dividing cells in the previously created grid
 // based on the population and population density cutoffs in config.
 func (config *VarGridConfig) StaticVariableGrid(data *CTMData, pop *Population, mort *MortalityRates, emis *Emissions) DomainManipulator {
-	return func(d *InMAPdata) error {
+	return func(d *InMAP) error {
 
 		webMapTrans, err := config.webMapTrans()
 		if err != nil {
@@ -420,7 +422,7 @@ func (config *VarGridConfig) StaticVariableGrid(data *CTMData, pop *Population, 
 // AddCells adds a new cell to the grid. The function will take the necessary
 // steps to fit the new cell in with existing cells, but it is the caller's
 // reponsibility that the new cell doesn't overlap any existing cells.
-func (d *InMAPdata) AddCells(cells ...*Cell) {
+func (d *InMAP) AddCells(cells ...*Cell) {
 	for _, c := range cells {
 		d.Cells = append(d.Cells, c)
 		d.index.Insert(c)
@@ -431,7 +433,7 @@ func (d *InMAPdata) AddCells(cells ...*Cell) {
 
 // DeleteCells deletes the cell with index i from the grid and removes any
 // references to it from other cells.
-func (d *InMAPdata) DeleteCells(indicesToDelete ...int) {
+func (d *InMAP) DeleteCells(indicesToDelete ...int) {
 	indexToSubtract := 0
 	for _, ii := range indicesToDelete {
 		i := ii - indexToSubtract

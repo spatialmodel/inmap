@@ -60,8 +60,8 @@ var emisLabels = map[string]int{"VOC Emissions": igOrg,
 	"PM2.5 emissions": iPM2_5,
 }
 
-// These are the names of pollutants within the model
-var polNames = []string{"gOrg", "pOrg", // gaseous and particulate organic matter
+// PolNames are the names of pollutants within the model
+var PolNames = []string{"gOrg", "pOrg", // gaseous and particulate organic matter
 	"PM2_5",      // PM2.5
 	"gNH", "pNH", // gaseous and particulate N in ammonia
 	"gS", "pS", // gaseous and particulate S in sulfur
@@ -115,13 +115,13 @@ var baselinePolLabels = map[string]polConv{
 // ResetCells clears concentration and emissions information from all of the
 // grid cells and boundary cells.
 func ResetCells() DomainManipulator {
-	return func(d *InMAPdata) error {
+	return func(d *InMAP) error {
 		for _, g := range [][]*Cell{d.Cells, d.westBoundary, d.eastBoundary,
 			d.northBoundary, d.southBoundary, d.topBoundary} {
 			for _, c := range g {
-				c.Ci = make([]float64, len(polNames))
-				c.Cf = make([]float64, len(polNames))
-				c.emisFlux = make([]float64, len(polNames))
+				c.Ci = make([]float64, len(PolNames))
+				c.Cf = make([]float64, len(PolNames))
+				c.EmisFlux = make([]float64, len(PolNames))
 			}
 		}
 		return nil
@@ -135,7 +135,7 @@ func Calculations(calculators ...CellManipulator) DomainManipulator {
 	nprocs := runtime.GOMAXPROCS(0) // number of processors
 	var wg sync.WaitGroup
 
-	return func(d *InMAPdata) error {
+	return func(d *InMAP) error {
 		// Concurrently run all of the calculators on all of the cells.
 		wg.Add(nprocs)
 		for pp := 0; pp < nprocs; pp++ {
@@ -162,25 +162,33 @@ func Calculations(calculators ...CellManipulator) DomainManipulator {
 // the last convergence check and this one.
 type ConvergenceStatus []float64
 
+func (c ConvergenceStatus) String() string {
+	s := "Percent change since last convergence check:\n"
+	for i, n := range PolNames {
+		s += fmt.Sprintf("%s: %g%%\n", n, c[i]*100)
+	}
+	return s
+}
+
 // SteadyStateConvergenceCheck checks whether a steady-state
 // simulation is finished and sets the Done
 // flag if it is. If numIterations > 0, the simulation is finished after
 // that number of iterations have completed. Otherwise, the simulation has
 // finished if the change in mass in the domain since the last check is less
-// than 5%. c is a channel over which the percent change between checks is
+// than 0.1%. c is a channel over which the percent change between checks is
 // sent. If c is nil, no status updates will be sent.
 func SteadyStateConvergenceCheck(numIterations int, c chan ConvergenceStatus) DomainManipulator {
 
-	const tolerance = 0.005   // tolerance for convergence
+	const tolerance = 0.001   // tolerance for convergence
 	const checkPeriod = 3600. // seconds, how often to check for convergence
 
 	// oldSum is the sum of mass in the domain at the last check
-	oldSum := make([]float64, len(polNames))
+	oldSum := make([]float64, len(PolNames))
 
 	timeSinceLastCheck := 0.
 	iteration := 0
 
-	return func(d *InMAPdata) error {
+	return func(d *InMAP) error {
 
 		if d.Dt == 0 {
 			return fmt.Errorf("inmap: timestep is zero")
@@ -199,8 +207,8 @@ func SteadyStateConvergenceCheck(numIterations int, c chan ConvergenceStatus) Do
 		} else if timeSinceLastCheck >= checkPeriod {
 			timeToQuit := true
 			timeSinceLastCheck = 0.
-			status := make(ConvergenceStatus, len(polNames))
-			for ii := range polNames {
+			status := make(ConvergenceStatus, len(PolNames))
+			for ii := range PolNames {
 				var sum float64
 				for _, c := range d.Cells {
 					sum += c.Cf[ii]
@@ -264,7 +272,7 @@ func Log(c chan *SimulationStatus) DomainManipulator {
 	iteration := 0
 	nDaysRun := 0.
 
-	return func(d *InMAPdata) error {
+	return func(d *InMAP) error {
 		iteration++
 		nDaysRun += d.Dt * daysPerSecond
 
@@ -287,7 +295,7 @@ func Log(c chan *SimulationStatus) DomainManipulator {
 // layers, otherwise only the ground-level layer is returned.
 // outputVariables is a list of the names of the variables for which data should be
 // returned.
-func (d *InMAPdata) Results(allLayers bool, outputVariables ...string) (map[string][][]float64, error) {
+func (d *InMAP) Results(allLayers bool, outputVariables ...string) (map[string][][]float64, error) {
 
 	tempOutputNames, _ := d.OutputOptions()
 	outputNames := make(map[string]uint8)

@@ -31,7 +31,7 @@ import (
 )
 
 // InMAPdata holds the current state of the model.
-type InMAPdata struct {
+type InMAP struct {
 
 	// InitFuncs are functions to be called in the given order
 	//  at the beginning of the simulation.
@@ -75,7 +75,7 @@ type InMAPdata struct {
 }
 
 // Init initializes the simulation by running d.InitFuncs.
-func (d *InMAPdata) Init() error {
+func (d *InMAP) Init() error {
 	for _, f := range d.InitFuncs {
 		if err := f(d); err != nil {
 			return err
@@ -85,7 +85,7 @@ func (d *InMAPdata) Init() error {
 }
 
 // Run carries out the simulation by running d.RunFuncs until d.Done is true.
-func (d *InMAPdata) Run() error {
+func (d *InMAP) Run() error {
 	for !d.Done {
 		for _, f := range d.RunFuncs {
 			if err := f(d); err != nil {
@@ -97,7 +97,7 @@ func (d *InMAPdata) Run() error {
 }
 
 // Cleanup finishes the simulation by running d.CleanupFuncs.
-func (d *InMAPdata) Cleanup() error {
+func (d *InMAP) Cleanup() error {
 	for _, f := range d.CleanupFuncs {
 		if err := f(d); err != nil {
 			return err
@@ -151,7 +151,7 @@ type Cell struct {
 
 	Ci        []float64 // concentrations at beginning of time step [μg/m³]
 	Cf        []float64 // concentrations at end of time step [μg/m³]
-	emisFlux  []float64 // emissions [μg/m³/s]
+	EmisFlux  []float64 // emissions [μg/m³/s]
 	CBaseline []float64 // Total baseline PM2.5 concentration.
 
 	West        []*Cell // Neighbors to the East
@@ -194,17 +194,17 @@ type Cell struct {
 
 // DomainManipulator is a class of functions that operate on the entire InMAP
 // domain.
-type DomainManipulator func(d *InMAPdata) error
+type DomainManipulator func(d *InMAP) error
 
 // CellManipulator is a class of functions that operate on a single grid cell,
 // using the given timestep Dt.
 type CellManipulator func(c *Cell, Dt float64)
 
 func (c *Cell) make() {
-	c.Ci = make([]float64, len(polNames))
-	c.Cf = make([]float64, len(polNames))
-	c.CBaseline = make([]float64, len(polNames))
-	c.emisFlux = make([]float64, len(polNames))
+	c.Ci = make([]float64, len(PolNames))
+	c.Cf = make([]float64, len(PolNames))
+	c.CBaseline = make([]float64, len(PolNames))
+	c.EmisFlux = make([]float64, len(PolNames))
 }
 
 func (c *Cell) boundaryCopy() *Cell {
@@ -223,35 +223,35 @@ func (c *Cell) boundaryCopy() *Cell {
 }
 
 // addWestBoundary adds a cell to the western boundary of the domain.
-func (d *InMAPdata) addWestBoundary(cell *Cell) {
+func (d *InMAP) addWestBoundary(cell *Cell) {
 	c := cell.boundaryCopy()
 	cell.West = []*Cell{c}
 	d.westBoundary = append(d.westBoundary, c)
 }
 
 // addEastBoundary adds a cell to the eastern boundary of the domain.
-func (d *InMAPdata) addEastBoundary(cell *Cell) {
+func (d *InMAP) addEastBoundary(cell *Cell) {
 	c := cell.boundaryCopy()
 	cell.East = []*Cell{c}
 	d.eastBoundary = append(d.eastBoundary, c)
 }
 
 // addSouthBoundary adds a cell to the southern boundary of the domain.
-func (d *InMAPdata) addSouthBoundary(cell *Cell) {
+func (d *InMAP) addSouthBoundary(cell *Cell) {
 	c := cell.boundaryCopy()
 	cell.South = []*Cell{c}
 	d.southBoundary = append(d.southBoundary, c)
 }
 
 // addNorthBoundary adds a cell to the northern boundary of the domain.
-func (d *InMAPdata) addNorthBoundary(cell *Cell) {
+func (d *InMAP) addNorthBoundary(cell *Cell) {
 	c := cell.boundaryCopy()
 	cell.North = []*Cell{c}
 	d.northBoundary = append(d.northBoundary, c)
 }
 
 // addTopBoundary adds a cell to the top boundary of the domain.
-func (d *InMAPdata) addTopBoundary(cell *Cell) {
+func (d *InMAP) addTopBoundary(cell *Cell) {
 	c := cell.boundaryCopy()
 	cell.Above = []*Cell{c}
 	d.topBoundary = append(d.topBoundary, c)
@@ -263,7 +263,7 @@ func (d *InMAPdata) addTopBoundary(cell *Cell) {
 // (http://en.wikipedia.org/wiki/Von_Neumann_stability_analysis) for
 // diffusion, whichever one yields a smaller time step.
 func SetTimestepCFL() DomainManipulator {
-	return func(d *InMAPdata) error {
+	return func(d *InMAP) error {
 		const Cmax = 1.
 		sqrt3 := math.Pow(3., 0.5)
 		for i, c := range d.Cells {
@@ -292,7 +292,7 @@ func harmonicMean(a, b float64) float64 {
 }
 
 // Convert cell data into a regular array
-func (d *InMAPdata) toArray(pol string, layer int) []float64 {
+func (d *InMAP) toArray(pol string, layer int) []float64 {
 	o := make([]float64, 0, len(d.Cells))
 	for _, c := range d.Cells {
 		c.RLock()
@@ -313,7 +313,7 @@ func (d *InMAPdata) toArray(pol string, layer int) []float64 {
 // are array indices of each population type.
 func (c *Cell) getValue(varName string, popIndices map[string]int) float64 {
 	if index, ok := emisLabels[varName]; ok { // Emissions
-		return c.emisFlux[index]
+		return c.EmisFlux[index]
 
 	} else if polConv, ok := polLabels[varName]; ok { // Concentrations
 		var o float64
@@ -343,7 +343,7 @@ func (c *Cell) getValue(varName string, popIndices map[string]int) float64 {
 }
 
 // Get the units of a variable
-func (d *InMAPdata) getUnits(varName string) string {
+func (d *InMAP) getUnits(varName string) string {
 	if _, ok := emisLabels[varName]; ok { // Emissions
 		return "μg/m³/s"
 	} else if _, ok := polLabels[varName]; ok { // Concentrations
@@ -366,7 +366,7 @@ func (d *InMAPdata) getUnits(varName string) string {
 }
 
 // GetGeometry returns the cell geometry for the given layer.
-func (d *InMAPdata) GetGeometry(layer int) []geom.Geom {
+func (d *InMAP) GetGeometry(layer int) []geom.Geom {
 	o := make([]geom.Geom, 0, len(d.Cells))
 	for _, c := range d.Cells {
 		c.RLock()

@@ -130,7 +130,7 @@ func TestEmissions(t *testing.T) {
 	}
 	cfg, ctmdata, pop, popIndices, mr := VarGridData()
 
-	d := &InMAPdata{
+	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
 		},
@@ -168,14 +168,14 @@ func TestEmissions(t *testing.T) {
 		nonzero[tt.cellIndex] = make(map[int]int)
 		for i, ii := range tt.polIndex {
 			nonzero[tt.cellIndex][ii] = 0
-			if different(c.emisFlux[ii]*c.Volume, tt.values[i], tol) {
+			if different(c.EmisFlux[ii]*c.Volume, tt.values[i], tol) {
 				t.Errorf("emissions value for cell %d pollutant %d should be %g but is %g",
-					tt.cellIndex, ii, tt.values[i], c.emisFlux[ii]*c.Volume)
+					tt.cellIndex, ii, tt.values[i], c.EmisFlux[ii]*c.Volume)
 			}
 		}
 	}
 	for i, c := range d.Cells {
-		for ii, e := range c.emisFlux {
+		for ii, e := range c.EmisFlux {
 			if _, ok := nonzero[i][ii]; !ok {
 				if e != 0 {
 					t.Errorf("emissions for cell %d pollutant %d should be zero but is %g",
@@ -198,7 +198,7 @@ func TestOutput(t *testing.T) {
 		Geom: geom.Point{X: -3999, Y: -3999.},
 	}) // ground level emissions
 
-	d := &InMAPdata{
+	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
 		},

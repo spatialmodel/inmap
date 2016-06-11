@@ -38,7 +38,10 @@ import (
 
 var configFile = flag.String("config", "none", "Path to configuration file")
 
-const version = "1.2.0-dev"
+const (
+	version = "1.2.0-dev"
+	year    = "2016"
+)
 
 type configData struct {
 
@@ -60,6 +63,10 @@ type configData struct {
 	// Can include environment variables.
 	EmissionsShapefiles []string
 
+	// EmissionUnits gives the units that the input emissions are in.
+	// Acceptable values are 'tons/year' and 'kg/year'.
+	EmissionUnits string
+
 	// Path to desired output file location, where [layer] is a stand-in
 	// for the model layer number. Can include environment variables.
 	OutputTemplate string
@@ -67,6 +74,10 @@ type configData struct {
 	// If OutputAllLayers is true, output data for all model layers. If false, only output
 	// the lowest layer.
 	OutputAllLayers bool
+
+	// OutputVariables specifies which model variables should be included in the
+	// output file.
+	OutputVariables []string
 
 	// NumIterations is the number of iterations to calculate. If < 1, convergence
 	// is automatically calculated.
@@ -93,12 +104,29 @@ func main() {
 		"------------------------------------------------\n" +
 		"                    Welcome!\n" +
 		"  (In)tervention (M)odel for (A)ir (P)ollution  \n" +
-		"                Version " + version + "             \n" +
-		"               Copyright 2013-2015              \n" +
+		"                Version " + version + "         \n" +
+		"               Copyright 2013-" + year + "      \n" +
 		"     Regents of the University of Minnesota     \n" +
-		"------------------------------------------------\n")
+		"------------------------------------------------")
 
-	fmt.Println("Reading input data...")
+	// Start a function to receive and print log messages.
+	cConverge := make(chan inmap.ConvergenceStatus)
+	cLog := make(chan *inmap.SimulationStatus)
+	msgLog := make(chan string)
+	go func() {
+		for {
+			select {
+			case msg := <-cConverge:
+				fmt.Println(msg.String())
+			case msg := <-cLog:
+				fmt.Println(msg.String())
+			case msg := <-msgLog:
+				log.Println(msg)
+			}
+		}
+	}()
+
+	log.Println("Reading input data...")
 
 	f, err := os.Open(config.InMAPData)
 	if err != nil {
@@ -109,27 +137,61 @@ func main() {
 		log.Fatalf("Problem loading input data: %v\n", err)
 	}
 
-	d, err := config.VarGrid.NewInMAPData(ctmData, config.NumIterations)
+	emis, err := inmap.ReadEmissionShapefiles(config.sr, config.EmissionUnits,
+		msgLog, config.EmissionsShapefiles...)
+
+	log.Println("Loading population and mortality rate data")
+
+	pop, popIndices, mr, err := config.VarGrid.LoadPopMort()
 	if err != nil {
-		log.Fatalf("Problem loading input data: %v\n", err)
+		log.Fatal(err)
 	}
 
-	if config.HTTPport != "" {
-		go d.WebServer(config.HTTPport)
+	d := &inmap.InMAP{
+		InitFuncs: []inmap.DomainManipulator{
+			config.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, emis),
+			config.VarGrid.StaticVariableGrid(ctmData, pop, mr, emis),
+			inmap.SetTimestepCFL(),
+		},
+		RunFuncs: []inmap.DomainManipulator{
+			inmap.Log(cLog),
+			inmap.Calculations(inmap.AddEmissionsFlux()),
+			inmap.Calculations(
+				inmap.UpwindAdvection(),
+				inmap.Mixing(),
+				inmap.MeanderMixing(),
+				inmap.DryDeposition(),
+				inmap.WetDeposition(),
+				inmap.Chemistry(),
+			),
+			inmap.SteadyStateConvergenceCheck(config.NumIterations, cConverge),
+		},
+		CleanupFuncs: []inmap.DomainManipulator{
+			inmap.Output(config.OutputTemplate, config.OutputAllLayers, config.OutputVariables...),
+		},
+	}
+	if err = d.Init(); err != nil {
+		log.Fatalf("InMAP: problem initializing model: %v\n", err)
 	}
 
-	for pol, arr := range emissions {
-		sum := 0.
-		for _, val := range arr {
-			sum += val
+	emisTotals := make([]float64, len(d.Cells[0].Cf))
+	for _, c := range d.Cells {
+		for i, val := range c.EmisFlux {
+			emisTotals[i] += val
 		}
-		fmt.Printf("%v, %g ug/s\n", pol, sum)
+	}
+	log.Println("Emission totals:")
+	for i, pol := range inmap.PolNames {
+		fmt.Printf("%v, %g μg/s\n", pol, emisTotals[i])
 	}
 
-	// Run model
-	finalConc := d.Run(emissions, config.OutputAllLayers)
+	if err = d.Run(); err != nil {
+		log.Fatalf("InMAP: problem running simulation: %v\n", err)
+	}
 
-	writeOutput(finalConc, d, config.OutputTemplate, config.OutputAllLayers)
+	if err = d.Cleanup(); err != nil {
+		log.Fatalf("InMAP: problem shutting down model.: %v\n", err)
+	}
 
 	fmt.Println("\nIntake fraction results:")
 	breathingRate := 15. // [m³/day]
@@ -228,6 +290,17 @@ func readConfigFile(filename string) (config *configData) {
 	if err != nil {
 		log.Fatalf("The following error occured while parsing the InMAP grid"+
 			"projection (the InMAPProj variable): %v", err)
+	}
+
+	if len(config.OutputVariables) == 0 {
+		log.Fatal("There are no variables specified for output. Please fill in " +
+			"the OutputVariables section of the configuration file and try again.")
+	}
+
+	if config.EmissionUnits != "tons/year" && config.EmissionUnits != "kg/year" {
+		log.Fatalf("ERROR: the EmissionUnits variable in the configuration file "+
+			"needs to be set to either tons/year or kg/year, but is currently set to `%s`",
+			config.EmissionUnits)
 	}
 
 	outdir := filepath.Dir(config.OutputTemplate)

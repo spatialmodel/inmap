@@ -39,7 +39,7 @@ func TestCellAlignment(t *testing.T) {
 		data: rtree.NewTree(25, 50),
 	}
 
-	d := &InMAPdata{
+	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
 			cfg.StaticVariableGrid(ctmdata, pop, mr, emis),
@@ -238,7 +238,7 @@ func TestConvectiveMixing(t *testing.T) {
 		data: rtree.NewTree(25, 50),
 	}
 
-	d := &InMAPdata{
+	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, PopIndices, mr, emis),
 			cfg.StaticVariableGrid(ctmdata, pop, mr, emis),
@@ -275,7 +275,7 @@ func TestMixing(t *testing.T) {
 		},
 	}) // ground level emissions
 
-	d := &InMAPdata{
+	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
 			cfg.StaticVariableGrid(ctmdata, pop, mr, emis),
@@ -303,7 +303,7 @@ func TestMixing(t *testing.T) {
 			maxval = max(maxval, cell.Cf[iPM2_5])
 		}
 	}
-	expectedMass := d.Cells[0].emisFlux[iPM2_5] * d.Cells[0].Volume * d.Dt * numTimesteps
+	expectedMass := d.Cells[0].EmisFlux[iPM2_5] * d.Cells[0].Volume * d.Dt * numTimesteps
 	if different(sum, expectedMass, testTolerance) {
 		t.Errorf("sum=%g (it should equal %g)\n", sum, expectedMass)
 	}
@@ -331,7 +331,7 @@ func TestChemistry(t *testing.T) {
 		Geom: geom.Point{X: -3999, Y: -3999.},
 	}) // ground level emissions
 
-	d := &InMAPdata{
+	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, PopIndices, mr, emis),
 			cfg.StaticVariableGrid(ctmdata, pop, mr, emis),
@@ -376,7 +376,7 @@ func TestAdvection(t *testing.T) {
 		data: rtree.NewTree(25, 50),
 	}
 
-	d := &InMAPdata{
+	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
 			cfg.StaticVariableGrid(ctmdata, pop, mr, emis),
@@ -436,7 +436,7 @@ func TestMeanderMixing(t *testing.T) {
 		data: rtree.NewTree(25, 50),
 	}
 
-	d := &InMAPdata{
+	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
 			cfg.StaticVariableGrid(ctmdata, pop, mr, emis),
@@ -512,13 +512,13 @@ func TestConverge(t *testing.T) {
 
 	convergences := []DomainManipulator{SteadyStateConvergenceCheck(2, nil), SteadyStateConvergenceCheck(-1, nil)}
 	convergenceNames := []string{"fixed", "criterion"}
-	expectedConcentration := []float64{0.46486263752954793, 79.05672270902414}
+	expectedConcentration := []float64{0.46486263752954793, 83.22031969811773}
 
 	for i, conv := range convergences {
 
 		iterations := 0
 
-		d := &InMAPdata{
+		d := &InMAP{
 			InitFuncs: []DomainManipulator{
 				cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
 				SetTimestepCFL(),
@@ -530,7 +530,7 @@ func TestConverge(t *testing.T) {
 					WetDeposition(),
 				),
 				conv,
-				func(_ *InMAPdata) error {
+				func(_ *InMAP) error {
 					iterations++
 					return nil
 				},
@@ -582,7 +582,7 @@ func BenchmarkRun(b *testing.B) {
 		Geom: geom.Point{X: -3999, Y: -3999.},
 	}) // ground level emissions
 
-	d := &InMAPdata{
+	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
 			cfg.StaticVariableGrid(ctmdata, pop, mr, emis),
@@ -626,7 +626,7 @@ func TestDryDeposition(t *testing.T) {
 		data: rtree.NewTree(25, 50),
 	}
 
-	d := &InMAPdata{
+	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
 			cfg.StaticVariableGrid(ctmdata, pop, mr, emis),
@@ -669,7 +669,7 @@ func TestWetDeposition(t *testing.T) {
 		data: rtree.NewTree(25, 50),
 	}
 
-	d := &InMAPdata{
+	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
 			cfg.StaticVariableGrid(ctmdata, pop, mr, emis),

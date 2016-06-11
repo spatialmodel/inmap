@@ -444,6 +444,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	data.Write(ff, config.CtmGridXo, config.CtmGridYo, config.CtmGridDx, config.CtmGridDy)
 	ff.Close()
 }
 

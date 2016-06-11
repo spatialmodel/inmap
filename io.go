@@ -21,8 +21,8 @@ import (
 // and it should not be run in parallel with other CellManipulators.
 func AddEmissionsFlux() CellManipulator {
 	return func(c *Cell, Dt float64) {
-		for i := range polNames {
-			c.Cf[i] += c.emisFlux[i] * Dt
+		for i := range PolNames {
+			c.Cf[i] += c.EmisFlux[i] * Dt
 			c.Ci[i] = c.Cf[i]
 		}
 	}
@@ -134,7 +134,7 @@ func ReadEmissionShapefiles(gridSR *proj.SR, units string, c chan string, shapef
 // and a scale for molecular mass conversion.
 func (c *Cell) addEmisFlux(val float64, scale float64, iPol int) {
 	fluxScale := 1. / c.Dx / c.Dy / c.Dz // μg/s /m/m/m = μg/m3/s
-	c.emisFlux[iPol] += val * scale * fluxScale
+	c.EmisFlux[iPol] += val * scale * fluxScale
 }
 
 // calcIntersection calculates the geometry of any intersection between e and c.
@@ -185,7 +185,7 @@ func calcWeightFactor(e, intersection geom.Geom) float64 {
 
 // setEmissionsFlux sets the emissions flux for c based on the emissions in e.
 func (c *Cell) setEmissionsFlux(e *Emissions) {
-	c.emisFlux = make([]float64, len(polNames))
+	c.EmisFlux = make([]float64, len(PolNames))
 	for _, eTemp := range e.data.SearchIntersect(c.Bounds()) {
 		e := eTemp.(emisRecord)
 		if e.Height > 0. {
@@ -221,7 +221,7 @@ func (c *Cell) setEmissionsFlux(e *Emissions) {
 // layers, otherwise only the ground-level layer is written.
 // outputVariables is a list of the names of the variables to be output.
 func Output(fileTemplate string, allLayers bool, outputVariables ...string) DomainManipulator {
-	return func(d *InMAPdata) error {
+	return func(d *InMAP) error {
 
 		// Projection definition. This may need to be changed for a different
 		// spatial domain.

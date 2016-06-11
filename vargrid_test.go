@@ -488,7 +488,7 @@ func TestVarGridCreate(t *testing.T) {
 		data: rtree.NewTree(25, 50),
 	}
 
-	d := &InMAPdata{
+	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
 			cfg.StaticVariableGrid(ctmdata, pop, mr, emis),
@@ -946,7 +946,7 @@ func TestGetGeometry(t *testing.T) {
 		data: rtree.NewTree(25, 50),
 	}
 
-	d := &InMAPdata{
+	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
 			cfg.StaticVariableGrid(ctmdata, pop, mr, emis),
@@ -1076,7 +1076,7 @@ func TestReadWriteCTMData(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err = ctmdata.Write(f, cfg); err != nil {
+	if err = ctmdata.Write(f, cfg.ctmGridXo, cfg.ctmGridYo, cfg.ctmGridDx, cfg.ctmGridDy); err != nil {
 		t.Fatal(err)
 	}
 

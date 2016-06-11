@@ -39,7 +39,7 @@ import (
 
 // OutputOptions returns the options for output variable names and their
 // descriptions.
-func (d *InMAPdata) OutputOptions() (names []string, descriptions []string) {
+func (d *InMAP) OutputOptions() (names []string, descriptions []string) {
 
 	// Model pollutant concentrations
 	for pol := range polLabels {
@@ -134,7 +134,7 @@ func s2f(s string) (float64, error) {
 	return f, err
 }
 
-func (d *InMAPdata) mapHandler(w http.ResponseWriter, r *http.Request) {
+func (d *InMAP) mapHandler(w http.ResponseWriter, r *http.Request) {
 	name, layer, z, x, y, err := parseMapRequest("/map/", r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -172,7 +172,7 @@ func parseLegendRequest(base string, r *http.Request) (name string,
 }
 
 // LegendHandler creates a legend and serves it.
-func (d *InMAPdata) LegendHandler(w http.ResponseWriter, r *http.Request) {
+func (d *InMAP) LegendHandler(w http.ResponseWriter, r *http.Request) {
 	name, layer, err := parseLegendRequest("/legend/", r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -219,7 +219,7 @@ func parseVerticalProfileRequest(base string, r *http.Request) (name string,
 	return
 }
 
-func (d *InMAPdata) verticalProfileHandler(w http.ResponseWriter,
+func (d *InMAP) verticalProfileHandler(w http.ResponseWriter,
 	r *http.Request) {
 	w.Header().Set("Content-Type", "image/png")
 	name, lon, lat, err := parseVerticalProfileRequest("/verticalProfile/", r)
@@ -264,7 +264,7 @@ func (d *InMAPdata) verticalProfileHandler(w http.ResponseWriter,
 
 // VerticalProfile retrieves the vertical profile for a given
 // variable at a given location.
-func (d *InMAPdata) VerticalProfile(variable string, lon, lat float64) (height, vals []float64) {
+func (d *InMAP) VerticalProfile(variable string, lon, lat float64) (height, vals []float64) {
 	height = make([]float64, d.nlayers)
 	vals = make([]float64, d.nlayers)
 	x, y := carto.Degrees2meters(lon, lat)
