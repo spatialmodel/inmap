@@ -138,28 +138,46 @@ func (c *Cell) addEmisFlux(val float64, scale float64, iPol int) {
 }
 
 // calcIntersection calculates the geometry of any intersection between e and c.
-func calcIntersection(e geom.Geom, c *Cell) geom.Geom {
-	var intersection geom.Geom
+// calcWeightFactor calculates the fraction of emissions in e that should be
+// allocated to the intersection based on the areas of lengths or areas.
+func calcIntersectionWeightFactor(e geom.Geom, c *Cell) (intersection geom.Geom, weightFactor float64) {
 	switch e.(type) {
 	case geom.Point:
-		if e.(geom.Point).Within(c) {
+		in := e.(geom.Point).Within(c)
+		if in == geom.Inside {
 			intersection = e
-		} else {
-			return nil
+			weightFactor = 1.
+		} else if in == geom.OnEdge {
+			intersection = e
+			weightFactor = 0.5 // Spilt emissions between this cell and any cell
+			// that shares this edge. This still may cause double counting if the
+			// point is located on a corner, in which case it should actually be
+			// split among four cells, but I'm not currently sure how to handle that
+			// situation well.
 		}
 	case geom.Polygonal:
 		poly := e.(geom.Polygonal)
 		intersection = poly.Intersection(c)
+		if intersection == nil {
+			return
+		}
+		weightFactor = intersection.(geom.Polygon).Area() / poly.Area()
 	case geom.Linear:
 		var err error
 		intersection, err = op.Construct(e, c.Polygonal, op.INTERSECTION)
 		if err != nil {
 			log.Fatalf("while allocating emissions to grid: %v", err)
 		}
+		if intersection == nil {
+			return
+		}
+		el := e.(geom.Linear)
+		il := intersection.(geom.Linear)
+		weightFactor = il.Length() / el.Length()
 	default:
 		log.Fatalf("unsupported geometry type: %#v in emissions file", e)
 	}
-	return intersection
+	return
 }
 
 // calcWeightFactor calculate the fraction of emissions in e that should be
@@ -168,13 +186,7 @@ func calcWeightFactor(e, intersection geom.Geom) float64 {
 	var weightFactor float64 // fraction of geometry in grid cell
 	switch e.(type) {
 	case geom.Polygonal:
-		ep := e.(geom.Polygonal)
-		ip := intersection.(geom.Polygonal)
-		weightFactor = ip.Area() / ep.Area()
 	case geom.Linear:
-		el := e.(geom.Linear)
-		il := intersection.(geom.Linear)
-		weightFactor = il.Length() / el.Length()
 	case geom.Point:
 		weightFactor = 1.
 	default:
@@ -200,11 +212,10 @@ func (c *Cell) setEmissionsFlux(e *Emissions) {
 		} else if c.Layer != 0 {
 			continue
 		}
-		intersection := calcIntersection(e.Geom, c)
+		intersection, weightFactor := calcIntersectionWeightFactor(e.Geom, c)
 		if intersection == nil {
 			continue
 		}
-		weightFactor := calcWeightFactor(e.Geom, intersection)
 
 		// Emissions: all except PM2.5 go to gas phase
 		c.addEmisFlux(e.VOC, 1.*weightFactor, igOrg)

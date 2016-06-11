@@ -30,7 +30,7 @@ import (
 	"github.com/ctessum/geom/index/rtree"
 )
 
-// InMAPdata holds the current state of the model.
+// InMAP holds the current state of the model.
 type InMAP struct {
 
 	// InitFuncs are functions to be called in the given order
