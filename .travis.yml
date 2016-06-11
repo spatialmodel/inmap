@@ -1,7 +1,9 @@
 language: go
 go:
-- 1.5.2
+- 1.5.4
 - 1.6.2
+- 1.7beta1
+
 before_install:
 - go get github.com/axw/gocov/gocov
 - go get github.com/mattn/goveralls
@@ -16,4 +18,5 @@ script:
 - bash ./.travis/test_coverage.sh
 
 env:
-- COVERALLS_TOKEN = GVQhuqfj8QpDFM6zqabD9OFOCrR5eEeAb
+  global:
+    - COVERALLS_TOKEN: GVQhuqfj8QpDFM6zqabD9OFOCrR5eEeAb
