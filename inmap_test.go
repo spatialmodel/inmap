@@ -228,7 +228,7 @@ func TestCellAlignment(t *testing.T) {
 	}
 }
 
-// Test whether convective mixing coeffecients are balanced in
+// Test whether convective mixing coefficients are balanced in
 // a way that conserves mass
 func TestConvectiveMixing(t *testing.T) {
 	const testTolerance = 1.e-8

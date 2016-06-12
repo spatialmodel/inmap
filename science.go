@@ -190,7 +190,7 @@ func MeanderMixing() CellManipulator {
 }
 
 // Chemistry returns a function that calculates the secondary formation of PM2.5.
-// It explicitely calculates formation of particulate sulfate
+// It explicitly calculates formation of particulate sulfate
 // from gaseous and aqueous SO2.
 // It partitions organic matter ("gOrg" and "pOrg"), the
 // nitrogen in nitrate ("gNO and pNO"), and the nitrogen in ammonia ("gNH" and
