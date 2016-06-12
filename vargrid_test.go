@@ -31,7 +31,7 @@ func VarGridData() (*VarGridConfig, *CTMData, *Population, PopIndices, *Mortalit
 
 	// write out test population data.
 	popData := []pop{
-		pop{
+		{
 			Polygon: [][]geom.Point{{
 				geom.Point{X: -3999, Y: -3999},
 				geom.Point{X: -3998, Y: -3999},
@@ -73,7 +73,7 @@ func VarGridData() (*VarGridConfig, *CTMData, *Population, PopIndices, *Mortalit
 
 	// write out test mortality rate data.
 	mortData := []mort{
-		mort{
+		{
 			Polygon: [][]geom.Point{{
 				geom.Point{X: -3999, Y: -3999},
 				geom.Point{X: -3998, Y: -3999},
@@ -129,277 +129,277 @@ func VarGridData() (*VarGridConfig, *CTMData, *Population, PopIndices, *Mortalit
 	}
 
 	ctmdata := map[string]ctmVariable{
-		"WindSpeedMinusOnePointFour": ctmVariable{
+		"WindSpeedMinusOnePointFour": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "RMS wind speed^(-1.4)",
 			units:       "(m s-1)^(-1.4)",
 		},
-		"ParticleDryDep": ctmVariable{
+		"ParticleDryDep": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Dry deposition velocity for particles",
 			units:       "m s-1",
 		},
-		"Dz": ctmVariable{
+		"Dz": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Vertical grid size",
 			units:       "m",
 		},
-		"WAvg": ctmVariable{
+		"WAvg": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Annual average z velocity",
 			units:       "m/s",
 		},
-		"Temperature": ctmVariable{
+		"Temperature": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Average Temperature",
 			units:       "K",
 		},
-		"VOCDryDep": ctmVariable{
+		"VOCDryDep": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Dry deposition velocity for VOCs",
 			units:       "m s-1",
 		},
-		"alt": ctmVariable{
+		"alt": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Inverse density",
 			units:       "m3 kg-1",
 		},
-		"UDeviation": ctmVariable{
+		"UDeviation": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Average deviation from average x velocity",
 			units:       "m/s",
 		},
-		"gNO": ctmVariable{
+		"gNO": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Average concentration of nitrogen fraction of gaseous NOx",
 			units:       "ug m-3",
 		},
-		"bVOC": ctmVariable{
+		"bVOC": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Average biogenic VOC concentration",
 			units:       "ug m-3",
 		},
-		"SPartitioning": ctmVariable{
+		"SPartitioning": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Mass fraction of S from SOx in particle {vs. gas} phase",
 			units:       "fraction",
 		},
-		"Sclass": ctmVariable{
+		"Sclass": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Stability parameter",
 			units:       "0=Unstable; 1=Stable",
 		},
-		"Kzz": ctmVariable{
+		"Kzz": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Vertical turbulent diffusivity",
 			units:       "m2 s-1",
 		},
-		"VDeviation": ctmVariable{
+		"VDeviation": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Average deviation from average y velocity",
 			units:       "m/s",
 		},
-		"VAvg": ctmVariable{
+		"VAvg": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Annual average y velocity",
 			units:       "m/s",
 		},
-		"pNH": ctmVariable{
+		"pNH": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Average concentration of nitrogen fraction of particulate ammonium",
 			units:       "ug m-3",
 		},
-		"SO2DryDep": ctmVariable{
+		"SO2DryDep": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Dry deposition velocity for SO2",
 			units:       "m s-1",
 		},
-		"NOxDryDep": ctmVariable{
+		"NOxDryDep": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Dry deposition velocity for NOx",
 			units:       "m s-1",
 		},
-		"NHPartitioning": ctmVariable{
+		"NHPartitioning": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Mass fraction of N from NH3 in particle {vs. gas} phase",
 			units:       "fraction",
 		},
-		"Kxxyy": ctmVariable{
+		"Kxxyy": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Horizontal eddy diffusion coefficient",
 			units:       "m2 s-1",
 		},
-		"WindSpeed": ctmVariable{
+		"WindSpeed": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "RMS wind speed",
 			units:       "m s-1",
 		},
-		"SO2WetDep": ctmVariable{
+		"SO2WetDep": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Wet deposition rate constant for SO2 gas",
 			units:       "s-1",
 		},
-		"LayerHeights": ctmVariable{
+		"LayerHeights": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Height at edge of layer",
 			units:       "m",
 		},
-		"WindSpeedMinusThird": ctmVariable{
+		"WindSpeedMinusThird": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "RMS wind speed^(-1/3)",
 			units:       "(m s-1)^(-1/3)",
 		},
-		"gS": ctmVariable{
+		"gS": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Average concentration of sulfur fraction of gaseous SOx",
 			units:       "ug m-3",
 		},
-		"gNH": ctmVariable{
+		"gNH": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Average concentration of nitrogen fraction of gaseous ammonia",
 			units:       "ug m-3",
 		},
-		"aOrgPartitioning": ctmVariable{
+		"aOrgPartitioning": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Mass fraction of anthropogenic organic matter in particle {vs. gas} phase",
 			units:       "fraction",
 		},
-		"TotalPM25": ctmVariable{
+		"TotalPM25": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Total PM2.5 concentration",
 			units:       "ug m-3",
 		},
-		"aVOC": ctmVariable{
+		"aVOC": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Average anthropogenic VOC concentration",
 			units:       "ug m-3",
 		},
-		"NH3DryDep": ctmVariable{
+		"NH3DryDep": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Dry deposition velocity for NH3",
 			units:       "m s-1",
 		},
-		"pS": ctmVariable{
+		"pS": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Average concentration of sulfur fraction of particulate sulfate",
 			units:       "ug m-3",
 		},
-		"bOrgPartitioning": ctmVariable{
+		"bOrgPartitioning": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Mass fraction of biogenic organic matter in particle {vs. gas} phase",
 			units:       "fraction",
 		},
-		"Pblh": ctmVariable{
+		"Pblh": {
 			dims:        []string{"y", "x"},
 			data:        sparse.ZerosDense([]int{2, 2}...),
 			description: "Planetary boundary layer height",
 			units:       "m",
 		},
-		"bSOA": ctmVariable{
+		"bSOA": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Average biogenic secondary organic aerosol concentration",
 			units:       "ug m-3",
 		},
-		"pNO": ctmVariable{
+		"pNO": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Average concentration of nitrogen fraction of particulate NO3",
 			units:       "ug m-3",
 		},
-		"M2u": ctmVariable{
+		"M2u": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "ACM2 nonlocal upward mixing {Pleim 2007}",
 			units:       "s-1",
 		},
-		"SO2oxidation": ctmVariable{
+		"SO2oxidation": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Rate of SO2 oxidation to SO4 by hydroxyl radical and H2O2",
 			units:       "s-1",
 		},
-		"OtherGasWetDep": ctmVariable{
+		"OtherGasWetDep": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Wet deposition rate constant for other gases",
 			units:       "s-1",
 		},
-		"WindSpeedInverse": ctmVariable{
+		"WindSpeedInverse": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "RMS wind speed^(-1)",
 			units:       "(m s-1)^(-1)",
 		},
-		"NO_NO2partitioning": ctmVariable{
+		"NO_NO2partitioning": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Mass fraction of N in NOx that exists as NO.",
 			units:       "fraction",
 		},
-		"ParticleWetDep": ctmVariable{
+		"ParticleWetDep": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Wet deposition rate constant for fine particles",
 			units:       "s-1",
 		},
-		"aSOA": ctmVariable{
+		"aSOA": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Average anthropogenic secondary organic aerosol concentration",
 			units:       "ug m-3",
 		},
-		"NOPartitioning": ctmVariable{
+		"NOPartitioning": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Mass fraction of N from NOx in particle {vs. gas} phase",
 			units:       "fraction",
 		},
-		"M2d": ctmVariable{
+		"M2d": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "ACM2 nonlocal downward mixing {Pleim 2007}",
 			units:       "s-1",
 		},
-		"S1": ctmVariable{
+		"S1": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Stability parameter",
 			units:       "?",
 		},
-		"UAvg": ctmVariable{
+		"UAvg": {
 			dims:        []string{"z", "y", "x"},
 			data:        sparse.ZerosDense([]int{10, 2, 2}...),
 			description: "Annual average x velocity",
@@ -960,104 +960,104 @@ func TestGetGeometry(t *testing.T) {
 
 	want0 := []geom.Geom{
 		geom.Polygon{[]geom.Point{
-			geom.Point{X: -1.0803243503695702e+07, Y: 4.860686654254725e+06},
-			geom.Point{X: -1.0801930279663565e+07, Y: 4.860687250907495e+06},
-			geom.Point{X: -1.0801930791146653e+07, Y: 4.862000560256863e+06},
-			geom.Point{X: -1.080324418567307e+07, Y: 4.861999963449156e+06},
-			geom.Point{X: -1.0803243503695702e+07, Y: 4.860686654254725e+06}},
+			{X: -1.0803243503695702e+07, Y: 4.860686654254725e+06},
+			{X: -1.0801930279663565e+07, Y: 4.860687250907495e+06},
+			{X: -1.0801930791146653e+07, Y: 4.862000560256863e+06},
+			{X: -1.080324418567307e+07, Y: 4.861999963449156e+06},
+			{X: -1.0803243503695702e+07, Y: 4.860686654254725e+06}},
 		},
 		geom.Polygon{[]geom.Point{
-			geom.Point{X: -1.080324418567307e+07, Y: 4.861999963449156e+06},
-			geom.Point{X: -1.0801930791146653e+07, Y: 4.862000560256863e+06},
-			geom.Point{X: -1.0801931302762568e+07, Y: 4.8633140401226785e+06},
-			geom.Point{X: -1.0803244867827544e+07, Y: 4.863313443159976e+06},
-			geom.Point{X: -1.080324418567307e+07, Y: 4.861999963449156e+06}},
+			{X: -1.080324418567307e+07, Y: 4.861999963449156e+06},
+			{X: -1.0801930791146653e+07, Y: 4.862000560256863e+06},
+			{X: -1.0801931302762568e+07, Y: 4.8633140401226785e+06},
+			{X: -1.0803244867827544e+07, Y: 4.863313443159976e+06},
+			{X: -1.080324418567307e+07, Y: 4.861999963449156e+06}},
 		},
 		geom.Polygon{[]geom.Point{
-			geom.Point{X: -1.0803244867827544e+07, Y: 4.863313443159976e+06},
-			geom.Point{X: -1.080061773756471e+07, Y: 4.86331446652465e+06},
-			geom.Point{X: -1.0800618419985117e+07, Y: 4.865941938204324e+06},
-			geom.Point{X: -1.0803246232668078e+07, Y: 4.865940914307926e+06},
-			geom.Point{X: -1.0803244867827544e+07, Y: 4.863313443159976e+06}},
+			{X: -1.0803244867827544e+07, Y: 4.863313443159976e+06},
+			{X: -1.080061773756471e+07, Y: 4.86331446652465e+06},
+			{X: -1.0800618419985117e+07, Y: 4.865941938204324e+06},
+			{X: -1.0803246232668078e+07, Y: 4.865940914307926e+06},
+			{X: -1.0803244867827544e+07, Y: 4.863313443159976e+06}},
 		},
 		geom.Polygon{[]geom.Point{
-			geom.Point{X: -1.0801930279663565e+07, Y: 4.860687250907495e+06},
-			geom.Point{X: -1.0800617055498654e+07, Y: 4.86068767708809e+06},
-			geom.Point{X: -1.0800617396487407e+07, Y: 4.862000986548126e+06},
-			geom.Point{X: -1.0801930791146653e+07, Y: 4.862000560256863e+06},
-			geom.Point{X: -1.0801930279663565e+07, Y: 4.860687250907495e+06}},
+			{X: -1.0801930279663565e+07, Y: 4.860687250907495e+06},
+			{X: -1.0800617055498654e+07, Y: 4.86068767708809e+06},
+			{X: -1.0800617396487407e+07, Y: 4.862000986548126e+06},
+			{X: -1.0801930791146653e+07, Y: 4.862000560256863e+06},
+			{X: -1.0801930279663565e+07, Y: 4.860687250907495e+06}},
 		},
 		geom.Polygon{[]geom.Point{
-			geom.Point{X: -1.0801930791146653e+07, Y: 4.862000560256863e+06},
-			geom.Point{X: -1.0800617396487407e+07, Y: 4.862000986548126e+06},
-			geom.Point{X: -1.080061773756471e+07, Y: 4.86331446652465e+06},
-			geom.Point{X: -1.0801931302762568e+07, Y: 4.8633140401226785e+06},
-			geom.Point{X: -1.0801930791146653e+07, Y: 4.862000560256863e+06}},
+			{X: -1.0801930791146653e+07, Y: 4.862000560256863e+06},
+			{X: -1.0800617396487407e+07, Y: 4.862000986548126e+06},
+			{X: -1.080061773756471e+07, Y: 4.86331446652465e+06},
+			{X: -1.0801931302762568e+07, Y: 4.8633140401226785e+06},
+			{X: -1.0801930791146653e+07, Y: 4.862000560256863e+06}},
 		},
 		geom.Polygon{[]geom.Point{
-			geom.Point{X: -1.0803246232668078e+07, Y: 4.865940914307926e+06},
-			geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06},
-			geom.Point{X: -1.0797990606947536e+07, Y: 4.871199271364988e+06},
-			geom.Point{X: -1.0803248964477425e+07, Y: 4.87119790475015e+06},
-			geom.Point{X: -1.0803246232668078e+07, Y: 4.865940914307926e+06}},
+			{X: -1.0803246232668078e+07, Y: 4.865940914307926e+06},
+			{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06},
+			{X: -1.0797990606947536e+07, Y: 4.871199271364988e+06},
+			{X: -1.0803248964477425e+07, Y: 4.87119790475015e+06},
+			{X: -1.0803246232668078e+07, Y: 4.865940914307926e+06}},
 		},
 		geom.Polygon{[]geom.Point{
-			geom.Point{X: -1.0800617055498654e+07, Y: 4.86068767708809e+06},
-			geom.Point{X: -1.0797990606947536e+07, Y: 4.860688018032593e+06},
-			geom.Point{X: -1.0797990606947536e+07, Y: 4.863314807646255e+06},
-			geom.Point{X: -1.080061773756471e+07, Y: 4.86331446652465e+06},
-			geom.Point{X: -1.0800617055498654e+07, Y: 4.86068767708809e+06}},
+			{X: -1.0800617055498654e+07, Y: 4.86068767708809e+06},
+			{X: -1.0797990606947536e+07, Y: 4.860688018032593e+06},
+			{X: -1.0797990606947536e+07, Y: 4.863314807646255e+06},
+			{X: -1.080061773756471e+07, Y: 4.86331446652465e+06},
+			{X: -1.0800617055498654e+07, Y: 4.86068767708809e+06}},
 		},
 		geom.Polygon{[]geom.Point{
-			geom.Point{X: -1.080061773756471e+07, Y: 4.86331446652465e+06},
-			geom.Point{X: -1.0797990606947536e+07, Y: 4.863314807646255e+06},
-			geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06},
-			geom.Point{X: -1.0800618419985117e+07, Y: 4.865941938204324e+06},
-			geom.Point{X: -1.080061773756471e+07, Y: 4.86331446652465e+06}},
+			{X: -1.080061773756471e+07, Y: 4.86331446652465e+06},
+			{X: -1.0797990606947536e+07, Y: 4.863314807646255e+06},
+			{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06},
+			{X: -1.0800618419985117e+07, Y: 4.865941938204324e+06},
+			{X: -1.080061773756471e+07, Y: 4.86331446652465e+06}},
 		},
 		geom.Polygon{[]geom.Point{
-			geom.Point{X: -1.0797990606947536e+07, Y: 4.860688018032593e+06},
-			geom.Point{X: -1.0792737710199371e+07, Y: 4.860686654254725e+06},
-			geom.Point{X: -1.0792734981226994e+07, Y: 4.865940914307926e+06},
-			geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06},
-			geom.Point{X: -1.0797990606947536e+07, Y: 4.860688018032593e+06}},
+			{X: -1.0797990606947536e+07, Y: 4.860688018032593e+06},
+			{X: -1.0792737710199371e+07, Y: 4.860686654254725e+06},
+			{X: -1.0792734981226994e+07, Y: 4.865940914307926e+06},
+			{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06},
+			{X: -1.0797990606947536e+07, Y: 4.860688018032593e+06}},
 		},
 		geom.Polygon{[]geom.Point{
-			geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06},
-			geom.Point{X: -1.0792734981226994e+07, Y: 4.865940914307926e+06},
-			geom.Point{X: -1.0792732249417646e+07, Y: 4.87119790475015e+06},
-			geom.Point{X: -1.0797990606947536e+07, Y: 4.871199271364988e+06},
-			geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06}},
+			{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06},
+			{X: -1.0792734981226994e+07, Y: 4.865940914307926e+06},
+			{X: -1.0792732249417646e+07, Y: 4.87119790475015e+06},
+			{X: -1.0797990606947536e+07, Y: 4.871199271364988e+06},
+			{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06}},
 		},
 	}
 	want5 := []geom.Geom{
 		geom.Polygon{[]geom.Point{
-			geom.Point{X: -1.0803243503695702e+07, Y: 4.860686654254725e+06},
-			geom.Point{X: -1.0797990606947536e+07, Y: 4.860688018032593e+06},
-			geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06},
-			geom.Point{X: -1.0803246232668078e+07, Y: 4.865940914307926e+06},
-			geom.Point{X: -1.0803243503695702e+07, Y: 4.860686654254725e+06}},
+			{X: -1.0803243503695702e+07, Y: 4.860686654254725e+06},
+			{X: -1.0797990606947536e+07, Y: 4.860688018032593e+06},
+			{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06},
+			{X: -1.0803246232668078e+07, Y: 4.865940914307926e+06},
+			{X: -1.0803243503695702e+07, Y: 4.860686654254725e+06}},
 		},
 		geom.Polygon{[]geom.Point{
-			geom.Point{X: -1.0803246232668078e+07, Y: 4.865940914307926e+06},
-			geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06},
-			geom.Point{X: -1.0797990606947536e+07, Y: 4.871199271364988e+06},
-			geom.Point{X: -1.0803248964477425e+07, Y: 4.87119790475015e+06},
-			geom.Point{X: -1.0803246232668078e+07, Y: 4.865940914307926e+06}},
+			{X: -1.0803246232668078e+07, Y: 4.865940914307926e+06},
+			{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06},
+			{X: -1.0797990606947536e+07, Y: 4.871199271364988e+06},
+			{X: -1.0803248964477425e+07, Y: 4.87119790475015e+06},
+			{X: -1.0803246232668078e+07, Y: 4.865940914307926e+06}},
 		},
 		geom.Polygon{[]geom.Point{
-			geom.Point{X: -1.0797990606947536e+07, Y: 4.860688018032593e+06},
-			geom.Point{X: -1.0792737710199371e+07, Y: 4.860686654254725e+06},
-			geom.Point{X: -1.0792734981226994e+07, Y: 4.865940914307926e+06},
-			geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06},
-			geom.Point{X: -1.0797990606947536e+07, Y: 4.860688018032593e+06}},
+			{X: -1.0797990606947536e+07, Y: 4.860688018032593e+06},
+			{X: -1.0792737710199371e+07, Y: 4.860686654254725e+06},
+			{X: -1.0792734981226994e+07, Y: 4.865940914307926e+06},
+			{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06},
+			{X: -1.0797990606947536e+07, Y: 4.860688018032593e+06}},
 		},
 		geom.Polygon{[]geom.Point{
-			geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06},
-			geom.Point{X: -1.0792734981226994e+07, Y: 4.865940914307926e+06},
-			geom.Point{X: -1.0792732249417646e+07, Y: 4.87119790475015e+06},
-			geom.Point{X: -1.0797990606947536e+07, Y: 4.871199271364988e+06},
-			geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06}},
+			{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06},
+			{X: -1.0792734981226994e+07, Y: 4.865940914307926e+06},
+			{X: -1.0792732249417646e+07, Y: 4.87119790475015e+06},
+			{X: -1.0797990606947536e+07, Y: 4.871199271364988e+06},
+			{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06}},
 		},
 	}
 	if !reflect.DeepEqual(g0, want0) {

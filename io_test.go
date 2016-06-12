@@ -42,7 +42,7 @@ func WriteTestEmis() error {
 	}
 
 	emis := []emisHolder{
-		emisHolder{
+		{
 			Polygon: geom.Polygon{{
 				geom.Point{X: -3999, Y: -3999},
 				geom.Point{X: -3001, Y: -3001},
@@ -54,7 +54,7 @@ func WriteTestEmis() error {
 			SOx:  ETons,
 			PM25: ETons,
 		},
-		emisHolder{
+		{
 			Polygon: geom.Polygon{{
 				geom.Point{X: -3999, Y: -3999},
 				geom.Point{X: -3001, Y: -3001},
@@ -63,7 +63,7 @@ func WriteTestEmis() error {
 			PM25:   ETons,
 			Height: 20, // Layer 0
 		},
-		emisHolder{
+		{
 			Polygon: geom.Polygon{{
 				geom.Point{X: -3999, Y: -3999},
 				geom.Point{X: -3001, Y: -3001},
@@ -72,7 +72,7 @@ func WriteTestEmis() error {
 			PM25:   ETons,
 			Height: 150, // Layer 2
 		},
-		emisHolder{
+		{
 			Polygon: geom.Polygon{{
 				geom.Point{X: -3999, Y: -3999},
 				geom.Point{X: -3001, Y: -3001},
@@ -81,7 +81,7 @@ func WriteTestEmis() error {
 			PM25:   ETons,
 			Height: 2000, // Layer 9
 		},
-		emisHolder{
+		{
 			Polygon: geom.Polygon{{
 				geom.Point{X: -3999, Y: -3999},
 				geom.Point{X: -3001, Y: -3001},
@@ -145,17 +145,17 @@ func TestEmissions(t *testing.T) {
 		values    []float64
 	}
 	var tests = []test{
-		test{
+		{
 			cellIndex: 0,
 			polIndex:  []int{igOrg, igS, igNH, igNO, iPM2_5},
 			values:    []float64{E, E * SOxToS, E * NH3ToN, E * NOxToN, E * 2},
 		},
-		test{
+		{
 			cellIndex: 2 * 4, // layer 2, 4 cells per layer
 			polIndex:  []int{iPM2_5},
 			values:    []float64{E},
 		},
-		test{
+		{
 			cellIndex: 9 * 4, // layer 9, 4 cells per layer
 			polIndex:  []int{iPM2_5},
 			values:    []float64{E * 2},
@@ -238,21 +238,21 @@ func TestOutput(t *testing.T) {
 	}
 
 	want := []outData{
-		outData{
+		{
 			BaselineTotalPM25: 4.90770054,
 			PM25Emissions:     0.00112376, //E / d.Cells[0].Volume,
 			TotalPop:          100000.,
 			WindSpeed:         2.16334701,
 		},
-		outData{
+		{
 			BaselineTotalPM25: 4.2574172,
 			WindSpeed:         2.7272017,
 		},
-		outData{
+		{
 			BaselineTotalPM25: 10.34742928,
 			WindSpeed:         1.88434911,
 		},
-		outData{
+		{
 			BaselineTotalPM25: 5.36232233,
 			WindSpeed:         2.56135321,
 		},

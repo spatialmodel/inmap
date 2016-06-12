@@ -747,11 +747,11 @@ func (config *VarGridConfig) makeCTMgrid(nlayers int) *rtree.Rtree {
 				y0 := config.ctmGridYo + config.ctmGridDy*float64(iy)
 				y1 := config.ctmGridYo + config.ctmGridDy*float64(iy+1)
 				cell.Polygonal = geom.Polygon{[]geom.Point{
-					geom.Point{X: x0, Y: y0},
-					geom.Point{X: x1, Y: y0},
-					geom.Point{X: x1, Y: y1},
-					geom.Point{X: x0, Y: y1},
-					geom.Point{X: x0, Y: y0},
+					{X: x0, Y: y0},
+					{X: x1, Y: y0},
+					{X: x1, Y: y1},
+					{X: x0, Y: y1},
+					{X: x0, Y: y0},
 				}}
 				cell.Row = iy
 				cell.Col = ix
