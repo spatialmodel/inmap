@@ -32,7 +32,6 @@ const E = 1000000. // emissions
 
 // Tests whether the cells correctly reference each other
 func TestCellAlignment(t *testing.T) {
-	const testTolerance = 1.e-8
 
 	cfg, ctmdata, pop, popIndices, mr := VarGridData()
 	emis := &Emissions{
@@ -48,19 +47,23 @@ func TestCellAlignment(t *testing.T) {
 	if err := d.Init(); err != nil {
 		t.Error(err)
 	}
+	d.testCellAlignment2(t)
+}
 
+func (d *InMAP) testCellAlignment2(t *testing.T) {
+	const testTolerance = 1.e-8
 	for _, cell := range d.Cells {
-		for i, w := range cell.West {
-			if !w.Boundary && len(w.East) != 0 {
+		for i, w := range cell.west {
+			if !w.boundary && len(w.east) != 0 {
 				pass := false
-				for j, e := range w.East {
+				for j, e := range w.east {
 					if e == cell {
 						pass = true
-						if different(w.KxxEast[j], cell.KxxWest[i], testTolerance) {
+						if different(w.kxxEast[j], cell.kxxWest[i], testTolerance) {
 							t.Logf("Kxx doesn't match")
 							t.FailNow()
 						}
-						if different(w.DxPlusHalf[j], cell.DxMinusHalf[i], testTolerance) {
+						if different(w.dxPlusHalf[j], cell.dxMinusHalf[i], testTolerance) {
 							t.Logf("Dx doesn't match")
 							t.FailNow()
 						}
@@ -74,17 +77,17 @@ func TestCellAlignment(t *testing.T) {
 				}
 			}
 		}
-		for i, e := range cell.East {
-			if !e.Boundary && len(e.West) != 0 {
+		for i, e := range cell.east {
+			if !e.boundary && len(e.west) != 0 {
 				pass := false
-				for j, w := range e.West {
+				for j, w := range e.west {
 					if w == cell {
 						pass = true
-						if different(e.KxxWest[j], cell.KxxEast[i], testTolerance) {
+						if different(e.kxxWest[j], cell.kxxEast[i], testTolerance) {
 							t.Logf("Kxx doesn't match")
 							t.FailNow()
 						}
-						if different(e.DxMinusHalf[j], cell.DxPlusHalf[i], testTolerance) {
+						if different(e.dxMinusHalf[j], cell.dxPlusHalf[i], testTolerance) {
 							t.Logf("Dx doesn't match")
 							t.FailNow()
 						}
@@ -98,17 +101,17 @@ func TestCellAlignment(t *testing.T) {
 				}
 			}
 		}
-		for i, n := range cell.North {
-			if !n.Boundary && len(n.South) != 0 {
+		for i, n := range cell.north {
+			if !n.boundary && len(n.south) != 0 {
 				pass := false
-				for j, s := range n.South {
+				for j, s := range n.south {
 					if s == cell {
 						pass = true
-						if different(n.KyySouth[j], cell.KyyNorth[i], testTolerance) {
+						if different(n.kyySouth[j], cell.kyyNorth[i], testTolerance) {
 							t.Logf("Kyy doesn't match")
 							t.FailNow()
 						}
-						if different(n.DyMinusHalf[j], cell.DyPlusHalf[i], testTolerance) {
+						if different(n.dyMinusHalf[j], cell.dyPlusHalf[i], testTolerance) {
 							t.Logf("Dy doesn't match")
 							t.FailNow()
 						}
@@ -122,17 +125,17 @@ func TestCellAlignment(t *testing.T) {
 				}
 			}
 		}
-		for i, s := range cell.South {
-			if !s.Boundary && len(s.North) != 0 {
+		for i, s := range cell.south {
+			if !s.boundary && len(s.north) != 0 {
 				pass := false
-				for j, n := range s.North {
+				for j, n := range s.north {
 					if n == cell {
 						pass = true
-						if different(s.KyyNorth[j], cell.KyySouth[i], testTolerance) {
+						if different(s.kyyNorth[j], cell.kyySouth[i], testTolerance) {
 							t.Logf("Kyy doesn't match")
 							t.FailNow()
 						}
-						if different(s.DyPlusHalf[j], cell.DyMinusHalf[i], testTolerance) {
+						if different(s.dyPlusHalf[j], cell.dyMinusHalf[i], testTolerance) {
 							t.Logf("Dy doesn't match")
 							t.FailNow()
 						}
@@ -146,19 +149,19 @@ func TestCellAlignment(t *testing.T) {
 				}
 			}
 		}
-		for i, a := range cell.Above {
-			if !a.Boundary && len(a.Below) != 0 {
+		for i, a := range cell.above {
+			if !a.boundary && len(a.below) != 0 {
 				pass := false
-				for j, b := range a.Below {
+				for j, b := range a.below {
 					if b == cell {
 						pass = true
-						if different(a.KzzBelow[j], cell.KzzAbove[i], testTolerance) {
+						if different(a.kzzBelow[j], cell.kzzAbove[i], testTolerance) {
 							t.Logf("Kzz doesn't match above (layer=%v, "+
 								"KzzAbove=%v, KzzBelow=%v)", cell.Layer,
-								cell.KzzAbove[i], a.KzzBelow[j])
+								cell.kzzAbove[i], a.kzzBelow[j])
 							t.Fail()
 						}
-						if different(a.DzMinusHalf[j], cell.DzPlusHalf[i], testTolerance) {
+						if different(a.dzMinusHalf[j], cell.dzPlusHalf[i], testTolerance) {
 							t.Logf("Dz doesn't match")
 							t.FailNow()
 						}
@@ -172,19 +175,19 @@ func TestCellAlignment(t *testing.T) {
 				}
 			}
 		}
-		for i, b := range cell.Below {
+		for i, b := range cell.below {
 			pass := false
 			if cell.Layer == 0 && b == cell {
 				pass = true
-			} else if len(b.Above) != 0 {
-				for j, a := range b.Above {
+			} else if len(b.above) != 0 {
+				for j, a := range b.above {
 					if a == cell {
 						pass = true
-						if different(b.KzzAbove[j], cell.KzzBelow[i], testTolerance) {
+						if different(b.kzzAbove[j], cell.kzzBelow[i], testTolerance) {
 							t.Logf("Kzz doesn't match below")
 							t.FailNow()
 						}
-						if different(b.DzPlusHalf[j], cell.DzMinusHalf[i], testTolerance) {
+						if different(b.dzPlusHalf[j], cell.dzMinusHalf[i], testTolerance) {
 							t.Logf("Dz doesn't match")
 							t.FailNow()
 						}
@@ -201,15 +204,15 @@ func TestCellAlignment(t *testing.T) {
 			}
 		}
 		// Assume upper cells are never higher resolution than lower cells
-		for _, g := range cell.GroundLevel {
+		for _, g := range cell.groundLevel {
 			g2 := g
 			pass := false
 			for {
-				if len(g2.Above) == 0 {
+				if len(g2.above) == 0 {
 					pass = false
 					break
 				}
-				if g2 == g2.Above[0] {
+				if g2 == g2.above[0] {
 					pass = false
 					break
 				}
@@ -217,7 +220,7 @@ func TestCellAlignment(t *testing.T) {
 					pass = true
 					break
 				}
-				g2 = g2.Above[0]
+				g2 = g2.above[0]
 			}
 			if !pass {
 				t.Logf("Failed for Cell %v (layer %v) GroundLevel",
@@ -249,9 +252,9 @@ func TestConvectiveMixing(t *testing.T) {
 	}
 
 	for i, c := range d.Cells {
-		val := c.M2u - c.M2d + c.Above[0].M2d*c.Above[0].Dz/c.Dz
+		val := c.M2u - c.M2d + c.above[0].M2d*c.above[0].Dz/c.Dz
 		if absDifferent(val, 0, testTolerance) {
-			t.Error(i, c.Layer, val, c.M2u, c.M2d, c.Above[0].M2d)
+			t.Error(i, c.Layer, val, c.M2u, c.M2d, c.above[0].M2d)
 		}
 	}
 }

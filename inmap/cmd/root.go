@@ -71,4 +71,9 @@ var versionCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("InMAP v%s", inmap.Version)
 	},
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		return nil
+	},
+	PersistentPostRun: func(cmd *cobra.Command, args []string) {
+	},
 }

@@ -4,28 +4,30 @@ import "github.com/ctessum/geom"
 
 func (d *InMAP) setNeighbors(c *Cell, bboxOffset float64) {
 	d.neighbors(c, bboxOffset)
+	d.setBoundaryNeighbors(c)
+	if c.Layer == 0 {
+		c.below = []*Cell{c}
+		c.groundLevel = []*Cell{c}
+	}
+	c.neighborInfo()
+}
 
-	if len(c.West) == 0 {
+func (d *InMAP) setBoundaryNeighbors(c *Cell) {
+	if len(c.west) == 0 {
 		d.addWestBoundary(c)
 	}
-	if len(c.East) == 0 {
+	if len(c.east) == 0 {
 		d.addEastBoundary(c)
 	}
-	if len(c.North) == 0 {
+	if len(c.north) == 0 {
 		d.addNorthBoundary(c)
 	}
-	if len(c.South) == 0 {
+	if len(c.south) == 0 {
 		d.addSouthBoundary(c)
 	}
-	if len(c.Above) == 0 {
+	if len(c.above) == 0 {
 		d.addTopBoundary(c)
 	}
-	if c.Layer == 0 {
-		c.Below = []*Cell{c}
-		c.GroundLevel = []*Cell{c}
-	}
-
-	c.neighborInfo()
 }
 
 func (d *InMAP) neighbors(c *Cell, bboxOffset float64) {
@@ -34,88 +36,88 @@ func (d *InMAP) neighbors(c *Cell, bboxOffset float64) {
 	// Horizontal
 	westbox := newRect(b.Min.X-2*bboxOffset, b.Min.Y+bboxOffset,
 		b.Min.X-bboxOffset, b.Max.Y-bboxOffset)
-	c.West = getCells(d.index, westbox, c.Layer)
-	for _, w := range c.West {
-		if len(w.East) == 1 && w.East[0].Boundary {
-			deleteCellFromSlice(w.East[0], &d.eastBoundary)
-			deleteCellFromSlice(w.East[0], &w.East)
+	c.west = getCells(d.index, westbox, c.Layer)
+	for _, w := range c.west {
+		if len(w.east) == 1 && w.east[0].boundary {
+			deleteCellFromSlice(w.east[0], &d.eastBoundary)
+			deleteCellFromSlice(w.east[0], &w.east)
 		}
-		w.East = append(w.East, c)
+		w.east = append(w.east, c)
 		w.neighborInfo()
 	}
 
 	eastbox := newRect(b.Max.X+bboxOffset, b.Min.Y+bboxOffset,
 		b.Max.X+2*bboxOffset, b.Max.Y-bboxOffset)
-	c.East = getCells(d.index, eastbox, c.Layer)
-	for _, e := range c.East {
-		if len(e.West) == 1 && e.West[0].Boundary {
-			deleteCellFromSlice(e.West[0], &d.westBoundary)
-			deleteCellFromSlice(e.West[0], &e.West)
+	c.east = getCells(d.index, eastbox, c.Layer)
+	for _, e := range c.east {
+		if len(e.west) == 1 && e.west[0].boundary {
+			deleteCellFromSlice(e.west[0], &d.westBoundary)
+			deleteCellFromSlice(e.west[0], &e.west)
 		}
-		e.West = append(e.West, c)
+		e.west = append(e.west, c)
 		e.neighborInfo()
 	}
 
 	southbox := newRect(b.Min.X+bboxOffset, b.Min.Y-2*bboxOffset,
 		b.Max.X-bboxOffset, b.Min.Y-bboxOffset)
-	c.South = getCells(d.index, southbox, c.Layer)
-	for _, s := range c.South {
-		if len(s.North) == 1 && s.North[0].Boundary {
-			deleteCellFromSlice(s.North[0], &d.northBoundary)
-			deleteCellFromSlice(s.North[0], &s.North)
+	c.south = getCells(d.index, southbox, c.Layer)
+	for _, s := range c.south {
+		if len(s.north) == 1 && s.north[0].boundary {
+			deleteCellFromSlice(s.north[0], &d.northBoundary)
+			deleteCellFromSlice(s.north[0], &s.north)
 		}
-		s.North = append(s.North, c)
+		s.north = append(s.north, c)
 		s.neighborInfo()
 	}
 
 	northbox := newRect(b.Min.X+bboxOffset, b.Max.Y+bboxOffset,
 		b.Max.X-bboxOffset, b.Max.Y+2*bboxOffset)
-	c.North = getCells(d.index, northbox, c.Layer)
-	for _, n := range c.North {
-		if len(n.South) == 1 && n.South[0].Boundary {
-			deleteCellFromSlice(n.South[0], &d.southBoundary)
-			deleteCellFromSlice(n.South[0], &n.South)
+	c.north = getCells(d.index, northbox, c.Layer)
+	for _, n := range c.north {
+		if len(n.south) == 1 && n.south[0].boundary {
+			deleteCellFromSlice(n.south[0], &d.southBoundary)
+			deleteCellFromSlice(n.south[0], &n.south)
 		}
-		n.South = append(n.South, c)
+		n.south = append(n.south, c)
 		n.neighborInfo()
 	}
 
 	// Above
 	abovebox := newRect(b.Min.X+bboxOffset, b.Min.Y+bboxOffset,
 		b.Max.X-bboxOffset, b.Max.Y-bboxOffset)
-	c.Above = getCells(d.index, abovebox, c.Layer+1)
-	for _, a := range c.Above {
-		if len(a.Below) == 1 && a.Below[0] == a {
-			deleteCellFromSlice(a.Below[0], &a.Below)
+	c.above = getCells(d.index, abovebox, c.Layer+1)
+	for _, a := range c.above {
+		if len(a.below) == 1 && a.below[0] == a {
+			deleteCellFromSlice(a.below[0], &a.below)
 		}
-		a.Below = append(a.Below, c)
+		a.below = append(a.below, c)
 		a.neighborInfo()
 	}
 
 	// Below
 	belowbox := newRect(b.Min.X+bboxOffset, b.Min.Y+bboxOffset,
 		b.Max.X-bboxOffset, b.Max.Y-bboxOffset)
-	c.Below = getCells(d.index, belowbox, c.Layer-1)
-	for _, b := range c.Below {
-		if len(b.Above) == 1 && b.Above[0].Boundary {
-			deleteCellFromSlice(b.Above[0], &d.topBoundary)
-			deleteCellFromSlice(b.Above[0], &b.Above)
+	c.below = getCells(d.index, belowbox, c.Layer-1)
+	for _, b := range c.below {
+		if len(b.above) == 1 && b.above[0].boundary {
+			deleteCellFromSlice(b.above[0], &d.topBoundary)
+			deleteCellFromSlice(b.above[0], &b.above)
 		}
-		b.Above = append(b.Above, c)
+		b.above = append(b.above, c)
 		b.neighborInfo()
 	}
 
 	// Ground level.
 	groundlevelbox := newRect(b.Min.X+bboxOffset, b.Min.Y+bboxOffset,
 		b.Max.X-bboxOffset, b.Max.Y-bboxOffset)
-	c.GroundLevel = getCells(d.index, groundlevelbox, 0)
+	c.groundLevel = getCells(d.index, groundlevelbox, 0)
 
 	// Find the cells that this cell is the ground level for.
 	if c.Layer == 0 {
 		for _, ccI := range d.index.SearchIntersect(c.Centroid().Bounds()) {
 			cc := ccI.(*Cell)
 			if cc.Layer > 0 {
-				cc.GroundLevel = append(cc.GroundLevel, c)
+				cc.groundLevel = append(cc.groundLevel, c)
 				cc.neighborInfo()
 			}
 		}
@@ -126,117 +128,117 @@ func (d *InMAP) neighbors(c *Cell, bboxOffset float64) {
 // fractions of grid cell covered by each neighbor
 // and harmonic mean staggered-grid diffusivities.
 func (c *Cell) neighborInfo() {
-	c.DxPlusHalf = make([]float64, len(c.East))
-	c.EastFrac = make([]float64, len(c.East))
-	c.KxxEast = make([]float64, len(c.East))
-	for i, e := range c.East {
-		c.DxPlusHalf[i] = (c.Dx + e.Dx) / 2.
-		c.EastFrac[i] = min(e.Dy/c.Dy, 1.)
-		c.KxxEast[i] = harmonicMean(c.Kxxyy, e.Kxxyy)
-		e.DxMinusHalf = append(e.DxMinusHalf, c.DxPlusHalf[i])
-		e.WestFrac = append(e.WestFrac, c.EastFrac[i])
-		e.KxxWest = append(e.KxxWest, c.KxxEast[i])
+	c.dxPlusHalf = make([]float64, len(c.east))
+	c.eastFrac = make([]float64, len(c.east))
+	c.kxxEast = make([]float64, len(c.east))
+	for i, e := range c.east {
+		c.dxPlusHalf[i] = (c.Dx + e.Dx) / 2.
+		c.eastFrac[i] = min(e.Dy/c.Dy, 1.)
+		c.kxxEast[i] = harmonicMean(c.Kxxyy, e.Kxxyy)
+		e.dxMinusHalf = append(e.dxMinusHalf, c.dxPlusHalf[i])
+		e.westFrac = append(e.westFrac, c.eastFrac[i])
+		e.kxxWest = append(e.kxxWest, c.kxxEast[i])
 	}
-	c.DxMinusHalf = make([]float64, len(c.West))
-	c.WestFrac = make([]float64, len(c.West))
-	c.KxxWest = make([]float64, len(c.West))
-	for i, w := range c.West {
-		c.DxMinusHalf[i] = (c.Dx + w.Dx) / 2.
-		c.WestFrac[i] = min(w.Dy/c.Dy, 1.)
-		c.KxxWest[i] = harmonicMean(c.Kxxyy, w.Kxxyy)
-		w.DxPlusHalf = append(w.DxPlusHalf, c.DxMinusHalf[i])
-		w.EastFrac = append(w.EastFrac, c.WestFrac[i])
-		w.KxxEast = append(w.KxxEast, c.KxxWest[i])
+	c.dxMinusHalf = make([]float64, len(c.west))
+	c.westFrac = make([]float64, len(c.west))
+	c.kxxWest = make([]float64, len(c.west))
+	for i, w := range c.west {
+		c.dxMinusHalf[i] = (c.Dx + w.Dx) / 2.
+		c.westFrac[i] = min(w.Dy/c.Dy, 1.)
+		c.kxxWest[i] = harmonicMean(c.Kxxyy, w.Kxxyy)
+		w.dxPlusHalf = append(w.dxPlusHalf, c.dxMinusHalf[i])
+		w.eastFrac = append(w.eastFrac, c.westFrac[i])
+		w.kxxEast = append(w.kxxEast, c.kxxWest[i])
 	}
-	c.DyPlusHalf = make([]float64, len(c.North))
-	c.NorthFrac = make([]float64, len(c.North))
-	c.KyyNorth = make([]float64, len(c.North))
-	for i, n := range c.North {
-		c.DyPlusHalf[i] = (c.Dy + n.Dy) / 2.
-		c.NorthFrac[i] = min(n.Dx/c.Dx, 1.)
-		c.KyyNorth[i] = harmonicMean(c.Kxxyy, n.Kxxyy)
-		n.DyMinusHalf = append(n.DyMinusHalf, c.DyPlusHalf[i])
-		n.SouthFrac = append(n.SouthFrac, c.NorthFrac[i])
-		n.KyySouth = append(n.KyySouth, c.KyyNorth[i])
+	c.dyPlusHalf = make([]float64, len(c.north))
+	c.northFrac = make([]float64, len(c.north))
+	c.kyyNorth = make([]float64, len(c.north))
+	for i, n := range c.north {
+		c.dyPlusHalf[i] = (c.Dy + n.Dy) / 2.
+		c.northFrac[i] = min(n.Dx/c.Dx, 1.)
+		c.kyyNorth[i] = harmonicMean(c.Kxxyy, n.Kxxyy)
+		n.dyMinusHalf = append(n.dyMinusHalf, c.dyPlusHalf[i])
+		n.southFrac = append(n.southFrac, c.northFrac[i])
+		n.kyySouth = append(n.kyySouth, c.kyyNorth[i])
 	}
-	c.DyMinusHalf = make([]float64, len(c.South))
-	c.SouthFrac = make([]float64, len(c.South))
-	c.KyySouth = make([]float64, len(c.South))
-	for i, s := range c.South {
-		c.DyMinusHalf[i] = (c.Dy + s.Dy) / 2.
-		c.SouthFrac[i] = min(s.Dx/c.Dx, 1.)
-		c.KyySouth[i] = harmonicMean(c.Kxxyy, s.Kxxyy)
-		s.DyPlusHalf = append(s.DyPlusHalf, c.DyMinusHalf[i])
-		s.NorthFrac = append(s.NorthFrac, c.SouthFrac[i])
-		s.KyyNorth = append(s.KyyNorth, c.KyySouth[i])
+	c.dyMinusHalf = make([]float64, len(c.south))
+	c.southFrac = make([]float64, len(c.south))
+	c.kyySouth = make([]float64, len(c.south))
+	for i, s := range c.south {
+		c.dyMinusHalf[i] = (c.Dy + s.Dy) / 2.
+		c.southFrac[i] = min(s.Dx/c.Dx, 1.)
+		c.kyySouth[i] = harmonicMean(c.Kxxyy, s.Kxxyy)
+		s.dyPlusHalf = append(s.dyPlusHalf, c.dyMinusHalf[i])
+		s.northFrac = append(s.northFrac, c.southFrac[i])
+		s.kyyNorth = append(s.kyyNorth, c.kyySouth[i])
 	}
-	c.DzPlusHalf = make([]float64, len(c.Above))
-	c.AboveFrac = make([]float64, len(c.Above))
-	c.KzzAbove = make([]float64, len(c.Above))
-	for i, a := range c.Above {
-		c.DzPlusHalf[i] = (c.Dz + a.Dz) / 2.
-		c.AboveFrac[i] = min((a.Dx*a.Dy)/(c.Dx*c.Dy), 1.)
-		c.KzzAbove[i] = harmonicMean(c.Kzz, a.Kzz)
-		a.DzMinusHalf = append(a.DzMinusHalf, c.DzPlusHalf[i])
-		a.BelowFrac = append(a.BelowFrac, c.AboveFrac[i])
-		a.KzzBelow = append(a.KzzBelow, c.KzzAbove[i])
+	c.dzPlusHalf = make([]float64, len(c.above))
+	c.aboveFrac = make([]float64, len(c.above))
+	c.kzzAbove = make([]float64, len(c.above))
+	for i, a := range c.above {
+		c.dzPlusHalf[i] = (c.Dz + a.Dz) / 2.
+		c.aboveFrac[i] = min((a.Dx*a.Dy)/(c.Dx*c.Dy), 1.)
+		c.kzzAbove[i] = harmonicMean(c.Kzz, a.Kzz)
+		a.dzMinusHalf = append(a.dzMinusHalf, c.dzPlusHalf[i])
+		a.belowFrac = append(a.belowFrac, c.aboveFrac[i])
+		a.kzzBelow = append(a.kzzBelow, c.kzzAbove[i])
 	}
-	c.DzMinusHalf = make([]float64, len(c.Below))
-	c.BelowFrac = make([]float64, len(c.Below))
-	c.KzzBelow = make([]float64, len(c.Below))
-	for i, b := range c.Below {
-		c.DzMinusHalf[i] = (c.Dz + b.Dz) / 2.
-		c.BelowFrac[i] = min((b.Dx*b.Dy)/(c.Dx*c.Dy), 1.)
-		c.KzzBelow[i] = harmonicMean(c.Kzz, b.Kzz)
-		b.DzPlusHalf = append(b.DzPlusHalf, c.DzMinusHalf[i])
-		b.AboveFrac = append(b.AboveFrac, c.BelowFrac[i])
-		b.KzzAbove = append(b.KzzAbove, c.KzzBelow[i])
+	c.dzMinusHalf = make([]float64, len(c.below))
+	c.belowFrac = make([]float64, len(c.below))
+	c.kzzBelow = make([]float64, len(c.below))
+	for i, b := range c.below {
+		c.dzMinusHalf[i] = (c.Dz + b.Dz) / 2.
+		c.belowFrac[i] = min((b.Dx*b.Dy)/(c.Dx*c.Dy), 1.)
+		c.kzzBelow[i] = harmonicMean(c.Kzz, b.Kzz)
+		b.dzPlusHalf = append(b.dzPlusHalf, c.dzMinusHalf[i])
+		b.aboveFrac = append(b.aboveFrac, c.belowFrac[i])
+		b.kzzAbove = append(b.kzzAbove, c.kzzBelow[i])
 	}
-	c.GroundLevelFrac = make([]float64, len(c.GroundLevel))
-	for i, g := range c.GroundLevel {
-		c.GroundLevelFrac[i] = min((g.Dx*g.Dy)/(c.Dx*c.Dy), 1.)
+	c.groundLevelFrac = make([]float64, len(c.groundLevel))
+	for i, g := range c.groundLevel {
+		c.groundLevelFrac[i] = min((g.Dx*g.Dy)/(c.Dx*c.Dy), 1.)
 	}
 }
 
 // dereferenceNeighbors removes any references to this cell that exist in its
 // neighbors.
 func (c *Cell) dereferenceNeighbors(d *InMAP) {
-	for _, w := range c.West {
-		if w.Boundary {
+	for _, w := range c.west {
+		if w.boundary {
 			deleteCellFromSlice(w, &d.westBoundary)
 		} else {
-			deleteCellFromSlice(c, &w.East, &w.EastFrac, &w.KxxEast, &w.DxPlusHalf)
+			deleteCellFromSlice(c, &w.east, &w.eastFrac, &w.kxxEast, &w.dxPlusHalf)
 		}
 	}
-	for _, e := range c.East {
-		if e.Boundary {
+	for _, e := range c.east {
+		if e.boundary {
 			deleteCellFromSlice(e, &d.eastBoundary)
 		} else {
-			deleteCellFromSlice(c, &e.West, &e.WestFrac, &e.KxxWest, &e.DxMinusHalf)
+			deleteCellFromSlice(c, &e.west, &e.westFrac, &e.kxxWest, &e.dxMinusHalf)
 		}
 	}
-	for _, s := range c.South {
-		if s.Boundary {
+	for _, s := range c.south {
+		if s.boundary {
 			deleteCellFromSlice(s, &d.southBoundary)
 		} else {
-			deleteCellFromSlice(c, &s.North, &s.NorthFrac, &s.KyyNorth, &s.DyPlusHalf)
+			deleteCellFromSlice(c, &s.north, &s.northFrac, &s.kyyNorth, &s.dyPlusHalf)
 		}
 	}
-	for _, n := range c.North {
-		if n.Boundary {
+	for _, n := range c.north {
+		if n.boundary {
 			deleteCellFromSlice(n, &d.northBoundary)
 		} else {
-			deleteCellFromSlice(c, &n.South, &n.SouthFrac, &n.KyySouth, &n.DyMinusHalf)
+			deleteCellFromSlice(c, &n.south, &n.southFrac, &n.kyySouth, &n.dyMinusHalf)
 		}
 	}
-	for _, b := range c.Below {
-		deleteCellFromSlice(c, &b.Above, &b.AboveFrac, &b.KzzAbove, &b.DzPlusHalf)
+	for _, b := range c.below {
+		deleteCellFromSlice(c, &b.above, &b.aboveFrac, &b.kzzAbove, &b.dzPlusHalf)
 	}
-	for _, a := range c.Above {
-		if a.Boundary {
+	for _, a := range c.above {
+		if a.boundary {
 			deleteCellFromSlice(a, &d.topBoundary)
 		} else {
-			deleteCellFromSlice(c, &a.Below, &a.BelowFrac, &a.KzzBelow, &a.DzMinusHalf)
+			deleteCellFromSlice(c, &a.below, &a.belowFrac, &a.kzzBelow, &a.dzMinusHalf)
 		}
 	}
 
@@ -245,7 +247,7 @@ func (c *Cell) dereferenceNeighbors(d *InMAP) {
 		for _, ccI := range d.index.SearchIntersect(c.Centroid().Bounds()) {
 			cc := ccI.(*Cell)
 			if cc.Layer > 0 {
-				deleteCellFromSlice(c, &cc.GroundLevel, &cc.GroundLevelFrac)
+				deleteCellFromSlice(c, &cc.groundLevel, &cc.groundLevelFrac)
 			}
 		}
 	}

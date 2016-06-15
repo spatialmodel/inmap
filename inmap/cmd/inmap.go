@@ -21,6 +21,7 @@ package cmd
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -43,6 +44,11 @@ type configData struct {
 	// InMAPData is the path to location of baseline meteorology and pollutant data.
 	// The path can include environment variables.
 	InMAPData string
+
+	// VariableGridData is the path to the location of the variable-resolution gridded
+	// InMAP data, or the location where it should be created if it doesn't already
+	// exist. The path can include environment variables.
+	VariableGridData string
 
 	// EmissionsShapefiles are the paths to any emissions shapefiles.
 	// Can be elevated or ground level; elevated files need to have columns
@@ -82,8 +88,22 @@ type configData struct {
 	sr *proj.SR
 }
 
+func getCTMData() (*inmap.CTMData, error) {
+	log.Println("Reading input data...")
+
+	f, err := os.Open(config.InMAPData)
+	if err != nil {
+		return nil, fmt.Errorf("Problem loading input data: %v\n", err)
+	}
+	ctmData, err := config.VarGrid.LoadCTMData(f)
+	if err != nil {
+		return nil, fmt.Errorf("Problem loading input data: %v\n", err)
+	}
+	return ctmData, nil
+}
+
 // Run runs the model.
-func Run(dynamic bool) error {
+func Run(dynamic, createGrid bool) error {
 
 	// Start a function to receive and print log messages.
 	cConverge := make(chan inmap.ConvergenceStatus)
@@ -102,15 +122,9 @@ func Run(dynamic bool) error {
 		}
 	}()
 
-	log.Println("Reading input data...")
-
-	f, err := os.Open(config.InMAPData)
+	ctmData, err := getCTMData()
 	if err != nil {
-		return fmt.Errorf("Problem loading input data: %v\n", err)
-	}
-	ctmData, err := config.VarGrid.LoadCTMData(f)
-	if err != nil {
-		return fmt.Errorf("Problem loading input data: %v\n", err)
+		return err
 	}
 
 	emis, err := inmap.ReadEmissionShapefiles(config.sr, config.EmissionUnits,
@@ -118,9 +132,15 @@ func Run(dynamic bool) error {
 
 	log.Println("Loading population and mortality rate data")
 
-	pop, popIndices, mr, err := config.VarGrid.LoadPopMort()
-	if err != nil {
-		return err
+	// Only load the population if we're creating the grid.
+	var pop *inmap.Population
+	var mr *inmap.MortalityRates
+	var popIndices inmap.PopIndices
+	if dynamic || createGrid {
+		pop, popIndices, mr, err = config.VarGrid.LoadPopMort()
+		if err != nil {
+			return err
+		}
 	}
 
 	scienceFuncs := inmap.Calculations(
@@ -134,11 +154,23 @@ func Run(dynamic bool) error {
 
 	var initFuncs, runFuncs []inmap.DomainManipulator
 	if !dynamic {
-		initFuncs = []inmap.DomainManipulator{
-			config.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, emis),
-			config.VarGrid.MutateGrid(inmap.PopulationMutator(&config.VarGrid, popIndices),
-				ctmData, pop, mr, emis),
-			inmap.SetTimestepCFL(),
+		if createGrid {
+			initFuncs = []inmap.DomainManipulator{
+				config.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, emis),
+				config.VarGrid.MutateGrid(inmap.PopulationMutator(&config.VarGrid, popIndices),
+					ctmData, pop, mr, emis),
+				inmap.SetTimestepCFL(),
+			}
+		} else {
+			var r io.Reader
+			r, err = os.Open(config.VariableGridData)
+			if err != nil {
+				return fmt.Errorf("problem opening file to load VariableGridData: %v", err)
+			}
+			initFuncs = []inmap.DomainManipulator{
+				inmap.Load(r, &config.VarGrid, emis),
+				inmap.SetTimestepCFL(),
+			}
 		}
 		runFuncs = []inmap.DomainManipulator{
 			inmap.Log(cLog),
@@ -249,6 +281,7 @@ func readConfigFile(filename string) (config *configData, err error) {
 	}
 
 	config.InMAPData = os.ExpandEnv(config.InMAPData)
+	config.VariableGridData = os.ExpandEnv(config.VariableGridData)
 	config.OutputTemplate = os.ExpandEnv(config.OutputTemplate)
 
 	for i := 0; i < len(config.EmissionsShapefiles); i++ {

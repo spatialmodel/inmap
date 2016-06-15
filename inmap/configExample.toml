@@ -1,4 +1,7 @@
 InMAPData = "../testdata/inmapData.ncf"
+
+VariableGridData = "../testdata/inmapVarGrid.gob"
+
 EmissionsShapefiles = [
 	"../testdata/testEmis.shp"
 ]
@@ -33,7 +36,6 @@ GridProj= "+proj=lcc +lat_1=33.000000 +lat_2=45.000000 +lat_0=40.000000 +lon_0=-
 PopDensityThreshold= 0.001
 PopThreshold= 25000.0
 PopConcThreshold= 0.000001
-BboxOffset= 1.0
 CensusFile= "../testdata/census2012.shp"
 CensusPopColumns= ["TotalPop", "WhiteNoLat", "Black", "Native", "Asian", "Latino"]
 PopGridColumn= "TotalPop"

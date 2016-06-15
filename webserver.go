@@ -283,7 +283,7 @@ func (d *InMAP) VerticalProfile(variable string, lon, lat float64) (height, vals
 				//} else {
 				//	height[i] = height[i-1] + cell.DzMinusHalf[0]
 				//}
-				cell = cell.Above[0]
+				cell = cell.above[0]
 			}
 			return
 		}

@@ -41,7 +41,6 @@ type VarGridConfig struct {
 	// Σ(|ΔConcentration|)*combinedVolume*|ΔPopulation| / {Σ(|totalMass|)*totalPopulation}.
 	// See the documentation for PopConcMutator for more information.
 	PopConcThreshold    float64
-	BboxOffset          float64  // A number significantly less than the smallest grid size but not small enough to be confused with zero.
 	CensusFile          string   // Path to census shapefile
 	CensusPopColumns    []string // Shapefile fields containing populations for multiple demographics
 	PopGridColumn       string   // Name of field in shapefile to be used for determining variable grid resolution
@@ -356,8 +355,10 @@ func (config *VarGridConfig) RegularGrid(data *CTMData, pop *Population, popInde
 			}
 		}
 		// Add emissions to new cells.
-		for _, c := range d.Cells {
-			c.setEmissionsFlux(emis) // This needs to be called after setNeighbors.
+		if emis != nil {
+			for _, c := range d.Cells {
+				c.setEmissionsFlux(emis) // This needs to be called after setNeighbors.
+			}
 		}
 		return nil
 	}
@@ -393,7 +394,7 @@ func (config *VarGridConfig) MutateGrid(divideRule GridMutator, data *CTMData, p
 			var newCellLayers []int
 			var indicesToDelete []int
 			for i, cell := range d.Cells {
-				if len(cell.index) < len(config.Xnests) {
+				if len(cell.Index) < len(config.Xnests) {
 
 					if divideRule(cell, totalMass, totalPopulation) {
 
@@ -402,9 +403,9 @@ func (config *VarGridConfig) MutateGrid(divideRule GridMutator, data *CTMData, p
 
 						// If this cell is above a threshold, create inner
 						// nested cells instead of using this one.
-						for ii := 0; ii < config.Xnests[len(cell.index)]; ii++ {
-							for jj := 0; jj < config.Ynests[len(cell.index)]; jj++ {
-								newIndex := append(cell.index, [2]int{ii, jj})
+						for ii := 0; ii < config.Xnests[len(cell.Index)]; ii++ {
+							for jj := 0; jj < config.Ynests[len(cell.Index)]; jj++ {
+								newIndex := append(cell.Index, [2]int{ii, jj})
 								newCellIndices = append(newCellIndices, newIndex)
 								newCellLayers = append(newCellLayers, cell.Layer)
 							}
@@ -439,8 +440,10 @@ func (d *InMAP) deleteAndAddCells(config *VarGridConfig, newCellIndices [][][2]i
 		d.AddCells(cell)
 	}
 	// Add emissions to new cells.
-	for i := oldNumCells - 1; i < len(d.Cells); i++ {
-		d.Cells[i].setEmissionsFlux(emis) // This needs to be called after setNeighbors.
+	if emis != nil {
+		for i := oldNumCells - 1; i < len(d.Cells); i++ {
+			d.Cells[i].setEmissionsFlux(emis) // This needs to be called after setNeighbors.
+		}
 	}
 	return nil
 }
@@ -452,6 +455,8 @@ func (d *InMAP) AddCells(cells ...*Cell) {
 	for _, c := range cells {
 		d.Cells = append(d.Cells, c)
 		d.index.Insert(c)
+		// bboxOffset is a number significantly less than the smallest grid size
+		// but not small enough to be confused with zero.
 		const bboxOffset = 1.e-10
 		d.setNeighbors(c, bboxOffset)
 	}
@@ -485,7 +490,7 @@ type GridMutator func(cell *Cell, totalMass, totalPopulation float64) bool
 func PopulationMutator(config *VarGridConfig, popIndices PopIndices) GridMutator {
 	return func(cell *Cell, _, _ float64) bool {
 		return cell.Layer < config.HiResLayers &&
-			(cell.aboveDensityThreshold ||
+			(cell.AboveDensityThreshold ||
 				cell.PopData[popIndices[config.PopGridColumn]] > config.PopThreshold)
 	}
 }
@@ -508,7 +513,7 @@ func PopConcMutator(threshold float64, config *VarGridConfig, popIndices PopIndi
 			return false
 		}
 		totalMassPop := totalMass * totalPopulation
-		for _, group := range [][]*Cell{cell.West, cell.East, cell.North, cell.South} {
+		for _, group := range [][]*Cell{cell.west, cell.east, cell.north, cell.south} {
 			for _, neighbor := range group {
 				ΣΔC := 0.
 				for i, conc := range neighbor.Cf {
@@ -550,7 +555,7 @@ func (config *VarGridConfig) createCell(data *CTMData, pop *Population, popIndic
 
 	cell := new(Cell)
 	cell.PopData = make([]float64, len(popIndices))
-	cell.index = index
+	cell.Index = index
 	// Polygon must go counter-clockwise
 	cell.Polygonal = config.cellGeometry(index)
 	for _, pInterface := range pop.tree.SearchIntersect(cell.Bounds()) {
@@ -569,7 +574,7 @@ func (config *VarGridConfig) createCell(data *CTMData, pop *Population, popIndic
 		// Check if this census shape is above the density threshold
 		pDensity := p.PopData[popIndices[config.PopGridColumn]] / area2
 		if pDensity > config.PopDensityThreshold {
-			cell.aboveDensityThreshold = true
+			cell.AboveDensityThreshold = true
 		}
 	}
 	for _, mInterface := range mort.tree.SearchIntersect(cell.Bounds()) {

@@ -138,10 +138,10 @@ type Cell struct {
 	NOxDryDep float64 `desc:"NOx dry deposition" units:"m/s"`
 
 	Kzz                float64   `desc:"Grid center vertical diffusivity after applying convective fraction" units:"m²/s"`
-	KzzAbove, KzzBelow []float64 // horizontal diffusivity [m2/s] (staggered grid)
+	kzzAbove, kzzBelow []float64 // horizontal diffusivity [m2/s] (staggered grid)
 	Kxxyy              float64   `desc:"Grid center horizontal diffusivity" units:"m²/s"`
-	KyySouth, KyyNorth []float64 // horizontal diffusivity [m2/s] (staggered grid)
-	KxxWest, KxxEast   []float64 // horizontal diffusivity at [m2/s] (staggered grid)
+	kyySouth, kyyNorth []float64 // horizontal diffusivity [m2/s] (staggered grid)
+	kxxWest, kxxEast   []float64 // horizontal diffusivity at [m2/s] (staggered grid)
 
 	M2u float64 `desc:"ACM2 upward mixing (Pleim 2007)" units:"1/s"`
 	M2d float64 `desc:"ACM2 downward mixing (Pleim 2007)" units:"1/s"`
@@ -157,26 +157,26 @@ type Cell struct {
 	EmisFlux  []float64 // emissions [μg/m³/s]
 	CBaseline []float64 // Total baseline PM2.5 concentration.
 
-	West        []*Cell // Neighbors to the East
-	East        []*Cell // Neighbors to the West
-	South       []*Cell // Neighbors to the South
-	North       []*Cell // Neighbors to the North
-	Below       []*Cell // Neighbors below
-	Above       []*Cell // Neighbors above
-	GroundLevel []*Cell // Neighbors at ground level
-	Boundary    bool    // Does this cell represent a boundary condition?
+	west        []*Cell // Neighbors to the East
+	east        []*Cell // Neighbors to the West
+	south       []*Cell // Neighbors to the South
+	north       []*Cell // Neighbors to the North
+	below       []*Cell // Neighbors below
+	above       []*Cell // Neighbors above
+	groundLevel []*Cell // Neighbors at ground level
+	boundary    bool    // Does this cell represent a boundary condition?
 
-	WestFrac, EastFrac   []float64 // Fraction of cell covered by each neighbor (adds up to 1).
-	NorthFrac, SouthFrac []float64 // Fraction of cell covered by each neighbor (adds up to 1).
-	AboveFrac, BelowFrac []float64 // Fraction of cell covered by each neighbor (adds up to 1).
-	GroundLevelFrac      []float64 // Fraction of cell above to each ground level cell (adds up to 1).
+	westFrac, eastFrac   []float64 // Fraction of cell covered by each neighbor (adds up to 1).
+	northFrac, southFrac []float64 // Fraction of cell covered by each neighbor (adds up to 1).
+	aboveFrac, belowFrac []float64 // Fraction of cell covered by each neighbor (adds up to 1).
+	groundLevelFrac      []float64 // Fraction of cell above to each ground level cell (adds up to 1).
 
-	DxPlusHalf  []float64 // Distance between centers of cell and East [m]
-	DxMinusHalf []float64 // Distance between centers of cell and West [m]
-	DyPlusHalf  []float64 // Distance between centers of cell and North [m]
-	DyMinusHalf []float64 // Distance between centers of cell and South [m]
-	DzPlusHalf  []float64 // Distance between centers of cell and Above [m]
-	DzMinusHalf []float64 // Distance between centers of cell and Below [m]
+	dxPlusHalf  []float64 // Distance between centers of cell and East [m]
+	dxMinusHalf []float64 // Distance between centers of cell and West [m]
+	dyPlusHalf  []float64 // Distance between centers of cell and North [m]
+	dyMinusHalf []float64 // Distance between centers of cell and South [m]
+	dzPlusHalf  []float64 // Distance between centers of cell and Above [m]
+	dzMinusHalf []float64 // Distance between centers of cell and Below [m]
 
 	Layer       int     // layer index of grid cell
 	LayerHeight float64 // The height at the edge of this layer
@@ -189,10 +189,10 @@ type Cell struct {
 	S1                         float64 `desc:"Stability parameter" units:"?"`
 	SClass                     float64 `desc:"Stability class" units:"0=Unstable; 1=Stable"`
 
-	sync.RWMutex // Avoid cell being written by one subroutine and read by another at the same time.
+	mutex sync.RWMutex // Avoid cell being written by one subroutine and read by another at the same time.
 
-	index                 [][2]int
-	aboveDensityThreshold bool
+	Index                 [][2]int // Index gives this cell's place in the nest structure.
+	AboveDensityThreshold bool
 }
 
 // DomainManipulator is a class of functions that operate on the entire InMAP
@@ -219,7 +219,7 @@ func (c *Cell) boundaryCopy() *Cell {
 	c2.Kxxyy, c2.Kzz = c.Kxxyy, c.Kzz
 	c2.M2u, c2.M2d = c.M2u, c.M2d
 	c2.Layer, c2.LayerHeight = c.Layer, c.LayerHeight
-	c2.Boundary = true
+	c2.boundary = true
 	c2.make()
 	c2.Volume = c2.Dx * c2.Dy * c2.Dz
 	c2.PopData = c.PopData
@@ -229,35 +229,35 @@ func (c *Cell) boundaryCopy() *Cell {
 // addWestBoundary adds a cell to the western boundary of the domain.
 func (d *InMAP) addWestBoundary(cell *Cell) {
 	c := cell.boundaryCopy()
-	cell.West = []*Cell{c}
+	cell.west = []*Cell{c}
 	d.westBoundary = append(d.westBoundary, c)
 }
 
 // addEastBoundary adds a cell to the eastern boundary of the domain.
 func (d *InMAP) addEastBoundary(cell *Cell) {
 	c := cell.boundaryCopy()
-	cell.East = []*Cell{c}
+	cell.east = []*Cell{c}
 	d.eastBoundary = append(d.eastBoundary, c)
 }
 
 // addSouthBoundary adds a cell to the southern boundary of the domain.
 func (d *InMAP) addSouthBoundary(cell *Cell) {
 	c := cell.boundaryCopy()
-	cell.South = []*Cell{c}
+	cell.south = []*Cell{c}
 	d.southBoundary = append(d.southBoundary, c)
 }
 
 // addNorthBoundary adds a cell to the northern boundary of the domain.
 func (d *InMAP) addNorthBoundary(cell *Cell) {
 	c := cell.boundaryCopy()
-	cell.North = []*Cell{c}
+	cell.north = []*Cell{c}
 	d.northBoundary = append(d.northBoundary, c)
 }
 
 // addTopBoundary adds a cell to the top boundary of the domain.
 func (d *InMAP) addTopBoundary(cell *Cell) {
 	c := cell.boundaryCopy()
-	cell.Above = []*Cell{c}
+	cell.above = []*Cell{c}
 	d.topBoundary = append(d.topBoundary, c)
 }
 
@@ -295,12 +295,13 @@ func harmonicMean(a, b float64) float64 {
 	return 2. * a * b / (a + b)
 }
 
-// Convert cell data into a regular array
+// Convert cell data into a regular array. If layer is less than zero,
+// data for all layers is returned.
 func (d *InMAP) toArray(pol string, layer int) []float64 {
 	o := make([]float64, 0, len(d.Cells))
 	for _, c := range d.Cells {
-		c.RLock()
-		if c.Layer > layer {
+		c.mutex.RLock()
+		if layer >= 0 && c.Layer > layer {
 			// The cells should be sorted with the lower layers first, so we
 			// should be done here.
 			return o
@@ -308,7 +309,7 @@ func (d *InMAP) toArray(pol string, layer int) []float64 {
 		if c.Layer == layer {
 			o = append(o, c.getValue(pol, d.popIndices))
 		}
-		c.RUnlock()
+		c.mutex.RUnlock()
 	}
 	return o
 }
@@ -373,7 +374,7 @@ func (d *InMAP) getUnits(varName string) string {
 func (d *InMAP) GetGeometry(layer int) []geom.Geom {
 	o := make([]geom.Geom, 0, len(d.Cells))
 	for _, c := range d.Cells {
-		c.RLock()
+		c.mutex.RLock()
 		if c.Layer > layer {
 			// The cells should be sorted with the lower layers first, so we
 			// should be done here.
@@ -382,7 +383,7 @@ func (d *InMAP) GetGeometry(layer int) []geom.Geom {
 		if c.Layer == layer {
 			o = append(o, c.WebMapGeom)
 		}
-		c.RUnlock()
+		c.mutex.RUnlock()
 	}
 	return o
 }

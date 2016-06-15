@@ -28,51 +28,51 @@ func Mixing() CellManipulator {
 	return func(c *Cell, Δt float64) {
 		for ii := range c.Cf {
 			// Pleim (2007) Equation 10.
-			for i, g := range c.GroundLevel { // Upward convection
-				c.Cf[ii] += c.M2u * g.Ci[ii] * Δt * c.GroundLevelFrac[i]
+			for i, g := range c.groundLevel { // Upward convection
+				c.Cf[ii] += c.M2u * g.Ci[ii] * Δt * c.groundLevelFrac[i]
 			}
-			for i, a := range c.Above {
+			for i, a := range c.above {
 				// Convection balancing downward mixing
 				c.Cf[ii] += (a.M2d*a.Ci[ii]*a.Dz/c.Dz - c.M2d*c.Ci[ii]) *
-					Δt * c.AboveFrac[i]
+					Δt * c.aboveFrac[i]
 				// Mixing with above
-				c.Cf[ii] += 1. / c.Dz * (c.KzzAbove[i] * (a.Ci[ii] - c.Ci[ii]) /
-					c.DzPlusHalf[i]) * Δt * c.AboveFrac[i]
+				c.Cf[ii] += 1. / c.Dz * (c.kzzAbove[i] * (a.Ci[ii] - c.Ci[ii]) /
+					c.dzPlusHalf[i]) * Δt * c.aboveFrac[i]
 			}
-			for i, b := range c.Below { // Mixing with below
-				c.Cf[ii] += 1. / c.Dz * (c.KzzBelow[i] * (b.Ci[ii] - c.Ci[ii]) /
-					c.DzMinusHalf[i]) * Δt * c.BelowFrac[i]
+			for i, b := range c.below { // Mixing with below
+				c.Cf[ii] += 1. / c.Dz * (c.kzzBelow[i] * (b.Ci[ii] - c.Ci[ii]) /
+					c.dzMinusHalf[i]) * Δt * c.belowFrac[i]
 			}
 			// Horizontal mixing
-			for i, w := range c.West { // Mixing with West
-				flux := 1. / c.Dx * (c.KxxWest[i] *
-					(w.Ci[ii] - c.Ci[ii]) / c.DxMinusHalf[i]) * Δt * c.WestFrac[i]
+			for i, w := range c.west { // Mixing with West
+				flux := 1. / c.Dx * (c.kxxWest[i] *
+					(w.Ci[ii] - c.Ci[ii]) / c.dxMinusHalf[i]) * Δt * c.westFrac[i]
 				c.Cf[ii] += flux * w.Dz / c.Dz
-				if w.Boundary { // keep track of mass that leaves the domain.
+				if w.boundary { // keep track of mass that leaves the domain.
 					w.Cf[ii] -= flux * c.Volume / w.Volume
 				}
 			}
-			for i, e := range c.East { // Mixing with East
-				flux := 1. / c.Dx * (c.KxxEast[i] *
-					(e.Ci[ii] - c.Ci[ii]) / c.DxPlusHalf[i]) * Δt * c.EastFrac[i]
+			for i, e := range c.east { // Mixing with East
+				flux := 1. / c.Dx * (c.kxxEast[i] *
+					(e.Ci[ii] - c.Ci[ii]) / c.dxPlusHalf[i]) * Δt * c.eastFrac[i]
 				c.Cf[ii] += flux
-				if e.Boundary { // keep track of mass that leaves the domain.
+				if e.boundary { // keep track of mass that leaves the domain.
 					e.Cf[ii] -= flux * c.Volume / e.Volume
 				}
 			}
-			for i, s := range c.South { // Mixing with South
-				flux := 1. / c.Dy * (c.KyySouth[i] *
-					(s.Ci[ii] - c.Ci[ii]) / c.DyMinusHalf[i]) * Δt * c.SouthFrac[i]
+			for i, s := range c.south { // Mixing with South
+				flux := 1. / c.Dy * (c.kyySouth[i] *
+					(s.Ci[ii] - c.Ci[ii]) / c.dyMinusHalf[i]) * Δt * c.southFrac[i]
 				c.Cf[ii] += flux * s.Dz / c.Dz
-				if s.Boundary { // keep track of mass that leaves the domain.
+				if s.boundary { // keep track of mass that leaves the domain.
 					s.Cf[ii] -= flux * c.Volume / s.Volume
 				}
 			}
-			for i, n := range c.North { // Mixing with North
-				flux := 1. / c.Dy * (c.KyyNorth[i] *
-					(n.Ci[ii] - c.Ci[ii]) / c.DyPlusHalf[i]) * Δt * c.NorthFrac[i]
+			for i, n := range c.north { // Mixing with North
+				flux := 1. / c.Dy * (c.kyyNorth[i] *
+					(n.Ci[ii] - c.Ci[ii]) / c.dyPlusHalf[i]) * Δt * c.northFrac[i]
 				c.Cf[ii] += flux
-				if n.Boundary { // keep track of mass that leaves the domain.
+				if n.boundary { // keep track of mass that leaves the domain.
 					n.Cf[ii] -= flux * c.Volume / n.Volume
 				}
 			}
@@ -85,58 +85,58 @@ func Mixing() CellManipulator {
 func UpwindAdvection() CellManipulator {
 	return func(c *Cell, Δt float64) {
 		for ii := range c.Cf {
-			for i, w := range c.West {
+			for i, w := range c.west {
 				flux := advect.UpwindFlux(c.UAvg, w.Ci[ii], c.Ci[ii], c.Dx) *
-					c.WestFrac[i] * Δt
+					c.westFrac[i] * Δt
 				// Multiply by Dz ratio to correct for differences in cell heights.
 				c.Cf[ii] += flux * w.Dz / c.Dz
-				if w.Boundary { // keep track of mass that leaves the domain.
+				if w.boundary { // keep track of mass that leaves the domain.
 					w.Cf[ii] -= flux * c.Volume / w.Volume
 				}
 			}
 
-			for i, e := range c.East {
+			for i, e := range c.east {
 				flux := advect.UpwindFlux(e.UAvg, c.Ci[ii], e.Ci[ii], c.Dx) *
-					c.EastFrac[i] * Δt
+					c.eastFrac[i] * Δt
 				c.Cf[ii] -= flux
-				if e.Boundary { // keep track of mass that leaves the domain.
+				if e.boundary { // keep track of mass that leaves the domain.
 					e.Cf[ii] += flux * c.Volume / e.Volume
 				}
 			}
 
-			for i, s := range c.South {
+			for i, s := range c.south {
 				flux := advect.UpwindFlux(c.VAvg, s.Ci[ii], c.Ci[ii], c.Dy) *
-					c.SouthFrac[i] * Δt
+					c.southFrac[i] * Δt
 				// Multiply by Dz ratio to correct for differences in cell heights.
 				c.Cf[ii] += flux * s.Dz / c.Dz
-				if s.Boundary { // keep track of mass that leaves the domain.
+				if s.boundary { // keep track of mass that leaves the domain.
 					s.Cf[ii] -= flux * c.Volume / s.Volume
 				}
 			}
 
-			for i, n := range c.North {
+			for i, n := range c.north {
 				flux := advect.UpwindFlux(n.VAvg, c.Ci[ii], n.Ci[ii], c.Dy) *
-					c.NorthFrac[i] * Δt
+					c.northFrac[i] * Δt
 				c.Cf[ii] -= flux
-				if n.Boundary { // keep track of mass that leaves the domain.
+				if n.boundary { // keep track of mass that leaves the domain.
 					n.Cf[ii] += flux * c.Volume / n.Volume
 				}
 			}
 
-			for i, b := range c.Below {
+			for i, b := range c.below {
 				if c.Layer > 0 {
 					flux := advect.UpwindFlux(c.WAvg, b.Ci[ii], c.Ci[ii], c.Dz) *
-						c.BelowFrac[i] * Δt
+						c.belowFrac[i] * Δt
 					// Multiply by Dz ratio to correct for differences in cell heights.
 					c.Cf[ii] += flux
 				}
 			}
 
-			for i, a := range c.Above {
+			for i, a := range c.above {
 				flux := advect.UpwindFlux(a.WAvg, c.Ci[ii], a.Ci[ii], c.Dz) *
-					c.AboveFrac[i] * Δt
+					c.aboveFrac[i] * Δt
 				c.Cf[ii] -= flux
-				if a.Boundary { // keep track of mass that leaves the domain.
+				if a.boundary { // keep track of mass that leaves the domain.
 					a.Cf[ii] += flux * c.Volume / a.Volume
 				}
 			}
@@ -152,36 +152,36 @@ func MeanderMixing() CellManipulator {
 	return func(c *Cell, Δt float64) {
 		for ii := range c.Ci {
 
-			for i, w := range c.West { // Mixing with West
+			for i, w := range c.west { // Mixing with West
 				flux := 1. / c.Dx * c.UDeviation *
-					(w.Ci[ii] - c.Ci[ii]) * Δt * c.WestFrac[i]
+					(w.Ci[ii] - c.Ci[ii]) * Δt * c.westFrac[i]
 				// Multiply by Dz ratio to correct for differences in cell heights.
 				c.Cf[ii] += flux * w.Dz / c.Dz
-				if w.Boundary {
+				if w.boundary {
 					w.Cf[ii] -= flux * c.Volume / w.Volume
 				}
 			}
-			for i, e := range c.East { // Mixing with East
+			for i, e := range c.east { // Mixing with East
 				flux := 1. / c.Dx * (e.UDeviation *
-					(e.Ci[ii] - c.Ci[ii])) * Δt * c.EastFrac[i]
+					(e.Ci[ii] - c.Ci[ii])) * Δt * c.eastFrac[i]
 				c.Cf[ii] += flux
-				if e.Boundary {
+				if e.boundary {
 					e.Cf[ii] -= flux * c.Volume / e.Volume
 				}
 			}
-			for i, s := range c.South { // Mixing with South
+			for i, s := range c.south { // Mixing with South
 				flux := 1. / c.Dy * (c.VDeviation *
-					(s.Ci[ii] - c.Ci[ii])) * Δt * c.SouthFrac[i]
+					(s.Ci[ii] - c.Ci[ii])) * Δt * c.southFrac[i]
 				c.Cf[ii] += flux * s.Dz / c.Dz
-				if s.Boundary {
+				if s.boundary {
 					s.Cf[ii] -= flux * c.Volume / s.Volume
 				}
 			}
-			for i, n := range c.North { // Mixing with North
+			for i, n := range c.north { // Mixing with North
 				flux := 1. / c.Dy * (n.VDeviation *
-					(n.Ci[ii] - c.Ci[ii])) * Δt * c.NorthFrac[i]
+					(n.Ci[ii] - c.Ci[ii])) * Δt * c.northFrac[i]
 				c.Cf[ii] += flux
-				if n.Boundary {
+				if n.boundary {
 					n.Cf[ii] -= flux * c.Volume / n.Volume
 				}
 			}

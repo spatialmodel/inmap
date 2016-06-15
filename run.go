@@ -143,12 +143,12 @@ func Calculations(calculators ...CellManipulator) DomainManipulator {
 				var c *Cell
 				for ii := pp; ii < len(d.Cells); ii += nprocs {
 					c = d.Cells[ii]
-					c.Lock() // Lock the cell to avoid race conditions
+					c.mutex.Lock() // Lock the cell to avoid race conditions
 					// run functions
 					for _, f := range calculators {
 						f(c, d.Dt)
 					}
-					c.Unlock() // Unlock the cell: we're done editing it
+					c.mutex.Unlock() // Unlock the cell: we're done editing it
 				}
 				wg.Done()
 			}(pp)
@@ -163,11 +163,11 @@ func Calculations(calculators ...CellManipulator) DomainManipulator {
 func RunPeriodically(period float64, f DomainManipulator) DomainManipulator {
 	timeSinceLastRun := 0.
 	return func(d *InMAP) error {
+		timeSinceLastRun += d.Dt
 		if timeSinceLastRun >= period {
 			timeSinceLastRun = 0.
 			return f(d)
 		}
-		timeSinceLastRun += d.Dt
 		if d.Dt == 0 {
 			return fmt.Errorf("timestep is zero")
 		}
@@ -180,9 +180,9 @@ func RunPeriodically(period float64, f DomainManipulator) DomainManipulator {
 type ConvergenceStatus []float64
 
 func (c ConvergenceStatus) String() string {
-	s := "Percent change since last convergence check:\n"
+	s := "Percent change since last convergence check:"
 	for i, n := range PolNames {
-		s += fmt.Sprintf("%s: %.2g%%\n", n, c[i]*100)
+		s += fmt.Sprintf("\n%s: %.2g%%", n, c[i]*100)
 	}
 	return s
 }
