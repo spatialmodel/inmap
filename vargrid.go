@@ -13,6 +13,7 @@ import (
 	"github.com/ctessum/geom/encoding/shp"
 	"github.com/ctessum/geom/index/rtree"
 	"github.com/ctessum/geom/proj"
+	"github.com/gonum/floats"
 )
 
 // VarGridConfig is a holder for the configuration information for creating a
@@ -33,8 +34,13 @@ type VarGridConfig struct {
 	ctmGridNx int
 	ctmGridNy int
 
-	PopDensityCutoff    float64  // limit for people per unit area in the grid cell
-	PopCutoff           float64  // limit for total number of people in the grid cell
+	PopDensityThreshold float64 // limit for people per unit area in the grid cell
+	PopThreshold        float64 // limit for total number of people in the grid cell
+
+	// PopConcCutoff is the limit for
+	// Σ(|ΔConcentration|)*combinedVolume*|ΔPopulation| / {Σ(|totalMass|)*totalPopulation}.
+	// See the documentation for PopConcMutator for more information.
+	PopConcThreshold    float64
 	BboxOffset          float64  // A number significantly less than the smallest grid size but not small enough to be confused with zero.
 	CensusFile          string   // Path to census shapefile
 	CensusPopColumns    []string // Shapefile fields containing populations for multiple demographics
@@ -357,33 +363,41 @@ func (config *VarGridConfig) RegularGrid(data *CTMData, pop *Population, popInde
 	}
 }
 
-// StaticVariableGrid returns a function that creates a static variable
+// MutateGrid returns a function that creates a static variable
 // resolution grid (i.e., one that does not change during the simulation)
-// by dividing cells in the previously created grid
-// based on the population and population density cutoffs in config.
-func (config *VarGridConfig) StaticVariableGrid(data *CTMData, pop *Population, mort *MortalityRates, emis *Emissions) DomainManipulator {
+// by dividing cells as determined by divideRule. Cells where divideRule is
+// true are divided to the next nest level (up to the maximum nest level), and
+// cells where divideRule is false are combined (down to the baseline nest level).
+func (config *VarGridConfig) MutateGrid(divideRule GridMutator, data *CTMData, pop *Population, mort *MortalityRates, emis *Emissions) DomainManipulator {
 	return func(d *InMAP) error {
+
+		totalMass := 0.
+		totalPopulation := 0.
+		iPop := d.popIndices[config.PopGridColumn]
+		for _, c := range d.Cells {
+			totalMass += floats.Sum(c.Cf) * c.Volume
+			if c.Layer == 0 { // only track population at ground level
+				totalPopulation += c.PopData[iPop]
+			}
+		}
 
 		webMapTrans, err := config.webMapTrans()
 		if err != nil {
 			return err
 		}
 
-		continueSplitting := true
-		for continueSplitting {
-			continueSplitting = false
+		continueMutating := true
+		for continueMutating {
+			continueMutating = false
 			var newCellIndices [][][2]int
 			var newCellLayers []int
 			var indicesToDelete []int
 			for i, cell := range d.Cells {
 				if len(cell.index) < len(config.Xnests) {
-					// Check if this grid cell is above the population threshold
-					// or the population density threshold.
-					if cell.Layer < config.HiResLayers &&
-						(cell.aboveDensityThreshold ||
-							cell.PopData[d.popIndices[config.PopGridColumn]] > config.PopCutoff) {
 
-						continueSplitting = true
+					if divideRule(cell, totalMass, totalPopulation) {
+
+						continueMutating = true
 						indicesToDelete = append(indicesToDelete, i)
 
 						// If this cell is above a threshold, create inner
@@ -398,25 +412,37 @@ func (config *VarGridConfig) StaticVariableGrid(data *CTMData, pop *Population, 
 					}
 				}
 			}
-			// Delete the cells that were split.
-			d.DeleteCells(indicesToDelete...)
-			// Add the new cells.
-			oldNumCells := len(d.Cells)
-			for i, ii := range newCellIndices {
-				cell, err := config.createCell(data, pop, d.popIndices, mort, ii, newCellLayers[i], webMapTrans)
-				if err != nil {
-					return err
-				}
-				d.AddCells(cell)
-			}
-			// Add emissions to new cells.
-			for i := oldNumCells - 1; i < len(d.Cells); i++ {
-				d.Cells[i].setEmissionsFlux(emis) // This needs to be called after setNeighbors.
+			err = d.deleteAndAddCells(config, newCellIndices, newCellLayers, data, pop, mort,
+				emis, webMapTrans, indicesToDelete...)
+			if err != nil {
+				return err
 			}
 		}
 		d.sort()
 		return nil
 	}
+}
+
+func (d *InMAP) deleteAndAddCells(config *VarGridConfig, newCellIndices [][][2]int,
+	newCellLayers []int, data *CTMData, pop *Population, mort *MortalityRates,
+	emis *Emissions, webMapTrans proj.Transformer, indicesToDelete ...int) error {
+
+	// Delete the cells that were split.
+	d.DeleteCells(indicesToDelete...)
+	// Add the new cells.
+	oldNumCells := len(d.Cells)
+	for i, ii := range newCellIndices {
+		cell, err := config.createCell(data, pop, d.popIndices, mort, ii, newCellLayers[i], webMapTrans)
+		if err != nil {
+			return err
+		}
+		d.AddCells(cell)
+	}
+	// Add emissions to new cells.
+	for i := oldNumCells - 1; i < len(d.Cells); i++ {
+		d.Cells[i].setEmissionsFlux(emis) // This needs to be called after setNeighbors.
+	}
+	return nil
 }
 
 // AddCells adds a new cell to the grid. The function will take the necessary
@@ -447,11 +473,60 @@ func (d *InMAP) DeleteCells(indicesToDelete ...int) {
 	}
 }
 
-// createCell creates a new grid cell. If any of the census shapes
-// that intersect the cell are above the population density threshold,
-// then the grid cell is also set to being above the density threshold.
-func (config *VarGridConfig) createCell(data *CTMData, pop *Population, popIndices PopIndices, mort *MortalityRates, index [][2]int, layer int, webMapTrans proj.Transformer) (*Cell, error) {
+// A GridMutator is a function whether a Cell should be mutated (i.e., either
+// divided or combined with other cells), where totalMass is absolute value
+// of the total mass of pollution in the system and totalPopulation is the
+// total population in the system.
+type GridMutator func(cell *Cell, totalMass, totalPopulation float64) bool
 
+// PopulationMutator returns a function that determines whether a grid cell
+// should be split by determining whether either the cell population or
+// maximum poulation density are above the cutoffs specified in config.
+func PopulationMutator(config *VarGridConfig, popIndices PopIndices) GridMutator {
+	return func(cell *Cell, _, _ float64) bool {
+		return cell.Layer < config.HiResLayers &&
+			(cell.aboveDensityThreshold ||
+				cell.PopData[popIndices[config.PopGridColumn]] > config.PopThreshold)
+	}
+}
+
+// PopConcMutator returns a function that takes a grid cell and returns whether
+// Σ(|ΔConcentration|)*combinedVolume*|ΔPopulation| / {Σ(|totalMass|)*totalPopulation}
+// > threshold between the
+// grid cell in question and any of its horizontal neighbors, where Σ(|totalMass|)
+// is the sum of the absolute values of the mass of all pollutants in
+// all grid cells in the system,
+// Σ(|ΔConcentration|) is the sum of the absolute value of the difference
+// between pollution concentations in the cell in question and the neighbor in
+// question, |ΔPopulation| is the absolute value of the difference in population
+// between the two grid cells, totalPopulation is the total population in the domain,
+// and combinedVolume is the combined volume of the cell in question
+// and the neighbor in question.
+func PopConcMutator(threshold float64, config *VarGridConfig, popIndices PopIndices) GridMutator {
+	return func(cell *Cell, totalMass, totalPopulation float64) bool {
+		if totalMass == 0. || totalPopulation == 0 {
+			return false
+		}
+		totalMassPop := totalMass * totalPopulation
+		for _, group := range [][]*Cell{cell.West, cell.East, cell.North, cell.South} {
+			for _, neighbor := range group {
+				ΣΔC := 0.
+				for i, conc := range neighbor.Cf {
+					ΣΔC += math.Abs(conc - cell.Cf[i])
+				}
+				iPop := popIndices[config.PopGridColumn]
+				ΔP := math.Abs(cell.PopData[iPop] - neighbor.PopData[iPop])
+				if ΣΔC*(cell.Volume+neighbor.Volume)*ΔP/totalMassPop > threshold {
+					return true
+				}
+			}
+		}
+		return false
+	}
+}
+
+// cellGeometry returns the geometry of a cell with the give index.
+func (config *VarGridConfig) cellGeometry(index [][2]int) geom.Polygonal {
 	xResFac, yResFac := 1., 1.
 	l := config.VariableGridXo
 	b := config.VariableGridYo
@@ -465,12 +540,19 @@ func (config *VarGridConfig) createCell(data *CTMData, pop *Population, popIndic
 	}
 	r := l + config.VariableGridDx/xResFac
 	u := b + config.VariableGridDy/yResFac
+	return geom.Polygon([][]geom.Point{{{l, b}, {r, b}, {r, u}, {l, u}, {l, b}}})
+}
+
+// createCell creates a new grid cell. If any of the census shapes
+// that intersect the cell are above the population density threshold,
+// then the grid cell is also set to being above the density threshold.
+func (config *VarGridConfig) createCell(data *CTMData, pop *Population, popIndices PopIndices, mort *MortalityRates, index [][2]int, layer int, webMapTrans proj.Transformer) (*Cell, error) {
 
 	cell := new(Cell)
 	cell.PopData = make([]float64, len(popIndices))
 	cell.index = index
 	// Polygon must go counter-clockwise
-	cell.Polygonal = geom.Polygon([][]geom.Point{{{l, b}, {r, b}, {r, u}, {l, u}, {l, b}}})
+	cell.Polygonal = config.cellGeometry(index)
 	for _, pInterface := range pop.tree.SearchIntersect(cell.Bounds()) {
 		p := pInterface.(*population)
 		intersection := cell.Intersection(p)
@@ -486,7 +568,7 @@ func (config *VarGridConfig) createCell(data *CTMData, pop *Population, popIndic
 
 		// Check if this census shape is above the density threshold
 		pDensity := p.PopData[popIndices[config.PopGridColumn]] / area2
-		if pDensity > config.PopDensityCutoff {
+		if pDensity > config.PopDensityThreshold {
 			cell.aboveDensityThreshold = true
 		}
 	}
@@ -501,8 +583,9 @@ func (config *VarGridConfig) createCell(data *CTMData, pop *Population, popIndic
 		areaFrac := area1 / area2
 		cell.MortalityRate += m.AllCause * areaFrac
 	}
-	cell.Dx = r - l
-	cell.Dy = u - b
+	bounds := cell.Polygonal.Bounds()
+	cell.Dx = bounds.Max.X - bounds.Min.X
+	cell.Dy = bounds.Max.Y - bounds.Min.Y
 
 	cell.make()
 	cell.loadData(data, layer)

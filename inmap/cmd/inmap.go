@@ -16,11 +16,10 @@ You should have received a copy of the GNU General Public License
 along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package main
+package cmd
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -33,13 +32,6 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/ctessum/geom/proj"
 	"github.com/spatialmodel/inmap"
-)
-
-var configFile = flag.String("config", "none", "Path to configuration file")
-
-const (
-	version = "1.2.0-dev"
-	year    = "2016"
 )
 
 type configData struct {
@@ -90,23 +82,8 @@ type configData struct {
 	sr *proj.SR
 }
 
-func main() {
-	flag.Parse()
-	if *configFile == "" {
-		fmt.Println("Need to specify configuration file as in " +
-			"`inmap -config=configFile.toml`")
-		os.Exit(1)
-	}
-	config := readConfigFile(*configFile)
-
-	fmt.Println("\n" +
-		"------------------------------------------------\n" +
-		"                    Welcome!\n" +
-		"  (In)tervention (M)odel for (A)ir (P)ollution  \n" +
-		"                Version " + version + "         \n" +
-		"               Copyright 2013-" + year + "      \n" +
-		"     Regents of the University of Minnesota     \n" +
-		"------------------------------------------------")
+// Run runs the model.
+func Run(dynamic bool) error {
 
 	// Start a function to receive and print log messages.
 	cConverge := make(chan inmap.ConvergenceStatus)
@@ -129,11 +106,11 @@ func main() {
 
 	f, err := os.Open(config.InMAPData)
 	if err != nil {
-		log.Fatalf("Problem loading input data: %v\n", err)
+		return fmt.Errorf("Problem loading input data: %v\n", err)
 	}
 	ctmData, err := config.VarGrid.LoadCTMData(f)
 	if err != nil {
-		log.Fatalf("Problem loading input data: %v\n", err)
+		return fmt.Errorf("Problem loading input data: %v\n", err)
 	}
 
 	emis, err := inmap.ReadEmissionShapefiles(config.sr, config.EmissionUnits,
@@ -143,34 +120,60 @@ func main() {
 
 	pop, popIndices, mr, err := config.VarGrid.LoadPopMort()
 	if err != nil {
-		log.Fatal(err)
+		return err
+	}
+
+	scienceFuncs := inmap.Calculations(
+		inmap.UpwindAdvection(),
+		inmap.Mixing(),
+		inmap.MeanderMixing(),
+		inmap.DryDeposition(),
+		inmap.WetDeposition(),
+		inmap.Chemistry(),
+	)
+
+	var initFuncs, runFuncs []inmap.DomainManipulator
+	if !dynamic {
+		initFuncs = []inmap.DomainManipulator{
+			config.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, emis),
+			config.VarGrid.MutateGrid(inmap.PopulationMutator(&config.VarGrid, popIndices),
+				ctmData, pop, mr, emis),
+			inmap.SetTimestepCFL(),
+		}
+		runFuncs = []inmap.DomainManipulator{
+			inmap.Log(cLog),
+			inmap.Calculations(inmap.AddEmissionsFlux()),
+			scienceFuncs,
+			inmap.SteadyStateConvergenceCheck(config.NumIterations, cConverge),
+		}
+	} else {
+		initFuncs = []inmap.DomainManipulator{
+			config.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, emis),
+			inmap.SetTimestepCFL(),
+		}
+		const gridMutateInterval = 3600. // seconds
+		runFuncs = []inmap.DomainManipulator{
+			inmap.Log(cLog),
+			inmap.Calculations(inmap.AddEmissionsFlux()),
+			scienceFuncs,
+			inmap.RunPeriodically(gridMutateInterval,
+				config.VarGrid.MutateGrid(inmap.PopConcMutator(
+					config.VarGrid.PopConcThreshold, &config.VarGrid, popIndices),
+					ctmData, pop, mr, emis)),
+			inmap.RunPeriodically(gridMutateInterval, inmap.SetTimestepCFL()),
+			inmap.SteadyStateConvergenceCheck(config.NumIterations, cConverge),
+		}
 	}
 
 	d := &inmap.InMAP{
-		InitFuncs: []inmap.DomainManipulator{
-			config.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, emis),
-			config.VarGrid.StaticVariableGrid(ctmData, pop, mr, emis),
-			inmap.SetTimestepCFL(),
-		},
-		RunFuncs: []inmap.DomainManipulator{
-			inmap.Log(cLog),
-			inmap.Calculations(inmap.AddEmissionsFlux()),
-			inmap.Calculations(
-				inmap.UpwindAdvection(),
-				inmap.Mixing(),
-				inmap.MeanderMixing(),
-				inmap.DryDeposition(),
-				inmap.WetDeposition(),
-				inmap.Chemistry(),
-			),
-			inmap.SteadyStateConvergenceCheck(config.NumIterations, cConverge),
-		},
+		InitFuncs: initFuncs,
+		RunFuncs:  runFuncs,
 		CleanupFuncs: []inmap.DomainManipulator{
 			inmap.Output(config.OutputTemplate, config.OutputAllLayers, config.OutputVariables...),
 		},
 	}
 	if err = d.Init(); err != nil {
-		log.Fatalf("InMAP: problem initializing model: %v\n", err)
+		return fmt.Errorf("InMAP: problem initializing model: %v\n", err)
 	}
 
 	emisTotals := make([]float64, len(d.Cells[0].Cf))
@@ -185,11 +188,11 @@ func main() {
 	}
 
 	if err = d.Run(); err != nil {
-		log.Fatalf("InMAP: problem running simulation: %v\n", err)
+		return fmt.Errorf("InMAP: problem running simulation: %v\n", err)
 	}
 
 	if err = d.Cleanup(); err != nil {
-		log.Fatalf("InMAP: problem shutting down model.: %v\n", err)
+		return fmt.Errorf("InMAP: problem shutting down model.: %v\n", err)
 	}
 
 	fmt.Println("\nIntake fraction results:")
@@ -215,40 +218,34 @@ func main() {
 	}
 	w.Flush()
 
-	fmt.Println("\n" +
-		"------------------------------------\n" +
-		"           InMAP Completed!\n" +
-		"------------------------------------\n")
+	return nil
 }
 
 // readConfigFile reads and parses a TOML configuration file.
 // See below for the required variables.
-func readConfigFile(filename string) (config *configData) {
+func readConfigFile(filename string) (config *configData, err error) {
 	// Open the configuration file
 	var (
 		file  *os.File
 		bytes []byte
-		err   error
 	)
 	file, err = os.Open(filename)
 	if err != nil {
-		fmt.Printf("The configuration file you have specified, %v, does not "+
+		return nil, fmt.Errorf("the configuration file you have specified, %v, does not "+
 			"appear to exist. Please check the file name and location and "+
 			"try again.\n", filename)
-		os.Exit(1)
 	}
 	reader := bufio.NewReader(file)
 	bytes, err = ioutil.ReadAll(reader)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("problem reading configuration file: %v", err)
 	}
 
 	config = new(configData)
 	_, err = toml.Decode(string(bytes), config)
 	if err != nil {
-		fmt.Printf(
-			"There has been an error parsing the configuration file: %v\n", err)
-		os.Exit(1)
+		return nil, fmt.Errorf(
+			"there has been an error parsing the configuration file: %v\n", err)
 	}
 
 	config.InMAPData = os.ExpandEnv(config.InMAPData)
@@ -260,29 +257,28 @@ func readConfigFile(filename string) (config *configData) {
 	}
 
 	if config.OutputTemplate == "" {
-		fmt.Println("You need to specify an output template in the " +
+		return nil, fmt.Errorf("you need to specify an output template in the " +
 			"configuration file(for example: " +
 			"\"OutputTemplate\":\"output_[layer].shp\"")
-		os.Exit(1)
 	}
 
 	if config.VarGrid.GridProj == "" {
-		log.Fatal("You need to specify the InMAP grid projection in the " +
+		return nil, fmt.Errorf("you need to specify the InMAP grid projection in the " +
 			"'GridProj' configuration variable.")
 	}
 	config.sr, err = proj.Parse(config.VarGrid.GridProj)
 	if err != nil {
-		log.Fatalf("The following error occured while parsing the InMAP grid"+
+		return nil, fmt.Errorf("the following error occured while parsing the InMAP grid"+
 			"projection (the InMAPProj variable): %v", err)
 	}
 
 	if len(config.OutputVariables) == 0 {
-		log.Fatal("There are no variables specified for output. Please fill in " +
+		return nil, fmt.Errorf("there are no variables specified for output. Please fill in " +
 			"the OutputVariables section of the configuration file and try again.")
 	}
 
 	if config.EmissionUnits != "tons/year" && config.EmissionUnits != "kg/year" {
-		log.Fatalf("ERROR: the EmissionUnits variable in the configuration file "+
+		return nil, fmt.Errorf("the EmissionUnits variable in the configuration file "+
 			"needs to be set to either tons/year or kg/year, but is currently set to `%s`",
 			config.EmissionUnits)
 	}
@@ -290,8 +286,7 @@ func readConfigFile(filename string) (config *configData) {
 	outdir := filepath.Dir(config.OutputTemplate)
 	err = os.MkdirAll(outdir, os.ModePerm)
 	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return nil, fmt.Errorf("problem creating output directory: %v", err)
 	}
 	return
 }

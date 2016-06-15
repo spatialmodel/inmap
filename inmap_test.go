@@ -42,7 +42,7 @@ func TestCellAlignment(t *testing.T) {
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
-			cfg.StaticVariableGrid(ctmdata, pop, mr, emis),
+			cfg.MutateGrid(PopulationMutator(cfg, popIndices), ctmdata, pop, mr, emis),
 		},
 	}
 	if err := d.Init(); err != nil {
@@ -241,7 +241,7 @@ func TestConvectiveMixing(t *testing.T) {
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, PopIndices, mr, emis),
-			cfg.StaticVariableGrid(ctmdata, pop, mr, emis),
+			cfg.MutateGrid(PopulationMutator(cfg, PopIndices), ctmdata, pop, mr, emis),
 		},
 	}
 	if err := d.Init(); err != nil {
@@ -278,7 +278,7 @@ func TestMixing(t *testing.T) {
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
-			cfg.StaticVariableGrid(ctmdata, pop, mr, emis),
+			cfg.MutateGrid(PopulationMutator(cfg, popIndices), ctmdata, pop, mr, emis),
 			SetTimestepCFL(),
 		},
 		RunFuncs: []DomainManipulator{
@@ -334,7 +334,7 @@ func TestChemistry(t *testing.T) {
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, PopIndices, mr, emis),
-			cfg.StaticVariableGrid(ctmdata, pop, mr, emis),
+			cfg.MutateGrid(PopulationMutator(cfg, PopIndices), ctmdata, pop, mr, emis),
 			SetTimestepCFL(),
 		},
 		RunFuncs: []DomainManipulator{
@@ -379,7 +379,7 @@ func TestAdvection(t *testing.T) {
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
-			cfg.StaticVariableGrid(ctmdata, pop, mr, emis),
+			cfg.MutateGrid(PopulationMutator(cfg, popIndices), ctmdata, pop, mr, emis),
 			SetTimestepCFL(),
 		},
 		RunFuncs: []DomainManipulator{
@@ -439,7 +439,7 @@ func TestMeanderMixing(t *testing.T) {
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
-			cfg.StaticVariableGrid(ctmdata, pop, mr, emis),
+			cfg.MutateGrid(PopulationMutator(cfg, popIndices), ctmdata, pop, mr, emis),
 			SetTimestepCFL(),
 		},
 		RunFuncs: []DomainManipulator{
@@ -585,7 +585,7 @@ func BenchmarkRun(b *testing.B) {
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
-			cfg.StaticVariableGrid(ctmdata, pop, mr, emis),
+			cfg.MutateGrid(PopulationMutator(cfg, popIndices), ctmdata, pop, mr, emis),
 			SetTimestepCFL(),
 		},
 		RunFuncs: []DomainManipulator{
@@ -629,7 +629,7 @@ func TestDryDeposition(t *testing.T) {
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
-			cfg.StaticVariableGrid(ctmdata, pop, mr, emis),
+			cfg.MutateGrid(PopulationMutator(cfg, popIndices), ctmdata, pop, mr, emis),
 			SetTimestepCFL(),
 		},
 		RunFuncs: []DomainManipulator{
@@ -672,7 +672,7 @@ func TestWetDeposition(t *testing.T) {
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
-			cfg.StaticVariableGrid(ctmdata, pop, mr, emis),
+			cfg.MutateGrid(PopulationMutator(cfg, popIndices), ctmdata, pop, mr, emis),
 			SetTimestepCFL(),
 		},
 		RunFuncs: []DomainManipulator{

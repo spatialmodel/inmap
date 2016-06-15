@@ -30,6 +30,9 @@ import (
 	"github.com/ctessum/geom/index/rtree"
 )
 
+// Version gives the version number.
+const Version = "1.2.0-dev"
+
 // InMAP holds the current state of the model.
 type InMAP struct {
 
@@ -219,6 +222,7 @@ func (c *Cell) boundaryCopy() *Cell {
 	c2.Boundary = true
 	c2.make()
 	c2.Volume = c2.Dx * c2.Dy * c2.Dz
+	c2.PopData = c.PopData
 	return c2
 }
 

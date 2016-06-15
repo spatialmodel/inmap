@@ -1,14 +1,27 @@
 package main
 
 import (
-	"flag"
 	"testing"
+
+	"github.com/spatialmodel/inmap/inmap/cmd"
 )
 
-func TestInMAP(t *testing.T) {
-	err := flag.Set("config", "configExample.toml")
-	if err != nil {
+func TestInMAPStatic(t *testing.T) {
+	dynamic := false
+	if err := cmd.Startup("configExample.toml"); err != nil {
 		t.Fatal(err)
 	}
-	main()
+	if err := cmd.Run(dynamic); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestInMAPDyanamic(t *testing.T) {
+	dynamic := true
+	if err := cmd.Startup("configExample.toml"); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmd.Run(dynamic); err != nil {
+		t.Fatal(err)
+	}
 }

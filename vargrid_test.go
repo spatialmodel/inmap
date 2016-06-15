@@ -118,8 +118,8 @@ func VarGridData() (*VarGridConfig, *CTMData, *Population, PopIndices, *Mortalit
 		ctmGridNx:           2,
 		ctmGridNy:           2,
 		GridProj:            "+proj=lcc +lat_1=33.000000 +lat_2=45.000000 +lat_0=40.000000 +lon_0=-97.000000 +x_0=0 +y_0=0 +a=6370997.000000 +b=6370997.000000 +to_meter=1",
-		PopDensityCutoff:    0.001,
-		PopCutoff:           25000,
+		PopDensityThreshold: 0.001,
+		PopThreshold:        25000,
 		BboxOffset:          1,
 		CensusFile:          TestPopulationShapefile,
 		CensusPopColumns:    []string{"TotalPop", "WhiteNoLat", "Black", "Native", "Asian", "Latino"},
@@ -491,7 +491,7 @@ func TestVarGridCreate(t *testing.T) {
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
-			cfg.StaticVariableGrid(ctmdata, pop, mr, emis),
+			cfg.MutateGrid(PopulationMutator(cfg, popIndices), ctmdata, pop, mr, emis),
 		},
 	}
 	if err := d.Init(); err != nil {
@@ -937,7 +937,6 @@ func TestVarGridCreate(t *testing.T) {
 	if len(d.Cells[45].GroundLevel) != 1 || d.Cells[45].GroundLevel[0] != d.Cells[9] {
 		t.Error("Incorrect alignment cell 45 GroundLevel")
 	}
-
 }
 
 func TestGetGeometry(t *testing.T) {
@@ -949,7 +948,7 @@ func TestGetGeometry(t *testing.T) {
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
-			cfg.StaticVariableGrid(ctmdata, pop, mr, emis),
+			cfg.MutateGrid(PopulationMutator(cfg, popIndices), ctmdata, pop, mr, emis),
 		},
 	}
 	if err := d.Init(); err != nil {

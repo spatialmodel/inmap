@@ -158,6 +158,23 @@ func Calculations(calculators ...CellManipulator) DomainManipulator {
 	}
 }
 
+// RunPeriodically runs f periodically during the simulation, with the time
+// in seconds between runs specified by period.
+func RunPeriodically(period float64, f DomainManipulator) DomainManipulator {
+	timeSinceLastRun := 0.
+	return func(d *InMAP) error {
+		if timeSinceLastRun >= period {
+			timeSinceLastRun = 0.
+			return f(d)
+		}
+		timeSinceLastRun += d.Dt
+		if d.Dt == 0 {
+			return fmt.Errorf("timestep is zero")
+		}
+		return nil
+	}
+}
+
 // ConvergenceStatus holds the percent difference for each pollutant between
 // the last convergence check and this one.
 type ConvergenceStatus []float64
@@ -165,7 +182,7 @@ type ConvergenceStatus []float64
 func (c ConvergenceStatus) String() string {
 	s := "Percent change since last convergence check:\n"
 	for i, n := range PolNames {
-		s += fmt.Sprintf("%s: %g%%\n", n, c[i]*100)
+		s += fmt.Sprintf("%s: %.2g%%\n", n, c[i]*100)
 	}
 	return s
 }
@@ -260,7 +277,7 @@ type SimulationStatus struct {
 
 func (s SimulationStatus) String() string {
 	return fmt.Sprintf("iteration %-4d  walltime=%6.3gh  Δwalltime=%4.2gs  "+
-		"timestep=%2.0fs  day=%.3g\n", s.Iteration, s.Walltime.Hours(),
+		"timestep=%2.0fs  day=%.3g", s.Iteration, s.Walltime.Hours(),
 		s.StepWalltime.Hours(), s.Dt, s.SimulationDays)
 }
 
