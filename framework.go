@@ -49,7 +49,7 @@ type InMAP struct {
 	// simulation has completed.
 	CleanupFuncs []DomainManipulator
 
-	Cells   []*Cell // One data holder for each grid cell
+	cells   []*Cell // One data holder for each grid cell
 	Dt      float64 // seconds
 	nlayers int     // number of model layers
 
@@ -149,8 +149,10 @@ type Cell struct {
 	PopData       []float64 // Population for multiple demographics [people/grid cell]
 	MortalityRate float64   `desc:"Baseline mortalities rate" units:"Deaths per 100,000 people per year"`
 
-	Dx, Dy, Dz float64 // grid size [meters]
-	Volume     float64 `desc:"Cell volume" units:"m³"`
+	Dx     float64 `desc:"Cell x length" units:"m"`
+	Dy     float64 `desc:"Cell y length" units:"m"`
+	Dz     float64 `desc:"Cell z length" units:"m"`
+	Volume float64 `desc:"Cell volume" units:"m³"`
 
 	Ci        []float64 // concentrations at beginning of time step [μg/m³]
 	Cf        []float64 // concentrations at end of time step [μg/m³]
@@ -178,8 +180,8 @@ type Cell struct {
 	dzPlusHalf  []float64 // Distance between centers of cell and Above [m]
 	dzMinusHalf []float64 // Distance between centers of cell and Below [m]
 
-	Layer       int     // layer index of grid cell
-	LayerHeight float64 // The height at the edge of this layer
+	Layer       int     `desc:"Vertical layer index" units:"-"`
+	LayerHeight float64 `desc:"Height at layer bottom" units:"m"`
 
 	Temperature                float64 `desc:"Average temperature" units:"K"`
 	WindSpeed                  float64 `desc:"RMS wind speed" units:"m/s"`
@@ -193,6 +195,11 @@ type Cell struct {
 
 	Index                 [][2]int // Index gives this cell's place in the nest structure.
 	AboveDensityThreshold bool
+}
+
+// Cells returns the InMAP grid cells as an array.
+func (d *InMAP) Cells() []*Cell {
+	return d.cells
 }
 
 // DomainManipulator is a class of functions that operate on the entire InMAP
@@ -270,7 +277,7 @@ func SetTimestepCFL() DomainManipulator {
 	return func(d *InMAP) error {
 		const Cmax = 1.
 		sqrt3 := math.Pow(3., 0.5)
-		for i, c := range d.Cells {
+		for i, c := range d.cells {
 			// Advection time step
 			dt1 := Cmax / sqrt3 /
 				max((math.Abs(c.UAvg)+c.UDeviation*2)/c.Dx,
@@ -295,19 +302,19 @@ func harmonicMean(a, b float64) float64 {
 	return 2. * a * b / (a + b)
 }
 
-// Convert cell data into a regular array. If layer is less than zero,
-// data for all layers is returned.
-func (d *InMAP) toArray(pol string, layer int) []float64 {
-	o := make([]float64, 0, len(d.Cells))
-	for _, c := range d.Cells {
+// toArray converts cell data for variable varName into a regular array.
+// If layer is less than zero, data for all layers is returned.
+func (d *InMAP) toArray(varName string, layer int) []float64 {
+	o := make([]float64, 0, len(d.cells))
+	for _, c := range d.cells {
 		c.mutex.RLock()
 		if layer >= 0 && c.Layer > layer {
 			// The cells should be sorted with the lower layers first, so we
 			// should be done here.
 			return o
 		}
-		if c.Layer == layer {
-			o = append(o, c.getValue(pol, d.popIndices))
+		if layer < 0 || c.Layer == layer {
+			o = append(o, c.getValue(varName, d.popIndices))
 		}
 		c.mutex.RUnlock()
 	}
@@ -320,7 +327,7 @@ func (c *Cell) getValue(varName string, popIndices map[string]int) float64 {
 	if index, ok := emisLabels[varName]; ok { // Emissions
 		return c.EmisFlux[index]
 
-	} else if polConv, ok := polLabels[varName]; ok { // Concentrations
+	} else if polConv, ok := PolLabels[varName]; ok { // Concentrations
 		var o float64
 		for i, ii := range polConv.index {
 			o += c.Cf[ii] * polConv.conversion[i]
@@ -343,15 +350,22 @@ func (c *Cell) getValue(varName string, popIndices map[string]int) float64 {
 		return aqhealth.Deaths(rr, c.PopData[i], c.MortalityRate)
 
 	} // Everything else
-	val := reflect.Indirect(reflect.ValueOf(c))
-	return val.FieldByName(varName).Float()
+	val := reflect.ValueOf(c).Elem().FieldByName(varName)
+	switch val.Type().Kind() {
+	case reflect.Float64:
+		return val.Float()
+	case reflect.Int:
+		return float64(val.Int()) // convert integer fields to floats here for consistency.
+	default:
+		panic(fmt.Errorf("unsupported field type %v", val.Type().Kind()))
+	}
 }
 
 // Get the units of a variable
 func (d *InMAP) getUnits(varName string) string {
 	if _, ok := emisLabels[varName]; ok { // Emissions
 		return "μg/m³/s"
-	} else if _, ok := polLabels[varName]; ok { // Concentrations
+	} else if _, ok := PolLabels[varName]; ok { // Concentrations
 		return "μg/m³"
 	} else if _, ok := baselinePolLabels[varName]; ok { // Concentrations
 		return "μg/m³"
@@ -362,7 +376,7 @@ func (d *InMAP) getUnits(varName string) string {
 		return "deaths/grid cell"
 	}
 	// Everything else
-	t := reflect.TypeOf(*d.Cells[0])
+	t := reflect.TypeOf(*d.cells[0])
 	ftype, ok := t.FieldByName(varName)
 	if ok {
 		return ftype.Tag.Get("units")
@@ -371,9 +385,11 @@ func (d *InMAP) getUnits(varName string) string {
 }
 
 // GetGeometry returns the cell geometry for the given layer.
-func (d *InMAP) GetGeometry(layer int) []geom.Geom {
-	o := make([]geom.Geom, 0, len(d.Cells))
-	for _, c := range d.Cells {
+// if WebMap is true, it returns the geometry in web mercator projection,
+// otherwise it returns the native grid projection.
+func (d *InMAP) GetGeometry(layer int, webMap bool) []geom.Polygonal {
+	o := make([]geom.Polygonal, 0, len(d.cells))
+	for _, c := range d.cells {
 		c.mutex.RLock()
 		if c.Layer > layer {
 			// The cells should be sorted with the lower layers first, so we
@@ -381,9 +397,62 @@ func (d *InMAP) GetGeometry(layer int) []geom.Geom {
 			return o
 		}
 		if c.Layer == layer {
-			o = append(o, c.WebMapGeom)
+			if webMap {
+				o = append(o, c.WebMapGeom)
+			} else {
+				o = append(o, c.Polygonal)
+			}
 		}
 		c.mutex.RUnlock()
 	}
 	return o
+}
+
+// Regrid regrids concentration data from one spatial grid to a different one.
+func Regrid(oldGeom, newGeom []geom.Polygonal, oldData []float64) (newData []float64, err error) {
+	type data struct {
+		geom.Polygonal
+		data float64
+	}
+	if len(oldGeom) != len(oldData) {
+		return nil, fmt.Errorf("oldGeom and oldData have different lengths: %d!=%d", len(oldGeom), len(oldData))
+	}
+	index := rtree.NewTree(25, 50)
+	for i, g := range oldGeom {
+		index.Insert(&data{
+			Polygonal: g,
+			data:      oldData[i],
+		})
+	}
+	newData = make([]float64, len(newGeom))
+	for i, g := range newGeom {
+		for _, dI := range index.SearchIntersect(g.Bounds()) {
+			d := dI.(*data)
+			isect := g.Intersection(d.Polygonal)
+			if isect == nil {
+				continue
+			}
+			a := isect.Area()
+			frac := a / g.Area()
+			newData[i] += d.data * frac
+		}
+	}
+	return newData, nil
+}
+
+// CellIntersections returns an array of all of the grid cells (on all vertical levels)
+// that intersect g, and an array of the fraction of g that intersects with each
+// cell.
+func (d *InMAP) CellIntersections(g geom.Geom) (cells []*Cell, fractions []float64) {
+	cellIs := d.index.SearchIntersect(g.Bounds())
+	cells = make([]*Cell, 0, len(cellIs))
+	fractions = make([]float64, 0, len(cellIs))
+	for _, cellI := range cellIs {
+		cell := cellI.(*Cell)
+		if fraction := calcWeightFactor(g, cell); fraction != 0 {
+			cells = append(cells, cell)
+			fractions = append(fractions, fraction)
+		}
+	}
+	return cells, fractions
 }

@@ -7,7 +7,7 @@ EmissionsShapefiles = [
 ]
 EmissionUnits = "tons/year"
 
-OutputTemplate = "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/output_${InMAPRunType}_[layer].shp"
+OutputFile = "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/output_${InMAPRunType}.shp"
 OutputVariables = [
   "TotalPop deaths",
 	"WhiteNoLat deaths",
@@ -23,6 +23,8 @@ OutputVariables = [
 ]
 
 HTTPport = "8080"
+
+SROutputFile = "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testSR.ncf"
 
 [VarGrid]
 VariableGridXo= -4000.0

@@ -82,8 +82,8 @@ type polConv struct {
 	conversion []float64 // conversion from N to NH4, S to SO4, etc...
 }
 
-// Labels and conversions for pollutants.
-var polLabels = map[string]polConv{
+// PolLabels are labels and conversions for InMAP pollutants.
+var PolLabels = map[string]polConv{
 	"Total PM2.5": {[]int{iPM2_5, ipOrg, ipNH, ipS, ipNO},
 		[]float64{1, 1, NtoNH4, StoSO4, NtoNO3}},
 	"VOC":           {[]int{igOrg}, []float64{1.}},
@@ -116,7 +116,7 @@ var baselinePolLabels = map[string]polConv{
 // grid cells and boundary cells.
 func ResetCells() DomainManipulator {
 	return func(d *InMAP) error {
-		for _, g := range [][]*Cell{d.Cells, d.westBoundary, d.eastBoundary,
+		for _, g := range [][]*Cell{d.cells, d.westBoundary, d.eastBoundary,
 			d.northBoundary, d.southBoundary, d.topBoundary} {
 			for _, c := range g {
 				c.Ci = make([]float64, len(PolNames))
@@ -141,8 +141,8 @@ func Calculations(calculators ...CellManipulator) DomainManipulator {
 		for pp := 0; pp < nprocs; pp++ {
 			go func(pp int) {
 				var c *Cell
-				for ii := pp; ii < len(d.Cells); ii += nprocs {
-					c = d.Cells[ii]
+				for ii := pp; ii < len(d.cells); ii += nprocs {
+					c = d.cells[ii]
 					c.mutex.Lock() // Lock the cell to avoid race conditions
 					// run functions
 					for _, f := range calculators {
@@ -227,7 +227,7 @@ func SteadyStateConvergenceCheck(numIterations int, c chan ConvergenceStatus) Do
 			status := make(ConvergenceStatus, len(PolNames))
 			for ii := range PolNames {
 				var sum float64
-				for _, c := range d.Cells {
+				for _, c := range d.cells {
 					sum += c.Cf[ii]
 				}
 				bias, converged := checkConvergence(sum, oldSum[ii], tolerance)
@@ -305,6 +305,20 @@ func Log(c chan *SimulationStatus) DomainManipulator {
 	}
 }
 
+func (d *InMAP) checkOutputNames(n ...string) error {
+	tempOutputNames, _ := d.OutputOptions()
+	outputNames := make(map[string]uint8)
+	for _, n := range tempOutputNames {
+		outputNames[n] = 0
+	}
+	for _, v := range n {
+		if _, ok := outputNames[v]; !ok {
+			return fmt.Errorf("inmap: unsupported output variable name '%s'", v)
+		}
+	}
+	return nil
+}
+
 // Results returns the simulation results.
 // Output is in the form of map[pollutant][layer][row]concentration,
 // in units of μg/m3.
@@ -312,31 +326,18 @@ func Log(c chan *SimulationStatus) DomainManipulator {
 // layers, otherwise only the ground-level layer is returned.
 // outputVariables is a list of the names of the variables for which data should be
 // returned.
-func (d *InMAP) Results(allLayers bool, outputVariables ...string) (map[string][][]float64, error) {
-
-	tempOutputNames, _ := d.OutputOptions()
-	outputNames := make(map[string]uint8)
-	for _, n := range tempOutputNames {
-		outputNames[n] = 0
-	}
-	for _, v := range outputVariables {
-		if _, ok := outputNames[v]; !ok {
-			return nil, fmt.Errorf("inmap: unsupported output variable name '%s'", v)
-		}
+func (d *InMAP) Results(allLayers bool, outputVariables ...string) (map[string][]float64, error) {
+	if err := d.checkOutputNames(outputVariables...); err != nil {
+		return nil, err
 	}
 
 	// Prepare output data
-	outputConc := make(map[string][][]float64)
-	var outputLay int
-	if allLayers {
-		outputLay = d.nlayers
-	} else {
-		outputLay = 1
-	}
+	outputConc := make(map[string][]float64)
 	for _, name := range outputVariables {
-		outputConc[name] = make([][]float64, d.nlayers)
-		for k := 0; k < outputLay; k++ {
-			outputConc[name][k] = d.toArray(name, k)
+		if allLayers {
+			outputConc[name] = d.toArray(name, -1)
+		} else {
+			outputConc[name] = d.toArray(name, 0)
 		}
 	}
 	return outputConc, nil

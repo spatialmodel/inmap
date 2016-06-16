@@ -42,20 +42,20 @@ func Grid() error {
 
 	log.Println("Loading population and mortality rate data")
 
-	pop, popIndices, mr, err := config.VarGrid.LoadPopMort()
+	pop, popIndices, mr, err := Config.VarGrid.LoadPopMort()
 	if err != nil {
 		return err
 	}
 
-	w, err := os.Create(config.VariableGridData)
+	w, err := os.Create(Config.VariableGridData)
 	if err != nil {
 		return fmt.Errorf("problem creating file to store variable grid data in: %v", err)
 	}
 
 	d := &inmap.InMAP{
 		InitFuncs: []inmap.DomainManipulator{
-			config.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, nil),
-			config.VarGrid.MutateGrid(inmap.PopulationMutator(&config.VarGrid, popIndices),
+			Config.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, nil),
+			Config.VarGrid.MutateGrid(inmap.PopulationMutator(&Config.VarGrid, popIndices),
 				ctmData, pop, mr, nil),
 			inmap.Save(w),
 		},
@@ -63,6 +63,6 @@ func Grid() error {
 	if err := d.Init(); err != nil {
 		return err
 	}
-	log.Printf("Grid successfully created at %s", config.VariableGridData)
+	log.Printf("Grid successfully created at %s", Config.VariableGridData)
 	return nil
 }

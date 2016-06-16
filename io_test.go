@@ -9,7 +9,6 @@ import (
 
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/encoding/shp"
-	"github.com/ctessum/geom/index/rtree"
 	"github.com/ctessum/geom/proj"
 )
 
@@ -164,7 +163,7 @@ func TestEmissions(t *testing.T) {
 
 	nonzero := make(map[int]map[int]int)
 	for _, tt := range tests {
-		c := d.Cells[tt.cellIndex]
+		c := d.cells[tt.cellIndex]
 		nonzero[tt.cellIndex] = make(map[int]int)
 		for i, ii := range tt.polIndex {
 			nonzero[tt.cellIndex][ii] = 0
@@ -174,7 +173,7 @@ func TestEmissions(t *testing.T) {
 			}
 		}
 	}
-	for i, c := range d.Cells {
+	for i, c := range d.cells {
 		for ii, e := range c.EmisFlux {
 			if _, ok := nonzero[i][ii]; !ok {
 				if e != 0 {
@@ -190,10 +189,8 @@ func TestEmissions(t *testing.T) {
 func TestOutput(t *testing.T) {
 	cfg, ctmdata, pop, popIndices, mr := VarGridData()
 
-	emis := &Emissions{
-		data: rtree.NewTree(25, 50),
-	}
-	emis.data.Insert(emisRecord{
+	emis := NewEmissions()
+	emis.Add(&EmisRecord{
 		PM25: E,
 		Geom: geom.Point{X: -3999, Y: -3999.},
 	}) // ground level emissions
@@ -272,4 +269,197 @@ func TestOutput(t *testing.T) {
 	}
 	dec.Close()
 	DeleteShapefile(TestOutputFilename)
+}
+
+func TestRegrid(t *testing.T) {
+	oldGeom := []geom.Polygonal{
+		geom.Polygon{{
+			geom.Point{X: -1, Y: -1},
+			geom.Point{X: 1, Y: -1},
+			geom.Point{X: 1, Y: 1},
+			geom.Point{X: -1, Y: 1},
+		}},
+	}
+	newGeom := []geom.Polygonal{
+		geom.Polygon{{
+			geom.Point{X: -2, Y: -2},
+			geom.Point{X: 0, Y: -2},
+			geom.Point{X: 0, Y: 0},
+			geom.Point{X: -2, Y: 0},
+		}},
+		geom.Polygon{{
+			geom.Point{X: 0, Y: -2},
+			geom.Point{X: 2, Y: -2},
+			geom.Point{X: 2, Y: 0},
+			geom.Point{X: 0, Y: 0},
+		}},
+		geom.Polygon{{
+			geom.Point{X: 0, Y: 0},
+			geom.Point{X: 4, Y: 0},
+			geom.Point{X: 4, Y: 4},
+			geom.Point{X: 0, Y: 4},
+		}},
+		geom.Polygon{{
+			geom.Point{X: -1, Y: 0},
+			geom.Point{X: 0, Y: 0},
+			geom.Point{X: 0, Y: 1},
+			geom.Point{X: -1, Y: 1},
+		}},
+	}
+	oldData := []float64{1.}
+	newData, err := Regrid(oldGeom, newGeom, oldData)
+	if err != nil {
+		t.Error(err)
+	}
+	want := []float64{0.25, 0.25, 0.0625, 1}
+	if !reflect.DeepEqual(newData, want) {
+		t.Errorf("have %v, want %v", newData, want)
+	}
+}
+
+func TestCellIntersections(t *testing.T) {
+	cfg, ctmdata, pop, popIndices, mr := VarGridData()
+
+	emis := NewEmissions()
+
+	d := &InMAP{
+		InitFuncs: []DomainManipulator{
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
+			cfg.MutateGrid(PopulationMutator(cfg, popIndices), ctmdata, pop, mr, emis),
+		},
+	}
+	if err := d.Init(); err != nil {
+		t.Error(err)
+	}
+
+	cells, fractions := d.CellIntersections(geom.Point{X: 0, Y: -2000})
+
+	type answer struct {
+		b     *geom.Bounds
+		layer int
+		frac  float64
+	}
+	expected := []answer{
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
+			layer: 0,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: -4000, Y: -4000}, Max: geom.Point{X: 0, Y: 0}},
+			layer: 1,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
+			layer: 1,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: -4000, Y: -4000}, Max: geom.Point{X: 0, Y: 0}},
+			layer: 2,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
+			layer: 2,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: -4000, Y: -4000}, Max: geom.Point{X: 0, Y: 0}},
+			layer: 3,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
+			layer: 3,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: -4000, Y: -4000}, Max: geom.Point{X: 0, Y: 0}},
+			layer: 4,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
+			layer: 4,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: -4000, Y: -4000}, Max: geom.Point{X: 0, Y: 0}},
+			layer: 5,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
+			layer: 5,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: -4000, Y: -4000}, Max: geom.Point{X: 0, Y: 0}},
+			layer: 6,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
+			layer: 6,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: -4000, Y: -4000}, Max: geom.Point{X: 0, Y: 0}},
+			layer: 7,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
+			layer: 7,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: -4000, Y: -4000}, Max: geom.Point{X: 0, Y: 0}},
+			layer: 8,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
+			layer: 8,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: -4000, Y: -4000}, Max: geom.Point{X: 0, Y: 0}},
+			layer: 9,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
+			layer: 9,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: -2000, Y: -4000}, Max: geom.Point{X: 0, Y: -2000}},
+			layer: 0,
+			frac:  0.25,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: -2000, Y: -2000}, Max: geom.Point{X: 0, Y: 0}},
+			layer: 0,
+			frac:  0.25,
+		},
+	}
+
+	if len(cells) != len(expected) {
+		t.Errorf("wrong number of cells: %d != %d", len(cells), len(expected))
+	}
+
+	for i, cell := range cells {
+		if !reflect.DeepEqual(cell.Bounds(), expected[i].b) {
+			t.Errorf("bounds don't match: %v != %v", cell.Bounds(), expected[i].b)
+		}
+		if cell.Layer != expected[i].layer {
+			t.Errorf("layers don't match: %d != %d", cell.Layer, expected[i].layer)
+		}
+		if fractions[i] != expected[i].frac {
+			t.Errorf("fractions don't match: %g != %g", fractions[i], expected[i].frac)
+		}
+	}
 }

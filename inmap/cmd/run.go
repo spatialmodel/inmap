@@ -17,10 +17,10 @@ func init() {
 	RootCmd.AddCommand(runCmd)
 	runCmd.AddCommand(steadyCmd)
 
-	runCmd.PersistentFlags().BoolVarP(&dynamic, "dynamic", "d", false,
+	steadyCmd.PersistentFlags().BoolVarP(&dynamic, "dynamic", "d", false,
 		"Run with a dynamic grid that changes resolution depending on spatial "+
 			"gradients in population density and concentration.")
-	runCmd.PersistentFlags().BoolVar(&createGrid, "creategrid", false,
+	steadyCmd.PersistentFlags().BoolVar(&createGrid, "creategrid", false,
 		"Create the variable-resolution grid as specified in the configuration file"+
 			"before starting the simulation instead of reading it from a file. "+
 			"If --dynamic is set to true, then this flag will also be automatically set to true.")
@@ -29,7 +29,7 @@ func init() {
 
 var runCmd = &cobra.Command{
 	Use:   "run",
-	Short: "Run the model",
+	Short: "Run the model.",
 	Long:  "Run InMAP. Subcommands specify the run mode.",
 }
 

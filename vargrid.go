@@ -234,7 +234,7 @@ func (config *VarGridConfig) LoadPopMort() (*Population, PopIndices, *MortalityR
 }
 
 func (d *InMAP) sort() {
-	sortCells(d.Cells)
+	sortCells(d.cells)
 	sortCells(d.westBoundary)
 	sortCells(d.eastBoundary)
 	sortCells(d.northBoundary)
@@ -339,7 +339,7 @@ func (config *VarGridConfig) RegularGrid(data *CTMData, pop *Population, popInde
 
 		nx := config.Xnests[0]
 		ny := config.Ynests[0]
-		d.Cells = make([]*Cell, 0, nx*ny*nz)
+		d.cells = make([]*Cell, 0, nx*ny*nz)
 		// Iterate through indices and create the cells in the outermost nest.
 		for k := 0; k < nz; k++ {
 			for j := 0; j < ny; j++ {
@@ -356,7 +356,7 @@ func (config *VarGridConfig) RegularGrid(data *CTMData, pop *Population, popInde
 		}
 		// Add emissions to new cells.
 		if emis != nil {
-			for _, c := range d.Cells {
+			for _, c := range d.cells {
 				c.setEmissionsFlux(emis) // This needs to be called after setNeighbors.
 			}
 		}
@@ -375,7 +375,7 @@ func (config *VarGridConfig) MutateGrid(divideRule GridMutator, data *CTMData, p
 		totalMass := 0.
 		totalPopulation := 0.
 		iPop := d.popIndices[config.PopGridColumn]
-		for _, c := range d.Cells {
+		for _, c := range d.cells {
 			totalMass += floats.Sum(c.Cf) * c.Volume
 			if c.Layer == 0 { // only track population at ground level
 				totalPopulation += c.PopData[iPop]
@@ -393,7 +393,7 @@ func (config *VarGridConfig) MutateGrid(divideRule GridMutator, data *CTMData, p
 			var newCellIndices [][][2]int
 			var newCellLayers []int
 			var indicesToDelete []int
-			for i, cell := range d.Cells {
+			for i, cell := range d.cells {
 				if len(cell.Index) < len(config.Xnests) {
 
 					if divideRule(cell, totalMass, totalPopulation) {
@@ -431,7 +431,7 @@ func (d *InMAP) deleteAndAddCells(config *VarGridConfig, newCellIndices [][][2]i
 	// Delete the cells that were split.
 	d.DeleteCells(indicesToDelete...)
 	// Add the new cells.
-	oldNumCells := len(d.Cells)
+	oldNumCells := len(d.cells)
 	for i, ii := range newCellIndices {
 		cell, err := config.createCell(data, pop, d.popIndices, mort, ii, newCellLayers[i], webMapTrans)
 		if err != nil {
@@ -441,8 +441,8 @@ func (d *InMAP) deleteAndAddCells(config *VarGridConfig, newCellIndices [][][2]i
 	}
 	// Add emissions to new cells.
 	if emis != nil {
-		for i := oldNumCells - 1; i < len(d.Cells); i++ {
-			d.Cells[i].setEmissionsFlux(emis) // This needs to be called after setNeighbors.
+		for i := oldNumCells - 1; i < len(d.cells); i++ {
+			d.cells[i].setEmissionsFlux(emis) // This needs to be called after setNeighbors.
 		}
 	}
 	return nil
@@ -452,8 +452,14 @@ func (d *InMAP) deleteAndAddCells(config *VarGridConfig, newCellIndices [][][2]i
 // steps to fit the new cell in with existing cells, but it is the caller's
 // reponsibility that the new cell doesn't overlap any existing cells.
 func (d *InMAP) AddCells(cells ...*Cell) {
+	if d.index == nil {
+		d.index = rtree.NewTree(25, 50)
+	}
 	for _, c := range cells {
-		d.Cells = append(d.Cells, c)
+		if c.Layer > d.nlayers-1 { // Make sure we still have the right number of layers
+			d.nlayers = c.Layer + 1
+		}
+		d.cells = append(d.cells, c)
 		d.index.Insert(c)
 		// bboxOffset is a number significantly less than the smallest grid size
 		// but not small enough to be confused with zero.
@@ -468,10 +474,10 @@ func (d *InMAP) DeleteCells(indicesToDelete ...int) {
 	indexToSubtract := 0
 	for _, ii := range indicesToDelete {
 		i := ii - indexToSubtract
-		c := d.Cells[i]
-		copy(d.Cells[i:], d.Cells[i+1:])
-		d.Cells[len(d.Cells)-1] = nil
-		d.Cells = d.Cells[:len(d.Cells)-1]
+		c := d.cells[i]
+		copy(d.cells[i:], d.cells[i+1:])
+		d.cells[len(d.cells)-1] = nil
+		d.cells = d.cells[:len(d.cells)-1]
 		d.index.Delete(c)
 		c.dereferenceNeighbors(d)
 		indexToSubtract++
@@ -593,7 +599,9 @@ func (config *VarGridConfig) createCell(data *CTMData, pop *Population, popIndic
 	cell.Dy = bounds.Max.Y - bounds.Min.Y
 
 	cell.make()
-	cell.loadData(data, layer)
+	if err := cell.loadData(data, layer); err != nil {
+		return nil, err
+	}
 	cell.Volume = cell.Dx * cell.Dy * cell.Dz
 
 	gg, err := cell.Polygonal.Transform(webMapTrans)
@@ -716,111 +724,119 @@ func (config *VarGridConfig) loadMortality(sr *proj.SR) (*rtree.Rtree, error) {
 	return mortalityrate, nil
 }
 
-func (c *Cell) loadData(data *CTMData, k int) {
+// loadData allocates cell information from the CTM data to the Cell. If the
+// cell overlaps more than one CTM cells, weighted averaging is used.
+func (c *Cell) loadData(data *CTMData, k int) error {
 	c.Layer = k
+	cellArea := c.Area()
 	ctmcellsAllLayers := data.gridTree.SearchIntersect(c.Bounds())
 	var ctmcells []*gridCellLight
+	var fractions []float64
 	for _, cc := range ctmcellsAllLayers {
 		// we only want grid cells that match our layer.
 		ccc := cc.(*gridCellLight)
 		if ccc.layer == k {
-			ctmcells = append(ctmcells, ccc)
+			isect := ccc.Intersection(c)
+			if isect != nil {
+				fractions = append(fractions, isect.Area()/cellArea)
+				ctmcells = append(ctmcells, ccc)
+			}
 		}
 	}
-	ncells := float64(len(ctmcells))
 	if len(ctmcells) == 0. {
-		panic("No matching cells!")
+		return fmt.Errorf("there is no CTM data overlapping with the InMAP cell at %+v", c.Centroid())
 	}
-	for _, ctmcell := range ctmcells {
+	for i, ctmcell := range ctmcells {
 		ctmrow := ctmcell.Row
 		ctmcol := ctmcell.Col
+		frac := fractions[i]
 
 		// TODO: Average velocity is on a staggered grid, so we should
 		// do some sort of interpolation here.
-		c.UAvg += data.data["UAvg"].data.Get(k, ctmrow, ctmcol) / ncells
-		c.VAvg += data.data["VAvg"].data.Get(k, ctmrow, ctmcol) / ncells
-		c.WAvg += data.data["WAvg"].data.Get(k, ctmrow, ctmcol) / ncells
+		c.UAvg += data.data["UAvg"].data.Get(k, ctmrow, ctmcol) * frac
+		c.VAvg += data.data["VAvg"].data.Get(k, ctmrow, ctmcol) * frac
+		c.WAvg += data.data["WAvg"].data.Get(k, ctmrow, ctmcol) * frac
 
 		c.UDeviation += data.data["UDeviation"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.VDeviation += data.data["VDeviation"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 
 		c.AOrgPartitioning += data.data["aOrgPartitioning"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.BOrgPartitioning += data.data["bOrgPartitioning"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.NOPartitioning += data.data["NOPartitioning"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.SPartitioning += data.data["SPartitioning"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.NHPartitioning += data.data["NHPartitioning"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.SO2oxidation += data.data["SO2oxidation"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.ParticleDryDep += data.data["ParticleDryDep"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.SO2DryDep += data.data["SO2DryDep"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.NOxDryDep += data.data["NOxDryDep"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.NH3DryDep += data.data["NH3DryDep"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.VOCDryDep += data.data["VOCDryDep"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.Kxxyy += data.data["Kxxyy"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.LayerHeight += data.data["LayerHeights"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.Dz += data.data["Dz"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.ParticleWetDep += data.data["ParticleWetDep"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.SO2WetDep += data.data["SO2WetDep"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.OtherGasWetDep += data.data["OtherGasWetDep"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.Kzz += data.data["Kzz"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.M2u += data.data["M2u"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.M2d += data.data["M2d"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.WindSpeed += data.data["WindSpeed"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.WindSpeedInverse += data.data["WindSpeedInverse"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.WindSpeedMinusThird += data.data["WindSpeedMinusThird"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.WindSpeedMinusOnePointFour +=
 			data.data["WindSpeedMinusOnePointFour"].data.Get(
-				k, ctmrow, ctmcol) / ncells
+				k, ctmrow, ctmcol) * frac
 		c.Temperature += data.data["Temperature"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.S1 += data.data["S1"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.SClass += data.data["Sclass"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.CBaseline[iPM2_5] += data.data["TotalPM25"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.CBaseline[igNH] += data.data["gNH"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.CBaseline[ipNH] += data.data["pNH"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.CBaseline[igNO] += data.data["gNO"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.CBaseline[ipNO] += data.data["pNO"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.CBaseline[igS] += data.data["gS"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.CBaseline[ipS] += data.data["pS"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.CBaseline[igOrg] += data.data["aVOC"].data.Get(
-			k, ctmrow, ctmcol) / ncells
+			k, ctmrow, ctmcol) * frac
 		c.CBaseline[ipOrg] += data.data["aSOA"].data.Get(
-			k, ctmrow, ctmcol) / ncells
-
+			k, ctmrow, ctmcol) * frac
 	}
+	return nil
 }
 
 // make a vector representation of the chemical transport model grid

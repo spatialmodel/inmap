@@ -19,84 +19,25 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package cmd
 
 import (
-	"bufio"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"text/tabwriter"
 
-	"github.com/BurntSushi/toml"
-	"github.com/ctessum/geom/proj"
 	"github.com/spatialmodel/inmap"
 )
-
-type configData struct {
-
-	// VarGridConfig provides information for specifying the variable resolution
-	// grid.
-	VarGrid inmap.VarGridConfig
-
-	// InMAPData is the path to location of baseline meteorology and pollutant data.
-	// The path can include environment variables.
-	InMAPData string
-
-	// VariableGridData is the path to the location of the variable-resolution gridded
-	// InMAP data, or the location where it should be created if it doesn't already
-	// exist. The path can include environment variables.
-	VariableGridData string
-
-	// EmissionsShapefiles are the paths to any emissions shapefiles.
-	// Can be elevated or ground level; elevated files need to have columns
-	// labeled "height", "diam", "temp", and "velocity" containing stack
-	// information in units of m, m, K, and m/s, respectively.
-	// Emissions will be allocated from the geometries in the shape file
-	// to the InMAP computational grid, but the mapping projection of the
-	// shapefile must be the same as the projection InMAP uses.
-	// Can include environment variables.
-	EmissionsShapefiles []string
-
-	// EmissionUnits gives the units that the input emissions are in.
-	// Acceptable values are 'tons/year' and 'kg/year'.
-	EmissionUnits string
-
-	// Path to desired output file location, where [layer] is a stand-in
-	// for the model layer number. Can include environment variables.
-	OutputTemplate string
-
-	// If OutputAllLayers is true, output data for all model layers. If false, only output
-	// the lowest layer.
-	OutputAllLayers bool
-
-	// OutputVariables specifies which model variables should be included in the
-	// output file.
-	// Can include environment variables.
-	OutputVariables []string
-
-	// NumIterations is the number of iterations to calculate. If < 1, convergence
-	// is automatically calculated.
-	NumIterations int
-
-	// Port for hosting web page. If HTTPport is `8080`, then the GUI
-	// would be viewed by visiting `localhost:8080` in a web browser.
-	// If HTTPport is "", then the web server doesn't run.
-	HTTPport string
-
-	sr *proj.SR
-}
 
 func getCTMData() (*inmap.CTMData, error) {
 	log.Println("Reading input data...")
 
-	f, err := os.Open(config.InMAPData)
+	f, err := os.Open(Config.InMAPData)
 	if err != nil {
 		return nil, fmt.Errorf("Problem loading input data: %v\n", err)
 	}
-	ctmData, err := config.VarGrid.LoadCTMData(f)
+	ctmData, err := Config.VarGrid.LoadCTMData(f)
 	if err != nil {
 		return nil, fmt.Errorf("Problem loading input data: %v\n", err)
 	}
@@ -123,22 +64,22 @@ func Run(dynamic, createGrid bool) error {
 		}
 	}()
 
-	ctmData, err := getCTMData()
-	if err != nil {
-		return err
-	}
-
-	emis, err := inmap.ReadEmissionShapefiles(config.sr, config.EmissionUnits,
-		msgLog, config.EmissionsShapefiles...)
-
-	log.Println("Loading population and mortality rate data")
+	emis, err := inmap.ReadEmissionShapefiles(Config.sr, Config.EmissionUnits,
+		msgLog, Config.EmissionsShapefiles...)
 
 	// Only load the population if we're creating the grid.
 	var pop *inmap.Population
 	var mr *inmap.MortalityRates
 	var popIndices inmap.PopIndices
+	var ctmData *inmap.CTMData
 	if dynamic || createGrid {
-		pop, popIndices, mr, err = config.VarGrid.LoadPopMort()
+		log.Println("Loading CTM data")
+		ctmData, err = getCTMData()
+		if err != nil {
+			return err
+		}
+		log.Println("Loading population and mortality rate data")
+		pop, popIndices, mr, err = Config.VarGrid.LoadPopMort()
 		if err != nil {
 			return err
 		}
@@ -157,19 +98,19 @@ func Run(dynamic, createGrid bool) error {
 	if !dynamic {
 		if createGrid {
 			initFuncs = []inmap.DomainManipulator{
-				config.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, emis),
-				config.VarGrid.MutateGrid(inmap.PopulationMutator(&config.VarGrid, popIndices),
+				Config.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, emis),
+				Config.VarGrid.MutateGrid(inmap.PopulationMutator(&Config.VarGrid, popIndices),
 					ctmData, pop, mr, emis),
 				inmap.SetTimestepCFL(),
 			}
 		} else {
 			var r io.Reader
-			r, err = os.Open(config.VariableGridData)
+			r, err = os.Open(Config.VariableGridData)
 			if err != nil {
 				return fmt.Errorf("problem opening file to load VariableGridData: %v", err)
 			}
 			initFuncs = []inmap.DomainManipulator{
-				inmap.Load(r, &config.VarGrid, emis),
+				inmap.Load(r, &Config.VarGrid, emis),
 				inmap.SetTimestepCFL(),
 			}
 		}
@@ -177,11 +118,11 @@ func Run(dynamic, createGrid bool) error {
 			inmap.Log(cLog),
 			inmap.Calculations(inmap.AddEmissionsFlux()),
 			scienceFuncs,
-			inmap.SteadyStateConvergenceCheck(config.NumIterations, cConverge),
+			inmap.SteadyStateConvergenceCheck(Config.NumIterations, cConverge),
 		}
 	} else {
 		initFuncs = []inmap.DomainManipulator{
-			config.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, emis),
+			Config.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, emis),
 			inmap.SetTimestepCFL(),
 		}
 		const gridMutateInterval = 3600. // seconds
@@ -190,11 +131,11 @@ func Run(dynamic, createGrid bool) error {
 			inmap.Calculations(inmap.AddEmissionsFlux()),
 			scienceFuncs,
 			inmap.RunPeriodically(gridMutateInterval,
-				config.VarGrid.MutateGrid(inmap.PopConcMutator(
-					config.VarGrid.PopConcThreshold, &config.VarGrid, popIndices),
+				Config.VarGrid.MutateGrid(inmap.PopConcMutator(
+					Config.VarGrid.PopConcThreshold, &Config.VarGrid, popIndices),
 					ctmData, pop, mr, emis)),
 			inmap.RunPeriodically(gridMutateInterval, inmap.SetTimestepCFL()),
-			inmap.SteadyStateConvergenceCheck(config.NumIterations, cConverge),
+			inmap.SteadyStateConvergenceCheck(Config.NumIterations, cConverge),
 		}
 	}
 
@@ -202,15 +143,15 @@ func Run(dynamic, createGrid bool) error {
 		InitFuncs: initFuncs,
 		RunFuncs:  runFuncs,
 		CleanupFuncs: []inmap.DomainManipulator{
-			inmap.Output(config.OutputTemplate, config.OutputAllLayers, config.OutputVariables...),
+			inmap.Output(Config.OutputFile, Config.OutputAllLayers, Config.OutputVariables...),
 		},
 	}
 	if err = d.Init(); err != nil {
 		return fmt.Errorf("InMAP: problem initializing model: %v\n", err)
 	}
 
-	emisTotals := make([]float64, len(d.Cells[0].Cf))
-	for _, c := range d.Cells {
+	emisTotals := make([]float64, len(d.Cells()[0].Cf))
+	for _, c := range d.Cells() {
 		for i, val := range c.EmisFlux {
 			emisTotals[i] += val
 		}
@@ -252,77 +193,4 @@ func Run(dynamic, createGrid bool) error {
 	w.Flush()
 
 	return nil
-}
-
-// readConfigFile reads and parses a TOML configuration file.
-// See below for the required variables.
-func readConfigFile(filename string) (config *configData, err error) {
-	// Open the configuration file
-	var (
-		file  *os.File
-		bytes []byte
-	)
-	file, err = os.Open(filename)
-	if err != nil {
-		return nil, fmt.Errorf("the configuration file you have specified, %v, does not "+
-			"appear to exist. Please check the file name and location and "+
-			"try again.\n", filename)
-	}
-	reader := bufio.NewReader(file)
-	bytes, err = ioutil.ReadAll(reader)
-	if err != nil {
-		return nil, fmt.Errorf("problem reading configuration file: %v", err)
-	}
-
-	config = new(configData)
-	_, err = toml.Decode(string(bytes), config)
-	if err != nil {
-		return nil, fmt.Errorf(
-			"there has been an error parsing the configuration file: %v\n", err)
-	}
-
-	config.InMAPData = os.ExpandEnv(config.InMAPData)
-	config.VariableGridData = os.ExpandEnv(config.VariableGridData)
-	config.OutputTemplate = os.ExpandEnv(config.OutputTemplate)
-	config.VarGrid.CensusFile = os.ExpandEnv(config.VarGrid.CensusFile)
-	config.VarGrid.MortalityRateFile = os.ExpandEnv(config.VarGrid.MortalityRateFile)
-
-	for i := 0; i < len(config.EmissionsShapefiles); i++ {
-		config.EmissionsShapefiles[i] =
-			os.ExpandEnv(config.EmissionsShapefiles[i])
-	}
-
-	if config.OutputTemplate == "" {
-		return nil, fmt.Errorf("you need to specify an output template in the " +
-			"configuration file(for example: " +
-			"\"OutputTemplate\":\"output_[layer].shp\"")
-	}
-
-	if config.VarGrid.GridProj == "" {
-		return nil, fmt.Errorf("you need to specify the InMAP grid projection in the " +
-			"'GridProj' configuration variable.")
-	}
-	config.sr, err = proj.Parse(config.VarGrid.GridProj)
-	if err != nil {
-		return nil, fmt.Errorf("the following error occured while parsing the InMAP grid"+
-			"projection (the InMAPProj variable): %v", err)
-	}
-
-	if len(config.OutputVariables) == 0 {
-		return nil, fmt.Errorf("there are no variables specified for output. Please fill in " +
-			"the OutputVariables section of the configuration file and try again.")
-	}
-
-	if config.EmissionUnits != "tons/year" && config.EmissionUnits != "kg/year" {
-		return nil, fmt.Errorf("the EmissionUnits variable in the configuration file "+
-			"needs to be set to either tons/year or kg/year, but is currently set to `%s`",
-			config.EmissionUnits)
-	}
-
-	outdir := filepath.Dir(config.OutputTemplate)
-	err = os.MkdirAll(outdir, os.ModePerm)
-	if err != nil {
-		return nil, fmt.Errorf("problem creating output directory: %v", err)
-	}
-	return
 }

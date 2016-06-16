@@ -11,7 +11,9 @@ const year = "2016"
 
 var (
 	configFile string
-	config     *configData
+
+	// Config holds the global configuration data.
+	Config *ConfigData
 )
 
 // RootCmd is the main command.
@@ -30,12 +32,8 @@ var RootCmd = &cobra.Command{
 
 // Startup reads the configuration file and prints a welcome message.
 func Startup(configFile string) error {
-	if configFile == "" {
-		return fmt.Errorf("need to specify configuration file as in " +
-			"`inmap -config=configFile.toml`")
-	}
 	var err error
-	config, err = readConfigFile(configFile)
+	Config, err = ReadConfigFile(configFile)
 	if err != nil {
 		return err
 	}
@@ -61,7 +59,7 @@ func completedMessage() {
 func init() {
 	RootCmd.AddCommand(versionCmd)
 
-	RootCmd.PersistentFlags().StringVar(&configFile, "config", "", "config file (default is ./inmap.toml)")
+	RootCmd.PersistentFlags().StringVar(&configFile, "config", "./inmap.toml", "configuration file location")
 }
 
 var versionCmd = &cobra.Command{

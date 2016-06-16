@@ -30,442 +30,442 @@ func TestVarGridCreate(t *testing.T) {
 
 func (d *InMAP) testCellAlignment1(t *testing.T) {
 	// Cell 0
-	if len(d.Cells[0].west) != 1 || d.Cells[0].west[0] != d.westBoundary[0] {
+	if len(d.cells[0].west) != 1 || d.cells[0].west[0] != d.westBoundary[0] {
 		t.Error("Incorrect alignment cell 0 West")
 	}
-	if len(d.Cells[0].south) != 1 || d.Cells[0].south[0] != d.southBoundary[0] {
+	if len(d.cells[0].south) != 1 || d.cells[0].south[0] != d.southBoundary[0] {
 		t.Error("Incorrect alignment cell 0 South")
 	}
-	if len(d.Cells[0].north) != 1 || d.Cells[0].north[0] != d.Cells[1] {
+	if len(d.cells[0].north) != 1 || d.cells[0].north[0] != d.cells[1] {
 		t.Error("Incorrect alignment cell 0 North")
 	}
-	if len(d.Cells[0].east) != 1 || d.Cells[0].east[0] != d.Cells[3] {
+	if len(d.cells[0].east) != 1 || d.cells[0].east[0] != d.cells[3] {
 		t.Error("Incorrect alignment cell 0 East")
 	}
-	if len(d.Cells[0].above) != 1 || d.Cells[0].above[0] != d.Cells[10] {
+	if len(d.cells[0].above) != 1 || d.cells[0].above[0] != d.cells[10] {
 		t.Error("Incorrect alignment cell 0 Above")
 	}
-	if len(d.Cells[0].below) != 1 || d.Cells[0].below[0] != d.Cells[0] {
+	if len(d.cells[0].below) != 1 || d.cells[0].below[0] != d.cells[0] {
 		t.Error("Incorrect alignment cell 0 Below")
 	}
-	if len(d.Cells[0].groundLevel) != 1 || d.Cells[0].groundLevel[0] != d.Cells[0] {
+	if len(d.cells[0].groundLevel) != 1 || d.cells[0].groundLevel[0] != d.cells[0] {
 		t.Error("Incorrect alignment cell 0 GroundLevel")
 	}
 
 	// Cell 1
-	if len(d.Cells[1].west) != 1 || d.Cells[1].west[0] != d.westBoundary[1] {
+	if len(d.cells[1].west) != 1 || d.cells[1].west[0] != d.westBoundary[1] {
 		t.Error("Incorrect alignment cell 1 West")
 	}
-	if len(d.Cells[1].south) != 1 || d.Cells[1].south[0] != d.Cells[0] {
+	if len(d.cells[1].south) != 1 || d.cells[1].south[0] != d.cells[0] {
 		t.Error("Incorrect alignment cell 1 South")
 	}
-	if len(d.Cells[1].north) != 1 || d.Cells[1].north[0] != d.Cells[2] {
+	if len(d.cells[1].north) != 1 || d.cells[1].north[0] != d.cells[2] {
 		t.Error("Incorrect alignment cell 1 North")
 	}
-	if len(d.Cells[1].east) != 1 || d.Cells[1].east[0] != d.Cells[4] {
+	if len(d.cells[1].east) != 1 || d.cells[1].east[0] != d.cells[4] {
 		t.Error("Incorrect alignment cell 1 East")
 	}
-	if len(d.Cells[1].above) != 1 || d.Cells[1].above[0] != d.Cells[10] {
+	if len(d.cells[1].above) != 1 || d.cells[1].above[0] != d.cells[10] {
 		t.Error("Incorrect alignment cell 1 Above")
 	}
-	if len(d.Cells[1].below) != 1 || d.Cells[1].below[0] != d.Cells[1] {
+	if len(d.cells[1].below) != 1 || d.cells[1].below[0] != d.cells[1] {
 		t.Error("Incorrect alignment cell 1 Below")
 	}
-	if len(d.Cells[1].groundLevel) != 1 || d.Cells[1].groundLevel[0] != d.Cells[1] {
+	if len(d.cells[1].groundLevel) != 1 || d.cells[1].groundLevel[0] != d.cells[1] {
 		t.Error("Incorrect alignment cell 1 GroundLevel")
 	}
 
 	// Cell 2
-	if len(d.Cells[2].west) != 1 || d.Cells[2].west[0] != d.westBoundary[2] {
+	if len(d.cells[2].west) != 1 || d.cells[2].west[0] != d.westBoundary[2] {
 		t.Error("Incorrect alignment cell 2 West")
 	}
-	if len(d.Cells[2].south) != 2 || d.Cells[2].south[0] != d.Cells[1] ||
-		d.Cells[2].south[1] != d.Cells[4] {
+	if len(d.cells[2].south) != 2 || d.cells[2].south[0] != d.cells[1] ||
+		d.cells[2].south[1] != d.cells[4] {
 		t.Error("Incorrect alignment cell 2 South")
 	}
-	if len(d.Cells[2].north) != 1 || d.Cells[2].north[0] != d.Cells[5] {
+	if len(d.cells[2].north) != 1 || d.cells[2].north[0] != d.cells[5] {
 		t.Error("Incorrect alignment cell 2 North")
 	}
-	if len(d.Cells[2].east) != 1 || d.Cells[2].east[0] != d.Cells[7] {
+	if len(d.cells[2].east) != 1 || d.cells[2].east[0] != d.cells[7] {
 		t.Error("Incorrect alignment cell 2 East")
 	}
-	if len(d.Cells[2].above) != 1 || d.Cells[2].above[0] != d.Cells[10] {
+	if len(d.cells[2].above) != 1 || d.cells[2].above[0] != d.cells[10] {
 		t.Error("Incorrect alignment cell 2 Above")
 	}
-	if len(d.Cells[2].below) != 1 || d.Cells[2].below[0] != d.Cells[2] {
+	if len(d.cells[2].below) != 1 || d.cells[2].below[0] != d.cells[2] {
 		t.Error("Incorrect alignment cell 2 Below")
 	}
-	if len(d.Cells[2].groundLevel) != 1 || d.Cells[2].groundLevel[0] != d.Cells[2] {
+	if len(d.cells[2].groundLevel) != 1 || d.cells[2].groundLevel[0] != d.cells[2] {
 		t.Error("Incorrect alignment cell 2 GroundLevel")
 	}
 
 	// Cell 3
-	if len(d.Cells[3].west) != 1 || d.Cells[3].west[0] != d.Cells[0] {
+	if len(d.cells[3].west) != 1 || d.cells[3].west[0] != d.cells[0] {
 		t.Error("Incorrect alignment cell 3 West")
 	}
-	if len(d.Cells[3].south) != 1 || d.Cells[3].south[0] != d.southBoundary[1] {
+	if len(d.cells[3].south) != 1 || d.cells[3].south[0] != d.southBoundary[1] {
 		t.Error("Incorrect alignment cell 3 South")
 	}
-	if len(d.Cells[3].north) != 1 || d.Cells[3].north[0] != d.Cells[4] {
+	if len(d.cells[3].north) != 1 || d.cells[3].north[0] != d.cells[4] {
 		t.Error("Incorrect alignment cell 3 North")
 	}
-	if len(d.Cells[3].east) != 1 || d.Cells[3].east[0] != d.Cells[6] {
+	if len(d.cells[3].east) != 1 || d.cells[3].east[0] != d.cells[6] {
 		t.Error("Incorrect alignment cell 3 East")
 	}
-	if len(d.Cells[3].above) != 1 || d.Cells[3].above[0] != d.Cells[10] {
+	if len(d.cells[3].above) != 1 || d.cells[3].above[0] != d.cells[10] {
 		t.Error("Incorrect alignment cell 3 Above")
 	}
-	if len(d.Cells[3].below) != 1 || d.Cells[3].below[0] != d.Cells[3] {
+	if len(d.cells[3].below) != 1 || d.cells[3].below[0] != d.cells[3] {
 		t.Error("Incorrect alignment cell 3 Below")
 	}
-	if len(d.Cells[3].groundLevel) != 1 || d.Cells[3].groundLevel[0] != d.Cells[3] {
+	if len(d.cells[3].groundLevel) != 1 || d.cells[3].groundLevel[0] != d.cells[3] {
 		t.Error("Incorrect alignment cell 3 GroundLevel")
 	}
 
 	// Cell 4
-	if len(d.Cells[4].west) != 1 || d.Cells[4].west[0] != d.Cells[1] {
+	if len(d.cells[4].west) != 1 || d.cells[4].west[0] != d.cells[1] {
 		t.Error("Incorrect alignment cell 4 West")
 	}
-	if len(d.Cells[4].south) != 1 || d.Cells[4].south[0] != d.Cells[3] {
+	if len(d.cells[4].south) != 1 || d.cells[4].south[0] != d.cells[3] {
 		t.Error("Incorrect alignment cell 4 South")
 	}
-	if len(d.Cells[4].north) != 1 || d.Cells[4].north[0] != d.Cells[2] {
+	if len(d.cells[4].north) != 1 || d.cells[4].north[0] != d.cells[2] {
 		t.Error("Incorrect alignment cell 4 North")
 	}
-	if len(d.Cells[4].east) != 1 || d.Cells[4].east[0] != d.Cells[6] {
+	if len(d.cells[4].east) != 1 || d.cells[4].east[0] != d.cells[6] {
 		t.Error("Incorrect alignment cell 4 East")
 	}
-	if len(d.Cells[4].above) != 1 || d.Cells[4].above[0] != d.Cells[10] {
+	if len(d.cells[4].above) != 1 || d.cells[4].above[0] != d.cells[10] {
 		t.Error("Incorrect alignment cell 4 Above")
 	}
-	if len(d.Cells[4].below) != 1 || d.Cells[4].below[0] != d.Cells[4] {
+	if len(d.cells[4].below) != 1 || d.cells[4].below[0] != d.cells[4] {
 		t.Error("Incorrect alignment cell 4 Below")
 	}
-	if len(d.Cells[4].groundLevel) != 1 || d.Cells[4].groundLevel[0] != d.Cells[4] {
+	if len(d.cells[4].groundLevel) != 1 || d.cells[4].groundLevel[0] != d.cells[4] {
 		t.Error("Incorrect alignment cell 4 GroundLevel")
 	}
 
 	// Cell 5
-	if len(d.Cells[5].west) != 1 || d.Cells[5].west[0] != d.westBoundary[3] {
+	if len(d.cells[5].west) != 1 || d.cells[5].west[0] != d.westBoundary[3] {
 		t.Error("Incorrect alignment cell 5 West")
 	}
-	if len(d.Cells[5].south) != 2 || d.Cells[5].south[0] != d.Cells[2] ||
-		d.Cells[5].south[1] != d.Cells[7] {
+	if len(d.cells[5].south) != 2 || d.cells[5].south[0] != d.cells[2] ||
+		d.cells[5].south[1] != d.cells[7] {
 		t.Error("Incorrect alignment cell 5 South")
 	}
-	if len(d.Cells[5].north) != 1 || d.Cells[5].north[0] != d.northBoundary[0] {
+	if len(d.cells[5].north) != 1 || d.cells[5].north[0] != d.northBoundary[0] {
 		t.Error("Incorrect alignment cell 5 North")
 	}
-	if len(d.Cells[5].east) != 1 || d.Cells[5].east[0] != d.Cells[9] {
+	if len(d.cells[5].east) != 1 || d.cells[5].east[0] != d.cells[9] {
 		t.Error("Incorrect alignment cell 5 East")
 	}
-	if len(d.Cells[5].above) != 1 || d.Cells[5].above[0] != d.Cells[11] {
+	if len(d.cells[5].above) != 1 || d.cells[5].above[0] != d.cells[11] {
 		t.Error("Incorrect alignment cell 5 Above")
 	}
-	if len(d.Cells[5].below) != 1 || d.Cells[5].below[0] != d.Cells[5] {
+	if len(d.cells[5].below) != 1 || d.cells[5].below[0] != d.cells[5] {
 		t.Error("Incorrect alignment cell 5 Below")
 	}
-	if len(d.Cells[5].groundLevel) != 1 || d.Cells[5].groundLevel[0] != d.Cells[5] {
+	if len(d.cells[5].groundLevel) != 1 || d.cells[5].groundLevel[0] != d.cells[5] {
 		t.Error("Incorrect alignment cell 5 GroundLevel")
 	}
 
 	// Cell 6
-	if len(d.Cells[6].west) != 2 || d.Cells[6].west[0] != d.Cells[3] ||
-		d.Cells[6].west[1] != d.Cells[4] {
+	if len(d.cells[6].west) != 2 || d.cells[6].west[0] != d.cells[3] ||
+		d.cells[6].west[1] != d.cells[4] {
 		t.Error("Incorrect alignment cell 6 West")
 	}
-	if len(d.Cells[6].south) != 1 || d.Cells[6].south[0] != d.southBoundary[2] {
+	if len(d.cells[6].south) != 1 || d.cells[6].south[0] != d.southBoundary[2] {
 		t.Error("Incorrect alignment cell 6 South")
 	}
-	if len(d.Cells[6].north) != 1 || d.Cells[6].north[0] != d.Cells[7] {
+	if len(d.cells[6].north) != 1 || d.cells[6].north[0] != d.cells[7] {
 		t.Error("Incorrect alignment cell 6 North")
 	}
-	if len(d.Cells[6].east) != 1 || d.Cells[6].east[0] != d.Cells[8] {
+	if len(d.cells[6].east) != 1 || d.cells[6].east[0] != d.cells[8] {
 		t.Error("Incorrect alignment cell 6 East")
 	}
-	if len(d.Cells[6].above) != 1 || d.Cells[6].above[0] != d.Cells[10] {
+	if len(d.cells[6].above) != 1 || d.cells[6].above[0] != d.cells[10] {
 		t.Error("Incorrect alignment cell 6 Above")
 	}
-	if len(d.Cells[6].below) != 1 || d.Cells[6].below[0] != d.Cells[6] {
+	if len(d.cells[6].below) != 1 || d.cells[6].below[0] != d.cells[6] {
 		t.Error("Incorrect alignment cell 6 Below")
 	}
-	if len(d.Cells[6].groundLevel) != 1 || d.Cells[6].groundLevel[0] != d.Cells[6] {
+	if len(d.cells[6].groundLevel) != 1 || d.cells[6].groundLevel[0] != d.cells[6] {
 		t.Error("Incorrect alignment cell 6 GroundLevel")
 	}
 
 	// Cell 7
-	if len(d.Cells[7].west) != 1 || d.Cells[7].west[0] != d.Cells[2] {
+	if len(d.cells[7].west) != 1 || d.cells[7].west[0] != d.cells[2] {
 		t.Error("Incorrect alignment cell 7 West")
 	}
-	if len(d.Cells[7].south) != 1 || d.Cells[7].south[0] != d.Cells[6] {
+	if len(d.cells[7].south) != 1 || d.cells[7].south[0] != d.cells[6] {
 		t.Error("Incorrect alignment cell 7 South")
 	}
-	if len(d.Cells[7].north) != 1 || d.Cells[7].north[0] != d.Cells[5] {
+	if len(d.cells[7].north) != 1 || d.cells[7].north[0] != d.cells[5] {
 		t.Error("Incorrect alignment cell 7 North")
 	}
-	if len(d.Cells[7].east) != 1 || d.Cells[7].east[0] != d.Cells[8] {
+	if len(d.cells[7].east) != 1 || d.cells[7].east[0] != d.cells[8] {
 		t.Error("Incorrect alignment cell 7 East")
 	}
-	if len(d.Cells[7].above) != 1 || d.Cells[7].above[0] != d.Cells[10] {
+	if len(d.cells[7].above) != 1 || d.cells[7].above[0] != d.cells[10] {
 		t.Error("Incorrect alignment cell 7 Above")
 	}
-	if len(d.Cells[7].below) != 1 || d.Cells[7].below[0] != d.Cells[7] {
+	if len(d.cells[7].below) != 1 || d.cells[7].below[0] != d.cells[7] {
 		t.Error("Incorrect alignment cell 7 Below")
 	}
-	if len(d.Cells[7].groundLevel) != 1 || d.Cells[7].groundLevel[0] != d.Cells[7] {
+	if len(d.cells[7].groundLevel) != 1 || d.cells[7].groundLevel[0] != d.cells[7] {
 		t.Error("Incorrect alignment cell 7 GroundLevel")
 	}
 
 	// Cell 8
-	if len(d.Cells[8].west) != 2 || d.Cells[8].west[0] != d.Cells[6] ||
-		d.Cells[8].west[1] != d.Cells[7] {
+	if len(d.cells[8].west) != 2 || d.cells[8].west[0] != d.cells[6] ||
+		d.cells[8].west[1] != d.cells[7] {
 		t.Error("Incorrect alignment cell 8 West")
 	}
-	if len(d.Cells[8].south) != 1 || d.Cells[8].south[0] != d.southBoundary[3] {
+	if len(d.cells[8].south) != 1 || d.cells[8].south[0] != d.southBoundary[3] {
 		t.Error("Incorrect alignment cell 8 South")
 	}
-	if len(d.Cells[8].north) != 1 || d.Cells[8].north[0] != d.Cells[9] {
+	if len(d.cells[8].north) != 1 || d.cells[8].north[0] != d.cells[9] {
 		t.Error("Incorrect alignment cell 8 North")
 	}
-	if len(d.Cells[8].east) != 1 || d.Cells[8].east[0] != d.eastBoundary[0] {
+	if len(d.cells[8].east) != 1 || d.cells[8].east[0] != d.eastBoundary[0] {
 		t.Error("Incorrect alignment cell 8 East")
 	}
-	if len(d.Cells[8].above) != 1 || d.Cells[8].above[0] != d.Cells[12] {
+	if len(d.cells[8].above) != 1 || d.cells[8].above[0] != d.cells[12] {
 		t.Error("Incorrect alignment cell 8 Above")
 	}
-	if len(d.Cells[8].below) != 1 || d.Cells[8].below[0] != d.Cells[8] {
+	if len(d.cells[8].below) != 1 || d.cells[8].below[0] != d.cells[8] {
 		t.Error("Incorrect alignment cell 8 Below")
 	}
-	if len(d.Cells[8].groundLevel) != 1 || d.Cells[8].groundLevel[0] != d.Cells[8] {
+	if len(d.cells[8].groundLevel) != 1 || d.cells[8].groundLevel[0] != d.cells[8] {
 		t.Error("Incorrect alignment cell 8 GroundLevel")
 	}
 
 	// Cell 9
-	if len(d.Cells[9].west) != 1 || d.Cells[9].west[0] != d.Cells[5] {
+	if len(d.cells[9].west) != 1 || d.cells[9].west[0] != d.cells[5] {
 		t.Error("Incorrect alignment cell 9 West")
 	}
-	if len(d.Cells[9].south) != 1 || d.Cells[9].south[0] != d.Cells[8] {
+	if len(d.cells[9].south) != 1 || d.cells[9].south[0] != d.cells[8] {
 		t.Error("Incorrect alignment cell 9 South")
 	}
-	if len(d.Cells[9].north) != 1 || d.Cells[9].north[0] != d.northBoundary[1] {
+	if len(d.cells[9].north) != 1 || d.cells[9].north[0] != d.northBoundary[1] {
 		t.Error("Incorrect alignment cell 9 North")
 	}
-	if len(d.Cells[9].east) != 1 || d.Cells[9].east[0] != d.eastBoundary[1] {
+	if len(d.cells[9].east) != 1 || d.cells[9].east[0] != d.eastBoundary[1] {
 		t.Error("Incorrect alignment cell 9 East")
 	}
-	if len(d.Cells[9].above) != 1 || d.Cells[9].above[0] != d.Cells[13] {
+	if len(d.cells[9].above) != 1 || d.cells[9].above[0] != d.cells[13] {
 		t.Error("Incorrect alignment cell 9 Above")
 	}
-	if len(d.Cells[9].below) != 1 || d.Cells[9].below[0] != d.Cells[9] {
+	if len(d.cells[9].below) != 1 || d.cells[9].below[0] != d.cells[9] {
 		t.Error("Incorrect alignment cell 9 Below")
 	}
-	if len(d.Cells[9].groundLevel) != 1 || d.Cells[9].groundLevel[0] != d.Cells[9] {
+	if len(d.cells[9].groundLevel) != 1 || d.cells[9].groundLevel[0] != d.cells[9] {
 		t.Error("Incorrect alignment cell 0 GroundLevel")
 	}
 
 	// Cell 10
-	if len(d.Cells[10].west) != 1 || d.Cells[10].west[0] != d.westBoundary[4] {
+	if len(d.cells[10].west) != 1 || d.cells[10].west[0] != d.westBoundary[4] {
 		t.Error("Incorrect alignment cell 10 West")
 	}
-	if len(d.Cells[10].south) != 1 || d.Cells[10].south[0] != d.southBoundary[4] {
+	if len(d.cells[10].south) != 1 || d.cells[10].south[0] != d.southBoundary[4] {
 		t.Error("Incorrect alignment cell 10 South")
 	}
-	if len(d.Cells[10].north) != 1 || d.Cells[10].north[0] != d.Cells[11] {
+	if len(d.cells[10].north) != 1 || d.cells[10].north[0] != d.cells[11] {
 		t.Error("Incorrect alignment cell 10 North")
 	}
-	if len(d.Cells[10].east) != 1 || d.Cells[10].east[0] != d.Cells[12] {
+	if len(d.cells[10].east) != 1 || d.cells[10].east[0] != d.cells[12] {
 		t.Error("Incorrect alignment cell 10 East")
 	}
-	if len(d.Cells[10].above) != 1 || d.Cells[10].above[0] != d.Cells[14] {
+	if len(d.cells[10].above) != 1 || d.cells[10].above[0] != d.cells[14] {
 		t.Error("Incorrect alignment cell 10 Above")
 	}
-	sortCells(d.Cells[10].below)
-	if len(d.Cells[10].below) != 7 || d.Cells[10].below[0] != d.Cells[0] ||
-		d.Cells[10].below[1] != d.Cells[1] ||
-		d.Cells[10].below[2] != d.Cells[2] ||
-		d.Cells[10].below[3] != d.Cells[3] ||
-		d.Cells[10].below[4] != d.Cells[4] ||
-		d.Cells[10].below[5] != d.Cells[6] ||
-		d.Cells[10].below[6] != d.Cells[7] {
+	sortCells(d.cells[10].below)
+	if len(d.cells[10].below) != 7 || d.cells[10].below[0] != d.cells[0] ||
+		d.cells[10].below[1] != d.cells[1] ||
+		d.cells[10].below[2] != d.cells[2] ||
+		d.cells[10].below[3] != d.cells[3] ||
+		d.cells[10].below[4] != d.cells[4] ||
+		d.cells[10].below[5] != d.cells[6] ||
+		d.cells[10].below[6] != d.cells[7] {
 		t.Error("Incorrect alignment cell 10 Below")
 	}
-	sortCells(d.Cells[10].groundLevel)
-	if len(d.Cells[10].groundLevel) != 7 || d.Cells[10].groundLevel[0] != d.Cells[0] ||
-		d.Cells[10].groundLevel[1] != d.Cells[1] ||
-		d.Cells[10].groundLevel[2] != d.Cells[2] ||
-		d.Cells[10].groundLevel[3] != d.Cells[3] ||
-		d.Cells[10].groundLevel[4] != d.Cells[4] ||
-		d.Cells[10].groundLevel[5] != d.Cells[6] ||
-		d.Cells[10].groundLevel[6] != d.Cells[7] {
+	sortCells(d.cells[10].groundLevel)
+	if len(d.cells[10].groundLevel) != 7 || d.cells[10].groundLevel[0] != d.cells[0] ||
+		d.cells[10].groundLevel[1] != d.cells[1] ||
+		d.cells[10].groundLevel[2] != d.cells[2] ||
+		d.cells[10].groundLevel[3] != d.cells[3] ||
+		d.cells[10].groundLevel[4] != d.cells[4] ||
+		d.cells[10].groundLevel[5] != d.cells[6] ||
+		d.cells[10].groundLevel[6] != d.cells[7] {
 		t.Error("Incorrect alignment cell 10 GroundLevel")
 	}
 
 	// Cell 11
-	if len(d.Cells[11].west) != 1 || d.Cells[11].west[0] != d.westBoundary[5] {
+	if len(d.cells[11].west) != 1 || d.cells[11].west[0] != d.westBoundary[5] {
 		t.Error("Incorrect alignment cell 11 West")
 	}
-	if len(d.Cells[11].south) != 1 || d.Cells[11].south[0] != d.Cells[10] {
+	if len(d.cells[11].south) != 1 || d.cells[11].south[0] != d.cells[10] {
 		t.Error("Incorrect alignment cell 11 South")
 	}
-	if len(d.Cells[11].north) != 1 || d.Cells[11].north[0] != d.northBoundary[2] {
+	if len(d.cells[11].north) != 1 || d.cells[11].north[0] != d.northBoundary[2] {
 		t.Error("Incorrect alignment cell 11 North")
 	}
-	if len(d.Cells[11].east) != 1 || d.Cells[11].east[0] != d.Cells[13] {
+	if len(d.cells[11].east) != 1 || d.cells[11].east[0] != d.cells[13] {
 		t.Error("Incorrect alignment cell 11 East")
 	}
-	if len(d.Cells[11].above) != 1 || d.Cells[11].above[0] != d.Cells[15] {
+	if len(d.cells[11].above) != 1 || d.cells[11].above[0] != d.cells[15] {
 		t.Error("Incorrect alignment cell 11 Above")
 	}
-	if len(d.Cells[11].below) != 1 || d.Cells[11].below[0] != d.Cells[5] {
+	if len(d.cells[11].below) != 1 || d.cells[11].below[0] != d.cells[5] {
 		t.Error("Incorrect alignment cell 11 Below")
 	}
-	if len(d.Cells[11].groundLevel) != 1 || d.Cells[11].groundLevel[0] != d.Cells[5] {
+	if len(d.cells[11].groundLevel) != 1 || d.cells[11].groundLevel[0] != d.cells[5] {
 		t.Error("Incorrect alignment cell 11 GroundLevel")
 	}
 
 	// Cell 12
-	if len(d.Cells[12].west) != 1 || d.Cells[12].west[0] != d.Cells[10] {
+	if len(d.cells[12].west) != 1 || d.cells[12].west[0] != d.cells[10] {
 		t.Error("Incorrect alignment cell 12 West")
 	}
-	if len(d.Cells[12].south) != 1 || d.Cells[12].south[0] != d.southBoundary[5] {
+	if len(d.cells[12].south) != 1 || d.cells[12].south[0] != d.southBoundary[5] {
 		t.Error("Incorrect alignment cell 12 South")
 	}
-	if len(d.Cells[12].north) != 1 || d.Cells[12].north[0] != d.Cells[13] {
+	if len(d.cells[12].north) != 1 || d.cells[12].north[0] != d.cells[13] {
 		t.Error("Incorrect alignment cell 12 North")
 	}
-	if len(d.Cells[12].east) != 1 || d.Cells[12].east[0] != d.eastBoundary[2] {
+	if len(d.cells[12].east) != 1 || d.cells[12].east[0] != d.eastBoundary[2] {
 		t.Error("Incorrect alignment cell 12 East")
 	}
-	if len(d.Cells[12].above) != 1 || d.Cells[12].above[0] != d.Cells[16] {
+	if len(d.cells[12].above) != 1 || d.cells[12].above[0] != d.cells[16] {
 		t.Error("Incorrect alignment cell 12 Above")
 	}
-	if len(d.Cells[12].below) != 1 || d.Cells[12].below[0] != d.Cells[8] {
+	if len(d.cells[12].below) != 1 || d.cells[12].below[0] != d.cells[8] {
 		t.Error("Incorrect alignment cell 12 Below")
 	}
-	if len(d.Cells[12].groundLevel) != 1 || d.Cells[12].groundLevel[0] != d.Cells[8] {
+	if len(d.cells[12].groundLevel) != 1 || d.cells[12].groundLevel[0] != d.cells[8] {
 		t.Error("Incorrect alignment cell 12 GroundLevel")
 	}
 
 	// Cell 13
-	if len(d.Cells[13].west) != 1 || d.Cells[13].west[0] != d.Cells[11] {
+	if len(d.cells[13].west) != 1 || d.cells[13].west[0] != d.cells[11] {
 		t.Error("Incorrect alignment cell 13 West")
 	}
-	if len(d.Cells[13].south) != 1 || d.Cells[13].south[0] != d.Cells[12] {
+	if len(d.cells[13].south) != 1 || d.cells[13].south[0] != d.cells[12] {
 		t.Error("Incorrect alignment cell 13 South")
 	}
-	if len(d.Cells[13].north) != 1 || d.Cells[13].north[0] != d.northBoundary[3] {
+	if len(d.cells[13].north) != 1 || d.cells[13].north[0] != d.northBoundary[3] {
 		t.Error("Incorrect alignment cell 13 North")
 	}
-	if len(d.Cells[13].east) != 1 || d.Cells[13].east[0] != d.eastBoundary[3] {
+	if len(d.cells[13].east) != 1 || d.cells[13].east[0] != d.eastBoundary[3] {
 		t.Error("Incorrect alignment cell 13 East")
 	}
-	if len(d.Cells[13].above) != 1 || d.Cells[13].above[0] != d.Cells[17] {
+	if len(d.cells[13].above) != 1 || d.cells[13].above[0] != d.cells[17] {
 		t.Error("Incorrect alignment cell 13 Above")
 	}
-	if len(d.Cells[13].below) != 1 || d.Cells[13].below[0] != d.Cells[9] {
+	if len(d.cells[13].below) != 1 || d.cells[13].below[0] != d.cells[9] {
 		t.Error("Incorrect alignment cell 13 Below")
 	}
-	if len(d.Cells[13].groundLevel) != 1 || d.Cells[13].groundLevel[0] != d.Cells[9] {
+	if len(d.cells[13].groundLevel) != 1 || d.cells[13].groundLevel[0] != d.cells[9] {
 		t.Error("Incorrect alignment cell 13 GroundLevel")
 	}
 
 	// Skip to the top layer
 	// Cell 42
-	if len(d.Cells[42].west) != 1 || d.Cells[42].west[0] != d.westBoundary[20] {
+	if len(d.cells[42].west) != 1 || d.cells[42].west[0] != d.westBoundary[20] {
 		t.Error("Incorrect alignment cell 42 West")
 	}
-	if len(d.Cells[42].south) != 1 || d.Cells[42].south[0] != d.southBoundary[20] {
+	if len(d.cells[42].south) != 1 || d.cells[42].south[0] != d.southBoundary[20] {
 		t.Error("Incorrect alignment cell 42 South")
 	}
-	if len(d.Cells[42].north) != 1 || d.Cells[42].north[0] != d.Cells[43] {
+	if len(d.cells[42].north) != 1 || d.cells[42].north[0] != d.cells[43] {
 		t.Error("Incorrect alignment cell 42 North")
 	}
-	if len(d.Cells[42].east) != 1 || d.Cells[42].east[0] != d.Cells[44] {
+	if len(d.cells[42].east) != 1 || d.cells[42].east[0] != d.cells[44] {
 		t.Error("Incorrect alignment cell 42 East")
 	}
-	if len(d.Cells[42].above) != 1 || d.Cells[42].above[0] != d.topBoundary[0] {
+	if len(d.cells[42].above) != 1 || d.cells[42].above[0] != d.topBoundary[0] {
 		t.Error("Incorrect alignment cell 42 Above")
 	}
-	if len(d.Cells[42].below) != 1 || d.Cells[42].below[0] != d.Cells[38] {
+	if len(d.cells[42].below) != 1 || d.cells[42].below[0] != d.cells[38] {
 		t.Error("Incorrect alignment cell 42 Below")
 	}
-	sortCells(d.Cells[42].groundLevel)
-	if len(d.Cells[42].groundLevel) != 7 || d.Cells[42].groundLevel[0] != d.Cells[0] ||
-		d.Cells[42].groundLevel[1] != d.Cells[1] ||
-		d.Cells[42].groundLevel[2] != d.Cells[2] ||
-		d.Cells[42].groundLevel[3] != d.Cells[3] ||
-		d.Cells[42].groundLevel[4] != d.Cells[4] ||
-		d.Cells[42].groundLevel[5] != d.Cells[6] ||
-		d.Cells[42].groundLevel[6] != d.Cells[7] {
+	sortCells(d.cells[42].groundLevel)
+	if len(d.cells[42].groundLevel) != 7 || d.cells[42].groundLevel[0] != d.cells[0] ||
+		d.cells[42].groundLevel[1] != d.cells[1] ||
+		d.cells[42].groundLevel[2] != d.cells[2] ||
+		d.cells[42].groundLevel[3] != d.cells[3] ||
+		d.cells[42].groundLevel[4] != d.cells[4] ||
+		d.cells[42].groundLevel[5] != d.cells[6] ||
+		d.cells[42].groundLevel[6] != d.cells[7] {
 		t.Error("Incorrect alignment cell 42 GroundLevel")
 	}
 
 	// Cell 43
-	if len(d.Cells[43].west) != 1 || d.Cells[43].west[0] != d.westBoundary[21] {
+	if len(d.cells[43].west) != 1 || d.cells[43].west[0] != d.westBoundary[21] {
 		t.Error("Incorrect alignment cell 43 West")
 	}
-	if len(d.Cells[43].south) != 1 || d.Cells[43].south[0] != d.Cells[42] {
+	if len(d.cells[43].south) != 1 || d.cells[43].south[0] != d.cells[42] {
 		t.Error("Incorrect alignment cell 43 South")
 	}
-	if len(d.Cells[43].north) != 1 || d.Cells[43].north[0] != d.northBoundary[18] {
+	if len(d.cells[43].north) != 1 || d.cells[43].north[0] != d.northBoundary[18] {
 		t.Error("Incorrect alignment cell 43 North")
 	}
-	if len(d.Cells[43].east) != 1 || d.Cells[43].east[0] != d.Cells[45] {
+	if len(d.cells[43].east) != 1 || d.cells[43].east[0] != d.cells[45] {
 		t.Error("Incorrect alignment cell 43 East")
 	}
-	if len(d.Cells[43].above) != 1 || d.Cells[43].above[0] != d.topBoundary[1] {
+	if len(d.cells[43].above) != 1 || d.cells[43].above[0] != d.topBoundary[1] {
 		t.Error("Incorrect alignment cell 43 Above")
 	}
-	if len(d.Cells[43].below) != 1 || d.Cells[43].below[0] != d.Cells[39] {
+	if len(d.cells[43].below) != 1 || d.cells[43].below[0] != d.cells[39] {
 		t.Error("Incorrect alignment cell 43 Below")
 	}
-	if len(d.Cells[43].groundLevel) != 1 || d.Cells[43].groundLevel[0] != d.Cells[5] {
+	if len(d.cells[43].groundLevel) != 1 || d.cells[43].groundLevel[0] != d.cells[5] {
 		t.Error("Incorrect alignment cell 43 GroundLevel")
 	}
 
 	// Cell 44
-	if len(d.Cells[44].west) != 1 || d.Cells[44].west[0] != d.Cells[42] {
+	if len(d.cells[44].west) != 1 || d.cells[44].west[0] != d.cells[42] {
 		t.Error("Incorrect alignment cell 44 West")
 	}
-	if len(d.Cells[44].south) != 1 || d.Cells[44].south[0] != d.southBoundary[21] {
+	if len(d.cells[44].south) != 1 || d.cells[44].south[0] != d.southBoundary[21] {
 		t.Error("Incorrect alignment cell 44 South")
 	}
-	if len(d.Cells[44].north) != 1 || d.Cells[44].north[0] != d.Cells[45] {
+	if len(d.cells[44].north) != 1 || d.cells[44].north[0] != d.cells[45] {
 		t.Error("Incorrect alignment cell 44 North")
 	}
-	if len(d.Cells[44].east) != 1 || d.Cells[44].east[0] != d.eastBoundary[18] {
+	if len(d.cells[44].east) != 1 || d.cells[44].east[0] != d.eastBoundary[18] {
 		t.Error("Incorrect alignment cell 44 East")
 	}
-	if len(d.Cells[44].above) != 1 || d.Cells[44].above[0] != d.topBoundary[2] {
+	if len(d.cells[44].above) != 1 || d.cells[44].above[0] != d.topBoundary[2] {
 		t.Error("Incorrect alignment cell 44 Above")
 	}
-	if len(d.Cells[44].below) != 1 || d.Cells[44].below[0] != d.Cells[40] {
+	if len(d.cells[44].below) != 1 || d.cells[44].below[0] != d.cells[40] {
 		t.Error("Incorrect alignment cell 44 Below")
 	}
-	if len(d.Cells[44].groundLevel) != 1 || d.Cells[44].groundLevel[0] != d.Cells[8] {
+	if len(d.cells[44].groundLevel) != 1 || d.cells[44].groundLevel[0] != d.cells[8] {
 		t.Error("Incorrect alignment cell 44 GroundLevel")
 	}
 
 	// Cell 45
-	if len(d.Cells[45].west) != 1 || d.Cells[45].west[0] != d.Cells[43] {
+	if len(d.cells[45].west) != 1 || d.cells[45].west[0] != d.cells[43] {
 		t.Error("Incorrect alignment cell 45 West")
 	}
-	if len(d.Cells[45].south) != 1 || d.Cells[45].south[0] != d.Cells[44] {
+	if len(d.cells[45].south) != 1 || d.cells[45].south[0] != d.cells[44] {
 		t.Error("Incorrect alignment cell 45 South")
 	}
-	if len(d.Cells[45].north) != 1 || d.Cells[45].north[0] != d.northBoundary[19] {
+	if len(d.cells[45].north) != 1 || d.cells[45].north[0] != d.northBoundary[19] {
 		t.Error("Incorrect alignment cell 45 North")
 	}
-	if len(d.Cells[45].east) != 1 || d.Cells[45].east[0] != d.eastBoundary[19] {
+	if len(d.cells[45].east) != 1 || d.cells[45].east[0] != d.eastBoundary[19] {
 		t.Error("Incorrect alignment cell 45 East")
 	}
-	if len(d.Cells[45].above) != 1 || d.Cells[45].above[0] != d.topBoundary[3] {
+	if len(d.cells[45].above) != 1 || d.cells[45].above[0] != d.topBoundary[3] {
 		t.Error("Incorrect alignment cell 45 Above")
 	}
-	if len(d.Cells[45].below) != 1 || d.Cells[45].below[0] != d.Cells[41] {
+	if len(d.cells[45].below) != 1 || d.cells[45].below[0] != d.cells[41] {
 		t.Error("Incorrect alignment cell 45 Below")
 	}
-	if len(d.Cells[45].groundLevel) != 1 || d.Cells[45].groundLevel[0] != d.Cells[9] {
+	if len(d.cells[45].groundLevel) != 1 || d.cells[45].groundLevel[0] != d.cells[9] {
 		t.Error("Incorrect alignment cell 45 GroundLevel")
 	}
 }
@@ -485,10 +485,10 @@ func TestGetGeometry(t *testing.T) {
 	if err := d.Init(); err != nil {
 		t.Error(err)
 	}
-	g0 := d.GetGeometry(0)
-	g5 := d.GetGeometry(5)
+	g0 := d.GetGeometry(0, true)
+	g5 := d.GetGeometry(5, true)
 
-	want0 := []geom.Geom{
+	want0 := []geom.Polygonal{
 		geom.Polygon{[]geom.Point{
 			{X: -1.0803243503695702e+07, Y: 4.860686654254725e+06},
 			{X: -1.0801930279663565e+07, Y: 4.860687250907495e+06},
@@ -560,7 +560,7 @@ func TestGetGeometry(t *testing.T) {
 			{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06}},
 		},
 	}
-	want5 := []geom.Geom{
+	want5 := []geom.Polygonal{
 		geom.Polygon{[]geom.Point{
 			{X: -1.0803243503695702e+07, Y: 4.860686654254725e+06},
 			{X: -1.0797990606947536e+07, Y: 4.860688018032593e+06},

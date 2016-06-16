@@ -19,7 +19,7 @@ func Save(w io.Writer) DomainManipulator {
 	return func(d *InMAP) error {
 		e := gob.NewEncoder(w)
 
-		if err := e.Encode(d.Cells); err != nil {
+		if err := e.Encode(d.cells); err != nil {
 			return fmt.Errorf("inmap.InMAP.Save: %v", err)
 		}
 		return nil
@@ -51,7 +51,7 @@ func (d *InMAP) initFromCells(cells []*Cell, emis *Emissions, config *VarGridCon
 	d.sort()
 	// Add emissions to new cells.
 	if emis != nil {
-		for _, c := range d.Cells {
+		for _, c := range d.cells {
 			c.setEmissionsFlux(emis) // This needs to be called after setNeighbors.
 			if c.Layer > d.nlayers-1 {
 				d.nlayers = c.Layer + 1

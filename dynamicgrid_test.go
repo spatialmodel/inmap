@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/ctessum/geom"
-	"github.com/ctessum/geom/index/rtree"
 	"github.com/gonum/floats"
 )
 
@@ -17,10 +16,8 @@ func TestDynamicGrid(t *testing.T) {
 	)
 
 	cfg, ctmdata, pop, popIndices, mr := VarGridData()
-	emis := &Emissions{
-		data: rtree.NewTree(25, 50),
-	}
-	emis.data.Insert(emisRecord{
+	emis := NewEmissions()
+	emis.Add(&EmisRecord{
 		SOx:  E,
 		NOx:  E,
 		PM25: E,
@@ -60,7 +57,7 @@ func TestDynamicGrid(t *testing.T) {
 	}
 
 	cells := make([]int, d.nlayers)
-	for _, c := range d.Cells {
+	for _, c := range d.cells {
 		cells[c.Layer]++
 	}
 
@@ -73,7 +70,7 @@ func TestDynamicGrid(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	results := r["TotalPop deaths"][0]
+	results := r["TotalPop deaths"]
 	totald := floats.Sum(results)
 	const expectedDeaths = 1.2694482153756345e-05
 	if different(totald, expectedDeaths, testTolerance) {

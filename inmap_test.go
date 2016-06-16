@@ -52,7 +52,7 @@ func TestCellAlignment(t *testing.T) {
 
 func (d *InMAP) testCellAlignment2(t *testing.T) {
 	const testTolerance = 1.e-8
-	for _, cell := range d.Cells {
+	for _, cell := range d.cells {
 		for i, w := range cell.west {
 			if !w.boundary && len(w.east) != 0 {
 				pass := false
@@ -237,9 +237,7 @@ func TestConvectiveMixing(t *testing.T) {
 	const testTolerance = 1.e-8
 
 	cfg, ctmdata, pop, popIndices, mr := VarGridData()
-	emis := &Emissions{
-		data: rtree.NewTree(25, 50),
-	}
+	emis := NewEmissions()
 
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
@@ -251,7 +249,7 @@ func TestConvectiveMixing(t *testing.T) {
 		t.Error(err)
 	}
 
-	for i, c := range d.Cells {
+	for i, c := range d.cells {
 		val := c.M2u - c.M2d + c.above[0].M2d*c.above[0].Dz/c.Dz
 		if absDifferent(val, 0, testTolerance) {
 			t.Error(i, c.Layer, val, c.M2u, c.M2d, c.above[0].M2d)
@@ -270,7 +268,7 @@ func TestMixing(t *testing.T) {
 	emis := &Emissions{
 		data: rtree.NewTree(25, 50),
 	}
-	emis.data.Insert(emisRecord{
+	emis.Add(&EmisRecord{
 		PM25: E,
 		Geom: geom.LineString{
 			geom.Point{X: -3999, Y: -3999.},
@@ -299,14 +297,14 @@ func TestMixing(t *testing.T) {
 
 	sum := 0.
 	maxval := 0.
-	for _, group := range [][]*Cell{d.Cells, d.westBoundary, d.eastBoundary,
+	for _, group := range [][]*Cell{d.cells, d.westBoundary, d.eastBoundary,
 		d.northBoundary, d.southBoundary, d.topBoundary} {
 		for _, cell := range group {
 			sum += cell.Cf[iPM2_5] * cell.Volume
 			maxval = max(maxval, cell.Cf[iPM2_5])
 		}
 	}
-	expectedMass := d.Cells[0].EmisFlux[iPM2_5] * d.Cells[0].Volume * d.Dt * numTimesteps
+	expectedMass := d.cells[0].EmisFlux[iPM2_5] * d.cells[0].Volume * d.Dt * numTimesteps
 	if different(sum, expectedMass, testTolerance) {
 		t.Errorf("sum=%g (it should equal %g)\n", sum, expectedMass)
 	}
@@ -325,7 +323,7 @@ func TestChemistry(t *testing.T) {
 	emis := &Emissions{
 		data: rtree.NewTree(25, 50),
 	}
-	emis.data.Insert(emisRecord{
+	emis.data.Insert(&EmisRecord{
 		SOx:  E,
 		NOx:  E,
 		PM25: E,
@@ -353,7 +351,7 @@ func TestChemistry(t *testing.T) {
 		t.Error(err)
 	}
 
-	c := d.Cells[0]
+	c := d.cells[0]
 	sum := 0.
 	sum += c.Cf[igOrg] + c.Cf[ipOrg]
 	sum += (c.Cf[igNO] + c.Cf[ipNO]) / NOxToN
@@ -395,14 +393,14 @@ func TestAdvection(t *testing.T) {
 		t.Error(err)
 	}
 
-	var cellGroups = [][]*Cell{d.Cells, d.westBoundary, d.eastBoundary,
+	var cellGroups = [][]*Cell{d.cells, d.westBoundary, d.eastBoundary,
 		d.northBoundary, d.southBoundary, d.topBoundary}
 
-	for testRow := 0; testRow < len(d.Cells); testRow++ {
+	for testRow := 0; testRow < len(d.cells); testRow++ {
 		ResetCells()(d)
 
 		// Add emissions
-		c := d.Cells[testRow]
+		c := d.cells[testRow]
 		c.Ci[0] += E / c.Dz / c.Dy / c.Dx
 		c.Cf[0] += E / c.Dz / c.Dy / c.Dx
 		// Calculate advection
@@ -455,10 +453,10 @@ func TestMeanderMixing(t *testing.T) {
 		t.Error(err)
 	}
 
-	var cellGroups = [][]*Cell{d.Cells, d.westBoundary, d.eastBoundary,
+	var cellGroups = [][]*Cell{d.cells, d.westBoundary, d.eastBoundary,
 		d.northBoundary, d.southBoundary, d.topBoundary}
 	// Test emissions from every thirtieth row.
-	for testRow := 0; testRow < len(d.Cells); testRow++ {
+	for testRow := 0; testRow < len(d.cells); testRow++ {
 		for _, group := range cellGroups {
 			for _, c := range group {
 				c.Ci[0] = 0
@@ -468,7 +466,7 @@ func TestMeanderMixing(t *testing.T) {
 		ResetCells()(d)
 		for tt := 0; tt < nsteps; tt++ {
 
-			c := d.Cells[testRow]
+			c := d.cells[testRow]
 			c.Ci[0] += E / c.Dz / c.Dy / c.Dx // ground level emissions
 			c.Cf[0] += E / c.Dz / c.Dy / c.Dx // ground level emissions
 
@@ -504,7 +502,7 @@ func TestConverge(t *testing.T) {
 	emis := &Emissions{
 		data: rtree.NewTree(25, 50),
 	}
-	emis.data.Insert(emisRecord{
+	emis.data.Insert(&EmisRecord{
 		SOx:  E,
 		NOx:  E,
 		PM25: E,
@@ -561,7 +559,7 @@ func TestConverge(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		results := r["Primary PM2.5"][0]
+		results := r["Primary PM2.5"]
 		total := floats.Sum(results)
 		if different(total, expectedConcentration[i], testTolerance) {
 			t.Errorf("%s concentration (%v) doesn't equal %v", convergenceNames[i], total, expectedConcentration[i])
@@ -576,7 +574,7 @@ func BenchmarkRun(b *testing.B) {
 	emis := &Emissions{
 		data: rtree.NewTree(25, 50),
 	}
-	emis.data.Insert(emisRecord{
+	emis.Add(&EmisRecord{
 		SOx:  E,
 		NOx:  E,
 		PM25: E,
@@ -615,7 +613,7 @@ func BenchmarkRun(b *testing.B) {
 	if err != nil {
 		b.Error(err)
 	}
-	results := r["TotalPop deaths"][0]
+	results := r["TotalPop deaths"]
 	totald := floats.Sum(results)
 	const expectedDeaths = 1.1582659761054755e-06
 	if different(totald, expectedDeaths, testTolerance) {
@@ -644,7 +642,7 @@ func TestDryDeposition(t *testing.T) {
 	if err := d.Init(); err != nil {
 		t.Error(err)
 	}
-	for _, c := range d.Cells {
+	for _, c := range d.cells {
 		for i := range c.Ci {
 			c.Cf[i] = 1 // set concentrations to 1
 		}
@@ -653,7 +651,7 @@ func TestDryDeposition(t *testing.T) {
 		t.Error(err)
 	}
 
-	for i, c := range d.Cells {
+	for i, c := range d.cells {
 		for ii, cc := range c.Cf {
 			if c.Layer == 0 {
 				if cc >= 1 || cc <= 0.98 {
@@ -687,7 +685,7 @@ func TestWetDeposition(t *testing.T) {
 	if err := d.Init(); err != nil {
 		t.Error(err)
 	}
-	for _, c := range d.Cells {
+	for _, c := range d.cells {
 		for i := range c.Ci {
 			c.Cf[i] = 1 // set concentrations to 1
 		}
@@ -696,7 +694,7 @@ func TestWetDeposition(t *testing.T) {
 		t.Error(err)
 	}
 
-	for i, c := range d.Cells {
+	for i, c := range d.cells {
 		for ii, cc := range c.Cf {
 			if cc > 1 || cc <= 0.99 {
 				t.Errorf("ground-level cell %d pollutant %d should equal be between 0.99 and 1 but is %g", i, ii, cc)

@@ -5,6 +5,7 @@ import (
 	"log"
 	"math"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -33,14 +34,27 @@ type Emissions struct {
 	data *rtree.Rtree
 }
 
-type emisRecord struct {
+// EmisRecord is a holder for an emissions record.
+type EmisRecord struct {
 	geom.Geom
-	VOC, NOx, NH3, SOx float64 // emissions [tons/year]
-	PM25               float64 `shp:"PM2_5"` // emissions [tons/year]
+	VOC, NOx, NH3, SOx float64 // emissions [μg/s]
+	PM25               float64 `shp:"PM2_5"` // emissions [μg/s]
 	Height             float64 // stack height [m]
 	Diam               float64 // stack diameter [m]
 	Temp               float64 // stack temperature [K]
 	Velocity           float64 // stack velocity [m/s]
+}
+
+// NewEmissions Initializes a new emissions holder.
+func NewEmissions() *Emissions {
+	return &Emissions{
+		data: rtree.NewTree(25, 50),
+	}
+}
+
+// Add adds an emissions record to e.
+func (e *Emissions) Add(er *EmisRecord) {
+	e.data.Insert(er)
 }
 
 // ReadEmissionShapefiles returns the emissions data in the specified shapefiles,
@@ -66,9 +80,7 @@ func ReadEmissionShapefiles(gridSR *proj.SR, units string, c chan string, shapef
 
 	// Add in emissions shapefiles
 	// Load emissions into rtree for fast searching
-	emis := &Emissions{
-		data: rtree.NewTree(25, 50),
-	}
+	emis := NewEmissions()
 	for _, fname := range shapefiles {
 		if c != nil {
 			c <- fmt.Sprintf("Loading emissions shapefile: %s.", fname)
@@ -90,7 +102,7 @@ func ReadEmissionShapefiles(gridSR *proj.SR, units string, c chan string, shapef
 				"the emissions shapefile '%s'. The error message was %v.", fname, err)
 		}
 		for {
-			var e emisRecord
+			var e EmisRecord
 			if ok := f.DecodeRow(&e); !ok {
 				break
 			}
@@ -119,7 +131,7 @@ func ReadEmissionShapefiles(gridSR *proj.SR, units string, c chan string, shapef
 			if math.IsNaN(e.Velocity) {
 				e.Velocity = 0.
 			}
-			emis.data.Insert(e)
+			emis.Add(&e)
 		}
 		f.Close()
 		if err := f.Error(); err != nil {
@@ -137,60 +149,56 @@ func (c *Cell) addEmisFlux(val float64, scale float64, iPol int) {
 	c.EmisFlux[iPol] += val * scale * fluxScale
 }
 
-// calcIntersection calculates the geometry of any intersection between e and c.
 // calcWeightFactor calculates the fraction of emissions in e that should be
-// allocated to the intersection based on the areas of lengths or areas.
-func calcIntersectionWeightFactor(e geom.Geom, c *Cell) (intersection geom.Geom, weightFactor float64) {
+// allocated to the intersection between e and c based on the areas of lengths or areas.
+func calcWeightFactor(e geom.Geom, c *Cell) float64 {
+	var weightFactor float64
 	switch e.(type) {
 	case geom.Point:
-		in := e.(geom.Point).Within(c)
+		p := e.(geom.Point)
+		in := p.Within(c)
 		if in == geom.Inside {
-			intersection = e
 			weightFactor = 1.
 		} else if in == geom.OnEdge {
-			intersection = e
-			weightFactor = 0.5 // Spilt emissions between this cell and any cell
-			// that shares this edge. This still may cause double counting if the
-			// point is located on a corner, in which case it should actually be
-			// split among four cells, but I'm not currently sure how to handle that
-			// situation well.
+			onCorner := false
+			for _, cp := range c.Polygons()[0][0] {
+				if cp.Equals(p) {
+					// If the point is located exactly on one of the corners of the
+					// grid cell, we split the emissions evenly between this grid cell
+					// and the three that it shares a corner with.
+					onCorner = true
+					weightFactor = 0.25
+					break
+				}
+			}
+			if !onCorner {
+				// If the point is on the edge of the cell but not on the corner,
+				// split the emissions between this cell and the cell that it shares
+				// an edge with.
+				weightFactor = 0.5
+			}
 		}
 	case geom.Polygonal:
 		poly := e.(geom.Polygonal)
-		intersection = poly.Intersection(c)
+		intersection := poly.Intersection(c)
 		if intersection == nil {
-			return
+			return 0.
 		}
-		weightFactor = intersection.(geom.Polygon).Area() / poly.Area()
+		weightFactor = intersection.Area() / poly.Area()
 	case geom.Linear:
 		var err error
-		intersection, err = op.Construct(e, c.Polygonal, op.INTERSECTION)
+		intersection, err := op.Construct(e, c.Polygonal, op.INTERSECTION)
 		if err != nil {
 			log.Fatalf("while allocating emissions to grid: %v", err)
 		}
 		if intersection == nil {
-			return
+			return 0.
 		}
 		el := e.(geom.Linear)
 		il := intersection.(geom.Linear)
 		weightFactor = il.Length() / el.Length()
 	default:
 		log.Fatalf("unsupported geometry type: %#v in emissions file", e)
-	}
-	return
-}
-
-// calcWeightFactor calculate the fraction of emissions in e that should be
-// allocated to intersection based on the areas of lengths or areas.
-func calcWeightFactor(e, intersection geom.Geom) float64 {
-	var weightFactor float64 // fraction of geometry in grid cell
-	switch e.(type) {
-	case geom.Polygonal:
-	case geom.Linear:
-	case geom.Point:
-		weightFactor = 1.
-	default:
-		log.Fatalf("unsupported geometry type: %#v", e)
 	}
 	return weightFactor
 }
@@ -199,10 +207,10 @@ func calcWeightFactor(e, intersection geom.Geom) float64 {
 func (c *Cell) setEmissionsFlux(e *Emissions) {
 	c.EmisFlux = make([]float64, len(PolNames))
 	for _, eTemp := range e.data.SearchIntersect(c.Bounds()) {
-		e := eTemp.(emisRecord)
+		e := eTemp.(*EmisRecord)
 		if e.Height > 0. {
 			// Figure out if this cell is at the right hight for the plume.
-			in, err := c.IsPlumeIn(e.Height, e.Diam, e.Temp, e.Velocity)
+			in, _, err := c.IsPlumeIn(e.Height, e.Diam, e.Temp, e.Velocity)
 			if err != nil {
 				panic(err)
 			}
@@ -212,8 +220,8 @@ func (c *Cell) setEmissionsFlux(e *Emissions) {
 		} else if c.Layer != 0 {
 			continue
 		}
-		intersection, weightFactor := calcIntersectionWeightFactor(e.Geom, c)
-		if intersection == nil {
+		weightFactor := calcWeightFactor(e.Geom, c)
+		if weightFactor == 0 {
 			continue
 		}
 
@@ -231,7 +239,7 @@ func (c *Cell) setEmissionsFlux(e *Emissions) {
 // If  allLayers` is true, the function writes out data for all of the vertical
 // layers, otherwise only the ground-level layer is written.
 // outputVariables is a list of the names of the variables to be output.
-func Output(fileTemplate string, allLayers bool, outputVariables ...string) DomainManipulator {
+func Output(fileName string, allLayers bool, outputVariables ...string) DomainManipulator {
 	return func(d *InMAP) error {
 
 		// Projection definition. This may need to be changed for a different
@@ -255,50 +263,33 @@ func Output(fileTemplate string, allLayers bool, outputVariables ...string) Doma
 			fields[i] = goshp.FloatField(v, 14, 8)
 		}
 
-		var nlayers int
-		if allLayers {
-			nlayers = d.nlayers
-		} else {
-			nlayers = 1
+		// remove extension and replace it with .shp
+		fileBase := strings.TrimSuffix(fileName, filepath.Ext(fileName))
+		fileName = fileBase + ".shp"
+		shape, err := shp.NewEncoderFromFields(fileName, goshp.POLYGON, fields...)
+		if err != nil {
+			return fmt.Errorf("error creating output shapefile: %v", err)
 		}
-		row := 0
-		for k := 0; k < nlayers; k++ {
 
-			filename := strings.Replace(fileTemplate, "[layer]",
-				fmt.Sprintf("%v", k), -1)
-			// remove extension and replace it with .shp
-			extIndex := strings.LastIndex(filename, ".")
-			if extIndex == -1 {
-				extIndex = len(filename)
+		for i, c := range d.cells[0:len(results[outputVariables[0]])] {
+			outFields := make([]interface{}, len(vars))
+			for j, v := range vars {
+				outFields[j] = results[v][i]
 			}
-			filename = filename[0:extIndex] + ".shp"
-			shape, err := shp.NewEncoderFromFields(filename, goshp.POLYGON, fields...)
+			err = shape.EncodeFields(c.Polygonal, outFields...)
 			if err != nil {
-				return fmt.Errorf("error creating output shapefile: %v", err)
+				return fmt.Errorf("error writing output shapefile: %v", err)
 			}
-
-			numRowsInLayer := len(results[vars[0]][k])
-			for i := 0; i < numRowsInLayer; i++ {
-				outFields := make([]interface{}, len(vars))
-				for j, v := range vars {
-					outFields[j] = results[v][k][i]
-				}
-				err = shape.EncodeFields(d.Cells[row].Polygonal, outFields...)
-				if err != nil {
-					return fmt.Errorf("error writing output shapefile: %v", err)
-				}
-				row++
-			}
-			shape.Close()
-
-			// Create .prj file
-			f, err := os.Create(filename[0:extIndex] + ".prj")
-			if err != nil {
-				return fmt.Errorf("error creating output prj file: %v", err)
-			}
-			fmt.Fprint(f, proj4)
-			f.Close()
 		}
+		shape.Close()
+
+		// Create .prj file
+		f, err := os.Create(fileBase + ".prj")
+		if err != nil {
+			return fmt.Errorf("error creating output prj file: %v", err)
+		}
+		fmt.Fprint(f, proj4)
+		f.Close()
 
 		return nil
 	}

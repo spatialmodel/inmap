@@ -23,7 +23,9 @@ import "github.com/ctessum/atmos/plumerise"
 // IsPlumeIn calculates whether the plume rise from an emission is at the height
 // of c when given stack information
 // (see github.com/ctessum/atmos/plumerise for required units).
-func (c *Cell) IsPlumeIn(stackHeight, stackDiam, stackTemp, stackVel float64) (bool, error) {
+// The return values are whether the plume rise ends within the current cell,
+// the height of the plume rise in meters, and whether there was an error.
+func (c *Cell) IsPlumeIn(stackHeight, stackDiam, stackTemp, stackVel float64) (bool, float64, error) {
 
 	// Find the cells in the vertical column below c.
 	var cellStack []*Cell
@@ -60,7 +62,7 @@ func (c *Cell) IsPlumeIn(stackHeight, stackDiam, stackTemp, stackVel float64) (b
 		s1[i] = cell.S1
 	}
 
-	plumeIndex, _, err := plumerise.ASMEPrecomputed(stackHeight, stackDiam,
+	plumeIndex, plumeHeight, err := plumerise.ASMEPrecomputed(stackHeight, stackDiam,
 		stackTemp, stackVel, layerHeights, temperature, windSpeed,
 		sClass, s1, windSpeedMinusOnePointFour, windSpeedMinusThird,
 		windSpeedInverse)
@@ -71,17 +73,17 @@ func (c *Cell) IsPlumeIn(stackHeight, stackDiam, stackTemp, stackVel float64) (b
 			// top layer even if it should technically go above it),
 			//  otherwise return false.
 			if c.above[0].boundary {
-				return true, nil
+				return true, plumeHeight, nil
 			}
-			return false, nil
+			return false, plumeHeight, nil
 		}
-		return false, err
+		return false, plumeHeight, err
 	}
 
 	// if the index of the plume is at the end of the cell stack,
 	// that means that the plume should go in this cell.
 	if plumeIndex == c.Layer {
-		return true, nil
+		return true, plumeHeight, nil
 	}
-	return false, nil
+	return false, plumeHeight, nil
 }

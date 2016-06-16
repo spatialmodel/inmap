@@ -28,7 +28,6 @@ import (
 
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/carto"
-	"github.com/ctessum/geom/op"
 	"github.com/gonum/plot"
 	"github.com/gonum/plot/plotter"
 	"github.com/gonum/plot/plotutil"
@@ -42,7 +41,7 @@ import (
 func (d *InMAP) OutputOptions() (names []string, descriptions []string) {
 
 	// Model pollutant concentrations
-	for pol := range polLabels {
+	for pol := range PolLabels {
 		names = append(names, pol)
 	}
 	sort.Strings(names)
@@ -80,7 +79,7 @@ func (d *InMAP) OutputOptions() (names []string, descriptions []string) {
 	descriptions = append(descriptions, tempEmis...)
 
 	// Eveything else
-	t := reflect.TypeOf(*d.Cells[0])
+	t := reflect.TypeOf(*d.cells[0])
 	var tempNames []string
 	var tempDescriptions []string
 	for i := 0; i < t.NumField(); i++ {
@@ -141,11 +140,15 @@ func (d *InMAP) mapHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	vals := d.toArray(name, layer)
-	geometry := d.GetGeometry(layer)
+	geometry := d.GetGeometry(layer, true)
+	geom2 := make([]geom.Geom, len(geometry))
+	for i, g := range geometry {
+		geom2[i] = geom.Geom(g)
+	}
 	m := carto.NewMapData(len(vals), carto.LinCutoff)
 	m.Cmap.AddArray(vals)
 	m.Cmap.Set()
-	m.Shapes = geometry
+	m.Shapes = geom2
 	m.Data = vals
 	//b := bufio.NewWriter(w)
 	err = m.WriteGoogleMapTile(w, z, x, y)
@@ -219,24 +222,26 @@ func parseVerticalProfileRequest(base string, r *http.Request) (name string,
 	return
 }
 
-func (d *InMAP) verticalProfileHandler(w http.ResponseWriter,
-	r *http.Request) {
+func (d *InMAP) verticalProfileHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "image/png")
 	name, lon, lat, err := parseVerticalProfileRequest("/verticalProfile/", r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	height, vals := d.VerticalProfile(name, lon, lat)
+	// TODO: This need to be converted to grid coordinates, not lat-lon.
+	height, vals, err := d.VerticalProfile(name, geom.Point{X: lon, Y: lat})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	p, err := plot.New()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	p.Title.Text = fmt.Sprintf("%v vertical\nprofile at (%.2f, %.2f)",
-		name, lon, lat)
-	//p.X.Label.Text = "Layer height (m)"
-	p.X.Label.Text = "Layer index"
+	p.Title.Text = fmt.Sprintf("%v vertical\nprofile at (%.2f, %.2f)", name, lon, lat)
+	p.X.Label.Text = "Layer height (m)"
 	p.Y.Label.Text = d.getUnits(name)
 	xy := make(plotter.XYs, len(height))
 	for i, h := range height {
@@ -263,30 +268,34 @@ func (d *InMAP) verticalProfileHandler(w http.ResponseWriter,
 }
 
 // VerticalProfile retrieves the vertical profile for a given
-// variable at a given location.
-func (d *InMAP) VerticalProfile(variable string, lon, lat float64) (height, vals []float64) {
+// variable at the given location p in the native grid projection.
+func (d *InMAP) VerticalProfile(variable string, p geom.Point) (height, vals []float64, err error) {
+	if err := d.checkOutputNames(variable); err != nil {
+		return nil, nil, err
+	}
+
 	height = make([]float64, d.nlayers)
 	vals = make([]float64, d.nlayers)
-	x, y := carto.Degrees2meters(lon, lat)
-	loc := geom.Point{X: x, Y: y}
-	for _, cell := range d.Cells {
-		in, err := op.Within(loc, cell.WebMapGeom)
-		if err != nil {
-			panic(err)
+	cells := d.index.SearchIntersect(p.Bounds())
+	if len(cells) == 0 {
+		return nil, nil, fmt.Errorf("inmap.VerticalProfile: location %+v not in grid", p)
+	}
+	var c *Cell
+	for _, cI := range cells {
+		c = cI.(*Cell)
+		if c.Layer == 0 {
+			break
 		}
-		if in {
-			for i := 0; i < d.nlayers; i++ {
-				vals[i] = cell.getValue(variable, d.popIndices)
-				height[i] = float64(i)
-				//if i == 0 {
-				//	height[i] = cell.Dz / 2.
-				//} else {
-				//	height[i] = height[i-1] + cell.DzMinusHalf[0]
-				//}
-				cell = cell.above[0]
-			}
-			return
-		}
+	}
+	if c.Layer != 0 {
+		panic("couldn't find a ground level cell.")
+	}
+	i := 0
+	for !c.boundary {
+		vals[i] = c.getValue(variable, d.popIndices)
+		height[i] = c.LayerHeight + c.Dz/2.
+		c = c.above[0]
+		i++
 	}
 	return
 }
