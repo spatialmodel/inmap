@@ -236,15 +236,15 @@ func (d *InMAP) testCellAlignment2(t *testing.T) {
 func TestConvectiveMixing(t *testing.T) {
 	const testTolerance = 1.e-8
 
-	cfg, ctmdata, pop, PopIndices, mr := VarGridData()
+	cfg, ctmdata, pop, popIndices, mr := VarGridData()
 	emis := &Emissions{
 		data: rtree.NewTree(25, 50),
 	}
 
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, PopIndices, mr, emis),
-			cfg.MutateGrid(PopulationMutator(cfg, PopIndices), ctmdata, pop, mr, emis),
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
+			cfg.MutateGrid(PopulationMutator(cfg, popIndices), ctmdata, pop, mr, emis),
 		},
 	}
 	if err := d.Init(); err != nil {
@@ -321,7 +321,7 @@ func TestChemistry(t *testing.T) {
 		testTolerance = 1.e-8
 		testRow       = 2
 	)
-	cfg, ctmdata, pop, PopIndices, mr := VarGridData()
+	cfg, ctmdata, pop, popIndices, mr := VarGridData()
 	emis := &Emissions{
 		data: rtree.NewTree(25, 50),
 	}
@@ -336,8 +336,8 @@ func TestChemistry(t *testing.T) {
 
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, PopIndices, mr, emis),
-			cfg.MutateGrid(PopulationMutator(cfg, PopIndices), ctmdata, pop, mr, emis),
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
+			cfg.MutateGrid(PopulationMutator(cfg, popIndices), ctmdata, pop, mr, emis),
 			SetTimestepCFL(),
 		},
 		RunFuncs: []DomainManipulator{

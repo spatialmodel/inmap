@@ -4,6 +4,8 @@
 * Fixed a bug involving the the loss of mass conservation in adjacent cells with different heights
 * Population in output files is now population per grid cell instead of population per square km
 * The user can now specify which variables are to be output
+* Added option to dynamically vary grid resolution during the simulation based on spatial gradients in concentration and population density
+* Changed the command line interface for the executable program to be more flexible
 
 # Release 1.1.0 (2016-2-12)
 * Fixed a bug related to molar mass conversions

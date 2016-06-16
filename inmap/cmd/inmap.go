@@ -74,6 +74,7 @@ type configData struct {
 
 	// OutputVariables specifies which model variables should be included in the
 	// output file.
+	// Can include environment variables.
 	OutputVariables []string
 
 	// NumIterations is the number of iterations to calculate. If < 1, convergence
@@ -283,6 +284,8 @@ func readConfigFile(filename string) (config *configData, err error) {
 	config.InMAPData = os.ExpandEnv(config.InMAPData)
 	config.VariableGridData = os.ExpandEnv(config.VariableGridData)
 	config.OutputTemplate = os.ExpandEnv(config.OutputTemplate)
+	config.VarGrid.CensusFile = os.ExpandEnv(config.VarGrid.CensusFile)
+	config.VarGrid.MortalityRateFile = os.ExpandEnv(config.VarGrid.MortalityRateFile)
 
 	for i := 0; i < len(config.EmissionsShapefiles); i++ {
 		config.EmissionsShapefiles[i] =

@@ -1,13 +1,13 @@
-InMAPData = "../testdata/inmapData.ncf"
+InMAPData = "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testInMAPInputData.ncf"
 
-VariableGridData = "../testdata/inmapVarGrid.gob"
+VariableGridData = "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/inmapVarGrid.gob"
 
 EmissionsShapefiles = [
-	"../testdata/testEmis.shp"
+	"${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testEmis.shp"
 ]
 EmissionUnits = "tons/year"
 
-OutputTemplate = "../testdata/output_[layer].shp"
+OutputTemplate = "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/output_${InMAPRunType}_[layer].shp"
 OutputVariables = [
   "TotalPop deaths",
 	"WhiteNoLat deaths",
@@ -25,19 +25,19 @@ OutputVariables = [
 HTTPport = "8080"
 
 [VarGrid]
-VariableGridXo= -2004000.0
-VariableGridYo= -540000.0
-VariableGridDx= 12000.0
-VariableGridDy= 12000.0
-Xnests= [12, 2, 2]
-Ynests= [10, 2, 2]
-HiResLayers= 8
+VariableGridXo= -4000.0
+VariableGridYo= -4000.0
+VariableGridDx= 4000.0
+VariableGridDy= 4000.0
+Xnests= [2, 2, 2]
+Ynests= [2, 2, 2]
+HiResLayers= 1
 GridProj= "+proj=lcc +lat_1=33.000000 +lat_2=45.000000 +lat_0=40.000000 +lon_0=-97.000000 +x_0=0 +y_0=0 +a=6370997.000000 +b=6370997.000000 +to_meter=1"
 PopDensityThreshold= 0.001
 PopThreshold= 25000.0
 PopConcThreshold= 0.000001
-CensusFile= "../testdata/census2012.shp"
+CensusFile= "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testPopulation.shp"
 CensusPopColumns= ["TotalPop", "WhiteNoLat", "Black", "Native", "Asian", "Latino"]
 PopGridColumn= "TotalPop"
-MortalityRateFile= "../testdata/MortalityRate.shp"
+MortalityRateFile= "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testMortalityRate.shp"
 MortalityRateColumn= "AllCause"
