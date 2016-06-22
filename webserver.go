@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2013-2014 Regents of the University of Minnesota.
+Copyright © 2013 the InMAP authors.
 This file is part of InMAP.
 
 InMAP is free software: you can redistribute it and/or modify
@@ -38,14 +38,16 @@ import (
 
 // OutputOptions returns the options for output variable names and their
 // descriptions.
-func (d *InMAP) OutputOptions() (names []string, descriptions []string) {
+func (d *InMAP) OutputOptions() (names []string, descriptions []string, units []string) {
 
 	// Model pollutant concentrations
 	for pol := range PolLabels {
 		names = append(names, pol)
 	}
 	sort.Strings(names)
-	descriptions = append(descriptions, names...)
+	for _, n := range names {
+		descriptions = append(descriptions, n+" Concentration")
+	}
 
 	// Baseline pollutant concentrations
 	var tempBaseline []string
@@ -54,7 +56,9 @@ func (d *InMAP) OutputOptions() (names []string, descriptions []string) {
 	}
 	sort.Strings(tempBaseline)
 	names = append(names, tempBaseline...)
-	descriptions = append(descriptions, tempBaseline...)
+	for _, n := range tempBaseline {
+		descriptions = append(descriptions, n+" Concentration")
+	}
 
 	// Population and deaths
 	var tempPop []string
@@ -66,7 +70,9 @@ func (d *InMAP) OutputOptions() (names []string, descriptions []string) {
 	sort.Strings(tempPop)
 	names = append(names, tempPop...)
 	names = append(names, tempDeaths...)
-	descriptions = append(descriptions, tempPop...)
+	for _, n := range tempPop {
+		descriptions = append(descriptions, n+" Population")
+	}
 	descriptions = append(descriptions, tempDeaths...)
 
 	// Emissions.
@@ -93,6 +99,11 @@ func (d *InMAP) OutputOptions() (names []string, descriptions []string) {
 	}
 	names = append(names, tempNames...)
 	descriptions = append(descriptions, tempDescriptions...)
+
+	units = make([]string, len(names))
+	for i, n := range names {
+		units[i] = d.getUnits(n)
+	}
 
 	return
 }

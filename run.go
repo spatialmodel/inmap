@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2013-2014 Regents of the University of Minnesota.
+Copyright © 2013 the InMAP authors.
 This file is part of InMAP.
 
 InMAP is free software: you can redistribute it and/or modify
@@ -306,7 +306,7 @@ func Log(c chan *SimulationStatus) DomainManipulator {
 }
 
 func (d *InMAP) checkOutputNames(n ...string) error {
-	tempOutputNames, _ := d.OutputOptions()
+	tempOutputNames, _, _ := d.OutputOptions()
 	outputNames := make(map[string]uint8)
 	for _, n := range tempOutputNames {
 		outputNames[n] = 0
@@ -320,8 +320,7 @@ func (d *InMAP) checkOutputNames(n ...string) error {
 }
 
 // Results returns the simulation results.
-// Output is in the form of map[pollutant][layer][row]concentration,
-// in units of μg/m3.
+// Output is in the form of map[variable][row]concentration.
 // If  allLayers` is true, the function returns data for all of the vertical
 // layers, otherwise only the ground-level layer is returned.
 // outputVariables is a list of the names of the variables for which data should be

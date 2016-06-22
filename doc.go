@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2013-2014 Regents of the University of Minnesota.
+Copyright © 2013 the InMAP authors.
 This file is part of InMAP.
 
 InMAP is free software: you can redistribute it and/or modify
@@ -16,4 +16,10 @@ You should have received a copy of the GNU General Public License
 along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/*
+Package inmap is a air quality model for predicting health impacts of air
+pollutant emissions.
+*/
 package inmap
+
+//go:generate go run internal/autogen.go

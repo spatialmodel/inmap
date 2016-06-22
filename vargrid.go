@@ -1,3 +1,21 @@
+/*
+Copyright © 2013 the InMAP authors.
+This file is part of InMAP.
+
+InMAP is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+InMAP is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 package inmap
 
 import (
@@ -93,6 +111,13 @@ func (config *VarGridConfig) LoadCTMData(rw cdf.ReaderWriterAt) (*CTMData, error
 	config.ctmGridXo = f.Header.GetAttribute("", "x0").([]float64)[0]
 	config.ctmGridYo = f.Header.GetAttribute("", "y0").([]float64)[0]
 
+	dataVersion := f.Header.GetAttribute("", "data_version").(string)
+
+	if dataVersion != InMAPDataVersion {
+		return nil, fmt.Errorf("inmap.LoadCTMData: data version %s is incompatible "+
+			"with the required version %s", dataVersion, InMAPDataVersion)
+	}
+
 	o.gridTree = config.makeCTMgrid(nz)
 
 	od := make(map[string]ctmVariable)
@@ -149,6 +174,8 @@ func (d *CTMData) Write(w *os.File, x0, y0, dx, dy float64) error {
 	h.AddAttribute("", "dy", []float64{dy})
 	h.AddAttribute("", "nx", []int32{int32(windSpeed.Shape[2])})
 	h.AddAttribute("", "ny", []int32{int32(windSpeed.Shape[1])})
+
+	h.AddAttribute("", "data_version", InMAPDataVersion)
 
 	for name, dd := range d.data {
 		h.AddVariable(name, dd.dims, []float32{0})

@@ -1,0 +1,17 @@
+# This is the official list of people who have contributed code
+# to InMAP.
+#
+# The AUTHORS file lists the copyright holders; this file
+# lists people.  For example, Google employees would be listed here
+# but not in AUTHORS, because Google would hold the copyright.
+#
+# When adding a contributor to this file,
+# either the contributor's name or the contributor's organization's name should be
+# added to the AUTHORS file.
+#
+# Names should be added to this file like so:
+#     Name <email address>
+#
+# Please keep the list sorted.
+
+Christopher Tessum <ctessum@uw.edu> <ctessum@gmail.com>

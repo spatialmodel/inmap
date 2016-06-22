@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2013-2014 Regents of the University of Minnesota.
+Copyright © 2013 the InMAP authors.
 This file is part of InMAP.
 
 InMAP is free software: you can redistribute it and/or modify
@@ -30,8 +30,18 @@ import (
 	"github.com/ctessum/geom/index/rtree"
 )
 
-// Version gives the version number.
-const Version = "1.2.0-dev"
+const (
+	// Version gives the version number.
+	Version = "1.2.0-dev"
+
+	// VarGridDataVersion gives the version of the variable grid data reuquired by
+	// this version of the software.
+	VarGridDataVersion = "1.2.0"
+
+	// InMAPDataVersion is the version of the InMAP data required by this version
+	// of the software.
+	InMAPDataVersion = "1.2.0"
+)
 
 // InMAP holds the current state of the model.
 type InMAP struct {
@@ -147,7 +157,7 @@ type Cell struct {
 	M2d float64 `desc:"ACM2 downward mixing (Pleim 2007)" units:"1/s"`
 
 	PopData       []float64 // Population for multiple demographics [people/grid cell]
-	MortalityRate float64   `desc:"Baseline mortalities rate" units:"Deaths per 100,000 people per year"`
+	MortalityRate float64   `desc:"Baseline mortality rate" units:"Deaths per 100,000 people per year"`
 
 	Dx     float64 `desc:"Cell x length" units:"m"`
 	Dy     float64 `desc:"Cell y length" units:"m"`
@@ -361,7 +371,7 @@ func (c *Cell) getValue(varName string, popIndices map[string]int) float64 {
 	}
 }
 
-// Get the units of a variable
+// getUnits returns the units of a model variable.
 func (d *InMAP) getUnits(varName string) string {
 	if _, ok := emisLabels[varName]; ok { // Emissions
 		return "μg/m³/s"

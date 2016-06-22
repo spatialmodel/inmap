@@ -1,3 +1,21 @@
+/*
+Copyright © 2013 the InMAP authors.
+This file is part of InMAP.
+
+InMAP is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+InMAP is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 package inmap
 
 import (
@@ -13,13 +31,28 @@ func init() {
 	gob.Register(geom.Polygon{})
 }
 
+type versionCells struct {
+	// DataVersion holds the variable grid data version of the software
+	// that saved this data, if any, and should match the VarGridDataVersion
+	// global variable.
+	DataVersion string
+	Cells       []*Cell
+}
+
 // Save returns a function that saves the data in d to a gob file
 // (format description at https://golang.org/pkg/encoding/gob/).
 func Save(w io.Writer) DomainManipulator {
 	return func(d *InMAP) error {
+
+		// Set the data version so it can be checked when the data is loaded.
+		data := versionCells{
+			DataVersion: VarGridDataVersion,
+			Cells:       d.cells,
+		}
+
 		e := gob.NewEncoder(w)
 
-		if err := e.Encode(d.cells); err != nil {
+		if err := e.Encode(data); err != nil {
 			return fmt.Errorf("inmap.InMAP.Save: %v", err)
 		}
 		return nil
@@ -31,11 +64,15 @@ func Save(w io.Writer) DomainManipulator {
 func Load(r io.Reader, config *VarGridConfig, emis *Emissions) DomainManipulator {
 	return func(d *InMAP) error {
 		dec := gob.NewDecoder(r)
-		var cells []*Cell
-		if err := dec.Decode(&cells); err != nil {
+		var data versionCells
+		if err := dec.Decode(&data); err != nil {
 			return fmt.Errorf("inmap.InMAP.Load: %v", err)
 		}
-		d.initFromCells(cells, emis, config)
+		d.initFromCells(data.Cells, emis, config)
+		if data.DataVersion != VarGridDataVersion {
+			return fmt.Errorf("InMAP variable grid data version %s is not compatible with "+
+				"the required version %s", data.DataVersion, VarGridDataVersion)
+		}
 		return nil
 	}
 }

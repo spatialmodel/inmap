@@ -1,6 +1,6 @@
 # Release 1.2.0 (?)
 * Allowed the input emissions data shapefiles to have arbitrary spatial projections instead of requiring them to be the same as the InMAP grid
-* Changed the program to create the variable grid at runtime from user supplied population and mortality data
+* Changed the program to be able to create the variable grid at runtime from user supplied population and mortality data
 * Fixed a bug involving the the loss of mass conservation in adjacent cells with different heights
 * Population in output files is now population per grid cell instead of population per square km
 * The user can now specify which variables are to be output

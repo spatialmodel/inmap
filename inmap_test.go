@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2013-2014 Regents of the University of Minnesota.
+Copyright © 2013 the InMAP authors.
 This file is part of InMAP.
 
 InMAP is free software: you can redistribute it and/or modify

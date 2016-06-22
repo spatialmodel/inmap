@@ -1,3 +1,23 @@
+/*
+Copyright © 2013 the InMAP authors.
+This file is part of InMAP.
+
+InMAP is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+InMAP is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+// Package sr contains functions for creating a source-receptor (SR) matrix from
+// the InMAP air pollution model and interacting with it.
 package sr
 
 import (
@@ -180,9 +200,10 @@ func (sr *SR) writeResults(outfile string, layers []int, requestChan chan result
 		log.Println("creating output file")
 
 		// Get model variable names for inclusion in the SR matrix.
-		vars, descriptions := sr.d.OutputOptions()
+		vars, descriptions, units := sr.d.OutputOptions()
 		inmapVars := make([]string, 0, len(vars))
 		inmapDescriptions := make([]string, 0, len(vars))
+		inmapUnits := make([]string, 0, len(vars))
 		for i, v := range vars {
 			if _, ok := inmap.PolLabels[v]; ok {
 				continue // ignore modeled pollutants
@@ -192,6 +213,7 @@ func (sr *SR) writeResults(outfile string, layers []int, requestChan chan result
 			}
 			inmapVars = append(inmapVars, v)
 			inmapDescriptions = append(inmapDescriptions, descriptions[i])
+			inmapUnits = append(inmapUnits, units[i])
 		}
 
 		h := cdf.NewHeader([]string{"layer", "source", "receptor", "allcells", "layers"},
@@ -207,6 +229,7 @@ func (sr *SR) writeResults(outfile string, layers []int, requestChan chan result
 		for i, v := range inmapVars {
 			h.AddVariable(v, []string{"allcells"}, []float64{0.})
 			h.AddAttribute(v, "description", inmapDescriptions[i])
+			h.AddAttribute(v, "units", inmapUnits[i])
 		}
 		// Grid cell edges.
 		for _, v := range []string{"N", "S", "E", "W"} {

@@ -1,7 +1,0 @@
-*.ncf filter=lfs diff=lfs merge=lfs -text
-*_00_00_00 filter=lfs diff=lfs merge=lfs -text
-*.shp filter=lfs diff=lfs merge=lfs -text
-*.shx filter=lfs diff=lfs merge=lfs -text
-*.prj filter=lfs diff=lfs merge=lfs -text
-*.dbf filter=lfs diff=lfs merge=lfs -text
-*.gob filter=lfs diff=lfs merge=lfs -text
