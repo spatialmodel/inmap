@@ -33,7 +33,7 @@ import (
 // ConfigData holds information about an InMAP configuration.
 type ConfigData struct {
 
-	// VarGridConfig provides information for specifying the variable resolution
+	// VarGrid provides information for specifying the variable resolution
 	// grid.
 	VarGrid inmap.VarGridConfig
 
@@ -79,7 +79,7 @@ type ConfigData struct {
 	// Port for hosting web page. If HTTPport is `8080`, then the GUI
 	// would be viewed by visiting `localhost:8080` in a web browser.
 	// If HTTPport is "", then the web server doesn't run.
-	HTTPport string
+	HTTPAddress string
 
 	// SRLogDir is the directory that log files should be stored in when creating
 	// a source-receptor matrix. It can contain environment variables.
@@ -116,6 +116,10 @@ func ReadConfigFile(filename string) (config *ConfigData, err error) {
 	if err != nil {
 		return nil, fmt.Errorf(
 			"there has been an error parsing the configuration file: %v\n", err)
+	}
+
+	for i, v := range config.OutputVariables {
+		config.OutputVariables[i] = os.ExpandEnv(v)
 	}
 
 	config.InMAPData = os.ExpandEnv(config.InMAPData)

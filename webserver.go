@@ -21,6 +21,7 @@ package inmap
 import (
 	"fmt"
 	"net/http"
+	_ "net/http/pprof" // pprof serves a performance profiler.
 	"reflect"
 	"sort"
 	"strconv"
@@ -309,4 +310,19 @@ func (d *InMAP) VerticalProfile(variable string, p geom.Point) (height, vals []f
 		i++
 	}
 	return
+}
+
+// HTMLUI returns a function that serves an HTML user interface at address.
+// If address is "", then the server won't run.
+func HTMLUI(address string) DomainManipulator {
+	return func(d *InMAP) error {
+		if address != "" {
+			errChan := make(chan error)
+			go func() {
+				errChan <- http.ListenAndServe(address, nil)
+			}()
+			return <-errChan
+		}
+		return nil
+	}
 }

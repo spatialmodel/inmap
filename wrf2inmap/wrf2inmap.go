@@ -1151,10 +1151,10 @@ func StabilityMixingChemistry(LayerHeights *sparse.DenseArray,
 					for k := 0; k < T.Shape[0]; k++ {
 						Tval := T.Get(k, j, i)
 						var dthetaDz = 0. // potential temperature gradient
-						if k > 0 {
-							dthetaDz = (Tval - T.Get(k-1, j, i)) /
-								(LayerHeights.Get(k, j, i) -
-									LayerHeights.Get(k-1, j, i)) // K/m
+						if k < T.Shape[0]-1 {
+							dthetaDz = (T.Get(k+1, j, i) - Tval) /
+								(LayerHeights.Get(k+1, j, i) -
+									LayerHeights.Get(k, j, i)) // K/m
 						}
 
 						p := P.Get(k, j, i) + PB.Get(k, j, i) // Pa

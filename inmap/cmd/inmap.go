@@ -66,6 +66,9 @@ func Run(dynamic, createGrid bool) error {
 
 	emis, err := inmap.ReadEmissionShapefiles(Config.sr, Config.EmissionUnits,
 		msgLog, Config.EmissionsShapefiles...)
+	if err != nil {
+		return err
+	}
 
 	// Only load the population if we're creating the grid.
 	var pop *inmap.Population
@@ -98,6 +101,7 @@ func Run(dynamic, createGrid bool) error {
 	if !dynamic {
 		if createGrid {
 			initFuncs = []inmap.DomainManipulator{
+				inmap.HTMLUI(Config.HTTPAddress),
 				Config.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, emis),
 				Config.VarGrid.MutateGrid(inmap.PopulationMutator(&Config.VarGrid, popIndices),
 					ctmData, pop, mr, emis),
