@@ -101,7 +101,7 @@ func Run(dynamic, createGrid bool) error {
 	if !dynamic {
 		if createGrid {
 			initFuncs = []inmap.DomainManipulator{
-				inmap.HTMLUI(Config.HTTPAddress),
+				//inmap.HTMLUI(Config.HTTPAddress),
 				Config.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, emis),
 				Config.VarGrid.MutateGrid(inmap.PopulationMutator(&Config.VarGrid, popIndices),
 					ctmData, pop, mr, emis),
@@ -157,7 +157,7 @@ func Run(dynamic, createGrid bool) error {
 	emisTotals := make([]float64, len(d.Cells()[0].Cf))
 	for _, c := range d.Cells() {
 		for i, val := range c.EmisFlux {
-			emisTotals[i] += val
+			emisTotals[i] += val * c.Volume
 		}
 	}
 	log.Println("Emission totals:")

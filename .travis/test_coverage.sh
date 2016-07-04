@@ -4,7 +4,7 @@
 # with script found at https://github.com/gopns/gopns/blob/master/test-coverage.sh
 
 echo "mode: set" > acc.out
-returnval=`go test -v -coverprofile=profile.out`
+returnval=`go test -short -v -coverprofile=profile.out`
 echo ${returnval}
 if [[ ${returnval} != *FAIL* ]]
 then

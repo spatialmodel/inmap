@@ -21,7 +21,6 @@ package inmap
 import (
 	"fmt"
 	"net/http"
-	_ "net/http/pprof" // pprof serves a performance profiler.
 	"reflect"
 	"sort"
 	"strconv"
