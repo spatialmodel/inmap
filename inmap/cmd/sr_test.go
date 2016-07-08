@@ -27,7 +27,7 @@ func TestSR(t *testing.T) {
 	if err := Startup("../configExample.toml"); err != nil {
 		t.Fatal(err)
 	}
-	Config.SROutputFile = "tempSR.ncf"
+	Config.SROutputFile = "../testdata/tempSR.ncf"
 	begin := 8
 	end := 9
 	layers := []int{0}
