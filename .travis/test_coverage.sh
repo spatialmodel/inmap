@@ -21,7 +21,7 @@ do
 	if ls $Dir/*.go &> /dev/null;
 	then
 		echo $Dir
-		returnval=`go test -coverprofile=profile.out $Dir`
+		returnval=`go test -short -coverprofile=profile.out $Dir`
 		echo ${returnval}
 		if [[ ${returnval} != *FAIL* ]]
 		then

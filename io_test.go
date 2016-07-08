@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
@@ -260,12 +261,12 @@ func TestOutput(t *testing.T) {
 			WindSpeed:         2.16334701,
 		},
 		{
-			BaselineTotalPM25: 4.2574172,
-			WindSpeed:         2.7272017,
-		},
-		{
 			BaselineTotalPM25: 10.34742928,
 			WindSpeed:         1.88434911,
+		},
+		{
+			BaselineTotalPM25: 4.2574172,
+			WindSpeed:         2.7272017,
 		},
 		{
 			BaselineTotalPM25: 5.36232233,
@@ -335,6 +336,16 @@ func TestRegrid(t *testing.T) {
 	}
 }
 
+type cellsFracSorter struct {
+	cellsSorter
+	fractions []float64
+}
+
+func (c *cellsFracSorter) Swap(i, j int) {
+	c.cells[i], c.cells[j] = c.cells[j], c.cells[i]
+	c.fractions[i], c.fractions[j] = c.fractions[j], c.fractions[i]
+}
+
 func TestCellIntersections(t *testing.T) {
 	cfg, ctmdata, pop, popIndices, mr := VarGridData()
 
@@ -352,107 +363,19 @@ func TestCellIntersections(t *testing.T) {
 
 	cells, fractions := d.CellIntersections(geom.Point{X: 0, Y: -2000})
 
+	sort.Sort(&cellsFracSorter{
+		cellsSorter: cellsSorter{
+			cells: cells,
+		},
+		fractions: fractions,
+	})
+
 	type answer struct {
 		b     *geom.Bounds
 		layer int
 		frac  float64
 	}
 	expected := []answer{
-		{
-			b:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
-			layer: 0,
-			frac:  0.5,
-		},
-		{
-			b:     &geom.Bounds{Min: geom.Point{X: -4000, Y: -4000}, Max: geom.Point{X: 0, Y: 0}},
-			layer: 1,
-			frac:  0.5,
-		},
-		{
-			b:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
-			layer: 1,
-			frac:  0.5,
-		},
-		{
-			b:     &geom.Bounds{Min: geom.Point{X: -4000, Y: -4000}, Max: geom.Point{X: 0, Y: 0}},
-			layer: 2,
-			frac:  0.5,
-		},
-		{
-			b:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
-			layer: 2,
-			frac:  0.5,
-		},
-		{
-			b:     &geom.Bounds{Min: geom.Point{X: -4000, Y: -4000}, Max: geom.Point{X: 0, Y: 0}},
-			layer: 3,
-			frac:  0.5,
-		},
-		{
-			b:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
-			layer: 3,
-			frac:  0.5,
-		},
-		{
-			b:     &geom.Bounds{Min: geom.Point{X: -4000, Y: -4000}, Max: geom.Point{X: 0, Y: 0}},
-			layer: 4,
-			frac:  0.5,
-		},
-		{
-			b:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
-			layer: 4,
-			frac:  0.5,
-		},
-		{
-			b:     &geom.Bounds{Min: geom.Point{X: -4000, Y: -4000}, Max: geom.Point{X: 0, Y: 0}},
-			layer: 5,
-			frac:  0.5,
-		},
-		{
-			b:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
-			layer: 5,
-			frac:  0.5,
-		},
-		{
-			b:     &geom.Bounds{Min: geom.Point{X: -4000, Y: -4000}, Max: geom.Point{X: 0, Y: 0}},
-			layer: 6,
-			frac:  0.5,
-		},
-		{
-			b:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
-			layer: 6,
-			frac:  0.5,
-		},
-		{
-			b:     &geom.Bounds{Min: geom.Point{X: -4000, Y: -4000}, Max: geom.Point{X: 0, Y: 0}},
-			layer: 7,
-			frac:  0.5,
-		},
-		{
-			b:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
-			layer: 7,
-			frac:  0.5,
-		},
-		{
-			b:     &geom.Bounds{Min: geom.Point{X: -4000, Y: -4000}, Max: geom.Point{X: 0, Y: 0}},
-			layer: 8,
-			frac:  0.5,
-		},
-		{
-			b:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
-			layer: 8,
-			frac:  0.5,
-		},
-		{
-			b:     &geom.Bounds{Min: geom.Point{X: -4000, Y: -4000}, Max: geom.Point{X: 0, Y: 0}},
-			layer: 9,
-			frac:  0.5,
-		},
-		{
-			b:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
-			layer: 9,
-			frac:  0.5,
-		},
 		{
 			b:     &geom.Bounds{Min: geom.Point{X: -2000, Y: -4000}, Max: geom.Point{X: 0, Y: -2000}},
 			layer: 0,
@@ -463,21 +386,116 @@ func TestCellIntersections(t *testing.T) {
 			layer: 0,
 			frac:  0.25,
 		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
+			layer: 0,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: -4000, Y: -4000}, Max: geom.Point{X: 0, Y: 0}},
+			layer: 1,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
+			layer: 1,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: -4000, Y: -4000}, Max: geom.Point{X: 0, Y: 0}},
+			layer: 2,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
+			layer: 2,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: -4000, Y: -4000}, Max: geom.Point{X: 0, Y: 0}},
+			layer: 3,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
+			layer: 3,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: -4000, Y: -4000}, Max: geom.Point{X: 0, Y: 0}},
+			layer: 4,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
+			layer: 4,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: -4000, Y: -4000}, Max: geom.Point{X: 0, Y: 0}},
+			layer: 5,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
+			layer: 5,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: -4000, Y: -4000}, Max: geom.Point{X: 0, Y: 0}},
+			layer: 6,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
+			layer: 6,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: -4000, Y: -4000}, Max: geom.Point{X: 0, Y: 0}},
+			layer: 7,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
+			layer: 7,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: -4000, Y: -4000}, Max: geom.Point{X: 0, Y: 0}},
+			layer: 8,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
+			layer: 8,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: -4000, Y: -4000}, Max: geom.Point{X: 0, Y: 0}},
+			layer: 9,
+			frac:  0.5,
+		},
+		{
+			b:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
+			layer: 9,
+			frac:  0.5,
+		},
 	}
 
 	if len(cells) != len(expected) {
-		t.Errorf("wrong number of cells: %d != %d", len(cells), len(expected))
+		t.Fatalf("wrong number of cells: %d != %d", len(cells), len(expected))
 	}
 
 	for i, cell := range cells {
 		if !reflect.DeepEqual(cell.Bounds(), expected[i].b) {
-			t.Errorf("bounds don't match: %v != %v", cell.Bounds(), expected[i].b)
+			t.Errorf("%d: bounds don't match: have %v but want %v", i, cell.Bounds(), expected[i].b)
 		}
 		if cell.Layer != expected[i].layer {
-			t.Errorf("layers don't match: %d != %d", cell.Layer, expected[i].layer)
+			t.Errorf("%d: layers don't match: have %d but want %d", i, cell.Layer, expected[i].layer)
 		}
 		if fractions[i] != expected[i].frac {
-			t.Errorf("fractions don't match: %g != %g", fractions[i], expected[i].frac)
+			t.Errorf("%d: fractions don't have match: %g but want %g", i, fractions[i], expected[i].frac)
 		}
 	}
 }

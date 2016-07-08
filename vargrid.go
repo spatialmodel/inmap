@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"runtime"
 	"sort"
 
 	"bitbucket.org/ctessum/cdf"
@@ -232,7 +233,7 @@ type Population struct {
 
 // MortalityRates is a holder for information about the average human
 // mortality rate (in units of deaths per 100,000 people per year) in the
-// model domain
+// model domain.
 type MortalityRates struct {
 	tree *rtree.Rtree
 }
@@ -364,29 +365,55 @@ func (config *VarGridConfig) RegularGrid(data *CTMData, pop *Population, popInde
 		d.nlayers = nz
 		d.index = rtree.NewTree(25, 50)
 
+		type cellErr struct {
+			cell *Cell
+			err  error
+		}
+		cellErrChan := make(chan cellErr)
+		nprocs := runtime.GOMAXPROCS(-1)
+
 		nx := config.Xnests[0]
 		ny := config.Ynests[0]
 		d.cells = make([]*Cell, 0, nx*ny*nz)
 		// Iterate through indices and create the cells in the outermost nest.
 		for k := 0; k < nz; k++ {
 			for j := 0; j < ny; j++ {
+				for p := 0; p < nprocs; p++ {
+					go func(p int) {
+						for i := p; i < nx; i += nprocs {
+							index := [][2]int{{i, j}}
+							// Create the cell
+							cell, err2 := config.createCell(data, pop, d.popIndices, mort, index, k, webMapTrans)
+							cellErrChan <- cellErr{cell: cell, err: err2}
+						}
+					}(p)
+				}
 				for i := 0; i < nx; i++ {
-					index := [][2]int{{i, j}}
-					// Create the cell
-					cell, err := config.createCell(data, pop, d.popIndices, mort, index, k, webMapTrans)
-					if err != nil {
+					cellerr := <-cellErrChan
+					if cellerr.err != nil {
 						return err
 					}
-					d.AddCells(cell)
+					d.AddCells(cellerr.cell)
 				}
 			}
 		}
 		// Add emissions to new cells.
 		if emis != nil {
-			for _, c := range d.cells {
-				c.setEmissionsFlux(emis) // This needs to be called after setNeighbors.
+			done := make(chan int)
+			for p := 0; p < nprocs; p++ {
+				go func(p int) {
+					for i := p; i < len(d.cells); i += nprocs {
+						// This needs to be called after setNeighbors.
+						d.cells[i].setEmissionsFlux(emis)
+					}
+					done <- 0
+				}(p)
+			}
+			for i := 0; i < nprocs; i++ {
+				<-done
 			}
 		}
+		d.sort()
 		return nil
 	}
 }
@@ -428,8 +455,7 @@ func (config *VarGridConfig) MutateGrid(divideRule GridMutator, data *CTMData, p
 						continueMutating = true
 						indicesToDelete = append(indicesToDelete, i)
 
-						// If this cell is above a threshold, create inner
-						// nested cells instead of using this one.
+						// Create inner nested cells instead of using this one.
 						for ii := 0; ii < config.Xnests[len(cell.Index)]; ii++ {
 							for jj := 0; jj < config.Ynests[len(cell.Index)]; jj++ {
 								newIndex := append(cell.Index, [2]int{ii, jj})
@@ -455,21 +481,46 @@ func (d *InMAP) deleteAndAddCells(config *VarGridConfig, newCellIndices [][][2]i
 	newCellLayers []int, data *CTMData, pop *Population, mort *MortalityRates,
 	emis *Emissions, webMapTrans proj.Transformer, indicesToDelete ...int) error {
 
+	type cellErr struct {
+		cell *Cell
+		err  error
+	}
+	cellErrChan := make(chan cellErr)
+	nprocs := runtime.GOMAXPROCS(-1)
+
 	// Delete the cells that were split.
 	d.DeleteCells(indicesToDelete...)
 	// Add the new cells.
 	oldNumCells := len(d.cells)
-	for i, ii := range newCellIndices {
-		cell, err := config.createCell(data, pop, d.popIndices, mort, ii, newCellLayers[i], webMapTrans)
-		if err != nil {
-			return err
+	for p := 0; p < nprocs; p++ {
+		go func(p int) {
+			for i := p; i < len(newCellIndices); i += nprocs {
+				ii := newCellIndices[i]
+				cell, err2 := config.createCell(data, pop, d.popIndices, mort, ii, newCellLayers[i], webMapTrans)
+				cellErrChan <- cellErr{cell: cell, err: err2}
+			}
+		}(p)
+	}
+	for range newCellIndices {
+		cellerr := <-cellErrChan
+		if cellerr.err != nil {
+			return cellerr.err
 		}
-		d.AddCells(cell)
+		d.AddCells(cellerr.cell)
 	}
 	// Add emissions to new cells.
 	if emis != nil {
-		for i := oldNumCells - 1; i < len(d.cells); i++ {
-			d.cells[i].setEmissionsFlux(emis) // This needs to be called after setNeighbors.
+		doneChan := make(chan int)
+		for p := 0; p < nprocs; p++ {
+			go func(p int) {
+				for i := oldNumCells - 1 + p; i < len(d.cells); i += nprocs {
+					d.cells[i].setEmissionsFlux(emis) // This needs to be called after setNeighbors.
+				}
+				doneChan <- 0
+			}(p)
+		}
+		for p := 0; p < nprocs; p++ {
+			<-doneChan
 		}
 	}
 	return nil

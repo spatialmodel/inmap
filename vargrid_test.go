@@ -47,6 +47,16 @@ func TestVarGridCreate(t *testing.T) {
 }
 
 func (d *InMAP) testCellAlignment1(t *testing.T) {
+	for _, c := range d.cells {
+		sortCells(c.west)
+		sortCells(c.east)
+		sortCells(c.north)
+		sortCells(c.south)
+		sortCells(c.above)
+		sortCells(c.below)
+		sortCells(c.groundLevel)
+	}
+
 	// Cell 0
 	if len(d.cells[0].west) != 1 || d.cells[0].west[0] != d.westBoundary[0] {
 		t.Error("Incorrect alignment cell 0 West")

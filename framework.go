@@ -85,6 +85,8 @@ type InMAP struct {
 
 	// index is a spatial index of Cells.
 	index *rtree.Rtree
+
+	cellLock sync.Mutex
 }
 
 // Init initializes the simulation by running d.InitFuncs.
