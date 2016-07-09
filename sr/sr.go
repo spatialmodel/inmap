@@ -132,8 +132,8 @@ func (sr *SR) Run(outfile string, layers []int, begin, end int) error {
 	for _, l := range layers {
 		layersMap[l] = Empty{}
 	}
-	if end < 0 {
-		end = len(sr.d.Cells())
+	if l := len(sr.d.Cells()); end < 0 || end > l {
+		end = l
 	}
 	for i := 0; i < len(sr.d.Cells()); i++ {
 
