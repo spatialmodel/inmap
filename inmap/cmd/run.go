@@ -18,7 +18,11 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 
 package cmd
 
-import "github.com/spf13/cobra"
+import (
+	"fmt"
+
+	"github.com/spf13/cobra"
+)
 
 var (
 	// dynamic specifies whether the simulation should be run with a dynamic
@@ -59,6 +63,13 @@ var steadyCmd = &cobra.Command{
 	Long: "steady runs InMAP in steady-state mode to calculate annual average " +
 		"concentrations with no temporal variability.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return Run(dynamic, createGrid)
+		return labelErr(Run(dynamic, createGrid))
 	},
+}
+
+func labelErr(err error) error {
+	if err != nil {
+		return fmt.Errorf("ERROR: %v", err)
+	}
+	return nil
 }

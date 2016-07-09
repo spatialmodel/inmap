@@ -61,7 +61,7 @@ var srCmd = &cobra.Command{
     If $PBS_NODEFILE doesn't exist, the simulations will run on the
     local machine.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return RunSR(begin, end, layers)
+		return labelErr(RunSR(begin, end, layers))
 	},
 }
 
@@ -99,9 +99,9 @@ var workerCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		worker, err := InitWorker()
 		if err != nil {
-			return err
+			return labelErr(err)
 		}
-		return worker.Listen(sr.RPCPort)
+		return labelErr(worker.Listen(sr.RPCPort))
 	},
 }
 

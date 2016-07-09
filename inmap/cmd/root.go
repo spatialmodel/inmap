@@ -43,7 +43,7 @@ var RootCmd = &cobra.Command{
 			Use the subcommands specified below to access the model functionality.
       Additional information is available at http://inmap.spatialmodel.com.`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		return Startup(configFile)
+		return labelErr(Startup(configFile))
 	},
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
 		completedMessage()

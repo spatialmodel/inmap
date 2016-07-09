@@ -39,7 +39,7 @@ var gridCmd = &cobra.Command{
 	information in the configuration file. The saved data can then be loaded
 	for future InMAP simulations.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return Grid()
+		return labelErr(Grid())
 	},
 }
 

@@ -44,6 +44,10 @@ type versionCells struct {
 func Save(w io.Writer) DomainManipulator {
 	return func(d *InMAP) error {
 
+		if len(d.cells) == 0 {
+			return fmt.Errorf("inmap.InMAP.Save: no grid cells to save")
+		}
+
 		// Set the data version so it can be checked when the data is loaded.
 		data := versionCells{
 			DataVersion: VarGridDataVersion,
