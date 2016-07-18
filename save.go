@@ -22,6 +22,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io"
+	"runtime"
 
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/index/rtree"
@@ -90,13 +91,24 @@ func (d *InMAP) initFromCells(cells []*Cell, emis *Emissions, config *VarGridCon
 	d.index = rtree.NewTree(25, 50)
 	d.AddCells(cells...)
 	d.sort()
+
+	// Figure out the number of layers.
+	for _, c := range d.cells {
+		if c.Layer > d.nlayers-1 {
+			d.nlayers = c.Layer + 1
+		}
+	}
+
 	// Add emissions to new cells.
 	if emis != nil {
-		for _, c := range d.cells {
-			c.setEmissionsFlux(emis) // This needs to be called after setNeighbors.
-			if c.Layer > d.nlayers-1 {
-				d.nlayers = c.Layer + 1
-			}
+		nprocs := runtime.GOMAXPROCS(-1)
+		for p := 0; p < nprocs; p++ {
+			go func(p int) {
+				for i := p; i < len(d.cells); i += nprocs {
+					c := d.cells[i]
+					c.setEmissionsFlux(emis) // This needs to be called after setNeighbors.
+				}
+			}(p)
 		}
 	}
 }
