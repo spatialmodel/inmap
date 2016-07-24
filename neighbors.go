@@ -132,7 +132,7 @@ func (d *InMAP) neighbors(c *Cell, bboxOffset float64) {
 
 	// Find the cells that this cell is the ground level for.
 	if c.Layer == 0 {
-		for _, ccI := range d.index.SearchIntersect(c.Centroid().Bounds()) {
+		for _, ccI := range d.index.SearchIntersect(groundlevelbox) {
 			cc := ccI.(*Cell)
 			if cc.Layer > 0 {
 				cc.groundLevel = append(cc.groundLevel, c)

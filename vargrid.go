@@ -369,33 +369,25 @@ func (config *VarGridConfig) RegularGrid(data *CTMData, pop *Population, popInde
 			cell *Cell
 			err  error
 		}
-		cellErrChan := make(chan cellErr)
 		nprocs := runtime.GOMAXPROCS(-1)
 
 		nx := config.Xnests[0]
 		ny := config.Ynests[0]
 		d.cells = make([]*Cell, 0, nx*ny*nz)
 		// Iterate through indices and create the cells in the outermost nest.
+		indices := make([][][2]int, 0, nz*ny*nx)
+		layers := make([]int, 0, nz*ny*nx)
 		for k := 0; k < nz; k++ {
 			for j := 0; j < ny; j++ {
-				for p := 0; p < nprocs; p++ {
-					go func(p int) {
-						for i := p; i < nx; i += nprocs {
-							index := [][2]int{{i, j}}
-							// Create the cell
-							cell, err2 := config.createCell(data, pop, d.popIndices, mort, index, k, webMapTrans)
-							cellErrChan <- cellErr{cell: cell, err: err2}
-						}
-					}(p)
-				}
 				for i := 0; i < nx; i++ {
-					cellerr := <-cellErrChan
-					if cellerr.err != nil {
-						return err
-					}
-					d.AddCells(cellerr.cell)
+					indices = append(indices, [][2]int{{i, j}})
+					layers = append(layers, k)
 				}
 			}
+		}
+		err = d.addCells(config, indices, layers, data, pop, mort, emis, webMapTrans)
+		if err != nil {
+			return err
 		}
 		// Add emissions to new cells.
 		if emis != nil {
@@ -446,19 +438,26 @@ func (config *VarGridConfig) MutateGrid(divideRule GridMutator, data *CTMData, p
 			continueMutating = false
 			var newCellIndices [][][2]int
 			var newCellLayers []int
-			var indicesToDelete []int
+			var cellsToDelete []*Cell
 			for i, cell := range d.cells {
 				if len(cell.Index) < len(config.Xnests) {
 
 					if divideRule(cell, totalMass, totalPopulation) {
 
 						continueMutating = true
-						indicesToDelete = append(indicesToDelete, i)
+						cellsToDelete = append(cellsToDelete, cell)
+						// Delete the grid cell from the array.
+						d.cells[i] = nil
 
 						// Create inner nested cells instead of using this one.
 						for ii := 0; ii < config.Xnests[len(cell.Index)]; ii++ {
 							for jj := 0; jj < config.Ynests[len(cell.Index)]; jj++ {
-								newIndex := append(cell.Index, [2]int{ii, jj})
+
+								newIndex := make([][2]int, len(cell.Index)+1)
+								for k, ij := range cell.Index {
+									newIndex[k] = [2]int{ij[0], ij[1]}
+								}
+								newIndex[len(newIndex)-1] = [2]int{ii, jj}
 								newCellIndices = append(newCellIndices, newIndex)
 								newCellLayers = append(newCellLayers, cell.Layer)
 							}
@@ -466,21 +465,38 @@ func (config *VarGridConfig) MutateGrid(divideRule GridMutator, data *CTMData, p
 					}
 				}
 			}
-			err = d.deleteAndAddCells(config, newCellIndices, newCellLayers, data, pop, mort,
-				emis, webMapTrans, indicesToDelete...)
+
+			// Remove nil cells from array.
+			newCells := make([]*Cell, 0, len(d.cells))
+			for _, c := range d.cells {
+				if c != nil {
+					newCells = append(newCells, c)
+				}
+			}
+			d.cells = newCells
+
+			// Clean up deleted cells.
+			for _, cell := range cellsToDelete {
+				d.index.Delete(cell)
+				cell.dereferenceNeighbors(d)
+			}
+
+			// Add new cells.
+			err = d.addCells(config, newCellIndices, newCellLayers, data, pop, mort,
+				emis, webMapTrans)
 			if err != nil {
 				return err
 			}
 		}
 		d.sort()
+
 		return nil
 	}
 }
 
-func (d *InMAP) deleteAndAddCells(config *VarGridConfig, newCellIndices [][][2]int,
+func (d *InMAP) addCells(config *VarGridConfig, newCellIndices [][][2]int,
 	newCellLayers []int, data *CTMData, pop *Population, mort *MortalityRates,
-	emis *Emissions, webMapTrans proj.Transformer, indicesToDelete ...int) error {
-
+	emis *Emissions, webMapTrans proj.Transformer) error {
 	type cellErr struct {
 		cell *Cell
 		err  error
@@ -488,9 +504,7 @@ func (d *InMAP) deleteAndAddCells(config *VarGridConfig, newCellIndices [][][2]i
 	cellErrChan := make(chan cellErr)
 	nprocs := runtime.GOMAXPROCS(-1)
 
-	// Delete the cells that were split.
-	d.DeleteCells(indicesToDelete...)
-	// Add the new cells.
+	// Create the new cells.
 	oldNumCells := len(d.cells)
 	for p := 0; p < nprocs; p++ {
 		go func(p int) {
@@ -501,19 +515,20 @@ func (d *InMAP) deleteAndAddCells(config *VarGridConfig, newCellIndices [][][2]i
 			}
 		}(p)
 	}
+	// Insert the new cells into d.
 	for range newCellIndices {
 		cellerr := <-cellErrChan
 		if cellerr.err != nil {
 			return cellerr.err
 		}
-		d.AddCells(cellerr.cell)
+		d.InsertCell(cellerr.cell)
 	}
 	// Add emissions to new cells.
 	if emis != nil {
 		doneChan := make(chan int)
 		for p := 0; p < nprocs; p++ {
 			go func(p int) {
-				for i := oldNumCells - 1 + p; i < len(d.cells); i += nprocs {
+				for i := oldNumCells + p; i < len(d.cells); i += nprocs {
 					d.cells[i].setEmissionsFlux(emis) // This needs to be called after setNeighbors.
 				}
 				doneChan <- 0
@@ -526,40 +541,22 @@ func (d *InMAP) deleteAndAddCells(config *VarGridConfig, newCellIndices [][][2]i
 	return nil
 }
 
-// AddCells adds a new cell to the grid. The function will take the necessary
+// InsertCell adds a new cell to the grid. The function will take the necessary
 // steps to fit the new cell in with existing cells, but it is the caller's
 // reponsibility that the new cell doesn't overlap any existing cells.
-func (d *InMAP) AddCells(cells ...*Cell) {
+func (d *InMAP) InsertCell(c *Cell) {
 	if d.index == nil {
 		d.index = rtree.NewTree(25, 50)
 	}
-	for _, c := range cells {
-		if c.Layer > d.nlayers-1 { // Make sure we still have the right number of layers
-			d.nlayers = c.Layer + 1
-		}
-		d.cells = append(d.cells, c)
-		d.index.Insert(c)
-		// bboxOffset is a number significantly less than the smallest grid size
-		// but not small enough to be confused with zero.
-		const bboxOffset = 1.e-10
-		d.setNeighbors(c, bboxOffset)
+	if c.Layer > d.nlayers-1 { // Make sure we still have the right number of layers
+		d.nlayers = c.Layer + 1
 	}
-}
-
-// DeleteCells deletes the cell with index i from the grid and removes any
-// references to it from other cells.
-func (d *InMAP) DeleteCells(indicesToDelete ...int) {
-	indexToSubtract := 0
-	for _, ii := range indicesToDelete {
-		i := ii - indexToSubtract
-		c := d.cells[i]
-		copy(d.cells[i:], d.cells[i+1:])
-		d.cells[len(d.cells)-1] = nil
-		d.cells = d.cells[:len(d.cells)-1]
-		d.index.Delete(c)
-		c.dereferenceNeighbors(d)
-		indexToSubtract++
-	}
+	d.cells = append(d.cells, c)
+	d.index.Insert(c)
+	// bboxOffset is a number significantly less than the smallest grid size
+	// but not small enough to be confused with zero.
+	const bboxOffset = 1.e-10
+	d.setNeighbors(c, bboxOffset)
 }
 
 // A GridMutator is a function whether a Cell should be mutated (i.e., either
@@ -572,10 +569,18 @@ type GridMutator func(cell *Cell, totalMass, totalPopulation float64) bool
 // should be split by determining whether either the cell population or
 // maximum poulation density are above the cutoffs specified in config.
 func PopulationMutator(config *VarGridConfig, popIndices PopIndices) GridMutator {
+	popIndex := popIndices[config.PopGridColumn]
 	return func(cell *Cell, _, _ float64) bool {
+		population := 0.
+		aboveDensityThreshold := false
+		for _, g := range cell.groundLevel {
+			population += g.PopData[popIndex]
+			if g.AboveDensityThreshold {
+				aboveDensityThreshold = true
+			}
+		}
 		return cell.Layer < config.HiResLayers &&
-			(cell.AboveDensityThreshold ||
-				cell.PopData[popIndices[config.PopGridColumn]] > config.PopThreshold)
+			(aboveDensityThreshold || population > config.PopThreshold)
 	}
 }
 
@@ -596,15 +601,23 @@ func PopConcMutator(threshold float64, config *VarGridConfig, popIndices PopIndi
 		if totalMass == 0. || totalPopulation == 0 {
 			return false
 		}
+		iPop := popIndices[config.PopGridColumn]
+		var groundCellPop float64
+		for _, gc := range cell.groundLevel {
+			groundCellPop += gc.PopData[iPop]
+		}
 		totalMassPop := totalMass * totalPopulation
 		for _, group := range [][]*Cell{cell.west, cell.east, cell.north, cell.south} {
 			for _, neighbor := range group {
+				var groundNeighborPop float64
+				for _, gc := range neighbor.groundLevel {
+					groundNeighborPop += gc.PopData[iPop]
+				}
 				ΣΔC := 0.
 				for i, conc := range neighbor.Cf {
 					ΣΔC += math.Abs(conc - cell.Cf[i])
 				}
-				iPop := popIndices[config.PopGridColumn]
-				ΔP := math.Abs(cell.PopData[iPop] - neighbor.PopData[iPop])
+				ΔP := math.Abs(groundCellPop - groundNeighborPop)
 				if ΣΔC*(cell.Volume+neighbor.Volume)*ΔP/totalMassPop > threshold {
 					return true
 				}
@@ -642,35 +655,10 @@ func (config *VarGridConfig) createCell(data *CTMData, pop *Population, popIndic
 	cell.Index = index
 	// Polygon must go counter-clockwise
 	cell.Polygonal = config.cellGeometry(index)
-	for _, pInterface := range pop.tree.SearchIntersect(cell.Bounds()) {
-		p := pInterface.(*population)
-		intersection := cell.Intersection(p)
-		area1 := intersection.Area()
-		area2 := p.Area() // we want to conserve the total population
-		if area2 == 0. {
-			panic("divide by zero")
-		}
-		areaFrac := area1 / area2
-		for popType, pop := range p.PopData {
-			cell.PopData[popType] += pop * areaFrac
-		}
-
-		// Check if this census shape is above the density threshold
-		pDensity := p.PopData[popIndices[config.PopGridColumn]] / area2
-		if pDensity > config.PopDensityThreshold {
-			cell.AboveDensityThreshold = true
-		}
-	}
-	for _, mInterface := range mort.tree.SearchIntersect(cell.Bounds()) {
-		m := mInterface.(*mortality)
-		intersection := cell.Intersection(m)
-		area1 := intersection.Area()
-		area2 := cell.Area() // we want to conserve the average rate here, not the total
-		if area2 == 0. {
-			panic("divide by zero")
-		}
-		areaFrac := area1 / area2
-		cell.MortalityRate += m.AllCause * areaFrac
+	if layer == 0 {
+		// only ground level grid cells have people
+		cell.loadPopulation(config, pop, popIndices)
+		cell.loadMortalityRate(mort)
 	}
 	bounds := cell.Polygonal.Bounds()
 	cell.Dx = bounds.Max.X - bounds.Min.X
@@ -689,6 +677,44 @@ func (config *VarGridConfig) createCell(data *CTMData, pop *Population, popIndic
 	cell.WebMapGeom = gg.(geom.Polygonal)
 
 	return cell, nil
+}
+
+// loadPopulation calculates the population in this Cell.
+func (c *Cell) loadPopulation(config *VarGridConfig, pop *Population, popIndices PopIndices) {
+	for _, pInterface := range pop.tree.SearchIntersect(c.Bounds()) {
+		p := pInterface.(*population)
+		intersection := c.Intersection(p)
+		area1 := intersection.Area()
+		area2 := p.Area() // we want to conserve the total population
+		if area2 == 0. {
+			panic("divide by zero")
+		}
+		areaFrac := area1 / area2
+		for popType, pop := range p.PopData {
+			c.PopData[popType] += pop * areaFrac
+		}
+
+		// Check if this census shape is above the density threshold
+		pDensity := p.PopData[popIndices[config.PopGridColumn]] / area2
+		if pDensity > config.PopDensityThreshold {
+			c.AboveDensityThreshold = true
+		}
+	}
+}
+
+// loadMortalityRate calculates the baseline mortality rate for this cell.
+func (c *Cell) loadMortalityRate(mort *MortalityRates) {
+	for _, mInterface := range mort.tree.SearchIntersect(c.Bounds()) {
+		m := mInterface.(*mortality)
+		intersection := c.Intersection(m)
+		area1 := intersection.Area()
+		area2 := c.Area() // we want to conserve the average rate here, not the total
+		if area2 == 0. {
+			panic("divide by zero")
+		}
+		areaFrac := area1 / area2
+		c.MortalityRate += m.AllCause * areaFrac
+	}
 }
 
 type population struct {

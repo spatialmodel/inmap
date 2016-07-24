@@ -193,7 +193,7 @@ func obsCompare() {
 		if err != nil {
 			panic(err)
 		}
-		_, err = vgimg.PngCanvas{canvases[iPol].Canvas.(*vgimg.Canvas)}.WriteTo(f)
+		_, err = vgimg.PngCanvas{Canvas: canvases[iPol].Canvas.(*vgimg.Canvas)}.WriteTo(f)
 		//_, err = canvases[iPol].Canvas.(*vgpdf.Canvas).WriteTo(f)
 		//_, err = canvases[iPol].Canvas.(*vgsvg.Canvas).WriteTo(f)
 		if err != nil {
@@ -356,10 +356,11 @@ func matchObs(polName string, obsData []*data, wrfData,
 		inmapmap.DrawVector(locs[i], color, lineStyle, markerGlyph)
 	}
 
-	wrfmap.FillText(ts, vg.Point{wrfmap.X(0.5), wrfmap.Max.Y - 0.1*vg.Inch},
-		-0.5, -1, "WRF-Chem")
-	inmapmap.FillText(ts, vg.Point{inmapmap.X(0.5), inmapmap.Max.Y - 0.1*vg.Inch},
-		-0.5, -1, "InMAP")
+	ts2 := ts
+	ts2.XAlign = -0.5
+	ts2.YAlign = -1
+	wrfmap.FillText(ts2, vg.Point{X: wrfmap.X(0.5), Y: wrfmap.Max.Y - 0.1*vg.Inch}, "WRF-Chem")
+	inmapmap.FillText(ts2, vg.Point{X: inmapmap.X(0.5), Y: inmapmap.Max.Y - 0.1*vg.Inch}, "InMAP")
 
 	wrfstats, inmapstats := makePlot(obsMatches, wrfMatches, inmapMatches,
 		"", cScatter)
@@ -377,20 +378,25 @@ func matchObs(polName string, obsData []*data, wrfData,
 	left := cStats.Min.X + 0.8*vg.Inch
 	rowspace := 0.12 * vg.Inch
 	top := cStats.Max.Y - 0.1*vg.Inch
+	ts3 := ts
+	ts3.XAlign = -0.5
+	ts3.YAlign = -0.5
 	for i, s := range []string{"MFB", "MFE", "MB", "ME",
 		"S", "R²"} {
-		cStats.FillText(ts, vg.Point{left + vg.Length(i)*colspace, top}, -0.5, -0.5, s)
+		cStats.FillText(ts3, vg.Point{X: left + vg.Length(i)*colspace, Y: top}, s)
 	}
 	types := []string{"WRF-Chem", "InMAP"}
 	format := []string{"%.0f%%", "%.0f%%", "%.1f", "%.1f", "%.2f",
 		"%.2f"}
+	ts4 := ts
+	ts4.XAlign = -1
+	ts4.YAlign = -0.5
 	for j, ss := range []*Stats{wrfstats, inmapstats} {
-		cStats.FillText(ts, vg.Point{left - 0.2*vg.Inch, top - vg.Length(j+1)*rowspace},
-			-1, -0.5, types[j])
+		cStats.FillText(ts4, vg.Point{X: left - 0.2*vg.Inch, Y: top - vg.Length(j+1)*rowspace}, types[j])
 		for i, s := range []interface{}{ss.mfb * 100, ss.mfe * 100,
 			ss.mb, ss.me, ss.slope, ss.rsquared} { //ss.intercept,
-			cStats.FillText(ts, vg.Point{left + vg.Length(i)*colspace,
-				top - vg.Length(j+1)*rowspace}, -0.5, -0.5,
+			cStats.FillText(ts3, vg.Point{X: left + vg.Length(i)*colspace,
+				Y: top - vg.Length(j+1)*rowspace},
 				fmt.Sprintf(format[i], s))
 		}
 	}
@@ -448,7 +454,7 @@ func getObsData(oChan chan [][]*data, alts *rtree.Rtree) {
 		o := new(data)
 		lat := s2f(rec[5])
 		lon := s2f(rec[6])
-		o.Geom = geom.Point{lon, lat}
+		o.Geom = geom.Point{X: lon, Y: lat}
 		datum := rec[7]
 		if datum == "UNKNOWN" {
 			datum = "WGS84"
@@ -704,7 +710,7 @@ func newMap(c draw.Canvas) (*carto.Canvas, *geom.Bounds) {
 		N = 1944000.00
 	)
 
-	bounds := geom.Bounds{Min: geom.Point{W, S}, Max: geom.Point{E, N}}
+	bounds := geom.Bounds{Min: geom.Point{X: W, Y: S}, Max: geom.Point{X: E, Y: N}}
 	return carto.NewCanvas(N, S, E, W, c), &bounds
 }
 

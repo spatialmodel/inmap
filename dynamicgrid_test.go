@@ -79,7 +79,7 @@ func TestDynamicGrid(t *testing.T) {
 		cells[c.Layer]++
 	}
 
-	wantCells := []int{22, 22, 22, 22, 22, 22, 22, 19, 4, 4}
+	wantCells := []int{22, 22, 22, 22, 22, 22, 22, 19, 7, 4}
 	if !reflect.DeepEqual(cells, wantCells) {
 		t.Errorf("dynamic grid should have %v cells but instead has %v", wantCells, cells)
 	}

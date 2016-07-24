@@ -110,7 +110,9 @@ func NewReader(r cdf.ReaderWriterAt) (*Reader, error) {
 			}
 		}
 	}
-	sr.d.AddCells(cells...)
+	for _, cell := range cells {
+		sr.d.InsertCell(cell)
+	}
 
 	// Read in extra data that wasn't able to be saved into the cells.
 	sr.extraData = make(map[string][]float64)
