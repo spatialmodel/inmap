@@ -287,7 +287,7 @@ func (d *InMAP) addTopBoundary(cell *Cell) {
 // diffusion, whichever one yields a smaller time step.
 func SetTimestepCFL() DomainManipulator {
 	return func(d *InMAP) error {
-		const Cmax = 1.
+		const Cmax = 1.0
 		sqrt3 := math.Pow(3., 0.5)
 		for i, c := range d.cells {
 			// Advection time step

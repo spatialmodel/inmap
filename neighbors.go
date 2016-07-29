@@ -18,10 +18,14 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 
 package inmap
 
-import "github.com/ctessum/geom"
+import (
+	"math"
 
-func (d *InMAP) setNeighbors(c *Cell, bboxOffset float64) {
-	d.neighbors(c, bboxOffset)
+	"github.com/ctessum/geom"
+)
+
+func (d *InMAP) setNeighbors(c *Cell) {
+	d.neighbors(c)
 	d.setBoundaryNeighbors(c)
 	if c.Layer == 0 {
 		c.below = []*Cell{c}
@@ -48,12 +52,11 @@ func (d *InMAP) setBoundaryNeighbors(c *Cell) {
 	}
 }
 
-func (d *InMAP) neighbors(c *Cell, bboxOffset float64) {
+func (d *InMAP) neighbors(c *Cell) {
 	b := c.Bounds()
 
 	// Horizontal
-	westbox := newRect(b.Min.X-2*bboxOffset, b.Min.Y+bboxOffset,
-		b.Min.X-bboxOffset, b.Max.Y-bboxOffset)
+	westbox := newNeighborRect(b, west)
 	c.west = getCells(d.index, westbox, c.Layer)
 	for _, w := range c.west {
 		if len(w.east) == 1 && w.east[0].boundary {
@@ -64,8 +67,7 @@ func (d *InMAP) neighbors(c *Cell, bboxOffset float64) {
 		w.neighborInfo()
 	}
 
-	eastbox := newRect(b.Max.X+bboxOffset, b.Min.Y+bboxOffset,
-		b.Max.X+2*bboxOffset, b.Max.Y-bboxOffset)
+	eastbox := newNeighborRect(b, east)
 	c.east = getCells(d.index, eastbox, c.Layer)
 	for _, e := range c.east {
 		if len(e.west) == 1 && e.west[0].boundary {
@@ -76,8 +78,7 @@ func (d *InMAP) neighbors(c *Cell, bboxOffset float64) {
 		e.neighborInfo()
 	}
 
-	southbox := newRect(b.Min.X+bboxOffset, b.Min.Y-2*bboxOffset,
-		b.Max.X-bboxOffset, b.Min.Y-bboxOffset)
+	southbox := newNeighborRect(b, south)
 	c.south = getCells(d.index, southbox, c.Layer)
 	for _, s := range c.south {
 		if len(s.north) == 1 && s.north[0].boundary {
@@ -88,8 +89,7 @@ func (d *InMAP) neighbors(c *Cell, bboxOffset float64) {
 		s.neighborInfo()
 	}
 
-	northbox := newRect(b.Min.X+bboxOffset, b.Max.Y+bboxOffset,
-		b.Max.X-bboxOffset, b.Max.Y+2*bboxOffset)
+	northbox := newNeighborRect(b, north)
 	c.north = getCells(d.index, northbox, c.Layer)
 	for _, n := range c.north {
 		if len(n.south) == 1 && n.south[0].boundary {
@@ -101,9 +101,8 @@ func (d *InMAP) neighbors(c *Cell, bboxOffset float64) {
 	}
 
 	// Above
-	abovebox := newRect(b.Min.X+bboxOffset, b.Min.Y+bboxOffset,
-		b.Max.X-bboxOffset, b.Max.Y-bboxOffset)
-	c.above = getCells(d.index, abovebox, c.Layer+1)
+	abovebelowbox := newNeighborRect(b, aboveBelow)
+	c.above = getCells(d.index, abovebelowbox, c.Layer+1)
 	for _, a := range c.above {
 		if len(a.below) == 1 && a.below[0] == a {
 			deleteCellFromSlice(a.below[0], &a.below)
@@ -113,9 +112,7 @@ func (d *InMAP) neighbors(c *Cell, bboxOffset float64) {
 	}
 
 	// Below
-	belowbox := newRect(b.Min.X+bboxOffset, b.Min.Y+bboxOffset,
-		b.Max.X-bboxOffset, b.Max.Y-bboxOffset)
-	c.below = getCells(d.index, belowbox, c.Layer-1)
+	c.below = getCells(d.index, abovebelowbox, c.Layer-1)
 	for _, b := range c.below {
 		if len(b.above) == 1 && b.above[0].boundary {
 			deleteCellFromSlice(b.above[0], &d.topBoundary)
@@ -126,13 +123,11 @@ func (d *InMAP) neighbors(c *Cell, bboxOffset float64) {
 	}
 
 	// Ground level.
-	groundlevelbox := newRect(b.Min.X+bboxOffset, b.Min.Y+bboxOffset,
-		b.Max.X-bboxOffset, b.Max.Y-bboxOffset)
-	c.groundLevel = getCells(d.index, groundlevelbox, 0)
+	c.groundLevel = getCells(d.index, abovebelowbox, 0)
 
 	// Find the cells that this cell is the ground level for.
 	if c.Layer == 0 {
-		for _, ccI := range d.index.SearchIntersect(groundlevelbox) {
+		for _, ccI := range d.index.SearchIntersect(abovebelowbox) {
 			cc := ccI.(*Cell)
 			if cc.Layer > 0 {
 				cc.groundLevel = append(cc.groundLevel, c)
@@ -288,9 +283,64 @@ func deleteCellFromSlice(c *Cell, a *[]*Cell, aFrac ...*[]float64) {
 	}
 }
 
-func newRect(xmin, ymin, xmax, ymax float64) *geom.Bounds {
-	return &geom.Bounds{
-		Min: geom.Point{X: xmin, Y: ymin},
-		Max: geom.Point{X: xmax, Y: ymax},
+// neighborAlignment specifies the desired alignment of the neighbors that
+// are being looked for.
+type neighborAlignment int
+
+const (
+	west neighborAlignment = iota
+	east
+	north
+	south
+	aboveBelow
+)
+
+// newNeighborRect returns a rectangle that should overlap all of the neighbors
+// of a cell with the given alignment a.
+func newNeighborRect(b *geom.Bounds, a neighborAlignment) *geom.Bounds {
+
+	// bboxOffset is a number significantly less than the smallest grid size
+	// but not small enough to be confused with zero.
+	const (
+		bboxOffset = 1.e-10
+	)
+
+	o := new(geom.Bounds)
+
+	offsetX := math.Abs(b.Min.X+b.Max.X) / 2 * bboxOffset
+	offsetY := math.Abs(b.Min.Y+b.Max.Y) / 2 * bboxOffset
+
+	if offsetX == 0 {
+		offsetX = bboxOffset * math.Abs(b.Max.X)
 	}
+	if offsetY == 0 {
+		offsetY = bboxOffset * math.Abs(b.Max.Y)
+	}
+
+	// Set x extents
+	switch a {
+	case west:
+		o.Min.X = b.Min.X - 2*offsetX
+		o.Max.X = b.Min.X - offsetX
+	case east:
+		o.Min.X = b.Max.X + offsetX
+		o.Max.X = b.Max.X + 2*offsetX
+	default:
+		o.Min.X = b.Min.X + offsetX
+		o.Max.X = b.Max.X - offsetX
+	}
+
+	// Set y extents
+	switch a {
+	case south:
+		o.Min.Y = b.Min.Y - 2*offsetY
+		o.Max.Y = b.Min.Y - offsetY
+	case north:
+		o.Min.Y = b.Max.Y + offsetY
+		o.Max.Y = b.Max.Y + 2*offsetY
+	default:
+		o.Min.Y = b.Min.Y + offsetY
+		o.Max.Y = b.Max.Y - offsetY
+	}
+	return o
 }

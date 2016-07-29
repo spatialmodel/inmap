@@ -278,7 +278,7 @@ type SimulationStatus struct {
 func (s SimulationStatus) String() string {
 	return fmt.Sprintf("iteration %-4d  walltime=%6.3gh  Δwalltime=%4.2gs  "+
 		"timestep=%2.0fs  day=%.3g", s.Iteration, s.Walltime.Hours(),
-		s.StepWalltime.Hours(), s.Dt, s.SimulationDays)
+		s.StepWalltime.Seconds(), s.Dt, s.SimulationDays)
 }
 
 // Log sends simulation status messages to c.

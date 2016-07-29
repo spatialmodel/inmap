@@ -5,6 +5,7 @@ import (
 	"net/http"
 	_ "net/http/pprof" // pprof serves a performance profiler.
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/spatialmodel/inmap/inmap/cmd"
@@ -22,13 +23,19 @@ func TestNEI2005(t *testing.T) {
 		return
 	}
 
-	dynamic := true
-	createGrid := false // this isn't used for the dynamic grid
+	//dynamic := true
+	//createGrid := false // this isn't used for the dynamic grid
 	os.Setenv("InMAPRunType", "dynamic")
 	if err := cmd.Startup("nei2005/nei2005Config.toml"); err != nil {
 		t.Fatal(err)
 	}
-	if err := cmd.Run(dynamic, createGrid); err != nil {
-		t.Fatal(err)
+	//if err := cmd.Run(dynamic, createGrid); err != nil {
+	//	t.Fatal(err)
+	//}
+
+	cfg := cmd.Config
+	if err := obsCompare(cfg.OutputFile, cfg.InMAPData, os.Getenv("AQSObs2005"),
+		os.Getenv("StatesShapefile"), filepath.Dir(cfg.OutputFile)); err != nil {
+		t.Error(err)
 	}
 }

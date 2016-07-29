@@ -415,8 +415,11 @@ func (config *VarGridConfig) RegularGrid(data *CTMData, pop *Population, popInde
 // by dividing cells as determined by divideRule. Cells where divideRule is
 // true are divided to the next nest level (up to the maximum nest level), and
 // cells where divideRule is false are combined (down to the baseline nest level).
-func (config *VarGridConfig) MutateGrid(divideRule GridMutator, data *CTMData, pop *Population, mort *MortalityRates, emis *Emissions) DomainManipulator {
+// Log messages are written to logChan if it is not nil.
+func (config *VarGridConfig) MutateGrid(divideRule GridMutator, data *CTMData, pop *Population, mort *MortalityRates, emis *Emissions, logChan chan string) DomainManipulator {
 	return func(d *InMAP) error {
+
+		beginCells := len(d.cells)
 
 		totalMass := 0.
 		totalPopulation := 0.
@@ -490,6 +493,12 @@ func (config *VarGridConfig) MutateGrid(divideRule GridMutator, data *CTMData, p
 		}
 		d.sort()
 
+		endCells := len(d.cells)
+		if logChan != nil {
+			logChan <- fmt.Sprintf("added %d grid cells; there are now %d cells total",
+				endCells-beginCells, endCells)
+		}
+
 		return nil
 	}
 }
@@ -553,10 +562,7 @@ func (d *InMAP) InsertCell(c *Cell) {
 	}
 	d.cells = append(d.cells, c)
 	d.index.Insert(c)
-	// bboxOffset is a number significantly less than the smallest grid size
-	// but not small enough to be confused with zero.
-	const bboxOffset = 1.e-10
-	d.setNeighbors(c, bboxOffset)
+	d.setNeighbors(c)
 }
 
 // A GridMutator is a function whether a Cell should be mutated (i.e., either

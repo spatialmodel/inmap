@@ -9,7 +9,7 @@ import (
 	"io"
 	"math"
 	"os"
-	"runtime"
+	"path/filepath"
 	"strconv"
 
 	"bitbucket.org/ctessum/cdf"
@@ -20,7 +20,6 @@ import (
 	"github.com/ctessum/geom/index/rtree"
 	"github.com/ctessum/geom/op"
 	"github.com/ctessum/geom/proj"
-	"github.com/ctessum/golatex"
 	"github.com/gonum/plot"
 	"github.com/gonum/plot/plotter"
 	"github.com/gonum/plot/vg"
@@ -31,9 +30,9 @@ import (
 )
 
 const (
-	GridProj = "+proj=lcc +lat_1=33.000000 +lat_2=45.000000 +lat_0=40.000000 +lon_0=-97.000000 +x_0=0 +y_0=0 +a=6370997.000000 +b=6370997.000000 +to_meter=1"
-	// Observation data from http://aqsdr1.epa.gov/aqsweb/aqstmp/airdata/download_files.html#Annual
-	obsFile = "annual_all_2005.csv"
+	// gridProj is the spatial projection of the InMAP grid.
+	gridProj = "+proj=lcc +lat_1=33.000000 +lat_2=45.000000 +lat_0=40.000000 +lon_0=-97.000000 +x_0=0 +y_0=0 +a=6370997.000000 +b=6370997.000000 +to_meter=1"
+	obsFile  = "annual_all_2005.csv"
 )
 
 var varnames = []string{
@@ -47,7 +46,7 @@ var varnames = []string{
 }
 
 var inmapVars = []string{
-	"TotalPM2_5",
+	"Total PM2.5",
 	"SOx",
 	"pSO4",
 	"NOx",
@@ -135,23 +134,17 @@ var obsVars = []string{
 
 //"Nitric oxide (NO)",
 
-const (
-	inmapDataLoc = "output/2005nei_output_0.shp"
-	wrfDataLoc   = "/home/chris/data/inmapData/inmapData_2005_v1.1.0/inmapData.ncf"
-	//wrfDataLoc   = "/home/marshall/tessumcm/src/bitbucket.org/ctessum/inmap/wrf2inmap/inmapData_12km/inmapData.ncf"
-)
-
 var (
 	figWidth  = 7 * vg.Inch
 	figHeight = 2.7 * vg.Inch
 )
 
-func obsCompare() {
+// obsFile is observation data from
+// http://aqsdr1.epa.gov/aqsweb/aqstmp/airdata/download_files.html#Annual
+func obsCompare(inmapDataLoc, wrfDataLoc, obsFile, statesLoc, outDir string) error {
 	plot.DefaultFont = "Helvetica"
 
-	runtime.GOMAXPROCS(8)
-	states = getStates()
-	r := latexreport.NewReport("obscompare")
+	states = getStates(statesLoc)
 	fmt.Println("Getting data")
 	iChan := make(chan *rtree.Rtree)
 	go getInMAPdata(inmapDataLoc, iChan)
@@ -161,7 +154,7 @@ func obsCompare() {
 	wrfData := <-wChan
 	alt := wrfData[len(wrfVars)-1]
 	oChan := make(chan [][]*data)
-	go getObsData(oChan, alt)
+	go getObsData(obsFile, oChan, alt)
 	obsData := <-oChan
 	fmt.Println("Finished getting data")
 
@@ -183,11 +176,9 @@ func obsCompare() {
 	var results []matchObsResult
 	for iPol, cChan := range captionChans {
 		//polName := inmapVars[iPol]
-		fname := "postproc/" + figNames[iPol] + "_" + inmapVars[iPol] + ".png"
+		fname := filepath.Join(outDir, figNames[iPol]+"_"+inmapVars[iPol]+".png")
 		obsresult := <-cChan
 		results = append(results, *obsresult)
-		r.Plot(fname,
-			"InMAP "+varnames[iPol]+":"+obsresult.ComparisonName)
 
 		f, err := os.Create(fname)
 		if err != nil {
@@ -201,22 +192,20 @@ func obsCompare() {
 		}
 		f.Close()
 	}
-	//r.Write()
-	f, err := os.Create("modelMeasurementComparisons.json")
-	handle(err)
+	f, err := os.Create(filepath.Join(outDir, "modelMeasurementComparisons.json"))
+	if err != nil {
+		return err
+	}
 
 	b, err := json.Marshal(results)
-	handle(err)
+	if err != nil {
+		return err
+	}
 	var out bytes.Buffer
 	json.Indent(&out, b, "", "\t")
 	out.WriteTo(f)
 	f.Close()
-}
-
-func handle(err error) {
-	if err != nil {
-		panic(err)
-	}
+	return nil
 }
 
 type data struct {
@@ -294,15 +283,15 @@ func matchObs(polName string, obsData []*data, wrfData,
 	}
 	lineStyle := draw.LineStyle{Width: 0.25 * vg.Millimeter}
 
-	wrfg := make([]geom.Geom, 0)
-	wrfd := make([]float64, 0)
+	var wrfg []geom.Geom
+	var wrfd []float64
 	for _, valI := range wrfData.SearchIntersect(bounds) {
 		val := valI.(*data)
 		wrfg = append(wrfg, val.Geom)
 		wrfd = append(wrfd, val.val)
 	}
-	inmapg := make([]geom.Geom, 0)
-	inmapd := make([]float64, 0)
+	var inmapg []geom.Geom
+	var inmapd []float64
 	for _, valI := range inmapData.SearchIntersect(bounds) {
 		val := valI.(*iData)
 		inmapg = append(inmapg, val.Geom)
@@ -391,7 +380,7 @@ func matchObs(polName string, obsData []*data, wrfData,
 	ts4 := ts
 	ts4.XAlign = -1
 	ts4.YAlign = -0.5
-	for j, ss := range []*Stats{wrfstats, inmapstats} {
+	for j, ss := range []*statistics{wrfstats, inmapstats} {
 		cStats.FillText(ts4, vg.Point{X: left - 0.2*vg.Inch, Y: top - vg.Length(j+1)*rowspace}, types[j])
 		for i, s := range []interface{}{ss.mfb * 100, ss.mfe * 100,
 			ss.mb, ss.me, ss.slope, ss.rsquared} { //ss.intercept,
@@ -416,8 +405,8 @@ type matchObsResult struct {
 	Measurements, InMAPPredictions, WRFChemPredictions []float64
 }
 
-func getObsData(oChan chan [][]*data, alts *rtree.Rtree) {
-	dst, err := proj.Parse(GridProj)
+func getObsData(obsFile string, oChan chan [][]*data, alts *rtree.Rtree) {
+	dst, err := proj.Parse(gridProj)
 	if err != nil {
 		panic(err)
 	}
@@ -501,10 +490,11 @@ func getObsData(oChan chan [][]*data, alts *rtree.Rtree) {
 
 type iData struct {
 	geom.Geom
-	TotalPM2_5, SOx, PSO4, NOx, PNO3, NH3, PNH4 float64
+	TotalPM25                       float64 `shp:"Total PM2.5"`
+	SOx, PSO4, NOx, PNO3, NH3, PNH4 float64
 }
 
-func getInMAPdata(name string, iChan chan *rtree.Rtree) {
+func getInMAPdata(inmapDataLoc string, iChan chan *rtree.Rtree) {
 	out := rtree.NewTree(25, 50)
 
 	// open a shapefile for reading
@@ -535,7 +525,7 @@ func getInMAPdata(name string, iChan chan *rtree.Rtree) {
 	iChan <- out
 }
 
-func getWRFdata(name string, wChan chan []*rtree.Rtree) {
+func getWRFdata(wrfDataLoc string, wChan chan []*rtree.Rtree) {
 
 	const (
 		W  = -2736000.00
@@ -548,7 +538,7 @@ func getWRFdata(name string, wChan chan []*rtree.Rtree) {
 		ny = 336
 	)
 
-	ff, err := os.Open(name)
+	ff, err := os.Open(wrfDataLoc)
 	if err != nil {
 		panic(err)
 	}
@@ -598,12 +588,12 @@ func rearrangeData(x, y []float64) plotter.XYs {
 	return out
 }
 
-type Stats struct {
+type statistics struct {
 	mfb, mfe, mb, me, slope, intercept, rsquared float64
 }
 
 func makePlot(x, yWRF, yInMAP []float64,
-	caption string, c draw.Canvas) (*Stats, *Stats) {
+	caption string, c draw.Canvas) (*statistics, *statistics) {
 
 	labelFont, err := vg.MakeFont(plot.DefaultFont, vg.Points(7))
 	if err != nil {
@@ -611,8 +601,8 @@ func makePlot(x, yWRF, yInMAP []float64,
 	}
 
 	// Calculate stats
-	wrfstats := new(Stats)
-	inmapstats := new(Stats)
+	wrfstats := new(statistics)
+	inmapstats := new(statistics)
 	wrfstats.slope, wrfstats.intercept, wrfstats.rsquared, _, _, _ =
 		stats.LinearRegression(x, yWRF)
 	wrfstats.mfb = mfb(x, yWRF)
@@ -760,10 +750,8 @@ type gg struct {
 	geom.Geom
 }
 
-func getStates() []geom.Geom {
-	//filename := "/home/marshall/tessumcm/shapefiles/states"
-	filename := "/home/chris/data/shapefiles/states"
-	s, err := shp.NewDecoder(filename + ".shp")
+func getStates(filename string) []geom.Geom {
+	s, err := shp.NewDecoder(filename)
 	if err != nil {
 		panic(err)
 	}
@@ -773,7 +761,7 @@ func getStates() []geom.Geom {
 	if err != nil {
 		panic(err)
 	}
-	dst, err := proj.Parse(GridProj)
+	dst, err := proj.Parse(gridProj)
 	if err != nil {
 		panic(err)
 	}
@@ -807,8 +795,8 @@ func getStates() []geom.Geom {
 func getInmapVal(polName string, d *iData) float64 {
 	var val float64
 	switch polName {
-	case "TotalPM2_5":
-		val = d.TotalPM2_5
+	case "Total PM2.5":
+		val = d.TotalPM25
 	case "SOx":
 		val = d.SOx
 	case "pSO4":

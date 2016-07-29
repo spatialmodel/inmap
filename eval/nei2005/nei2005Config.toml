@@ -2,9 +2,12 @@
 
 InMAPData = "${inmapData}"
 
+VariableGridData = "${vargridData}"
+
+
 EmissionsShapefiles = [
-	#"${nei2005BioFireEmissions}",
-	#"${nei2005ElevatedEmissions}",
+	"${nei2005BioFireEmissions}",
+	"${nei2005ElevatedEmissions}",
 	"${nei2005GroundLevelEmissions}"
 ]
 EmissionUnits = "tons/year"
@@ -69,7 +72,7 @@ PopDensityCutoff= 0.0055
 # is a candidate for splitting into smaller cells.
 PopCutoff= 40000.0
 
-PopConcThreshold= 0.000001
+PopConcThreshold= 0.000000001
 
 # CensusFile is the path to the shapefile holding population information.
 CensusFile= "${censusFile}"

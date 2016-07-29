@@ -33,7 +33,7 @@ func TestSaveLoad(t *testing.T) {
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
-			cfg.MutateGrid(PopulationMutator(cfg, popIndices), ctmdata, pop, mr, emis),
+			cfg.MutateGrid(PopulationMutator(cfg, popIndices), ctmdata, pop, mr, emis, nil),
 			Save(buf),
 		},
 	}

@@ -104,7 +104,7 @@ func Run(dynamic, createGrid bool) error {
 				//inmap.HTMLUI(Config.HTTPAddress),
 				Config.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, emis),
 				Config.VarGrid.MutateGrid(inmap.PopulationMutator(&Config.VarGrid, popIndices),
-					ctmData, pop, mr, emis),
+					ctmData, pop, mr, emis, msgLog),
 				inmap.SetTimestepCFL(),
 			}
 		} else {
@@ -124,7 +124,7 @@ func Run(dynamic, createGrid bool) error {
 			scienceFuncs,
 			inmap.SteadyStateConvergenceCheck(Config.NumIterations, cConverge),
 		}
-	} else {
+	} else { // dynamic grid
 		initFuncs = []inmap.DomainManipulator{
 			Config.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, emis),
 			inmap.SetTimestepCFL(),
@@ -137,7 +137,7 @@ func Run(dynamic, createGrid bool) error {
 			inmap.RunPeriodically(gridMutateInterval,
 				Config.VarGrid.MutateGrid(inmap.PopConcMutator(
 					Config.VarGrid.PopConcThreshold, &Config.VarGrid, popIndices),
-					ctmData, pop, mr, emis)),
+					ctmData, pop, mr, emis, msgLog)),
 			inmap.RunPeriodically(gridMutateInterval, inmap.SetTimestepCFL()),
 			inmap.SteadyStateConvergenceCheck(Config.NumIterations, cConverge),
 		}

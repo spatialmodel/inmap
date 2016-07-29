@@ -71,11 +71,13 @@ func Grid() error {
 		return fmt.Errorf("problem creating file to store variable grid data in: %v", err)
 	}
 
+	log.Println("Creating grid")
+
 	d := &inmap.InMAP{
 		InitFuncs: []inmap.DomainManipulator{
 			Config.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, nil),
 			Config.VarGrid.MutateGrid(inmap.PopulationMutator(&Config.VarGrid, popIndices),
-				ctmData, pop, mr, nil),
+				ctmData, pop, mr, nil, msgLog),
 			inmap.Save(w),
 		},
 	}

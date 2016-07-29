@@ -61,9 +61,9 @@ func TestDynamicGrid(t *testing.T) {
 			),
 			RunPeriodically(gridMutateInterval,
 				cfg.MutateGrid(PopConcMutator(mutateThreshold, cfg, popIndices),
-					ctmdata, pop, mr, emis)),
+					ctmdata, pop, mr, emis, nil)),
 			RunPeriodically(gridMutateInterval, SetTimestepCFL()),
-			SteadyStateConvergenceCheck(1000, nil),
+			SteadyStateConvergenceCheck(-1, nil),
 		},
 	}
 
@@ -79,7 +79,7 @@ func TestDynamicGrid(t *testing.T) {
 		cells[c.Layer]++
 	}
 
-	wantCells := []int{22, 22, 22, 22, 22, 22, 22, 19, 7, 4}
+	wantCells := []int{22, 22, 22, 22, 22, 22, 22, 19, 4, 4}
 	if !reflect.DeepEqual(cells, wantCells) {
 		t.Errorf("dynamic grid should have %v cells but instead has %v", wantCells, cells)
 	}
@@ -90,7 +90,7 @@ func TestDynamicGrid(t *testing.T) {
 	}
 	results := r["TotalPop deaths"]
 	totald := floats.Sum(results)
-	const expectedDeaths = 1.2694482153756345e-05
+	const expectedDeaths = 1.269448169737368e-05
 	if different(totald, expectedDeaths, testTolerance) {
 		t.Errorf("Deaths (%v) doesn't equal %v", totald, expectedDeaths)
 	}
