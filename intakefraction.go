@@ -37,8 +37,10 @@ func (d *InMAP) IntakeFraction(
 		for p, i := range d.popIndices {
 			erate := 0. // emissions rate [μg/s]
 			irate := 0. // inhalation rate [μg/s]
-			for _, c := range d.cells {
-				erate += c.EmisFlux[ie] * c.Volume
+			for c := d.cells.first; c != nil; c = c.next {
+				if c.EmisFlux != nil {
+					erate += c.EmisFlux[ie] * c.Volume
+				}
 				if c.Layer == 0 { // We only care about ground level concentrations
 					irate += c.Cf[ic] * Qb * c.PopData[i]
 				}

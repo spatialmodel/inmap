@@ -52,181 +52,184 @@ func TestCellAlignment(t *testing.T) {
 
 func (d *InMAP) testCellAlignment2(t *testing.T) {
 	const testTolerance = 1.e-8
-	for _, cell := range d.cells {
-		for i, w := range cell.west {
-			if !w.boundary && len(w.east) != 0 {
+	for cell := d.cells.first; cell != nil; cell = cell.next {
+		var westCoverage, eastCoverage, northCoverage, southCoverage float64
+		var aboveCoverage, belowCoverage, groundLevelCoverage float64
+		for w := cell.west.first; w != nil; w = w.next {
+			westCoverage += w.info.coverFrac
+			if !w.boundary {
 				pass := false
-				for j, e := range w.east {
-					if e == cell {
+				for e := w.east.first; e != nil; e = e.next {
+					if e.Cell == cell.Cell {
 						pass = true
-						if different(w.kxxEast[j], cell.kxxWest[i], testTolerance) {
-							t.Logf("Kxx doesn't match")
-							t.FailNow()
+						if different(w.info.diff, e.info.diff, testTolerance) {
+							t.Errorf("Kxx doesn't match")
 						}
-						if different(w.dxPlusHalf[j], cell.dxMinusHalf[i], testTolerance) {
-							t.Logf("Dx doesn't match")
-							t.FailNow()
+						if different(w.info.centerDistance, e.info.centerDistance, testTolerance) {
+							t.Errorf("Dx doesn't match")
+							break
+						}
+					}
+				}
+				if !pass {
+					t.Errorf("Failed for Cell %v West", cell)
+				}
+			}
+		}
+		for e := cell.east.first; e != nil; e = e.next {
+			eastCoverage += e.info.coverFrac
+			if !e.boundary {
+				pass := false
+				for w := e.west.first; w != nil; w = w.next {
+					if w.Cell == cell.Cell {
+						pass = true
+						if different(e.info.diff, w.info.diff, testTolerance) {
+							t.Errorf("Kxx doesn't match")
+						}
+						if different(e.info.centerDistance, w.info.centerDistance, testTolerance) {
+							t.Errorf("Dx doesn't match")
 						}
 						break
 					}
 				}
 				if !pass {
-					t.Logf("Failed for Cell %v (layer %v) West",
-						cell.Polygonal, cell.Layer)
-					t.FailNow()
+					t.Errorf("Failed for Cell %v East", cell)
 				}
 			}
 		}
-		for i, e := range cell.east {
-			if !e.boundary && len(e.west) != 0 {
+		for n := cell.north.first; n != nil; n = n.next {
+			northCoverage += n.info.coverFrac
+			if !n.boundary {
 				pass := false
-				for j, w := range e.west {
-					if w == cell {
+				for s := n.south.first; s != nil; s = s.next {
+					if s.Cell == cell.Cell {
 						pass = true
-						if different(e.kxxWest[j], cell.kxxEast[i], testTolerance) {
-							t.Logf("Kxx doesn't match")
-							t.FailNow()
+						if different(n.info.diff, s.info.diff, testTolerance) {
+							t.Errorf("Kyy doesn't match")
 						}
-						if different(e.dxMinusHalf[j], cell.dxPlusHalf[i], testTolerance) {
-							t.Logf("Dx doesn't match")
-							t.FailNow()
+						if different(n.info.centerDistance, s.info.centerDistance, testTolerance) {
+							t.Errorf("Dy doesn't match")
 						}
 						break
 					}
 				}
 				if !pass {
-					t.Logf("Failed for Cell %v (layer %v) East",
-						cell.Polygonal, cell.Layer)
-					t.FailNow()
+					t.Errorf("Failed for Cell %v  North", cell)
 				}
 			}
 		}
-		for i, n := range cell.north {
-			if !n.boundary && len(n.south) != 0 {
+		for s := cell.south.first; s != nil; s = s.next {
+			southCoverage += s.info.coverFrac
+			if !s.boundary {
 				pass := false
-				for j, s := range n.south {
-					if s == cell {
+				for n := s.north.first; n != nil; n = n.next {
+					if n.Cell == cell.Cell {
 						pass = true
-						if different(n.kyySouth[j], cell.kyyNorth[i], testTolerance) {
-							t.Logf("Kyy doesn't match")
-							t.FailNow()
+						if different(s.info.diff, n.info.diff, testTolerance) {
+							t.Errorf("Kyy doesn't match")
 						}
-						if different(n.dyMinusHalf[j], cell.dyPlusHalf[i], testTolerance) {
-							t.Logf("Dy doesn't match")
-							t.FailNow()
+						if different(s.info.centerDistance, n.info.centerDistance, testTolerance) {
+							t.Errorf("Dy doesn't match")
 						}
 						break
 					}
 				}
 				if !pass {
-					t.Logf("Failed for Cell %v (layer %v) North",
-						cell.Polygonal, cell.Layer)
-					t.FailNow()
+					t.Errorf("Failed for Cell %v South", cell)
 				}
 			}
 		}
-		for i, s := range cell.south {
-			if !s.boundary && len(s.north) != 0 {
+		for a := cell.above.first; a != nil; a = a.next {
+			aboveCoverage += a.info.coverFrac
+			if !a.boundary {
 				pass := false
-				for j, n := range s.north {
-					if n == cell {
+				for b := a.below.first; b != nil; b = b.next {
+					if b.Cell == cell.Cell {
 						pass = true
-						if different(s.kyyNorth[j], cell.kyySouth[i], testTolerance) {
-							t.Logf("Kyy doesn't match")
-							t.FailNow()
-						}
-						if different(s.dyPlusHalf[j], cell.dyMinusHalf[i], testTolerance) {
-							t.Logf("Dy doesn't match")
-							t.FailNow()
-						}
-						break
-					}
-				}
-				if !pass {
-					t.Logf("Failed for Cell %v (layer %v) South",
-						cell.Polygonal, cell.Layer)
-					t.FailNow()
-				}
-			}
-		}
-		for i, a := range cell.above {
-			if !a.boundary && len(a.below) != 0 {
-				pass := false
-				for j, b := range a.below {
-					if b == cell {
-						pass = true
-						if different(a.kzzBelow[j], cell.kzzAbove[i], testTolerance) {
-							t.Logf("Kzz doesn't match above (layer=%v, "+
+						if different(a.info.diff, b.info.diff, testTolerance) {
+							t.Errorf("Kzz doesn't match above (layer=%v, "+
 								"KzzAbove=%v, KzzBelow=%v)", cell.Layer,
-								cell.kzzAbove[i], a.kzzBelow[j])
-							t.Fail()
+								b.info.diff, a.info.diff)
 						}
-						if different(a.dzMinusHalf[j], cell.dzPlusHalf[i], testTolerance) {
-							t.Logf("Dz doesn't match")
-							t.FailNow()
+						if different(a.info.centerDistance, b.info.centerDistance, testTolerance) {
+							t.Errorf("Dz doesn't match")
 						}
 						break
 					}
 				}
 				if !pass {
-					t.Logf("Failed for Cell %v (layer %v) Above",
-						cell.Polygonal, cell.Layer)
-					t.FailNow()
+					t.Errorf("Failed for Cell %v Above", cell)
 				}
 			}
 		}
-		for i, b := range cell.below {
+		for b := cell.below.first; b != nil; b = b.next {
+			belowCoverage += b.info.coverFrac
 			pass := false
-			if cell.Layer == 0 && b == cell {
+			if cell.Layer == 0 && b.Cell == cell.Cell {
 				pass = true
-			} else if len(b.above) != 0 {
-				for j, a := range b.above {
-					if a == cell {
+			} else {
+				for a := b.above.first; a != nil; a = a.next {
+					if a.Cell == cell.Cell {
 						pass = true
-						if different(b.kzzAbove[j], cell.kzzBelow[i], testTolerance) {
-							t.Logf("Kzz doesn't match below")
-							t.FailNow()
+						if different(b.info.diff, a.info.diff, testTolerance) {
+							t.Errorf("Kzz doesn't match below")
 						}
-						if different(b.dzPlusHalf[j], cell.dzMinusHalf[i], testTolerance) {
-							t.Logf("Dz doesn't match")
-							t.FailNow()
+						if different(b.info.centerDistance, a.info.centerDistance, testTolerance) {
+							t.Errorf("Dz doesn't match")
 						}
 						break
 					}
 				}
-			} else {
-				pass = true
 			}
 			if !pass {
-				t.Logf("Failed for Cell %v (layer %v) Below",
-					cell, cell.Layer)
-				t.FailNow()
+				t.Errorf("Failed for Cell %v  Below", cell)
 			}
 		}
 		// Assume upper cells are never higher resolution than lower cells
-		for _, g := range cell.groundLevel {
+		for g := cell.groundLevel.first; g != nil; g = g.next {
+			groundLevelCoverage += g.info.coverFrac
 			g2 := g
 			pass := false
 			for {
-				if len(g2.above) == 0 {
+				if g2.above.len == 0 {
 					pass = false
 					break
 				}
-				if g2 == g2.above[0] {
+				if g2.Cell == g2.above.first.Cell {
 					pass = false
 					break
 				}
-				if g2 == cell {
+				if g2.Cell == cell.Cell {
 					pass = true
 					break
 				}
-				g2 = g2.above[0]
+				g2 = g2.above.first
 			}
 			if !pass {
-				t.Logf("Failed for Cell %v (layer %v) GroundLevel",
-					cell.Polygonal, cell.Layer)
-				t.FailNow()
+				t.Errorf("Failed for Cell %v GroundLevel", cell)
 			}
+		}
+		const tolerance = 1.0e-10
+		if different(westCoverage, 1, tolerance) {
+			t.Errorf("cell %v, west coverage %g!=1", cell, westCoverage)
+		}
+		if different(eastCoverage, 1, tolerance) {
+			t.Errorf("cell %v, east coverage %g!=1", cell, eastCoverage)
+		}
+		if different(southCoverage, 1, tolerance) {
+			t.Errorf("cell %v, south coverage %g!=1", cell, southCoverage)
+		}
+		if different(northCoverage, 1, tolerance) {
+			t.Errorf("cell %v, north coverage %g!=1", cell, northCoverage)
+		}
+		if different(belowCoverage, 1, tolerance) {
+			t.Errorf("cell %v, below coverage %g!=1", cell, belowCoverage)
+		}
+		if different(aboveCoverage, 1, tolerance) {
+			t.Errorf("cell %v, above coverage %g!=1", cell, aboveCoverage)
+		}
+		if different(groundLevelCoverage, 1, tolerance) {
+			t.Errorf("cell %v, groundLevel coverage %g!=1", cell, groundLevelCoverage)
 		}
 	}
 }
@@ -249,10 +252,10 @@ func TestConvectiveMixing(t *testing.T) {
 		t.Error(err)
 	}
 
-	for i, c := range d.cells {
-		val := c.M2u - c.M2d + c.above[0].M2d*c.above[0].Dz/c.Dz
+	for c := d.cells.first; c != nil; c = c.next {
+		val := c.M2u - c.M2d + c.above.first.M2d*c.above.first.Dz/c.Dz
 		if absDifferent(val, 0, testTolerance) {
-			t.Error(i, c.Layer, val, c.M2u, c.M2d, c.above[0].M2d)
+			t.Error(c.Layer, val, c.M2u, c.M2d, c.above.first.M2d)
 		}
 	}
 }
@@ -297,14 +300,15 @@ func TestMixing(t *testing.T) {
 
 	sum := 0.
 	maxval := 0.
-	for _, group := range [][]*Cell{d.cells, d.westBoundary, d.eastBoundary,
+	for _, group := range []*cellList{d.cells, d.westBoundary, d.eastBoundary,
 		d.northBoundary, d.southBoundary, d.topBoundary} {
-		for _, cell := range group {
+		for cell := group.first; cell != nil; cell = cell.next {
 			sum += cell.Cf[iPM2_5] * cell.Volume
 			maxval = max(maxval, cell.Cf[iPM2_5])
 		}
 	}
-	expectedMass := d.cells[0].EmisFlux[iPM2_5] * d.cells[0].Volume * d.Dt * numTimesteps
+	cells := d.cells.array()
+	expectedMass := cells[0].EmisFlux[iPM2_5] * cells[0].Volume * d.Dt * numTimesteps
 	if different(sum, expectedMass, testTolerance) {
 		t.Errorf("sum=%g (it should equal %g)\n", sum, expectedMass)
 	}
@@ -317,7 +321,6 @@ func TestMixing(t *testing.T) {
 func TestChemistry(t *testing.T) {
 	const (
 		testTolerance = 1.e-8
-		testRow       = 2
 	)
 	cfg, ctmdata, pop, popIndices, mr := VarGridData()
 	emis := &Emissions{
@@ -351,7 +354,7 @@ func TestChemistry(t *testing.T) {
 		t.Error(err)
 	}
 
-	c := d.cells[0]
+	c := d.cells.array()[0]
 	sum := 0.
 	sum += c.Cf[igOrg] + c.Cf[ipOrg]
 	sum += (c.Cf[igNO] + c.Cf[ipNO]) / NOxToN
@@ -393,16 +396,15 @@ func TestAdvection(t *testing.T) {
 		t.Error(err)
 	}
 
-	var cellGroups = [][]*Cell{d.cells, d.westBoundary, d.eastBoundary,
+	var cellGroups = []*cellList{d.cells, d.westBoundary, d.eastBoundary,
 		d.northBoundary, d.southBoundary, d.topBoundary}
 
-	for testRow := 0; testRow < len(d.cells); testRow++ {
+	for testCell := d.cells.first; testCell != nil; testCell = testCell.next {
 		ResetCells()(d)
 
 		// Add emissions
-		c := d.cells[testRow]
-		c.Ci[0] += E / c.Dz / c.Dy / c.Dx
-		c.Cf[0] += E / c.Dz / c.Dy / c.Dx
+		testCell.Ci[0] += E / testCell.Dz / testCell.Dy / testCell.Dx
+		testCell.Cf[0] += E / testCell.Dz / testCell.Dy / testCell.Dx
 		// Calculate advection
 
 		if err := d.Run(); err != nil {
@@ -412,17 +414,17 @@ func TestAdvection(t *testing.T) {
 		sum := 0.
 		layerSum := make(map[int]float64)
 		for _, cellGroup := range cellGroups {
-			for _, c := range cellGroup {
+			for c := cellGroup.first; c != nil; c = c.next {
 				val := c.Cf[0] * c.Dy * c.Dx * c.Dz
 				if val < 0 {
-					t.Fatalf("row %d emis: negative concentration", testRow)
+					t.Fatalf("cell %v emis: negative concentration", testCell)
 				}
 				sum += val
 				layerSum[c.Layer] += val
 			}
 		}
 		if different(sum, E, tolerance) {
-			t.Errorf("row %d emis: sum=%.12g (it should equal %v)\n", testRow, sum, E)
+			t.Errorf("cell %v emis: sum=%.12g (it should equal %v)\n", testCell, sum, E)
 		}
 	}
 }
@@ -453,12 +455,11 @@ func TestMeanderMixing(t *testing.T) {
 		t.Error(err)
 	}
 
-	var cellGroups = [][]*Cell{d.cells, d.westBoundary, d.eastBoundary,
+	var cellGroups = []*cellList{d.cells, d.westBoundary, d.eastBoundary,
 		d.northBoundary, d.southBoundary, d.topBoundary}
-	// Test emissions from every thirtieth row.
-	for testRow := 0; testRow < len(d.cells); testRow++ {
+	for testCell := d.cells.first; testCell != nil; testCell = testCell.next {
 		for _, group := range cellGroups {
-			for _, c := range group {
+			for c := group.first; c != nil; c = c.next {
 				c.Ci[0] = 0
 				c.Cf[0] = 0
 			}
@@ -466,9 +467,8 @@ func TestMeanderMixing(t *testing.T) {
 		ResetCells()(d)
 		for tt := 0; tt < nsteps; tt++ {
 
-			c := d.cells[testRow]
-			c.Ci[0] += E / c.Dz / c.Dy / c.Dx // ground level emissions
-			c.Cf[0] += E / c.Dz / c.Dy / c.Dx // ground level emissions
+			testCell.Ci[0] += E / testCell.Dz / testCell.Dy / testCell.Dx // ground level emissions
+			testCell.Cf[0] += E / testCell.Dz / testCell.Dy / testCell.Dx // ground level emissions
 
 			if err := d.Run(); err != nil {
 				t.Error(err)
@@ -477,17 +477,17 @@ func TestMeanderMixing(t *testing.T) {
 		sum := 0.
 		layerSum := make(map[int]float64)
 		for _, group := range cellGroups {
-			for _, c := range group {
+			for c := group.first; c != nil; c = c.next {
 				val := c.Cf[0] * c.Dy * c.Dx * c.Dz
 				if val < 0 {
-					t.Fatalf("row %d emis: negative concentration", testRow)
+					t.Fatalf("cell %v emis: negative concentration", testCell)
 				}
 				sum += val
 				layerSum[c.Layer] += val
 			}
 		}
 		if different(sum, E*float64(nsteps), tolerance) {
-			t.Errorf("row %d emis: sum=%.12g (it should equal %v)\n", testRow, sum, E*float64(nsteps))
+			t.Errorf("cell %v emis: sum=%.12g (it should equal %v)\n", testCell, sum, E*float64(nsteps))
 		}
 	}
 }
@@ -642,7 +642,7 @@ func TestDryDeposition(t *testing.T) {
 	if err := d.Init(); err != nil {
 		t.Error(err)
 	}
-	for _, c := range d.cells {
+	for c := d.cells.first; c != nil; c = c.next {
 		for i := range c.Ci {
 			c.Cf[i] = 1 // set concentrations to 1
 		}
@@ -651,14 +651,14 @@ func TestDryDeposition(t *testing.T) {
 		t.Error(err)
 	}
 
-	for i, c := range d.cells {
+	for c := d.cells.first; c != nil; c = c.next {
 		for ii, cc := range c.Cf {
 			if c.Layer == 0 {
 				if cc >= 1 || cc <= 0.98 {
-					t.Errorf("ground-level cell %d pollutant %d should equal be between 0.98 and 1 but is %g", i, ii, cc)
+					t.Errorf("ground-level cell %v pollutant %d should equal be between 0.98 and 1 but is %g", c, ii, cc)
 				}
 			} else if cc != 1 {
-				t.Errorf("above-ground cell %d pollutant %d should equal 1 but equals %g", i, ii, cc)
+				t.Errorf("above-ground cell %v pollutant %d should equal 1 but equals %g", c, ii, cc)
 			}
 		}
 	}
@@ -685,7 +685,7 @@ func TestWetDeposition(t *testing.T) {
 	if err := d.Init(); err != nil {
 		t.Error(err)
 	}
-	for _, c := range d.cells {
+	for c := d.cells.first; c != nil; c = c.next {
 		for i := range c.Ci {
 			c.Cf[i] = 1 // set concentrations to 1
 		}
@@ -694,10 +694,10 @@ func TestWetDeposition(t *testing.T) {
 		t.Error(err)
 	}
 
-	for i, c := range d.cells {
+	for c := d.cells.first; c != nil; c = c.next {
 		for ii, cc := range c.Cf {
 			if cc > 1 || cc <= 0.99 {
-				t.Errorf("ground-level cell %d pollutant %d should equal be between 0.99 and 1 but is %g", i, ii, cc)
+				t.Errorf("ground-level cell %v pollutant %d should equal be between 0.99 and 1 but is %g", c, ii, cc)
 			}
 		}
 	}

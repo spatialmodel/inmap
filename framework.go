@@ -59,9 +59,9 @@ type InMAP struct {
 	// simulation has completed.
 	CleanupFuncs []DomainManipulator
 
-	cells   []*Cell // One data holder for each grid cell
-	Dt      float64 // seconds
-	nlayers int     // number of model layers
+	cells   *cellList // One data holder for each grid cell
+	Dt      float64   // seconds
+	nlayers int       // number of model layers
 
 	// Done specifies whether the simulation is finished.
 	Done bool
@@ -71,13 +71,13 @@ type InMAP struct {
 	// VariableUnits gives the units of the model variables.
 	VariableUnits map[string]string
 
-	westBoundary  []*Cell // boundary cells
-	eastBoundary  []*Cell // boundary cells
-	northBoundary []*Cell // boundary cells
-	southBoundary []*Cell // boundary cells
+	westBoundary  *cellList // boundary cells
+	eastBoundary  *cellList // boundary cells
+	northBoundary *cellList // boundary cells
+	southBoundary *cellList // boundary cells
 
 	// boundary cells; assume bottom boundary is the same as lowest layer
-	topBoundary []*Cell
+	topBoundary *cellList
 
 	// popIndices give the array index of each population type in the PopData
 	// field in each Cell.
@@ -91,12 +91,23 @@ type InMAP struct {
 
 // Init initializes the simulation by running d.InitFuncs.
 func (d *InMAP) Init() error {
+	d.init()
 	for _, f := range d.InitFuncs {
 		if err := f(d); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func (d *InMAP) init() {
+	d.cells = new(cellList)
+	d.westBoundary = new(cellList)
+	d.eastBoundary = new(cellList)
+	d.northBoundary = new(cellList)
+	d.southBoundary = new(cellList)
+	d.topBoundary = new(cellList)
+	d.index = rtree.NewTree(25, 50)
 }
 
 // Run carries out the simulation by running d.RunFuncs until d.Done is true.
@@ -149,11 +160,8 @@ type Cell struct {
 	VOCDryDep float64 `desc:"VOC dry deposition" units:"m/s"`
 	NOxDryDep float64 `desc:"NOx dry deposition" units:"m/s"`
 
-	Kzz                float64   `desc:"Grid center vertical diffusivity after applying convective fraction" units:"m²/s"`
-	kzzAbove, kzzBelow []float64 // horizontal diffusivity [m2/s] (staggered grid)
-	Kxxyy              float64   `desc:"Grid center horizontal diffusivity" units:"m²/s"`
-	kyySouth, kyyNorth []float64 // horizontal diffusivity [m2/s] (staggered grid)
-	kxxWest, kxxEast   []float64 // horizontal diffusivity at [m2/s] (staggered grid)
+	Kzz   float64 `desc:"Grid center vertical diffusivity after applying convective fraction" units:"m²/s"`
+	Kxxyy float64 `desc:"Grid center horizontal diffusivity" units:"m²/s"`
 
 	M2u float64 `desc:"ACM2 upward mixing (Pleim 2007)" units:"1/s"`
 	M2d float64 `desc:"ACM2 downward mixing (Pleim 2007)" units:"1/s"`
@@ -171,26 +179,14 @@ type Cell struct {
 	EmisFlux  []float64 // emissions [μg/m³/s]
 	CBaseline []float64 // Total baseline PM2.5 concentration.
 
-	west        []*Cell // Neighbors to the East
-	east        []*Cell // Neighbors to the West
-	south       []*Cell // Neighbors to the South
-	north       []*Cell // Neighbors to the North
-	below       []*Cell // Neighbors below
-	above       []*Cell // Neighbors above
-	groundLevel []*Cell // Neighbors at ground level
-	boundary    bool    // Does this cell represent a boundary condition?
-
-	westFrac, eastFrac   []float64 // Fraction of cell covered by each neighbor (adds up to 1).
-	northFrac, southFrac []float64 // Fraction of cell covered by each neighbor (adds up to 1).
-	aboveFrac, belowFrac []float64 // Fraction of cell covered by each neighbor (adds up to 1).
-	groundLevelFrac      []float64 // Fraction of cell above to each ground level cell (adds up to 1).
-
-	dxPlusHalf  []float64 // Distance between centers of cell and East [m]
-	dxMinusHalf []float64 // Distance between centers of cell and West [m]
-	dyPlusHalf  []float64 // Distance between centers of cell and North [m]
-	dyMinusHalf []float64 // Distance between centers of cell and South [m]
-	dzPlusHalf  []float64 // Distance between centers of cell and Above [m]
-	dzMinusHalf []float64 // Distance between centers of cell and Below [m]
+	west        *cellList // Neighbors to the East
+	east        *cellList // Neighbors to the West
+	south       *cellList // Neighbors to the South
+	north       *cellList // Neighbors to the North
+	below       *cellList // Neighbors below
+	above       *cellList // Neighbors above
+	groundLevel *cellList // Neighbors at ground level
+	boundary    bool      // Does this cell represent a boundary condition?
 
 	Layer       int     `desc:"Vertical layer index" units:"-"`
 	LayerHeight float64 `desc:"Height at layer bottom" units:"m"`
@@ -209,9 +205,30 @@ type Cell struct {
 	AboveDensityThreshold bool
 }
 
+func (c *Cell) String() string {
+	b := c.Bounds()
+	return fmt.Sprintf("{min=%+v, max=%+v, layer=%d, boundary=%v}", b.Min, b.Max, c.Layer, c.boundary)
+}
+
+// neighborInfo holds information about the relationship between a cell and
+// its neighbor.
+type neighborInfo struct {
+	// coverFrac is the fration of the cell covered by
+	// this neighbor. It adds up to 1 for all neighbors.
+	coverFrac float64
+
+	// centerDistance is the distance between the
+	// center of this cell the neighbor [m].
+	centerDistance float64
+
+	// diff is the staggered grid diffusivity between this
+	// cell and the neighbor [m2/s].
+	diff float64
+}
+
 // Cells returns the InMAP grid cells as an array.
 func (d *InMAP) Cells() []*Cell {
-	return d.cells
+	return d.cells.array()
 }
 
 // DomainManipulator is a class of functions that operate on the entire InMAP
@@ -226,7 +243,13 @@ func (c *Cell) make() {
 	c.Ci = make([]float64, len(PolNames))
 	c.Cf = make([]float64, len(PolNames))
 	c.CBaseline = make([]float64, len(PolNames))
-	c.EmisFlux = make([]float64, len(PolNames))
+	c.west = new(cellList)
+	c.east = new(cellList)
+	c.south = new(cellList)
+	c.north = new(cellList)
+	c.below = new(cellList)
+	c.above = new(cellList)
+	c.groundLevel = new(cellList)
 }
 
 func (c *Cell) boundaryCopy() *Cell {
@@ -248,36 +271,41 @@ func (c *Cell) boundaryCopy() *Cell {
 // addWestBoundary adds a cell to the western boundary of the domain.
 func (d *InMAP) addWestBoundary(cell *Cell) {
 	c := cell.boundaryCopy()
-	cell.west = []*Cell{c}
-	d.westBoundary = append(d.westBoundary, c)
+	ref := cell.west.add(c)
+	d.westBoundary.add(c)
+	neighborInfoBoundaryEastWest(ref)
 }
 
 // addEastBoundary adds a cell to the eastern boundary of the domain.
 func (d *InMAP) addEastBoundary(cell *Cell) {
 	c := cell.boundaryCopy()
-	cell.east = []*Cell{c}
-	d.eastBoundary = append(d.eastBoundary, c)
+	ref := cell.east.add(c)
+	d.eastBoundary.add(c)
+	neighborInfoBoundaryEastWest(ref)
 }
 
 // addSouthBoundary adds a cell to the southern boundary of the domain.
 func (d *InMAP) addSouthBoundary(cell *Cell) {
 	c := cell.boundaryCopy()
-	cell.south = []*Cell{c}
-	d.southBoundary = append(d.southBoundary, c)
+	ref := cell.south.add(c)
+	d.southBoundary.add(c)
+	neighborInfoBoundarySouthNorth(ref)
 }
 
 // addNorthBoundary adds a cell to the northern boundary of the domain.
 func (d *InMAP) addNorthBoundary(cell *Cell) {
 	c := cell.boundaryCopy()
-	cell.north = []*Cell{c}
-	d.northBoundary = append(d.northBoundary, c)
+	ref := cell.north.add(c)
+	d.northBoundary.add(c)
+	neighborInfoBoundarySouthNorth(ref)
 }
 
 // addTopBoundary adds a cell to the top boundary of the domain.
 func (d *InMAP) addTopBoundary(cell *Cell) {
 	c := cell.boundaryCopy()
-	cell.above = []*Cell{c}
-	d.topBoundary = append(d.topBoundary, c)
+	ref := cell.above.add(c)
+	d.topBoundary.add(c)
+	neighborInfoBoundaryTopBottom(ref)
 }
 
 // SetTimestepCFL returns a function that sets the time step using the
@@ -288,8 +316,9 @@ func (d *InMAP) addTopBoundary(cell *Cell) {
 func SetTimestepCFL() DomainManipulator {
 	return func(d *InMAP) error {
 		const Cmax = 1.0
+		d.Dt = math.Inf(1)
 		sqrt3 := math.Pow(3., 0.5)
-		for i, c := range d.cells {
+		for c := d.cells.first; c != nil; c = c.next {
 			// Advection time step
 			dt1 := Cmax / sqrt3 /
 				max((math.Abs(c.UAvg)+c.UDeviation*2)/c.Dx,
@@ -300,11 +329,7 @@ func SetTimestepCFL() DomainManipulator {
 			// horizontal diffusion time step
 			dt3 := Cmax * c.Dx * c.Dx / 2. / c.Kxxyy
 			dt4 := Cmax * c.Dy * c.Dy / 2. / c.Kxxyy
-			if i == 0 {
-				d.Dt = amin(dt1, dt2, dt3, dt4) // seconds
-			} else {
-				d.Dt = amin(d.Dt, dt1, dt2, dt3, dt4) // seconds
-			}
+			d.Dt = amin(d.Dt, dt1, dt2, dt3, dt4) // seconds
 		}
 		return nil
 	}
@@ -317,8 +342,9 @@ func harmonicMean(a, b float64) float64 {
 // toArray converts cell data for variable varName into a regular array.
 // If layer is less than zero, data for all layers is returned.
 func (d *InMAP) toArray(varName string, layer int) []float64 {
-	o := make([]float64, 0, len(d.cells))
-	for _, c := range d.cells {
+	o := make([]float64, 0, d.cells.len)
+	cells := d.cells.array()
+	for _, c := range cells {
 		c.mutex.RLock()
 		if layer >= 0 && c.Layer > layer {
 			// The cells should be sorted with the lower layers first, so we
@@ -337,8 +363,10 @@ func (d *InMAP) toArray(varName string, layer int) []float64 {
 // are array indices of each population type.
 func (c *Cell) getValue(varName string, popIndices map[string]int) float64 {
 	if index, ok := emisLabels[varName]; ok { // Emissions
-		return c.EmisFlux[index]
-
+		if c.EmisFlux != nil {
+			return c.EmisFlux[index]
+		}
+		return 0
 	} else if polConv, ok := PolLabels[varName]; ok { // Concentrations
 		var o float64
 		for i, ii := range polConv.index {
@@ -388,7 +416,7 @@ func (d *InMAP) getUnits(varName string) string {
 		return "deaths/grid cell"
 	}
 	// Everything else
-	t := reflect.TypeOf(*d.cells[0])
+	t := reflect.TypeOf(*d.cells.first.Cell)
 	ftype, ok := t.FieldByName(varName)
 	if ok {
 		return ftype.Tag.Get("units")
@@ -400,8 +428,9 @@ func (d *InMAP) getUnits(varName string) string {
 // if WebMap is true, it returns the geometry in web mercator projection,
 // otherwise it returns the native grid projection.
 func (d *InMAP) GetGeometry(layer int, webMap bool) []geom.Polygonal {
-	o := make([]geom.Polygonal, 0, len(d.cells))
-	for _, c := range d.cells {
+	o := make([]geom.Polygonal, 0, d.cells.len)
+	cells := d.cells.array()
+	for _, c := range cells {
 		c.mutex.RLock()
 		if c.Layer > layer {
 			// The cells should be sorted with the lower layers first, so we

@@ -40,9 +40,11 @@ import (
 // and it should not be run in parallel with other CellManipulators.
 func AddEmissionsFlux() CellManipulator {
 	return func(c *Cell, Dt float64) {
-		for i := range PolNames {
-			c.Cf[i] += c.EmisFlux[i] * Dt
-			c.Ci[i] = c.Cf[i]
+		if c.EmisFlux != nil {
+			for i := range PolNames {
+				c.Cf[i] += c.EmisFlux[i] * Dt
+				c.Ci[i] = c.Cf[i]
+			}
 		}
 	}
 }
@@ -288,8 +290,8 @@ func Output(fileName string, allLayers bool, outputVariables ...string) DomainMa
 		if err != nil {
 			return fmt.Errorf("error creating output shapefile: %v", err)
 		}
-
-		for i, c := range d.cells[0:len(results[outputVariables[0]])] {
+		cells := d.cells.array()
+		for i, c := range cells[0:len(results[outputVariables[0]])] {
 			outFields := make([]interface{}, len(vars))
 			for j, v := range vars {
 				outFields[j] = results[v][i]

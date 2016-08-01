@@ -116,9 +116,9 @@ var baselinePolLabels = map[string]polConv{
 // grid cells and boundary cells.
 func ResetCells() DomainManipulator {
 	return func(d *InMAP) error {
-		for _, g := range [][]*Cell{d.cells, d.westBoundary, d.eastBoundary,
+		for _, g := range []*cellList{d.cells, d.westBoundary, d.eastBoundary,
 			d.northBoundary, d.southBoundary, d.topBoundary} {
-			for _, c := range g {
+			for c := g.first; c != nil; c = c.next {
 				c.Ci = make([]float64, len(PolNames))
 				c.Cf = make([]float64, len(PolNames))
 				c.EmisFlux = make([]float64, len(PolNames))
@@ -140,13 +140,11 @@ func Calculations(calculators ...CellManipulator) DomainManipulator {
 		wg.Add(nprocs)
 		for pp := 0; pp < nprocs; pp++ {
 			go func(pp int) {
-				var c *Cell
-				for ii := pp; ii < len(d.cells); ii += nprocs {
-					c = d.cells[ii]
+				for c := d.cells.forwardFrom(d.cells.first, pp); c != nil; c = d.cells.forwardFrom(c, nprocs) {
 					c.mutex.Lock() // Lock the cell to avoid race conditions
 					// run functions
 					for _, f := range calculators {
-						f(c, d.Dt)
+						f(c.Cell, d.Dt)
 					}
 					c.mutex.Unlock() // Unlock the cell: we're done editing it
 				}
@@ -227,7 +225,7 @@ func SteadyStateConvergenceCheck(numIterations int, c chan ConvergenceStatus) Do
 			status := make(ConvergenceStatus, len(PolNames))
 			for ii := range PolNames {
 				var sum float64
-				for _, c := range d.cells {
+				for c := d.cells.first; c != nil; c = c.next {
 					sum += c.Cf[ii]
 				}
 				bias, converged := checkConvergence(sum, oldSum[ii], tolerance)

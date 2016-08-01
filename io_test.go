@@ -180,9 +180,10 @@ func TestEmissions(t *testing.T) {
 		},
 	}
 
+	cells := d.cells.array()
 	nonzero := make(map[int]map[int]int)
 	for _, tt := range tests {
-		c := d.cells[tt.cellIndex]
+		c := cells[tt.cellIndex]
 		nonzero[tt.cellIndex] = make(map[int]int)
 		for i, ii := range tt.polIndex {
 			nonzero[tt.cellIndex][ii] = 0
@@ -192,7 +193,7 @@ func TestEmissions(t *testing.T) {
 			}
 		}
 	}
-	for i, c := range d.cells {
+	for i, c := range cells {
 		for ii, e := range c.EmisFlux {
 			if _, ok := nonzero[i][ii]; !ok {
 				if e != 0 {

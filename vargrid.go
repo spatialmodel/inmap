@@ -261,15 +261,6 @@ func (config *VarGridConfig) LoadPopMort() (*Population, PopIndices, *MortalityR
 	return &Population{tree: pop}, PopIndices(popIndex), &MortalityRates{tree: mort}, nil
 }
 
-func (d *InMAP) sort() {
-	sortCells(d.cells)
-	sortCells(d.westBoundary)
-	sortCells(d.eastBoundary)
-	sortCells(d.northBoundary)
-	sortCells(d.southBoundary)
-	sortCells(d.topBoundary)
-}
-
 // sortCells sorts the cells by layer, x centroid, and y centroid.
 func sortCells(cells []*Cell) {
 	sc := &cellsSorter{
@@ -308,20 +299,22 @@ func (c *cellsSorter) Less(i, j int) bool {
 	if icent.Y != jcent.Y {
 		return icent.Y < jcent.Y
 	}
+	fmt.Printf("%#v\n", ci.Polygonal)
+	fmt.Printf("%#v\n", cj.Polygonal)
+	fmt.Println(ci.Layer, cj.Layer, icent.X, jcent.X, icent.Y, jcent.Y)
 	// We apparently have concentric or identical cells if we get to here.
-	panic(fmt.Errorf("problem sorting: i: %v, i layer: %d, j: %v, j layer: %d",
-		ci.Polygonal, ci.Layer, cj.Polygonal, cj.Layer))
+	panic(fmt.Errorf("problem sorting: i: %v, j: %v", ci, cj))
 }
 
 // getCells returns all the grid cells in cellTree that are within box
 // and at vertical layer layer.
-func getCells(cellTree *rtree.Rtree, box *geom.Bounds, layer int) []*Cell {
+func getCells(cellTree *rtree.Rtree, box *geom.Bounds, layer int) *cellList {
 	x := cellTree.SearchIntersect(box)
-	cells := make([]*Cell, 0, len(x))
+	cells := new(cellList)
 	for _, xx := range x {
 		c := xx.(*Cell)
 		if c.Layer == layer {
-			cells = append(cells, c)
+			cells.add(c)
 		}
 	}
 	return cells
@@ -363,17 +356,14 @@ func (config *VarGridConfig) RegularGrid(data *CTMData, pop *Population, popInde
 
 		nz := data.data["UAvg"].data.Shape[0]
 		d.nlayers = nz
-		d.index = rtree.NewTree(25, 50)
 
 		type cellErr struct {
 			cell *Cell
 			err  error
 		}
-		nprocs := runtime.GOMAXPROCS(-1)
 
 		nx := config.Xnests[0]
 		ny := config.Ynests[0]
-		d.cells = make([]*Cell, 0, nx*ny*nz)
 		// Iterate through indices and create the cells in the outermost nest.
 		indices := make([][][2]int, 0, nz*ny*nx)
 		layers := make([]int, 0, nz*ny*nx)
@@ -389,23 +379,6 @@ func (config *VarGridConfig) RegularGrid(data *CTMData, pop *Population, popInde
 		if err != nil {
 			return err
 		}
-		// Add emissions to new cells.
-		if emis != nil {
-			done := make(chan int)
-			for p := 0; p < nprocs; p++ {
-				go func(p int) {
-					for i := p; i < len(d.cells); i += nprocs {
-						// This needs to be called after setNeighbors.
-						d.cells[i].setEmissionsFlux(emis)
-					}
-					done <- 0
-				}(p)
-			}
-			for i := 0; i < nprocs; i++ {
-				<-done
-			}
-		}
-		d.sort()
 		return nil
 	}
 }
@@ -419,12 +392,16 @@ func (config *VarGridConfig) RegularGrid(data *CTMData, pop *Population, popInde
 func (config *VarGridConfig) MutateGrid(divideRule GridMutator, data *CTMData, pop *Population, mort *MortalityRates, emis *Emissions, logChan chan string) DomainManipulator {
 	return func(d *InMAP) error {
 
-		beginCells := len(d.cells)
+		if logChan != nil {
+			logChan <- fmt.Sprint("Adding grid cells...")
+		}
+
+		beginCells := d.cells.len
 
 		totalMass := 0.
 		totalPopulation := 0.
 		iPop := d.popIndices[config.PopGridColumn]
-		for _, c := range d.cells {
+		for c := d.cells.first; c != nil; c = c.next {
 			totalMass += floats.Sum(c.Cf) * c.Volume
 			if c.Layer == 0 { // only track population at ground level
 				totalPopulation += c.PopData[iPop]
@@ -441,16 +418,14 @@ func (config *VarGridConfig) MutateGrid(divideRule GridMutator, data *CTMData, p
 			continueMutating = false
 			var newCellIndices [][][2]int
 			var newCellLayers []int
-			var cellsToDelete []*Cell
-			for i, cell := range d.cells {
+			var cellsToDelete []*cellRef
+			for cell := d.cells.first; cell != nil; cell = cell.next {
 				if len(cell.Index) < len(config.Xnests) {
-
-					if divideRule(cell, totalMass, totalPopulation) {
-
+					if divideRule(cell.Cell, totalMass, totalPopulation) {
 						continueMutating = true
+
+						// mark the grid cell for deletion
 						cellsToDelete = append(cellsToDelete, cell)
-						// Delete the grid cell from the array.
-						d.cells[i] = nil
 
 						// Create inner nested cells instead of using this one.
 						for ii := 0; ii < config.Xnests[len(cell.Index)]; ii++ {
@@ -469,18 +444,10 @@ func (config *VarGridConfig) MutateGrid(divideRule GridMutator, data *CTMData, p
 				}
 			}
 
-			// Remove nil cells from array.
-			newCells := make([]*Cell, 0, len(d.cells))
-			for _, c := range d.cells {
-				if c != nil {
-					newCells = append(newCells, c)
-				}
-			}
-			d.cells = newCells
-
-			// Clean up deleted cells.
+			// Delete the grid cells.
 			for _, cell := range cellsToDelete {
-				d.index.Delete(cell)
+				d.cells.delete(cell)
+				d.index.Delete(cell.Cell)
 				cell.dereferenceNeighbors(d)
 			}
 
@@ -491,11 +458,10 @@ func (config *VarGridConfig) MutateGrid(divideRule GridMutator, data *CTMData, p
 				return err
 			}
 		}
-		d.sort()
 
-		endCells := len(d.cells)
+		endCells := d.cells.len
 		if logChan != nil {
-			logChan <- fmt.Sprintf("added %d grid cells; there are now %d cells total",
+			logChan <- fmt.Sprintf("Added %d grid cells; there are now %d cells total",
 				endCells-beginCells, endCells)
 		}
 
@@ -514,7 +480,6 @@ func (d *InMAP) addCells(config *VarGridConfig, newCellIndices [][][2]int,
 	nprocs := runtime.GOMAXPROCS(-1)
 
 	// Create the new cells.
-	oldNumCells := len(d.cells)
 	for p := 0; p < nprocs; p++ {
 		go func(p int) {
 			for i := p; i < len(newCellIndices); i += nprocs {
@@ -537,8 +502,10 @@ func (d *InMAP) addCells(config *VarGridConfig, newCellIndices [][][2]int,
 		doneChan := make(chan int)
 		for p := 0; p < nprocs; p++ {
 			go func(p int) {
-				for i := oldNumCells + p; i < len(d.cells); i += nprocs {
-					d.cells[i].setEmissionsFlux(emis) // This needs to be called after setNeighbors.
+				for c := d.cells.forwardFrom(d.cells.first, p); c != nil; c = d.cells.forwardFrom(c, nprocs) {
+					if len(c.EmisFlux) == 0 {
+						c.setEmissionsFlux(emis) // This needs to be called after setNeighbors.
+					}
 				}
 				doneChan <- 0
 			}(p)
@@ -555,12 +522,12 @@ func (d *InMAP) addCells(config *VarGridConfig, newCellIndices [][][2]int,
 // reponsibility that the new cell doesn't overlap any existing cells.
 func (d *InMAP) InsertCell(c *Cell) {
 	if d.index == nil {
-		d.index = rtree.NewTree(25, 50)
+		d.init()
 	}
 	if c.Layer > d.nlayers-1 { // Make sure we still have the right number of layers
 		d.nlayers = c.Layer + 1
 	}
-	d.cells = append(d.cells, c)
+	d.cells.add(c)
 	d.index.Insert(c)
 	d.setNeighbors(c)
 }
@@ -579,7 +546,7 @@ func PopulationMutator(config *VarGridConfig, popIndices PopIndices) GridMutator
 	return func(cell *Cell, _, _ float64) bool {
 		population := 0.
 		aboveDensityThreshold := false
-		for _, g := range cell.groundLevel {
+		for g := cell.groundLevel.first; g != nil; g = g.next {
 			population += g.PopData[popIndex]
 			if g.AboveDensityThreshold {
 				aboveDensityThreshold = true
@@ -609,14 +576,14 @@ func PopConcMutator(threshold float64, config *VarGridConfig, popIndices PopIndi
 		}
 		iPop := popIndices[config.PopGridColumn]
 		var groundCellPop float64
-		for _, gc := range cell.groundLevel {
+		for gc := cell.groundLevel.first; gc != nil; gc = gc.next {
 			groundCellPop += gc.PopData[iPop]
 		}
 		totalMassPop := totalMass * totalPopulation
-		for _, group := range [][]*Cell{cell.west, cell.east, cell.north, cell.south} {
-			for _, neighbor := range group {
+		for _, group := range []*cellList{cell.west, cell.east, cell.north, cell.south} {
+			for neighbor := group.first; neighbor != nil; neighbor = neighbor.next {
 				var groundNeighborPop float64
-				for _, gc := range neighbor.groundLevel {
+				for gc := neighbor.groundLevel.first; gc != nil; gc = gc.next {
 					groundNeighborPop += gc.PopData[iPop]
 				}
 				ΣΔC := 0.

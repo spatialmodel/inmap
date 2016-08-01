@@ -141,7 +141,7 @@ var (
 
 // obsFile is observation data from
 // http://aqsdr1.epa.gov/aqsweb/aqstmp/airdata/download_files.html#Annual
-func obsCompare(inmapDataLoc, wrfDataLoc, obsFile, statesLoc, outDir string) error {
+func obsCompare(inmapDataLoc, wrfDataLoc, obsFile, statesLoc, outDir, fileprefix string) error {
 	plot.DefaultFont = "Helvetica"
 
 	states = getStates(statesLoc)
@@ -176,7 +176,7 @@ func obsCompare(inmapDataLoc, wrfDataLoc, obsFile, statesLoc, outDir string) err
 	var results []matchObsResult
 	for iPol, cChan := range captionChans {
 		//polName := inmapVars[iPol]
-		fname := filepath.Join(outDir, figNames[iPol]+"_"+inmapVars[iPol]+".png")
+		fname := filepath.Join(outDir, fileprefix+"_"+inmapVars[iPol]+".png")
 		obsresult := <-cChan
 		results = append(results, *obsresult)
 
@@ -192,7 +192,7 @@ func obsCompare(inmapDataLoc, wrfDataLoc, obsFile, statesLoc, outDir string) err
 		}
 		f.Close()
 	}
-	f, err := os.Create(filepath.Join(outDir, "modelMeasurementComparisons.json"))
+	f, err := os.Create(filepath.Join(outDir, fileprefix+"_modelMeasurementComparisons.json"))
 	if err != nil {
 		return err
 	}

@@ -85,7 +85,7 @@ func (d *InMAP) OutputOptions() (names []string, descriptions []string, units []
 	descriptions = append(descriptions, tempEmis...)
 
 	// Eveything else
-	t := reflect.TypeOf(*d.cells[0])
+	t := reflect.TypeOf(*d.cells.first.Cell)
 	var tempNames []string
 	var tempDescriptions []string
 	for i := 0; i < t.NumField(); i++ {
@@ -305,7 +305,7 @@ func (d *InMAP) VerticalProfile(variable string, p geom.Point) (height, vals []f
 	for !c.boundary {
 		vals[i] = c.getValue(variable, d.popIndices)
 		height[i] = c.LayerHeight + c.Dz/2.
-		c = c.above[0]
+		c = c.above.first.Cell
 		i++
 	}
 	return

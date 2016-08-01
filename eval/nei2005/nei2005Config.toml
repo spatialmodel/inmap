@@ -12,7 +12,7 @@ EmissionsShapefiles = [
 ]
 EmissionUnits = "tons/year"
 
-OutputFile = "nei2005/2005nei_output.shp"
+OutputFile = "nei2005/2005nei_output_${InMAPRunType}.shp"
 
 OutputVariables = [
 	"NH3",

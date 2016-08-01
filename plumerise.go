@@ -32,10 +32,10 @@ func (c *Cell) IsPlumeIn(stackHeight, stackDiam, stackTemp, stackVel float64) (b
 	cc := c
 	for {
 		cellStack = append(cellStack, cc)
-		if cc.groundLevel[0] == cc {
+		if cc.groundLevel.first.Cell == cc {
 			break
 		}
-		cc = cc.below[0]
+		cc = cc.below.first.Cell
 	}
 	// reverse the order of the stack so it starts at ground level.
 	for left, right := 0, len(cellStack)-1; left < right; left, right = left+1, right-1 {
@@ -72,7 +72,7 @@ func (c *Cell) IsPlumeIn(stackHeight, stackDiam, stackTemp, stackVel float64) (b
 			// in the top model layer (because we want to put the plume in the
 			// top layer even if it should technically go above it),
 			//  otherwise return false.
-			if c.above[0].boundary {
+			if c.above.first.boundary {
 				return true, plumeHeight, nil
 			}
 			return false, plumeHeight, nil

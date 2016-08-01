@@ -27,27 +27,22 @@ import (
 func (d *InMAP) setNeighbors(c *Cell) {
 	d.neighbors(c)
 	d.setBoundaryNeighbors(c)
-	if c.Layer == 0 {
-		c.below = []*Cell{c}
-		c.groundLevel = []*Cell{c}
-	}
-	c.neighborInfo()
 }
 
 func (d *InMAP) setBoundaryNeighbors(c *Cell) {
-	if len(c.west) == 0 {
+	if c.west.len == 0 {
 		d.addWestBoundary(c)
 	}
-	if len(c.east) == 0 {
+	if c.east.len == 0 {
 		d.addEastBoundary(c)
 	}
-	if len(c.north) == 0 {
+	if c.north.len == 0 {
 		d.addNorthBoundary(c)
 	}
-	if len(c.south) == 0 {
+	if c.south.len == 0 {
 		d.addSouthBoundary(c)
 	}
-	if len(c.above) == 0 {
+	if c.above.len == 0 {
 		d.addTopBoundary(c)
 	}
 }
@@ -58,200 +53,222 @@ func (d *InMAP) neighbors(c *Cell) {
 	// Horizontal
 	westbox := newNeighborRect(b, west)
 	c.west = getCells(d.index, westbox, c.Layer)
-	for _, w := range c.west {
-		if len(w.east) == 1 && w.east[0].boundary {
-			deleteCellFromSlice(w.east[0], &d.eastBoundary)
-			deleteCellFromSlice(w.east[0], &w.east)
+	for w := c.west.first; w != nil; w = w.next {
+		if w.east.len == 1 && w.east.first.boundary {
+			d.eastBoundary.delete(w.east.first)
+			w.east.delete(w.east.first)
 		}
-		w.east = append(w.east, c)
-		w.neighborInfo()
+		w.east.add(c)
+		neighborInfoEastWest(w, w.Cell.east.ref(c))
 	}
 
 	eastbox := newNeighborRect(b, east)
 	c.east = getCells(d.index, eastbox, c.Layer)
-	for _, e := range c.east {
-		if len(e.west) == 1 && e.west[0].boundary {
-			deleteCellFromSlice(e.west[0], &d.westBoundary)
-			deleteCellFromSlice(e.west[0], &e.west)
+	for e := c.east.first; e != nil; e = e.next {
+		if e.west.len == 1 && e.west.first.boundary {
+			d.westBoundary.delete(e.west.first)
+			e.west.delete(e.west.first)
 		}
-		e.west = append(e.west, c)
-		e.neighborInfo()
+		e.west.add(c)
+		neighborInfoEastWest(e, e.Cell.west.ref(c))
 	}
 
 	southbox := newNeighborRect(b, south)
 	c.south = getCells(d.index, southbox, c.Layer)
-	for _, s := range c.south {
-		if len(s.north) == 1 && s.north[0].boundary {
-			deleteCellFromSlice(s.north[0], &d.northBoundary)
-			deleteCellFromSlice(s.north[0], &s.north)
+	for s := c.south.first; s != nil; s = s.next {
+		if s.north.len == 1 && s.north.first.boundary {
+			d.northBoundary.delete(s.north.first)
+			s.north.delete(s.north.first)
 		}
-		s.north = append(s.north, c)
-		s.neighborInfo()
+		s.north.add(c)
+		neighborInfoSouthNorth(s, s.Cell.north.ref(c))
 	}
 
 	northbox := newNeighborRect(b, north)
 	c.north = getCells(d.index, northbox, c.Layer)
-	for _, n := range c.north {
-		if len(n.south) == 1 && n.south[0].boundary {
-			deleteCellFromSlice(n.south[0], &d.southBoundary)
-			deleteCellFromSlice(n.south[0], &n.south)
+	for n := c.north.first; n != nil; n = n.next {
+		if n.south.len == 1 && n.south.first.boundary {
+			d.southBoundary.delete(n.south.first)
+			n.south.delete(n.south.first)
 		}
-		n.south = append(n.south, c)
-		n.neighborInfo()
+		n.south.add(c)
+		neighborInfoSouthNorth(n, n.Cell.south.ref(c))
 	}
 
 	// Above
 	abovebelowbox := newNeighborRect(b, aboveBelow)
 	c.above = getCells(d.index, abovebelowbox, c.Layer+1)
-	for _, a := range c.above {
-		if len(a.below) == 1 && a.below[0] == a {
-			deleteCellFromSlice(a.below[0], &a.below)
+	for a := c.above.first; a != nil; a = a.next {
+		if a.below.len == 1 && a.below.first == a {
+			a.below.delete(a.below.first)
 		}
-		a.below = append(a.below, c)
-		a.neighborInfo()
+		a.below.add(c)
+		neighborInfoAboveBelow(a, a.Cell.below.ref(c))
 	}
 
 	// Below
 	c.below = getCells(d.index, abovebelowbox, c.Layer-1)
-	for _, b := range c.below {
-		if len(b.above) == 1 && b.above[0].boundary {
-			deleteCellFromSlice(b.above[0], &d.topBoundary)
-			deleteCellFromSlice(b.above[0], &b.above)
+	for b := c.below.first; b != nil; b = b.next {
+		if b.above.len == 1 && b.above.first.boundary {
+			d.topBoundary.delete(b.above.first)
+			b.above.delete(b.above.first)
 		}
-		b.above = append(b.above, c)
-		b.neighborInfo()
+		b.above.add(c)
+		neighborInfoAboveBelow(b, b.Cell.above.ref(c))
+	}
+	if c.Layer == 0 {
+		ref := c.below.add(c) // Reflective boundary at ground level.
+		neighborInfoBoundaryTopBottom(ref)
 	}
 
 	// Ground level.
 	c.groundLevel = getCells(d.index, abovebelowbox, 0)
-
+	for g := c.groundLevel.first; g != nil; g = g.next {
+		neighborInfoGroundLevel(c, g)
+	}
 	// Find the cells that this cell is the ground level for.
 	if c.Layer == 0 {
 		for _, ccI := range d.index.SearchIntersect(abovebelowbox) {
 			cc := ccI.(*Cell)
 			if cc.Layer > 0 {
-				cc.groundLevel = append(cc.groundLevel, c)
-				cc.neighborInfo()
+				cc.groundLevel.add(c)
+				neighborInfoGroundLevel(cc, cc.groundLevel.ref(c))
 			}
 		}
 	}
 }
 
-// Calculate center-to-center cell distance,
-// fractions of grid cell covered by each neighbor
-// and harmonic mean staggered-grid diffusivities.
-func (c *Cell) neighborInfo() {
-	c.dxPlusHalf = make([]float64, len(c.east))
-	c.eastFrac = make([]float64, len(c.east))
-	c.kxxEast = make([]float64, len(c.east))
-	for i, e := range c.east {
-		c.dxPlusHalf[i] = (c.Dx + e.Dx) / 2.
-		c.eastFrac[i] = min(e.Dy/c.Dy, 1.)
-		c.kxxEast[i] = harmonicMean(c.Kxxyy, e.Kxxyy)
-		e.dxMinusHalf = append(e.dxMinusHalf, c.dxPlusHalf[i])
-		e.westFrac = append(e.westFrac, c.eastFrac[i])
-		e.kxxWest = append(e.kxxWest, c.kxxEast[i])
+// neighborInfoEastWest calculates information about the relationship
+// between two cells that neighbor in the east-west direction, where
+// cr1 is the first cell's reference to the second cell, and
+// cr2 is the second cell's reference to the first cell.
+func neighborInfoEastWest(cr1, cr2 *cellRef) {
+	cr1.info = &neighborInfo{
+		centerDistance: (cr2.Dx + cr1.Dx) / 2,
+		coverFrac:      min(cr1.Dy/cr2.Dy, 1.),
+		diff:           harmonicMean(cr2.Kxxyy, cr1.Kxxyy),
 	}
-	c.dxMinusHalf = make([]float64, len(c.west))
-	c.westFrac = make([]float64, len(c.west))
-	c.kxxWest = make([]float64, len(c.west))
-	for i, w := range c.west {
-		c.dxMinusHalf[i] = (c.Dx + w.Dx) / 2.
-		c.westFrac[i] = min(w.Dy/c.Dy, 1.)
-		c.kxxWest[i] = harmonicMean(c.Kxxyy, w.Kxxyy)
-		w.dxPlusHalf = append(w.dxPlusHalf, c.dxMinusHalf[i])
-		w.eastFrac = append(w.eastFrac, c.westFrac[i])
-		w.kxxEast = append(w.kxxEast, c.kxxWest[i])
+	cr2.info = &neighborInfo{
+		centerDistance: cr1.info.centerDistance,
+		coverFrac:      min(cr2.Dy/cr1.Dy, 1.),
+		diff:           cr1.info.diff,
 	}
-	c.dyPlusHalf = make([]float64, len(c.north))
-	c.northFrac = make([]float64, len(c.north))
-	c.kyyNorth = make([]float64, len(c.north))
-	for i, n := range c.north {
-		c.dyPlusHalf[i] = (c.Dy + n.Dy) / 2.
-		c.northFrac[i] = min(n.Dx/c.Dx, 1.)
-		c.kyyNorth[i] = harmonicMean(c.Kxxyy, n.Kxxyy)
-		n.dyMinusHalf = append(n.dyMinusHalf, c.dyPlusHalf[i])
-		n.southFrac = append(n.southFrac, c.northFrac[i])
-		n.kyySouth = append(n.kyySouth, c.kyyNorth[i])
+}
+
+// neighborInfoBoundaryEastWest holds information about the relationship
+// between a cell on the east-west edge of the domain and the boundary.
+func neighborInfoBoundaryEastWest(cr *cellRef) {
+	cr.info = &neighborInfo{
+		centerDistance: cr.Dx,
+		coverFrac:      1.,
+		diff:           cr.Kxxyy,
 	}
-	c.dyMinusHalf = make([]float64, len(c.south))
-	c.southFrac = make([]float64, len(c.south))
-	c.kyySouth = make([]float64, len(c.south))
-	for i, s := range c.south {
-		c.dyMinusHalf[i] = (c.Dy + s.Dy) / 2.
-		c.southFrac[i] = min(s.Dx/c.Dx, 1.)
-		c.kyySouth[i] = harmonicMean(c.Kxxyy, s.Kxxyy)
-		s.dyPlusHalf = append(s.dyPlusHalf, c.dyMinusHalf[i])
-		s.northFrac = append(s.northFrac, c.southFrac[i])
-		s.kyyNorth = append(s.kyyNorth, c.kyySouth[i])
+}
+
+// neighborInfoSouthNorth calculates information about the relationship
+// between two cells that neighbor in the south-north direction, where
+// cr1 is the first cell's reference to the second cell, and
+// cr2 is the second cell's reference to the first cell.
+func neighborInfoSouthNorth(cr1, cr2 *cellRef) {
+	cr1.info = &neighborInfo{
+		centerDistance: (cr2.Dy + cr1.Dy) / 2,
+		coverFrac:      min(cr1.Dx/cr2.Dx, 1.),
+		diff:           harmonicMean(cr2.Kxxyy, cr1.Kxxyy),
 	}
-	c.dzPlusHalf = make([]float64, len(c.above))
-	c.aboveFrac = make([]float64, len(c.above))
-	c.kzzAbove = make([]float64, len(c.above))
-	for i, a := range c.above {
-		c.dzPlusHalf[i] = (c.Dz + a.Dz) / 2.
-		c.aboveFrac[i] = min((a.Dx*a.Dy)/(c.Dx*c.Dy), 1.)
-		c.kzzAbove[i] = harmonicMean(c.Kzz, a.Kzz)
-		a.dzMinusHalf = append(a.dzMinusHalf, c.dzPlusHalf[i])
-		a.belowFrac = append(a.belowFrac, c.aboveFrac[i])
-		a.kzzBelow = append(a.kzzBelow, c.kzzAbove[i])
+	cr2.info = &neighborInfo{
+		centerDistance: cr1.info.centerDistance,
+		coverFrac:      min(cr2.Dx/cr1.Dx, 1.),
+		diff:           cr1.info.diff,
 	}
-	c.dzMinusHalf = make([]float64, len(c.below))
-	c.belowFrac = make([]float64, len(c.below))
-	c.kzzBelow = make([]float64, len(c.below))
-	for i, b := range c.below {
-		c.dzMinusHalf[i] = (c.Dz + b.Dz) / 2.
-		c.belowFrac[i] = min((b.Dx*b.Dy)/(c.Dx*c.Dy), 1.)
-		c.kzzBelow[i] = harmonicMean(c.Kzz, b.Kzz)
-		b.dzPlusHalf = append(b.dzPlusHalf, c.dzMinusHalf[i])
-		b.aboveFrac = append(b.aboveFrac, c.belowFrac[i])
-		b.kzzAbove = append(b.kzzAbove, c.kzzBelow[i])
+}
+
+// neighborInfoBoundaryEastWest holds information about the relationship
+// between a cell on the north-south edge of the domain and the boundary.
+func neighborInfoBoundarySouthNorth(cr *cellRef) {
+	cr.info = &neighborInfo{
+		centerDistance: cr.Dy,
+		coverFrac:      1.,
+		diff:           cr.Kxxyy,
 	}
-	c.groundLevelFrac = make([]float64, len(c.groundLevel))
-	for i, g := range c.groundLevel {
-		c.groundLevelFrac[i] = min((g.Dx*g.Dy)/(c.Dx*c.Dy), 1.)
+}
+
+// neighborInfoAboveBelow calculates information about the relationship
+// between two cells that neighbor in the up-down direction, where
+// cr1 is the first cell's reference to the second cell, and
+// cr2 is the second cell's reference to the first cell.
+func neighborInfoAboveBelow(cr1, cr2 *cellRef) {
+	cr1.info = &neighborInfo{
+		centerDistance: (cr2.Dz + cr1.Dz) / 2,
+		coverFrac:      min((cr1.Dx*cr1.Dy)/(cr2.Dx*cr2.Dy), 1.),
+		diff:           harmonicMean(cr2.Kzz, cr1.Kzz),
+	}
+	cr2.info = &neighborInfo{
+		centerDistance: cr1.info.centerDistance,
+		coverFrac:      min((cr2.Dx*cr2.Dy)/(cr1.Dx*cr1.Dy), 1.),
+		diff:           cr1.info.diff,
+	}
+}
+
+// neighborInfoBoundaryEastWest holds information about the relationship
+// between a cell on the Top edge of the domain and the boundary.
+func neighborInfoBoundaryTopBottom(cr *cellRef) {
+	cr.info = &neighborInfo{
+		centerDistance: cr.Dz,
+		coverFrac:      1.,
+		diff:           cr.Kzz,
+	}
+}
+
+// neighborInfoAboveBelow calculates information about the relationship
+// between two cells where cr is a reference to a cell that
+// is above c when c is at ground level.
+func neighborInfoGroundLevel(c *Cell, cr *cellRef) {
+	cr.info = &neighborInfo{
+		coverFrac: min((cr.Dx*cr.Dy)/(c.Dx*c.Dy), 1.),
 	}
 }
 
 // dereferenceNeighbors removes any references to this cell that exist in its
 // neighbors.
 func (c *Cell) dereferenceNeighbors(d *InMAP) {
-	for _, w := range c.west {
+	for w := c.west.first; w != nil; w = w.next {
 		if w.boundary {
-			deleteCellFromSlice(w, &d.westBoundary)
+			d.westBoundary.deleteCell(w.Cell)
 		} else {
-			deleteCellFromSlice(c, &w.east, &w.eastFrac, &w.kxxEast, &w.dxPlusHalf)
+			w.east.deleteCell(c)
 		}
 	}
-	for _, e := range c.east {
+	for e := c.east.first; e != nil; e = e.next {
 		if e.boundary {
-			deleteCellFromSlice(e, &d.eastBoundary)
+			d.eastBoundary.deleteCell(e.Cell)
 		} else {
-			deleteCellFromSlice(c, &e.west, &e.westFrac, &e.kxxWest, &e.dxMinusHalf)
+			e.west.deleteCell(c)
 		}
 	}
-	for _, s := range c.south {
+	for s := c.south.first; s != nil; s = s.next {
 		if s.boundary {
-			deleteCellFromSlice(s, &d.southBoundary)
+			d.southBoundary.deleteCell(s.Cell)
 		} else {
-			deleteCellFromSlice(c, &s.north, &s.northFrac, &s.kyyNorth, &s.dyPlusHalf)
+			s.north.deleteCell(c)
 		}
 	}
-	for _, n := range c.north {
+	for n := c.north.first; n != nil; n = n.next {
 		if n.boundary {
-			deleteCellFromSlice(n, &d.northBoundary)
+			d.northBoundary.deleteCell(n.Cell)
 		} else {
-			deleteCellFromSlice(c, &n.south, &n.southFrac, &n.kyySouth, &n.dyMinusHalf)
+			n.south.deleteCell(c)
 		}
 	}
-	for _, b := range c.below {
-		deleteCellFromSlice(c, &b.above, &b.aboveFrac, &b.kzzAbove, &b.dzPlusHalf)
+	if c.Layer != 0 { // We don't worry about dereferencing below ground level cells.
+		for b := c.below.first; b != nil; b = b.next {
+			b.above.deleteCell(c)
+		}
 	}
-	for _, a := range c.above {
+	for a := c.above.first; a != nil; a = a.next {
 		if a.boundary {
-			deleteCellFromSlice(a, &d.topBoundary)
+			d.topBoundary.deleteCell(a.Cell)
 		} else {
-			deleteCellFromSlice(c, &a.below, &a.belowFrac, &a.kzzBelow, &a.dzMinusHalf)
+			a.below.deleteCell(c)
 		}
 	}
 
@@ -260,27 +277,11 @@ func (c *Cell) dereferenceNeighbors(d *InMAP) {
 		for _, ccI := range d.index.SearchIntersect(c.Centroid().Bounds()) {
 			cc := ccI.(*Cell)
 			if cc.Layer > 0 {
-				deleteCellFromSlice(c, &cc.groundLevel, &cc.groundLevelFrac)
+				cc.groundLevel.deleteCell(c)
 			}
 		}
 	}
 
-}
-
-// deleteCellFromSlice deletes a cell from a slice of cells and from a
-// set of matching slices of float64s.
-func deleteCellFromSlice(c *Cell, a *[]*Cell, aFrac ...*[]float64) {
-	for i, ac := range *a {
-		if c == ac {
-			(*a)[i] = (*a)[len(*a)-1]
-			(*a)[len(*a)-1] = nil
-			*a = (*a)[:len(*a)-1]
-
-			for _, af := range aFrac {
-				*af = append((*af)[:i], (*af)[i+1:]...)
-			}
-		}
-	}
 }
 
 // neighborAlignment specifies the desired alignment of the neighbors that

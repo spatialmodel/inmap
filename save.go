@@ -44,14 +44,14 @@ type versionCells struct {
 func Save(w io.Writer) DomainManipulator {
 	return func(d *InMAP) error {
 
-		if len(d.cells) == 0 {
+		if d.cells.len == 0 {
 			return fmt.Errorf("inmap.InMAP.Save: no grid cells to save")
 		}
 
 		// Set the data version so it can be checked when the data is loaded.
 		data := versionCells{
 			DataVersion: VarGridDataVersion,
-			Cells:       d.cells,
+			Cells:       d.cells.array(),
 		}
 
 		e := gob.NewEncoder(w)
@@ -82,6 +82,7 @@ func Load(r io.Reader, config *VarGridConfig, emis *Emissions) DomainManipulator
 }
 
 func (d *InMAP) initFromCells(cells []*Cell, emis *Emissions, config *VarGridConfig) {
+	d.init()
 	// Create a list of array indices for each population type.
 	d.popIndices = make(map[string]int)
 	for i, p := range config.CensusPopColumns {
@@ -90,15 +91,13 @@ func (d *InMAP) initFromCells(cells []*Cell, emis *Emissions, config *VarGridCon
 	for _, c := range cells {
 		d.InsertCell(c)
 	}
-	d.sort()
 
 	// Add emissions to new cells.
 	if emis != nil {
 		nprocs := runtime.GOMAXPROCS(-1)
 		for p := 0; p < nprocs; p++ {
 			go func(p int) {
-				for i := p; i < len(d.cells); i += nprocs {
-					c := d.cells[i]
+				for c := d.cells.forwardFrom(d.cells.first, p); c != nil; c = d.cells.forwardFrom(c, nprocs) {
 					c.setEmissionsFlux(emis) // This needs to be called after setNeighbors.
 				}
 			}(p)

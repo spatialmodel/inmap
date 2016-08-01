@@ -76,12 +76,12 @@ func Run(dynamic, createGrid bool) error {
 	var popIndices inmap.PopIndices
 	var ctmData *inmap.CTMData
 	if dynamic || createGrid {
-		log.Println("Loading CTM data")
+		log.Println("Loading CTM data...")
 		ctmData, err = getCTMData()
 		if err != nil {
 			return err
 		}
-		log.Println("Loading population and mortality rate data")
+		log.Println("Loading population and mortality rate data...")
 		pop, popIndices, mr, err = Config.VarGrid.LoadPopMort()
 		if err != nil {
 			return err
@@ -150,6 +150,7 @@ func Run(dynamic, createGrid bool) error {
 			inmap.Output(Config.OutputFile, Config.OutputAllLayers, Config.OutputVariables...),
 		},
 	}
+	log.Println("Initializing model...")
 	if err = d.Init(); err != nil {
 		return fmt.Errorf("InMAP: problem initializing model: %v\n", err)
 	}
