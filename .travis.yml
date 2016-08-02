@@ -1,8 +1,7 @@
 language: go
 go:
-- 1.5.4
 - 1.6.2
-- 1.7beta1
+- 1.7rc4
 
 before_install:
 - go get github.com/axw/gocov/gocov
