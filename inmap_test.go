@@ -288,7 +288,7 @@ func TestMixing(t *testing.T) {
 		RunFuncs: []DomainManipulator{
 			Calculations(AddEmissionsFlux()),
 			Calculations(Mixing()),
-			SteadyStateConvergenceCheck(numTimesteps, nil),
+			SteadyStateConvergenceCheck(numTimesteps, cfg.PopGridColumn, nil),
 		},
 	}
 	if err := d.Init(); err != nil {
@@ -344,7 +344,7 @@ func TestChemistry(t *testing.T) {
 		RunFuncs: []DomainManipulator{
 			Calculations(AddEmissionsFlux()),
 			Calculations(Chemistry()),
-			SteadyStateConvergenceCheck(1, nil),
+			SteadyStateConvergenceCheck(1, cfg.PopGridColumn, nil),
 		},
 	}
 	if err := d.Init(); err != nil {
@@ -389,7 +389,7 @@ func TestAdvection(t *testing.T) {
 		RunFuncs: []DomainManipulator{
 			Calculations(AddEmissionsFlux()),
 			Calculations(UpwindAdvection()),
-			SteadyStateConvergenceCheck(1, nil),
+			SteadyStateConvergenceCheck(1, cfg.PopGridColumn, nil),
 		},
 	}
 	if err := d.Init(); err != nil {
@@ -448,7 +448,7 @@ func TestMeanderMixing(t *testing.T) {
 		RunFuncs: []DomainManipulator{
 			Calculations(AddEmissionsFlux()),
 			Calculations(MeanderMixing()),
-			SteadyStateConvergenceCheck(nsteps, nil),
+			SteadyStateConvergenceCheck(nsteps, cfg.PopGridColumn, nil),
 		},
 	}
 	if err := d.Init(); err != nil {
@@ -511,9 +511,10 @@ func TestConverge(t *testing.T) {
 		Geom: geom.Point{X: -3999, Y: -3999.},
 	}) // ground level emissions
 
-	convergences := []DomainManipulator{SteadyStateConvergenceCheck(2, nil), SteadyStateConvergenceCheck(-1, nil)}
+	convergences := []DomainManipulator{SteadyStateConvergenceCheck(2, cfg.PopGridColumn, nil),
+		SteadyStateConvergenceCheck(-1, cfg.PopGridColumn, nil)}
 	convergenceNames := []string{"fixed", "criterion"}
-	expectedConcentration := []float64{0.46486263752954793, 83.22031969811773}
+	expectedConcentration := []float64{0.46486263752954793, 83.90845376986273}
 
 	for i, conv := range convergences {
 
@@ -599,7 +600,7 @@ func BenchmarkRun(b *testing.B) {
 				WetDeposition(),
 				Chemistry(),
 			),
-			SteadyStateConvergenceCheck(1000, nil),
+			SteadyStateConvergenceCheck(1000, cfg.PopGridColumn, nil),
 		},
 	}
 	if err := d.Init(); err != nil {
@@ -636,7 +637,7 @@ func TestDryDeposition(t *testing.T) {
 		RunFuncs: []DomainManipulator{
 			Calculations(AddEmissionsFlux()),
 			Calculations(DryDeposition()),
-			SteadyStateConvergenceCheck(1, nil),
+			SteadyStateConvergenceCheck(1, cfg.PopGridColumn, nil),
 		},
 	}
 	if err := d.Init(); err != nil {
@@ -679,7 +680,7 @@ func TestWetDeposition(t *testing.T) {
 		RunFuncs: []DomainManipulator{
 			Calculations(AddEmissionsFlux()),
 			Calculations(WetDeposition()),
-			SteadyStateConvergenceCheck(1, nil),
+			SteadyStateConvergenceCheck(1, cfg.PopGridColumn, nil),
 		},
 	}
 	if err := d.Init(); err != nil {

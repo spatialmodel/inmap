@@ -83,11 +83,11 @@ func (s *Worker) Calculate(input *IOData, output *IOData) error {
 		inmap.Calculations(inmap.AddEmissionsFlux()),
 		scienceFuncs,
 		inmap.RunPeriodically(gridMutateInterval,
-			s.Config.MutateGrid(inmap.PopConcMutator(
-				s.Config.PopConcThreshold, s.Config, s.PopIndices),
+			s.Config.MutateGrid(inmap.PopConcMutator(s.Config, s.PopIndices),
 				s.CTMData, s.Pop, s.MR, input.Emis, nil)),
 		inmap.RunPeriodically(gridMutateInterval, inmap.SetTimestepCFL()),
-		inmap.SteadyStateConvergenceCheck(-1, nil),
+		inmap.SteadyStateConvergenceCheck(-1, s.Config.PopGridColumn, nil),
+		s.Config.AdjustGridCriteria(nil),
 	}
 
 	d := &inmap.InMAP{

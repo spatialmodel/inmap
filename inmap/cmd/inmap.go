@@ -107,7 +107,7 @@ func Run(dynamic, createGrid bool) error {
 					ctmData, pop, mr, emis, msgLog),
 				inmap.SetTimestepCFL(),
 			}
-		} else {
+		} else { // pre-created static grid
 			var r io.Reader
 			r, err = os.Open(Config.VariableGridData)
 			if err != nil {
@@ -122,7 +122,8 @@ func Run(dynamic, createGrid bool) error {
 			inmap.Log(cLog),
 			inmap.Calculations(inmap.AddEmissionsFlux()),
 			scienceFuncs,
-			inmap.SteadyStateConvergenceCheck(Config.NumIterations, cConverge),
+			inmap.SteadyStateConvergenceCheck(Config.NumIterations,
+				Config.VarGrid.PopGridColumn, cConverge),
 		}
 	} else { // dynamic grid
 		initFuncs = []inmap.DomainManipulator{
@@ -135,11 +136,12 @@ func Run(dynamic, createGrid bool) error {
 			inmap.Calculations(inmap.AddEmissionsFlux()),
 			scienceFuncs,
 			inmap.RunPeriodically(gridMutateInterval,
-				Config.VarGrid.MutateGrid(inmap.PopConcMutator(
-					Config.VarGrid.PopConcThreshold, &Config.VarGrid, popIndices),
+				Config.VarGrid.MutateGrid(inmap.PopConcMutator(&Config.VarGrid, popIndices),
 					ctmData, pop, mr, emis, msgLog)),
 			inmap.RunPeriodically(gridMutateInterval, inmap.SetTimestepCFL()),
-			inmap.SteadyStateConvergenceCheck(Config.NumIterations, cConverge),
+			inmap.SteadyStateConvergenceCheck(Config.NumIterations,
+				Config.VarGrid.PopGridColumn, cConverge),
+			Config.VarGrid.AdjustGridCriteria(msgLog),
 		}
 	}
 

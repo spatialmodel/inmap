@@ -349,6 +349,7 @@ func (d *InMAP) toArray(varName string, layer int) []float64 {
 		if layer >= 0 && c.Layer > layer {
 			// The cells should be sorted with the lower layers first, so we
 			// should be done here.
+			c.mutex.RUnlock()
 			return o
 		}
 		if layer < 0 || c.Layer == layer {

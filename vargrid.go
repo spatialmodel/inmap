@@ -56,7 +56,7 @@ type VarGridConfig struct {
 	PopDensityThreshold float64 // limit for people per unit area in the grid cell
 	PopThreshold        float64 // limit for total number of people in the grid cell
 
-	// PopConcCutoff is the limit for
+	// PopConcThreshold is the limit for
 	// Σ(|ΔConcentration|)*combinedVolume*|ΔPopulation| / {Σ(|totalMass|)*totalPopulation}.
 	// See the documentation for PopConcMutator for more information.
 	PopConcThreshold    float64
@@ -559,7 +559,7 @@ func PopulationMutator(config *VarGridConfig, popIndices PopIndices) GridMutator
 
 // PopConcMutator returns a function that takes a grid cell and returns whether
 // Σ(|ΔConcentration|)*combinedVolume*|ΔPopulation| / {Σ(|totalMass|)*totalPopulation}
-// > threshold between the
+// > config.PopConcThreshold between the
 // grid cell in question and any of its horizontal neighbors, where Σ(|totalMass|)
 // is the sum of the absolute values of the mass of all pollutants in
 // all grid cells in the system,
@@ -569,7 +569,7 @@ func PopulationMutator(config *VarGridConfig, popIndices PopIndices) GridMutator
 // between the two grid cells, totalPopulation is the total population in the domain,
 // and combinedVolume is the combined volume of the cell in question
 // and the neighbor in question.
-func PopConcMutator(threshold float64, config *VarGridConfig, popIndices PopIndices) GridMutator {
+func PopConcMutator(config *VarGridConfig, popIndices PopIndices) GridMutator {
 	return func(cell *Cell, totalMass, totalPopulation float64) bool {
 		if totalMass == 0. || totalPopulation == 0 {
 			return false
@@ -591,7 +591,7 @@ func PopConcMutator(threshold float64, config *VarGridConfig, popIndices PopIndi
 					ΣΔC += math.Abs(conc - cell.Cf[i])
 				}
 				ΔP := math.Abs(groundCellPop - groundNeighborPop)
-				if ΣΔC*(cell.Volume+neighbor.Volume)*ΔP/totalMassPop > threshold {
+				if ΣΔC*(cell.Volume+neighbor.Volume)*ΔP/totalMassPop > config.PopConcThreshold {
 					return true
 				}
 			}
@@ -947,4 +947,44 @@ func (config *VarGridConfig) makeCTMgrid(nlayers int) *rtree.Rtree {
 type gridCellLight struct {
 	geom.Polygonal
 	Row, Col, layer int
+}
+
+// AdjustGridCriteria decreases the VarGridConfig.PopConcThreshold
+// field until further decreases do not yield any further changes in
+// calculated health impacts. To do this, it waits until the
+// simulation has converged (i.e., the
+// Done field of the *InMAP object is true),
+// and then checks the total number of deaths calculated by the simulation.
+// If the number of deaths is more than 0.1% different than the previous
+// check, the PopConcThreshold field of the receiver is divided by 100
+// and the Done field of the InMAP object is set to false so the simulation
+// can continue.
+func (config *VarGridConfig) AdjustGridCriteria(msgChan chan string) DomainManipulator {
+	const tolerance = 0.001 // tolerance for convergence
+	var oldDeaths float64
+	return func(d *InMAP) error {
+		if !d.Done {
+			return nil
+		}
+		deaths := floats.Sum(d.toArray(config.PopGridColumn+" deaths", 0))
+
+		bias, converged := checkConvergence(deaths, oldDeaths, tolerance)
+		if !converged {
+			d.Done = false
+		}
+		oldDeaths = deaths
+		config.PopConcThreshold /= 100
+
+		if msgChan != nil {
+			if d.Done {
+				msgChan <- fmt.Sprintf("Calculated deaths %.2g%% different from last "+
+					"grid threshold adjustment.", bias*100)
+			} else {
+				msgChan <- fmt.Sprintf("Calculated deaths %.2g%% different from last "+
+					"grid threshold adjustment. Continuing with new threshold=%.2g.",
+					bias*100, config.PopConcThreshold)
+			}
+		}
+		return nil
+	}
 }

@@ -19,10 +19,12 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package inmap
 
 import (
+	"bytes"
 	"fmt"
 	"math"
 	"runtime"
 	"sync"
+	"text/tabwriter"
 	"time"
 )
 
@@ -178,32 +180,40 @@ func RunPeriodically(period float64, f DomainManipulator) DomainManipulator {
 type ConvergenceStatus []float64
 
 func (c ConvergenceStatus) String() string {
-	s := "Percent change since last convergence check:"
+	b := bytes.NewBufferString("Percent change since last convergence check:")
+	w := tabwriter.NewWriter(b, 0, 8, 1, '\t', 0)
 	for i, n := range PolNames {
-		s += fmt.Sprintf("\n%s: %.2g%%", n, c[i]*100)
+		fmt.Fprintf(w, "\n%s:\t%.2g%%", n, c[i*2]*100)
+		fmt.Fprintf(w, "\n%s pop-wtd:\t%.2g%%", n, c[i*2+1]*100)
 	}
-	return s
+	w.Flush()
+	return b.String()
 }
 
 // SteadyStateConvergenceCheck checks whether a steady-state
 // simulation is finished and sets the Done
 // flag if it is. If numIterations > 0, the simulation is finished after
 // that number of iterations have completed. Otherwise, the simulation has
-// finished if the change in mass in the domain since the last check is less
-// than 0.1%. c is a channel over which the percent change between checks is
+// finished if the change in mass and population-weighted concentration
+// of each pollutant in the domain since the
+// last check are both less than 0.1%.
+// popGridColumn is the name of the population type used to determine grid
+// cell sizes as in VarGridConfig.PopGridColumn.
+// c is a channel over which the percent change between checks is
 // sent. If c is nil, no status updates will be sent.
-func SteadyStateConvergenceCheck(numIterations int, c chan ConvergenceStatus) DomainManipulator {
+func SteadyStateConvergenceCheck(numIterations int, popGridColumn string, c chan ConvergenceStatus) DomainManipulator {
+	const tolerance = 0.001          // tolerance for convergence
+	const checkPeriod = 60 * 60 * 24 // seconds, how often to check for convergence
 
-	const tolerance = 0.001   // tolerance for convergence
-	const checkPeriod = 3600. // seconds, how often to check for convergence
-
-	// oldSum is the sum of mass in the domain at the last check
-	oldSum := make([]float64, len(PolNames))
+	// oldSum is the sum of mass or population-weighted concentration
+	// in the domain at the last check.
+	oldSum := make([]float64, len(PolNames)*2)
 
 	timeSinceLastCheck := 0.
 	iteration := 0
 
 	return func(d *InMAP) error {
+		popIndex := d.popIndices[popGridColumn]
 
 		if d.Dt == 0 {
 			return fmt.Errorf("inmap: timestep is zero")
@@ -222,18 +232,29 @@ func SteadyStateConvergenceCheck(numIterations int, c chan ConvergenceStatus) Do
 		} else if timeSinceLastCheck >= checkPeriod {
 			timeToQuit := true
 			timeSinceLastCheck = 0.
-			status := make(ConvergenceStatus, len(PolNames))
+			status := make(ConvergenceStatus, len(PolNames)*2)
 			for ii := range PolNames {
-				var sum float64
+				var sum, bias float64
+				var converged bool
+				// calculate total mass.
 				for c := d.cells.first; c != nil; c = c.next {
-					sum += c.Cf[ii]
+					sum += c.Cf[ii] //* c.Volume
 				}
-				bias, converged := checkConvergence(sum, oldSum[ii], tolerance)
-				if !converged {
+				if bias, converged = checkConvergence(sum, oldSum[ii*2], tolerance); !converged {
 					timeToQuit = false
 				}
-				status[ii] = bias
-				oldSum[ii] = sum
+				status[ii*2] = bias
+				oldSum[ii*2] = sum
+				sum = 0
+				// Calculate population-weighted concetration.
+				for c := d.cells.first; c != nil; c = c.next {
+					sum += c.Cf[ii] * c.PopData[popIndex]
+				}
+				if bias, converged = checkConvergence(sum, oldSum[ii*2+1], tolerance); !converged {
+					timeToQuit = false
+				}
+				status[ii*2+1] = bias
+				oldSum[ii*2+1] = sum
 			}
 			if c != nil {
 				c <- status
