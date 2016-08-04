@@ -72,11 +72,6 @@ PopDensityCutoff= 0.0055
 # is a candidate for splitting into smaller cells.
 PopCutoff= 40000.0
 
-# PopConcThreshold is the beginning threshold for dividing grid cells in
-# dynamic grid simulations. It should be less than one, and will be decreased
-# during the simulation.
-PopConcThreshold= 0.00001
-
 # CensusFile is the path to the shapefile holding population information.
 CensusFile= "${censusFile}"
 

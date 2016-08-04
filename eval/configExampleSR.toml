@@ -97,13 +97,6 @@ PopDensityThreshold= 0.001
 # is a candidate for splitting into smaller cells.
 PopThreshold= 25000.0
 
-# PopConcThreshold is a limit for the gradient in Population * Concentration
-# in two neighboring grid cells divided by total population * total concentration.
-# If the gradient is larger than the threshold, then the cell is divided into
-# smaller cells. A smaller threshold leads to a larger number of higher-resolution
-# grid cells.
-PopConcThreshold= 0.000001
-
 # CensusFile is the path to the shapefile holding population information.
 CensusFile= "${GOPATH}/src/github.com/spatialmodel/inmap/testdata/census2012.shp"
 
