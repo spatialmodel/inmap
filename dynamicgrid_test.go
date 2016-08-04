@@ -43,6 +43,8 @@ func TestDynamicGrid(t *testing.T) {
 		Geom: geom.Point{X: -3999, Y: -3999.},
 	}) // ground level emissions
 
+	popConcMutator := NewPopConcMutator(cfg, popIndices)
+
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
@@ -59,11 +61,11 @@ func TestDynamicGrid(t *testing.T) {
 				Chemistry(),
 			),
 			RunPeriodically(gridMutateInterval,
-				cfg.MutateGrid(PopConcMutator(cfg, popIndices),
+				cfg.MutateGrid(popConcMutator.Mutate(),
 					ctmdata, pop, mr, emis, nil)),
 			RunPeriodically(gridMutateInterval, SetTimestepCFL()),
 			SteadyStateConvergenceCheck(-1, cfg.PopGridColumn, nil),
-			cfg.AdjustGridCriteria(nil),
+			popConcMutator.AdjustThreshold(nil),
 		},
 	}
 
@@ -79,7 +81,7 @@ func TestDynamicGrid(t *testing.T) {
 		cells[c.Layer]++
 	}
 
-	wantCells := []int{22, 22, 22, 22, 22, 13, 10, 10, 10, 10}
+	wantCells := []int{10, 10, 10, 10, 10, 7, 4, 4, 4, 4}
 	if !reflect.DeepEqual(cells, wantCells) {
 		t.Errorf("dynamic grid should have %v cells but instead has %v", wantCells, cells)
 	}
@@ -90,7 +92,7 @@ func TestDynamicGrid(t *testing.T) {
 	}
 	results := r["TotalPop deaths"]
 	totald := floats.Sum(results)
-	const expectedDeaths = 1.607075700165906e-05
+	const expectedDeaths = 4.152193894374204e-06
 	if different(totald, expectedDeaths, testTolerance) {
 		t.Errorf("Deaths (%v) doesn't equal %v", totald, expectedDeaths)
 	}

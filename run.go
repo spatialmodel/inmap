@@ -202,8 +202,8 @@ func (c ConvergenceStatus) String() string {
 // c is a channel over which the percent change between checks is
 // sent. If c is nil, no status updates will be sent.
 func SteadyStateConvergenceCheck(numIterations int, popGridColumn string, c chan ConvergenceStatus) DomainManipulator {
-	const tolerance = 0.001          // tolerance for convergence
-	const checkPeriod = 60 * 60 * 24 // seconds, how often to check for convergence
+	const tolerance = 0.001         // tolerance for convergence
+	const checkPeriod = 60 * 60 * 3 // seconds, how often to check for convergence
 
 	// oldSum is the sum of mass or population-weighted concentration
 	// in the domain at the last check.

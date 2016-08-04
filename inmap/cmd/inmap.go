@@ -130,18 +130,19 @@ func Run(dynamic, createGrid bool) error {
 			Config.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, emis),
 			inmap.SetTimestepCFL(),
 		}
-		const gridMutateInterval = 3600. // seconds
+		popConcMutator := inmap.NewPopConcMutator(&Config.VarGrid, popIndices)
+		const gridMutateInterval = 3 * 60 * 60 // every 3 hours in seconds
 		runFuncs = []inmap.DomainManipulator{
 			inmap.Log(cLog),
 			inmap.Calculations(inmap.AddEmissionsFlux()),
 			scienceFuncs,
 			inmap.RunPeriodically(gridMutateInterval,
-				Config.VarGrid.MutateGrid(inmap.PopConcMutator(&Config.VarGrid, popIndices),
+				Config.VarGrid.MutateGrid(popConcMutator.Mutate(),
 					ctmData, pop, mr, emis, msgLog)),
 			inmap.RunPeriodically(gridMutateInterval, inmap.SetTimestepCFL()),
 			inmap.SteadyStateConvergenceCheck(Config.NumIterations,
 				Config.VarGrid.PopGridColumn, cConverge),
-			Config.VarGrid.AdjustGridCriteria(msgLog),
+			popConcMutator.AdjustThreshold(msgLog),
 		}
 	}
 

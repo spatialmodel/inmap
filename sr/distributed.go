@@ -78,16 +78,17 @@ func (s *Worker) Calculate(input *IOData, output *IOData) error {
 		s.Config.RegularGrid(s.CTMData, s.Pop, s.PopIndices, s.MR, input.Emis),
 		inmap.SetTimestepCFL(),
 	}
-	const gridMutateInterval = 3600. // seconds
+	popConcMutator := inmap.NewPopConcMutator(s.Config, s.PopIndices)
+	const gridMutateInterval = 3 * 60 * 60 // every 3 hours in seconds
 	runFuncs := []inmap.DomainManipulator{
 		inmap.Calculations(inmap.AddEmissionsFlux()),
 		scienceFuncs,
 		inmap.RunPeriodically(gridMutateInterval,
-			s.Config.MutateGrid(inmap.PopConcMutator(s.Config, s.PopIndices),
+			s.Config.MutateGrid(popConcMutator.Mutate(),
 				s.CTMData, s.Pop, s.MR, input.Emis, nil)),
 		inmap.RunPeriodically(gridMutateInterval, inmap.SetTimestepCFL()),
 		inmap.SteadyStateConvergenceCheck(-1, s.Config.PopGridColumn, nil),
-		s.Config.AdjustGridCriteria(nil),
+		popConcMutator.AdjustThreshold(nil),
 	}
 
 	d := &inmap.InMAP{
