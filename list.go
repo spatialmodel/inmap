@@ -18,107 +18,131 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 
 package inmap
 
-import "fmt"
+import (
+	"fmt"
+	"sort"
+)
 
 // cellRefs holds a cell, a reference to the next and previous
 // adjacent cells in a cellList, and potentially information about the
 // cell's relationship to a neighbor.
 type cellRef struct {
 	*Cell
-	next, previous *cellRef
-	info           *neighborInfo
+	info *neighborInfo
 }
 
-// cellList is a linked list of cells.
-type cellList struct {
-	first *cellRef
-	len   int
-	index map[*Cell]*cellRef
+// cellList is a list of cells.
+type cellList []*cellRef
+
+func (l *cellList) len() int {
+	return len(*l)
 }
 
 // array returns a sorted array of the cells in this list.
 func (l *cellList) array() []*Cell {
-	o := make([]*Cell, l.len)
-	c := l.first
-	for i := 0; i < l.len; i++ {
+	o := make([]*Cell, len(*l))
+	for i, c := range *l {
 		o[i] = c.Cell
-		c = c.next
 	}
-	sortCells(o)
 	return o
 }
 
 // delete deletes this cellRef from the list.
 func (l *cellList) delete(c *cellRef) {
-	if c.previous != nil && c.next != nil {
-		c.previous.next, c.next.previous = c.next, c.previous
-	} else if c.previous != nil {
-		c.previous.next = nil
-	} else if c.next != nil {
-		c.next.previous = nil
-	}
-	if c == l.first {
-		l.first = c.next
-	}
-	c.previous = nil
-	c.next = nil
-	l.len--
-	delete(l.index, c.Cell)
+	l.deleteCell(c.Cell)
 }
 
 // deleteCell deletes this Cell from the list
 func (l *cellList) deleteCell(c *Cell) {
-	cc, ok := l.index[c]
-	if !ok {
+
+	// Find the index where the cell should be.
+	i := sort.Search(len(*l), func(i int) bool {
+		return c.before((*l)[i].Cell)
+	})
+
+	cref := (*l)[i]
+	if cref.Cell != c {
 		panic("tried to delete cell that is not in list")
 	}
-	l.delete(cc)
+
+	copy((*l)[i:], (*l)[i+1:])
+	(*l)[len(*l)-1] = nil
+	(*l) = (*l)[:len(*l)-1]
 }
 
 // addToList adds the cell to the beginning of the list.
 func (l *cellList) add(c *Cell) *cellRef {
 	cc := &cellRef{Cell: c}
-	cc.next = l.first
-	if l.first != nil {
-		l.first.previous = cc
-	}
-	l.first = cc
-	l.len++
 
-	if l.index == nil {
-		l.index = make(map[*Cell]*cellRef)
-	}
-	l.index[c] = cc
+	// Find the correct location to insert the cell
+	i := sort.Search(len(*l), func(i int) bool {
+		return c.before((*l)[i].Cell)
+	})
+
+	// Insert the cell.
+	(*l) = append((*l), nil)
+	copy((*l)[i+1:], (*l)[i:])
+	(*l)[i] = cc
+
 	return cc
 }
 
-// forwardInList returns the cell n spaces forward from c in the cell list.
-func (l *cellList) forwardFrom(c *cellRef, n int) *cellRef {
-	c2 := c
-	for i := 0; i < n; i++ {
-		if c2.next == nil {
-			return nil
-		}
-		c2 = c2.next
+// index returns the index of c and whether it was found
+func (l *cellList) index(c *Cell) (int, bool) {
+	// Find the index where the cell should be.
+	i := sort.Search(len(*l), func(i int) bool {
+		return c.before((*l)[i].Cell)
+	})
+
+	cref := (*l)[i]
+	if cref.Cell != c {
+		return -1, false
 	}
-	return c2
+	return i, true
 }
 
 func (l *cellList) ref(c *Cell) *cellRef {
-	cc, ok := l.index[c]
-	if !ok {
+
+	// Find the index where the cell should be.
+	i := sort.Search(len(*l), func(i int) bool {
+		return c.before((*l)[i].Cell)
+	})
+
+	cref := (*l)[i]
+	if cref.Cell != c {
 		panic("tried to retrieve cell that is not in list")
 	}
-	return cc
+	return cref
 }
 
 func (l *cellList) String() string {
 	s := ""
-	for c := l.first; c != nil; c = c.next {
-		if c != l.first {
+	for i, c := range *l {
+		if i != 0 {
 			s += "\n"
 		}
 		s += fmt.Sprint(c.Cell)
 	}
 	return s
+}
+
+// before returns whether c should be sorted before c2.
+func (c *Cell) before(c2 *Cell) bool {
+	if c == c2 {
+		return true
+	}
+	if c.Layer != c2.Layer {
+		return c.Layer < c2.Layer
+	}
+
+	icent := c.Centroid()
+	jcent := c2.Centroid()
+	if icent.X != jcent.X {
+		return icent.X < jcent.X
+	}
+	if icent.Y != jcent.Y {
+		return icent.Y < jcent.Y
+	}
+	// We apparently have concentric cells if we get to here.
+	panic(fmt.Errorf("problem sorting: i: %v, j: %v", c, c2))
 }

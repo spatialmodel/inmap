@@ -44,7 +44,7 @@ type versionCells struct {
 func Save(w io.Writer) DomainManipulator {
 	return func(d *InMAP) error {
 
-		if d.cells.len == 0 {
+		if d.cells.len() == 0 {
 			return fmt.Errorf("inmap.InMAP.Save: no grid cells to save")
 		}
 
@@ -97,7 +97,8 @@ func (d *InMAP) initFromCells(cells []*Cell, emis *Emissions, config *VarGridCon
 		nprocs := runtime.GOMAXPROCS(-1)
 		for p := 0; p < nprocs; p++ {
 			go func(p int) {
-				for c := d.cells.forwardFrom(d.cells.first, p); c != nil; c = d.cells.forwardFrom(c, nprocs) {
+				for i := p; i < d.cells.len(); i += nprocs {
+					c := (*d.cells)[i]
 					c.setEmissionsFlux(emis) // This needs to be called after setNeighbors.
 				}
 			}(p)

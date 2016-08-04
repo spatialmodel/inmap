@@ -19,6 +19,7 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package inmap
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -337,16 +338,6 @@ func TestRegrid(t *testing.T) {
 	}
 }
 
-type cellsFracSorter struct {
-	cellsSorter
-	fractions []float64
-}
-
-func (c *cellsFracSorter) Swap(i, j int) {
-	c.cells[i], c.cells[j] = c.cells[j], c.cells[i]
-	c.fractions[i], c.fractions[j] = c.fractions[j], c.fractions[i]
-}
-
 func TestCellIntersections(t *testing.T) {
 	cfg, ctmdata, pop, popIndices, mr := VarGridData()
 
@@ -499,4 +490,59 @@ func TestCellIntersections(t *testing.T) {
 			t.Errorf("%d: fractions don't have match: %g but want %g", i, fractions[i], expected[i].frac)
 		}
 	}
+}
+
+// sortCells sorts the cells by layer, x centroid, and y centroid.
+func sortCells(cells []*Cell) {
+	sc := &cellsSorter{
+		cells: cells,
+	}
+	sort.Sort(sc)
+}
+
+type cellsSorter struct {
+	cells []*Cell
+}
+
+// Len is part of sort.Interface.
+func (c *cellsSorter) Len() int {
+	return len(c.cells)
+}
+
+// Swap is part of sort.Interface.
+func (c *cellsSorter) Swap(i, j int) {
+	c.cells[i], c.cells[j] = c.cells[j], c.cells[i]
+}
+
+func (c *cellsSorter) Less(i, j int) bool {
+	ci := c.cells[i]
+	cj := c.cells[j]
+	if ci.Layer != cj.Layer {
+		return ci.Layer < cj.Layer
+	}
+
+	icent := ci.Polygonal.Centroid()
+	jcent := cj.Polygonal.Centroid()
+
+	if icent.X != jcent.X {
+		return icent.X < jcent.X
+	}
+	if icent.Y != jcent.Y {
+		return icent.Y < jcent.Y
+	}
+	fmt.Printf("%#v\n", ci.Polygonal)
+	fmt.Printf("%#v\n", cj.Polygonal)
+	fmt.Println(ci.Layer, cj.Layer, icent.X, jcent.X, icent.Y, jcent.Y)
+	// We apparently have concentric or identical cells if we get to here.
+	panic(fmt.Errorf("problem sorting: i: %v, j: %v", ci, cj))
+}
+
+type cellsFracSorter struct {
+	cellsSorter
+	fractions []float64
+}
+
+func (c *cellsFracSorter) Swap(i, j int) {
+	c.cells[i], c.cells[j] = c.cells[j], c.cells[i]
+	c.fractions[i], c.fractions[j] = c.fractions[j], c.fractions[i]
 }

@@ -120,7 +120,7 @@ func ResetCells() DomainManipulator {
 	return func(d *InMAP) error {
 		for _, g := range []*cellList{d.cells, d.westBoundary, d.eastBoundary,
 			d.northBoundary, d.southBoundary, d.topBoundary} {
-			for c := g.first; c != nil; c = c.next {
+			for _, c := range *g {
 				c.Ci = make([]float64, len(PolNames))
 				c.Cf = make([]float64, len(PolNames))
 				c.EmisFlux = make([]float64, len(PolNames))
@@ -142,7 +142,8 @@ func Calculations(calculators ...CellManipulator) DomainManipulator {
 		wg.Add(nprocs)
 		for pp := 0; pp < nprocs; pp++ {
 			go func(pp int) {
-				for c := d.cells.forwardFrom(d.cells.first, pp); c != nil; c = d.cells.forwardFrom(c, nprocs) {
+				for i := pp; i < d.cells.len(); i += nprocs {
+					c := (*d.cells)[i]
 					c.mutex.Lock() // Lock the cell to avoid race conditions
 					// run functions
 					for _, f := range calculators {
@@ -237,7 +238,7 @@ func SteadyStateConvergenceCheck(numIterations int, popGridColumn string, c chan
 				var sum, bias float64
 				var converged bool
 				// calculate total mass.
-				for c := d.cells.first; c != nil; c = c.next {
+				for _, c := range *d.cells {
 					sum += c.Cf[ii] //* c.Volume
 				}
 				if bias, converged = checkConvergence(sum, oldSum[ii*2], tolerance); !converged {
@@ -247,7 +248,7 @@ func SteadyStateConvergenceCheck(numIterations int, popGridColumn string, c chan
 				oldSum[ii*2] = sum
 				sum = 0
 				// Calculate population-weighted concetration.
-				for c := d.cells.first; c != nil; c = c.next {
+				for _, c := range *d.cells {
 					sum += c.Cf[ii] * c.PopData[popIndex]
 				}
 				if bias, converged = checkConvergence(sum, oldSum[ii*2+1], tolerance); !converged {

@@ -23,7 +23,6 @@ import (
 	"math"
 	"os"
 	"runtime"
-	"sort"
 
 	"bitbucket.org/ctessum/cdf"
 	"bitbucket.org/ctessum/sparse"
@@ -257,51 +256,6 @@ func (config *VarGridConfig) LoadPopMort() (*Population, PopIndices, *MortalityR
 	return &Population{tree: pop}, PopIndices(popIndex), &MortalityRates{tree: mort}, nil
 }
 
-// sortCells sorts the cells by layer, x centroid, and y centroid.
-func sortCells(cells []*Cell) {
-	sc := &cellsSorter{
-		cells: cells,
-	}
-	sort.Sort(sc)
-}
-
-type cellsSorter struct {
-	cells []*Cell
-}
-
-// Len is part of sort.Interface.
-func (c *cellsSorter) Len() int {
-	return len(c.cells)
-}
-
-// Swap is part of sort.Interface.
-func (c *cellsSorter) Swap(i, j int) {
-	c.cells[i], c.cells[j] = c.cells[j], c.cells[i]
-}
-
-func (c *cellsSorter) Less(i, j int) bool {
-	ci := c.cells[i]
-	cj := c.cells[j]
-	if ci.Layer != cj.Layer {
-		return ci.Layer < cj.Layer
-	}
-
-	icent := ci.Polygonal.Centroid()
-	jcent := cj.Polygonal.Centroid()
-
-	if icent.X != jcent.X {
-		return icent.X < jcent.X
-	}
-	if icent.Y != jcent.Y {
-		return icent.Y < jcent.Y
-	}
-	fmt.Printf("%#v\n", ci.Polygonal)
-	fmt.Printf("%#v\n", cj.Polygonal)
-	fmt.Println(ci.Layer, cj.Layer, icent.X, jcent.X, icent.Y, jcent.Y)
-	// We apparently have concentric or identical cells if we get to here.
-	panic(fmt.Errorf("problem sorting: i: %v, j: %v", ci, cj))
-}
-
 // getCells returns all the grid cells in cellTree that are within box
 // and at vertical layer layer.
 func getCells(cellTree *rtree.Rtree, box *geom.Bounds, layer int) *cellList {
@@ -383,7 +337,7 @@ func (config *VarGridConfig) RegularGrid(data *CTMData, pop *Population, popInde
 // total population of group popGridColumn.
 func (d *InMAP) totalMassPopulation(popGridColumn string) (totalMass, totalPopulation float64) {
 	iPop := d.popIndices[popGridColumn]
-	for c := d.cells.first; c != nil; c = c.next {
+	for _, c := range *d.cells {
 		totalMass += floats.Sum(c.Cf) * c.Volume
 		if c.Layer == 0 { // only track population at ground level
 			totalPopulation += c.PopData[iPop]
@@ -405,7 +359,7 @@ func (config *VarGridConfig) MutateGrid(divideRule GridMutator, data *CTMData, p
 			logChan <- fmt.Sprint("Adding grid cells...")
 		}
 
-		beginCells := d.cells.len
+		beginCells := d.cells.len()
 
 		totalMass, totalPopulation := d.totalMassPopulation(config.PopGridColumn)
 
@@ -420,7 +374,7 @@ func (config *VarGridConfig) MutateGrid(divideRule GridMutator, data *CTMData, p
 			var newCellIndices [][][2]int
 			var newCellLayers []int
 			var cellsToDelete []*cellRef
-			for cell := d.cells.first; cell != nil; cell = cell.next {
+			for _, cell := range *d.cells {
 				if len(cell.Index) < len(config.Xnests) {
 					if divideRule(cell.Cell, totalMass, totalPopulation) {
 						continueMutating = true
@@ -460,7 +414,7 @@ func (config *VarGridConfig) MutateGrid(divideRule GridMutator, data *CTMData, p
 			}
 		}
 
-		endCells := d.cells.len
+		endCells := d.cells.len()
 		if logChan != nil {
 			logChan <- fmt.Sprintf("Added %d grid cells; there are now %d cells total",
 				endCells-beginCells, endCells)
@@ -503,7 +457,8 @@ func (d *InMAP) addCells(config *VarGridConfig, newCellIndices [][][2]int,
 		doneChan := make(chan int)
 		for p := 0; p < nprocs; p++ {
 			go func(p int) {
-				for c := d.cells.forwardFrom(d.cells.first, p); c != nil; c = d.cells.forwardFrom(c, nprocs) {
+				for i := p; i < d.cells.len(); i += nprocs {
+					c := (*d.cells)[i]
 					if len(c.EmisFlux) == 0 {
 						c.setEmissionsFlux(emis) // This needs to be called after setNeighbors.
 					}
@@ -547,7 +502,7 @@ func PopulationMutator(config *VarGridConfig, popIndices PopIndices) GridMutator
 	return func(cell *Cell, _, _ float64) bool {
 		population := 0.
 		aboveDensityThreshold := false
-		for g := cell.groundLevel.first; g != nil; g = g.next {
+		for _, g := range *cell.groundLevel {
 			population += g.PopData[popIndex]
 			if g.AboveDensityThreshold {
 				aboveDensityThreshold = true
@@ -597,14 +552,14 @@ func (p *PopConcMutator) Mutate() GridMutator {
 			return false
 		}
 		var groundCellPop float64
-		for gc := cell.groundLevel.first; gc != nil; gc = gc.next {
+		for _, gc := range *cell.groundLevel {
 			groundCellPop += gc.PopData[iPop]
 		}
 		totalMassPop := totalMass * totalPopulation
 		for _, group := range []*cellList{cell.west, cell.east, cell.north, cell.south} {
-			for neighbor := group.first; neighbor != nil; neighbor = neighbor.next {
+			for _, neighbor := range *group {
 				var groundNeighborPop float64
-				for gc := neighbor.groundLevel.first; gc != nil; gc = gc.next {
+				for _, gc := range *neighbor.groundLevel {
 					groundNeighborPop += gc.PopData[iPop]
 				}
 				ΣΔC := 0.
@@ -629,8 +584,8 @@ func (p *PopConcMutator) Mutate() GridMutator {
 // Done field of the *InMAP object is true),
 // and then checks the total number of deaths in the population popGridColumn
 // calculated by the simulation.
-// If the number of deaths is more than 1% different than the previous
-// check, the threshold value is recursively divided by 10 until it is assured
+// If the number of deaths is more than 0.1% different than the previous
+// check, the threshold value is recursively divided by 2 until it is assured
 // continuing the simulation will produce addtional grid cells,
 // and the Done field of the InMAP object is set to false so the simulation
 // can continue.
@@ -649,13 +604,13 @@ func (p *PopConcMutator) AdjustThreshold(msgChan chan string) DomainManipulator 
 		}
 		oldDeaths = deaths
 
-		p.popConcThreshold /= 10 // make sure we're changing the threshold.
+		p.popConcThreshold /= 2 // make sure we're changing the threshold.
 		divideRule := p.Mutate()
 		totalMass, totalPopulation := d.totalMassPopulation(p.config.PopGridColumn)
 		// Make sure that we're setting a threshold that will cause the cells to divide.
 		for {
 			willDivide := false
-			for cell := d.cells.first; cell != nil; cell = cell.next {
+			for _, cell := range *d.cells {
 				if len(cell.Index) < len(p.config.Xnests) {
 					if divideRule(cell.Cell, totalMass, totalPopulation) {
 						willDivide = true
@@ -666,7 +621,7 @@ func (p *PopConcMutator) AdjustThreshold(msgChan chan string) DomainManipulator 
 			if willDivide {
 				break
 			}
-			p.popConcThreshold /= 10
+			p.popConcThreshold /= 2
 		}
 
 		if msgChan != nil {

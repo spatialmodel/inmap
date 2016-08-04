@@ -41,7 +41,7 @@ func TestList(t *testing.T) {
 	l2.deleteCell(c1)
 	l2.deleteCell(c2)
 	l2.deleteCell(c3)
-	if l2.first != nil {
+	if l2.len() != 0 {
 		t.Error("l2 should be empty but it is not.")
 	}
 
@@ -56,38 +56,11 @@ func TestList(t *testing.T) {
 		t.Errorf("have %#v, want %#v", l.array(), want)
 	}
 
-	cr0 := l.ref(c0)
-	if c := l.forwardFrom(cr0, 0); c != cr0 {
-		t.Errorf("have %#v, want %#v", c, cr0)
-	}
-
-	if c := l.forwardFrom(cr0, 1); c != nil {
-		t.Errorf("have %#v, want nil", c)
-	}
-
-	if c := l.forwardFrom(cr0, 5); c != nil {
-		t.Errorf("have %#v, want nil", c)
-	}
-
-	cr3 := l.ref(c3)
-	cr1 := l.ref(c1)
-	if c := l.forwardFrom(cr3, 1); c != cr1 {
-		t.Errorf("have %#v, want %#v", c, c1)
-	}
-
-	if c := l.forwardFrom(cr3, 2); c != cr0 {
-		t.Errorf("have %#v, want %#v", c, cr0)
-	}
-
-	if c := l.forwardFrom(cr3, 3); c != nil {
-		t.Errorf("have %#v, want nil", c)
-	}
-
 	l3 := new(cellList)
 	l3.add(c0)
 	l3.add(c1)
-	l3.delete(l3.first)
-	if l3.len == 1 && l3.first == nil {
+	l3.delete((*l3)[0])
+	if l3.len() == 1 && (*l3)[0] == nil {
 		t.Errorf("improperly formed list")
 	}
 

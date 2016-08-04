@@ -50,11 +50,11 @@ func (d *InMAP) testCellAlignment1(t *testing.T) {
 	cells := d.cells.array()
 
 	// Cell 0
-	_, inWestBoundary := d.westBoundary.index[cells[0].west.array()[0]]
+	_, inWestBoundary := d.westBoundary.index(cells[0].west.array()[0])
 	if len(cells[0].west.array()) != 1 || !inWestBoundary {
 		t.Error("Incorrect alignment cell 0 West")
 	}
-	_, inSouthBoundary := d.southBoundary.index[cells[0].south.array()[0]]
+	_, inSouthBoundary := d.southBoundary.index(cells[0].south.array()[0])
 	if len(cells[0].south.array()) != 1 || !inSouthBoundary {
 		t.Error("Incorrect alignment cell 0 South")
 	}
@@ -75,7 +75,7 @@ func (d *InMAP) testCellAlignment1(t *testing.T) {
 	}
 
 	// Cell 1
-	_, inWestBoundary = d.westBoundary.index[cells[1].west.array()[0]]
+	_, inWestBoundary = d.westBoundary.index(cells[1].west.array()[0])
 	if len(cells[1].west.array()) != 1 || !inWestBoundary {
 		t.Error("Incorrect alignment cell 1 West")
 	}
@@ -99,7 +99,7 @@ func (d *InMAP) testCellAlignment1(t *testing.T) {
 	}
 
 	// Cell 2
-	_, inWestBoundary = d.westBoundary.index[cells[2].west.array()[0]]
+	_, inWestBoundary = d.westBoundary.index(cells[2].west.array()[0])
 	if len(cells[2].west.array()) != 1 || !inWestBoundary {
 		t.Error("Incorrect alignment cell 2 West")
 	}
@@ -127,7 +127,7 @@ func (d *InMAP) testCellAlignment1(t *testing.T) {
 	if len(cells[3].west.array()) != 1 || cells[3].west.array()[0] != cells[0] {
 		t.Error("Incorrect alignment cell 3 West")
 	}
-	_, inSouthBoundary = d.southBoundary.index[cells[3].south.array()[0]]
+	_, inSouthBoundary = d.southBoundary.index(cells[3].south.array()[0])
 	if len(cells[3].south.array()) != 1 || !inSouthBoundary {
 		t.Error("Incorrect alignment cell 3 South")
 	}
@@ -171,7 +171,7 @@ func (d *InMAP) testCellAlignment1(t *testing.T) {
 	}
 
 	// Cell 5
-	_, inWestBoundary = d.westBoundary.index[cells[5].west.first.Cell]
+	_, inWestBoundary = d.westBoundary.index(cells[5].west.array()[0])
 	if len(cells[5].west.array()) != 1 || !inWestBoundary {
 		t.Error("Incorrect alignment cell 5 West")
 	}
@@ -179,7 +179,7 @@ func (d *InMAP) testCellAlignment1(t *testing.T) {
 		cells[5].south.array()[1] != cells[7] {
 		t.Error("Incorrect alignment cell 5 South")
 	}
-	_, inNorthBoundary := d.northBoundary.index[cells[5].north.array()[0]]
+	_, inNorthBoundary := d.northBoundary.index(cells[5].north.array()[0])
 	if len(cells[5].north.array()) != 1 || !inNorthBoundary {
 		t.Error("Incorrect alignment cell 5 North")
 	}
@@ -201,7 +201,7 @@ func (d *InMAP) testCellAlignment1(t *testing.T) {
 		cells[6].west.array()[1] != cells[4] {
 		t.Error("Incorrect alignment cell 6 West")
 	}
-	_, inSouthBoundary = d.southBoundary.index[cells[6].south.array()[0]]
+	_, inSouthBoundary = d.southBoundary.index(cells[6].south.array()[0])
 	if len(cells[6].south.array()) != 1 || !inSouthBoundary {
 		t.Error("Incorrect alignment cell 6 South")
 	}
@@ -249,14 +249,14 @@ func (d *InMAP) testCellAlignment1(t *testing.T) {
 		cells[8].west.array()[1] != cells[7] {
 		t.Error("Incorrect alignment cell 8 West")
 	}
-	_, inSouthBoundary = d.southBoundary.index[cells[8].south.array()[0]]
+	_, inSouthBoundary = d.southBoundary.index(cells[8].south.array()[0])
 	if len(cells[8].south.array()) != 1 || !inSouthBoundary {
 		t.Error("Incorrect alignment cell 8 South")
 	}
 	if len(cells[8].north.array()) != 1 || cells[8].north.array()[0] != cells[9] {
 		t.Error("Incorrect alignment cell 8 North")
 	}
-	_, inEastBoundary := d.eastBoundary.index[cells[8].east.first.Cell]
+	_, inEastBoundary := d.eastBoundary.index(cells[8].east.array()[0])
 	if len(cells[8].east.array()) != 1 || !inEastBoundary {
 		t.Error("Incorrect alignment cell 8 East")
 	}
@@ -277,11 +277,11 @@ func (d *InMAP) testCellAlignment1(t *testing.T) {
 	if len(cells[9].south.array()) != 1 || cells[9].south.array()[0] != cells[8] {
 		t.Error("Incorrect alignment cell 9 South")
 	}
-	_, inNorthBoundary = d.northBoundary.index[cells[9].north.first.Cell]
+	_, inNorthBoundary = d.northBoundary.index(cells[9].north.array()[0])
 	if len(cells[9].north.array()) != 1 || !inNorthBoundary {
 		t.Error("Incorrect alignment cell 9 North")
 	}
-	_, inEastBoundary = d.eastBoundary.index[cells[9].east.first.Cell]
+	_, inEastBoundary = d.eastBoundary.index(cells[9].east.array()[0])
 	if len(cells[9].east.array()) != 1 || !inEastBoundary {
 		t.Error("Incorrect alignment cell 9 East")
 	}
@@ -296,11 +296,11 @@ func (d *InMAP) testCellAlignment1(t *testing.T) {
 	}
 
 	// Cell 10
-	_, inWestBoundary = d.westBoundary.index[cells[10].west.array()[0]]
+	_, inWestBoundary = d.westBoundary.index(cells[10].west.array()[0])
 	if len(cells[10].west.array()) != 1 || !inWestBoundary {
 		t.Error("Incorrect alignment cell 10 West")
 	}
-	_, inSouthBoundary = d.southBoundary.index[cells[10].south.array()[0]]
+	_, inSouthBoundary = d.southBoundary.index(cells[10].south.array()[0])
 	if len(cells[10].south.array()) != 1 || !inSouthBoundary {
 		t.Error("Incorrect alignment cell 10 South")
 	}
@@ -335,14 +335,14 @@ func (d *InMAP) testCellAlignment1(t *testing.T) {
 	}
 
 	// Cell 11
-	_, inWestBoundary = d.westBoundary.index[cells[11].west.array()[0]]
+	_, inWestBoundary = d.westBoundary.index(cells[11].west.array()[0])
 	if len(cells[11].west.array()) != 1 || !inWestBoundary {
 		t.Error("Incorrect alignment cell 11 West")
 	}
 	if len(cells[11].south.array()) != 1 || cells[11].south.array()[0] != cells[10] {
 		t.Error("Incorrect alignment cell 11 South")
 	}
-	_, inNorthBoundary = d.northBoundary.index[cells[11].north.first.Cell]
+	_, inNorthBoundary = d.northBoundary.index(cells[11].north.array()[0])
 	if len(cells[11].north.array()) != 1 || !inNorthBoundary {
 		t.Error("Incorrect alignment cell 11 North")
 	}
@@ -363,14 +363,14 @@ func (d *InMAP) testCellAlignment1(t *testing.T) {
 	if len(cells[12].west.array()) != 1 || cells[12].west.array()[0] != cells[10] {
 		t.Error("Incorrect alignment cell 12 West")
 	}
-	_, inSouthBoundary = d.southBoundary.index[cells[12].south.array()[0]]
+	_, inSouthBoundary = d.southBoundary.index(cells[12].south.array()[0])
 	if len(cells[12].south.array()) != 1 || !inSouthBoundary {
 		t.Error("Incorrect alignment cell 12 South")
 	}
 	if len(cells[12].north.array()) != 1 || cells[12].north.array()[0] != cells[13] {
 		t.Error("Incorrect alignment cell 12 North")
 	}
-	_, inEastBoundary = d.eastBoundary.index[cells[12].east.first.Cell]
+	_, inEastBoundary = d.eastBoundary.index(cells[12].east.array()[0])
 	if len(cells[12].east.array()) != 1 || !inEastBoundary {
 		t.Error("Incorrect alignment cell 12 East")
 	}
@@ -391,11 +391,11 @@ func (d *InMAP) testCellAlignment1(t *testing.T) {
 	if len(cells[13].south.array()) != 1 || cells[13].south.array()[0] != cells[12] {
 		t.Error("Incorrect alignment cell 13 South")
 	}
-	_, inNorthBoundary = d.northBoundary.index[cells[13].north.first.Cell]
+	_, inNorthBoundary = d.northBoundary.index(cells[13].north.array()[0])
 	if len(cells[13].north.array()) != 1 || !inNorthBoundary {
 		t.Error("Incorrect alignment cell 13 North")
 	}
-	_, inEastBoundary = d.eastBoundary.index[cells[13].east.first.Cell]
+	_, inEastBoundary = d.eastBoundary.index(cells[13].east.array()[0])
 	if len(cells[13].east.array()) != 1 || !inEastBoundary {
 		t.Error("Incorrect alignment cell 13 East")
 	}
@@ -411,11 +411,11 @@ func (d *InMAP) testCellAlignment1(t *testing.T) {
 
 	// Skip to the top layer
 	// Cell 42
-	_, inWestBoundary = d.westBoundary.index[cells[42].west.array()[0]]
+	_, inWestBoundary = d.westBoundary.index(cells[42].west.array()[0])
 	if len(cells[42].west.array()) != 1 || !inWestBoundary {
 		t.Error("Incorrect alignment cell 42 West")
 	}
-	_, inSouthBoundary = d.southBoundary.index[cells[42].south.array()[0]]
+	_, inSouthBoundary = d.southBoundary.index(cells[42].south.array()[0])
 	if len(cells[42].south.array()) != 1 || !inSouthBoundary {
 		t.Error("Incorrect alignment cell 42 South")
 	}
@@ -425,7 +425,7 @@ func (d *InMAP) testCellAlignment1(t *testing.T) {
 	if len(cells[42].east.array()) != 1 || cells[42].east.array()[0] != cells[44] {
 		t.Error("Incorrect alignment cell 42 East")
 	}
-	_, inTopBoundary := d.topBoundary.index[cells[42].above.first.Cell]
+	_, inTopBoundary := d.topBoundary.index(cells[42].above.array()[0])
 	if len(cells[42].above.array()) != 1 || !inTopBoundary {
 		t.Error("Incorrect alignment cell 42 Above")
 	}
@@ -443,21 +443,21 @@ func (d *InMAP) testCellAlignment1(t *testing.T) {
 	}
 
 	// Cell 43
-	_, inWestBoundary = d.westBoundary.index[cells[43].west.array()[0]]
+	_, inWestBoundary = d.westBoundary.index(cells[43].west.array()[0])
 	if len(cells[43].west.array()) != 1 || !inWestBoundary {
 		t.Error("Incorrect alignment cell 43 West")
 	}
 	if len(cells[43].south.array()) != 1 || cells[43].south.array()[0] != cells[42] {
 		t.Error("Incorrect alignment cell 43 South")
 	}
-	_, inNorthBoundary = d.northBoundary.index[cells[43].north.first.Cell]
+	_, inNorthBoundary = d.northBoundary.index(cells[43].north.array()[0])
 	if len(cells[43].north.array()) != 1 || !inNorthBoundary {
 		t.Error("Incorrect alignment cell 43 North")
 	}
 	if len(cells[43].east.array()) != 1 || cells[43].east.array()[0] != cells[45] {
 		t.Error("Incorrect alignment cell 43 East")
 	}
-	_, inTopBoundary = d.topBoundary.index[cells[43].above.first.Cell]
+	_, inTopBoundary = d.topBoundary.index(cells[43].above.array()[0])
 	if len(cells[43].above.array()) != 1 || !inTopBoundary {
 		t.Error("Incorrect alignment cell 43 Above")
 	}
@@ -472,18 +472,18 @@ func (d *InMAP) testCellAlignment1(t *testing.T) {
 	if len(cells[44].west.array()) != 1 || cells[44].west.array()[0] != cells[42] {
 		t.Error("Incorrect alignment cell 44 West")
 	}
-	_, inSouthBoundary = d.southBoundary.index[cells[44].south.array()[0]]
+	_, inSouthBoundary = d.southBoundary.index(cells[44].south.array()[0])
 	if len(cells[44].south.array()) != 1 || !inSouthBoundary {
 		t.Error("Incorrect alignment cell 44 South")
 	}
 	if len(cells[44].north.array()) != 1 || cells[44].north.array()[0] != cells[45] {
 		t.Error("Incorrect alignment cell 44 North")
 	}
-	_, inEastBoundary = d.eastBoundary.index[cells[44].east.first.Cell]
+	_, inEastBoundary = d.eastBoundary.index(cells[44].east.array()[0])
 	if len(cells[44].east.array()) != 1 || !inEastBoundary {
 		t.Error("Incorrect alignment cell 44 East")
 	}
-	_, inTopBoundary = d.topBoundary.index[cells[44].above.first.Cell]
+	_, inTopBoundary = d.topBoundary.index(cells[44].above.array()[0])
 	if len(cells[44].above.array()) != 1 || !inTopBoundary {
 		t.Error("Incorrect alignment cell 44 Above")
 	}
@@ -501,15 +501,15 @@ func (d *InMAP) testCellAlignment1(t *testing.T) {
 	if len(cells[45].south.array()) != 1 || cells[45].south.array()[0] != cells[44] {
 		t.Error("Incorrect alignment cell 45 South")
 	}
-	_, inNorthBoundary = d.northBoundary.index[cells[45].north.first.Cell]
+	_, inNorthBoundary = d.northBoundary.index(cells[45].north.array()[0])
 	if len(cells[45].north.array()) != 1 || !inNorthBoundary {
 		t.Error("Incorrect alignment cell 45 North")
 	}
-	_, inEastBoundary = d.eastBoundary.index[cells[45].east.first.Cell]
+	_, inEastBoundary = d.eastBoundary.index(cells[45].east.array()[0])
 	if len(cells[45].east.array()) != 1 || !inEastBoundary {
 		t.Error("Incorrect alignment cell 45 East")
 	}
-	_, inTopBoundary = d.topBoundary.index[cells[45].above.first.Cell]
+	_, inTopBoundary = d.topBoundary.index(cells[45].above.array()[0])
 	if len(cells[45].above.array()) != 1 || !inTopBoundary {
 		t.Error("Incorrect alignment cell 45 Above")
 	}

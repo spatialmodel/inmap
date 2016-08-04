@@ -77,7 +77,7 @@ func TestDynamicGrid(t *testing.T) {
 	}
 
 	cells := make([]int, d.nlayers)
-	for c := d.cells.first; c != nil; c = c.next {
+	for _, c := range *d.cells {
 		cells[c.Layer]++
 	}
 

@@ -30,19 +30,19 @@ func (d *InMAP) setNeighbors(c *Cell) {
 }
 
 func (d *InMAP) setBoundaryNeighbors(c *Cell) {
-	if c.west.len == 0 {
+	if c.west.len() == 0 {
 		d.addWestBoundary(c)
 	}
-	if c.east.len == 0 {
+	if c.east.len() == 0 {
 		d.addEastBoundary(c)
 	}
-	if c.north.len == 0 {
+	if c.north.len() == 0 {
 		d.addNorthBoundary(c)
 	}
-	if c.south.len == 0 {
+	if c.south.len() == 0 {
 		d.addSouthBoundary(c)
 	}
-	if c.above.len == 0 {
+	if c.above.len() == 0 {
 		d.addTopBoundary(c)
 	}
 }
@@ -53,10 +53,10 @@ func (d *InMAP) neighbors(c *Cell) {
 	// Horizontal
 	westbox := newNeighborRect(b, west)
 	c.west = getCells(d.index, westbox, c.Layer)
-	for w := c.west.first; w != nil; w = w.next {
-		if w.east.len == 1 && w.east.first.boundary {
-			d.eastBoundary.delete(w.east.first)
-			w.east.delete(w.east.first)
+	for _, w := range *c.west {
+		if w.east.len() == 1 && (*w.east)[0].boundary {
+			d.eastBoundary.delete((*w.east)[0])
+			w.east.delete((*w.east)[0])
 		}
 		w.east.add(c)
 		neighborInfoEastWest(w, w.Cell.east.ref(c))
@@ -64,10 +64,10 @@ func (d *InMAP) neighbors(c *Cell) {
 
 	eastbox := newNeighborRect(b, east)
 	c.east = getCells(d.index, eastbox, c.Layer)
-	for e := c.east.first; e != nil; e = e.next {
-		if e.west.len == 1 && e.west.first.boundary {
-			d.westBoundary.delete(e.west.first)
-			e.west.delete(e.west.first)
+	for _, e := range *c.east {
+		if e.west.len() == 1 && (*e.west)[0].boundary {
+			d.westBoundary.delete((*e.west)[0])
+			e.west.delete((*e.west)[0])
 		}
 		e.west.add(c)
 		neighborInfoEastWest(e, e.Cell.west.ref(c))
@@ -75,10 +75,10 @@ func (d *InMAP) neighbors(c *Cell) {
 
 	southbox := newNeighborRect(b, south)
 	c.south = getCells(d.index, southbox, c.Layer)
-	for s := c.south.first; s != nil; s = s.next {
-		if s.north.len == 1 && s.north.first.boundary {
-			d.northBoundary.delete(s.north.first)
-			s.north.delete(s.north.first)
+	for _, s := range *c.south {
+		if s.north.len() == 1 && (*s.north)[0].boundary {
+			d.northBoundary.delete((*s.north)[0])
+			s.north.delete((*s.north)[0])
 		}
 		s.north.add(c)
 		neighborInfoSouthNorth(s, s.Cell.north.ref(c))
@@ -86,10 +86,10 @@ func (d *InMAP) neighbors(c *Cell) {
 
 	northbox := newNeighborRect(b, north)
 	c.north = getCells(d.index, northbox, c.Layer)
-	for n := c.north.first; n != nil; n = n.next {
-		if n.south.len == 1 && n.south.first.boundary {
-			d.southBoundary.delete(n.south.first)
-			n.south.delete(n.south.first)
+	for _, n := range *c.north {
+		if n.south.len() == 1 && (*n.south)[0].boundary {
+			d.southBoundary.delete((*n.south)[0])
+			n.south.delete((*n.south)[0])
 		}
 		n.south.add(c)
 		neighborInfoSouthNorth(n, n.Cell.south.ref(c))
@@ -98,9 +98,9 @@ func (d *InMAP) neighbors(c *Cell) {
 	// Above
 	abovebelowbox := newNeighborRect(b, aboveBelow)
 	c.above = getCells(d.index, abovebelowbox, c.Layer+1)
-	for a := c.above.first; a != nil; a = a.next {
-		if a.below.len == 1 && a.below.first == a {
-			a.below.delete(a.below.first)
+	for _, a := range *c.above {
+		if a.below.len() == 1 && (*a.below)[0] == a {
+			a.below.delete((*a.below)[0])
 		}
 		a.below.add(c)
 		neighborInfoAboveBelow(a, a.Cell.below.ref(c))
@@ -108,22 +108,22 @@ func (d *InMAP) neighbors(c *Cell) {
 
 	// Below
 	c.below = getCells(d.index, abovebelowbox, c.Layer-1)
-	for b := c.below.first; b != nil; b = b.next {
-		if b.above.len == 1 && b.above.first.boundary {
-			d.topBoundary.delete(b.above.first)
-			b.above.delete(b.above.first)
+	for _, b := range *c.below {
+		if b.above.len() == 1 && (*b.above)[0].boundary {
+			d.topBoundary.delete((*b.above)[0])
+			b.above.delete((*b.above)[0])
 		}
 		b.above.add(c)
 		neighborInfoAboveBelow(b, b.Cell.above.ref(c))
 	}
 	if c.Layer == 0 {
-		ref := c.below.add(c) // Reflective boundary at ground level.
+		ref := (*c).below.add(c) // Reflective boundary at ground level.
 		neighborInfoBoundaryTopBottom(ref)
 	}
 
 	// Ground level.
 	c.groundLevel = getCells(d.index, abovebelowbox, 0)
-	for g := c.groundLevel.first; g != nil; g = g.next {
+	for _, g := range *c.groundLevel {
 		neighborInfoGroundLevel(c, g)
 	}
 	// Find the cells that this cell is the ground level for.
@@ -231,28 +231,28 @@ func neighborInfoGroundLevel(c *Cell, cr *cellRef) {
 // dereferenceNeighbors removes any references to this cell that exist in its
 // neighbors.
 func (c *Cell) dereferenceNeighbors(d *InMAP) {
-	for w := c.west.first; w != nil; w = w.next {
+	for _, w := range *c.west {
 		if w.boundary {
 			d.westBoundary.deleteCell(w.Cell)
 		} else {
 			w.east.deleteCell(c)
 		}
 	}
-	for e := c.east.first; e != nil; e = e.next {
+	for _, e := range *c.east {
 		if e.boundary {
 			d.eastBoundary.deleteCell(e.Cell)
 		} else {
 			e.west.deleteCell(c)
 		}
 	}
-	for s := c.south.first; s != nil; s = s.next {
+	for _, s := range *c.south {
 		if s.boundary {
 			d.southBoundary.deleteCell(s.Cell)
 		} else {
 			s.north.deleteCell(c)
 		}
 	}
-	for n := c.north.first; n != nil; n = n.next {
+	for _, n := range *c.north {
 		if n.boundary {
 			d.northBoundary.deleteCell(n.Cell)
 		} else {
@@ -260,11 +260,11 @@ func (c *Cell) dereferenceNeighbors(d *InMAP) {
 		}
 	}
 	if c.Layer != 0 { // We don't worry about dereferencing below ground level cells.
-		for b := c.below.first; b != nil; b = b.next {
+		for _, b := range *c.below {
 			b.above.deleteCell(c)
 		}
 	}
-	for a := c.above.first; a != nil; a = a.next {
+	for _, a := range *c.above {
 		if a.boundary {
 			d.topBoundary.deleteCell(a.Cell)
 		} else {

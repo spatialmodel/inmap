@@ -318,7 +318,7 @@ func SetTimestepCFL() DomainManipulator {
 		const Cmax = 1.0
 		d.Dt = math.Inf(1)
 		sqrt3 := math.Pow(3., 0.5)
-		for c := d.cells.first; c != nil; c = c.next {
+		for _, c := range *d.cells {
 			// Advection time step
 			dt1 := Cmax / sqrt3 /
 				max((math.Abs(c.UAvg)+c.UDeviation*2)/c.Dx,
@@ -342,7 +342,7 @@ func harmonicMean(a, b float64) float64 {
 // toArray converts cell data for variable varName into a regular array.
 // If layer is less than zero, data for all layers is returned.
 func (d *InMAP) toArray(varName string, layer int) []float64 {
-	o := make([]float64, 0, d.cells.len)
+	o := make([]float64, 0, d.cells.len())
 	cells := d.cells.array()
 	for _, c := range cells {
 		c.mutex.RLock()
@@ -417,7 +417,7 @@ func (d *InMAP) getUnits(varName string) string {
 		return "deaths/grid cell"
 	}
 	// Everything else
-	t := reflect.TypeOf(*d.cells.first.Cell)
+	t := reflect.TypeOf(*(*d.cells)[0].Cell)
 	ftype, ok := t.FieldByName(varName)
 	if ok {
 		return ftype.Tag.Get("units")
@@ -429,7 +429,7 @@ func (d *InMAP) getUnits(varName string) string {
 // if WebMap is true, it returns the geometry in web mercator projection,
 // otherwise it returns the native grid projection.
 func (d *InMAP) GetGeometry(layer int, webMap bool) []geom.Polygonal {
-	o := make([]geom.Polygonal, 0, d.cells.len)
+	o := make([]geom.Polygonal, 0, d.cells.len())
 	cells := d.cells.array()
 	for _, c := range cells {
 		c.mutex.RLock()
