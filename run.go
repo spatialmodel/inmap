@@ -239,7 +239,7 @@ func SteadyStateConvergenceCheck(numIterations int, popGridColumn string, c chan
 				var converged bool
 				// calculate total mass.
 				for _, c := range *d.cells {
-					sum += c.Cf[ii] //* c.Volume
+					sum += c.Cf[ii] * c.Volume
 				}
 				if bias, converged = checkConvergence(sum, oldSum[ii*2], tolerance); !converged {
 					timeToQuit = false

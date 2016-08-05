@@ -137,6 +137,7 @@ func (c *Cell) before(c2 *Cell) bool {
 
 	icent := c.Centroid()
 	jcent := c2.Centroid()
+
 	if icent.X != jcent.X {
 		return icent.X < jcent.X
 	}

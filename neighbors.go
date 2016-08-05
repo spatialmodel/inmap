@@ -274,7 +274,8 @@ func (c *Cell) dereferenceNeighbors(d *InMAP) {
 
 	// Dereference the cells that this cell is the ground level for.
 	if c.Layer == 0 {
-		for _, ccI := range d.index.SearchIntersect(c.Centroid().Bounds()) {
+		r := newNeighborRect(c.Bounds(), aboveBelow)
+		for _, ccI := range d.index.SearchIntersect(r) {
 			cc := ccI.(*Cell)
 			if cc.Layer > 0 {
 				cc.groundLevel.deleteCell(c)

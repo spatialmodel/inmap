@@ -325,7 +325,7 @@ func (config *VarGridConfig) RegularGrid(data *CTMData, pop *Population, popInde
 				}
 			}
 		}
-		err = d.addCells(config, indices, layers, data, pop, mort, emis, webMapTrans)
+		err = d.addCells(config, indices, layers, nil, data, pop, mort, emis, webMapTrans)
 		if err != nil {
 			return err
 		}
@@ -373,6 +373,7 @@ func (config *VarGridConfig) MutateGrid(divideRule GridMutator, data *CTMData, p
 			continueMutating = false
 			var newCellIndices [][][2]int
 			var newCellLayers []int
+			var newCellConc [][]float64
 			var cellsToDelete []*cellRef
 			for _, cell := range *d.cells {
 				if len(cell.Index) < len(config.Xnests) {
@@ -393,6 +394,7 @@ func (config *VarGridConfig) MutateGrid(divideRule GridMutator, data *CTMData, p
 								newIndex[len(newIndex)-1] = [2]int{ii, jj}
 								newCellIndices = append(newCellIndices, newIndex)
 								newCellLayers = append(newCellLayers, cell.Layer)
+								newCellConc = append(newCellConc, cell.Cf)
 							}
 						}
 					}
@@ -407,8 +409,8 @@ func (config *VarGridConfig) MutateGrid(divideRule GridMutator, data *CTMData, p
 			}
 
 			// Add new cells.
-			err = d.addCells(config, newCellIndices, newCellLayers, data, pop, mort,
-				emis, webMapTrans)
+			err = d.addCells(config, newCellIndices, newCellLayers, newCellConc,
+				data, pop, mort, emis, webMapTrans)
 			if err != nil {
 				return err
 			}
@@ -425,8 +427,8 @@ func (config *VarGridConfig) MutateGrid(divideRule GridMutator, data *CTMData, p
 }
 
 func (d *InMAP) addCells(config *VarGridConfig, newCellIndices [][][2]int,
-	newCellLayers []int, data *CTMData, pop *Population, mort *MortalityRates,
-	emis *Emissions, webMapTrans proj.Transformer) error {
+	newCellLayers []int, conc [][]float64, data *CTMData, pop *Population,
+	mort *MortalityRates, emis *Emissions, webMapTrans proj.Transformer) error {
 	type cellErr struct {
 		cell *Cell
 		err  error
@@ -439,7 +441,12 @@ func (d *InMAP) addCells(config *VarGridConfig, newCellIndices [][][2]int,
 		go func(p int) {
 			for i := p; i < len(newCellIndices); i += nprocs {
 				ii := newCellIndices[i]
-				cell, err2 := config.createCell(data, pop, d.popIndices, mort, ii, newCellLayers[i], webMapTrans)
+				var conci []float64
+				if conc != nil {
+					conci = conc[i]
+				}
+				cell, err2 := config.createCell(data, pop, d.popIndices, mort, ii,
+					newCellLayers[i], conci, webMapTrans)
 				cellErrChan <- cellErr{cell: cell, err: err2}
 			}
 		}(p)
@@ -585,7 +592,7 @@ func (p *PopConcMutator) Mutate() GridMutator {
 // and then checks the total number of deaths in the population popGridColumn
 // calculated by the simulation.
 // If the number of deaths is more than 0.1% different than the previous
-// check, the threshold value is recursively divided by 2 until it is assured
+// check, the threshold value is recursively divided by 3 until it is assured
 // continuing the simulation will produce addtional grid cells,
 // and the Done field of the InMAP object is set to false so the simulation
 // can continue.
@@ -604,7 +611,7 @@ func (p *PopConcMutator) AdjustThreshold(msgChan chan string) DomainManipulator 
 		}
 		oldDeaths = deaths
 
-		p.popConcThreshold /= 2 // make sure we're changing the threshold.
+		p.popConcThreshold /= 3 // make sure we're changing the threshold.
 		divideRule := p.Mutate()
 		totalMass, totalPopulation := d.totalMassPopulation(p.config.PopGridColumn)
 		// Make sure that we're setting a threshold that will cause the cells to divide.
@@ -621,7 +628,7 @@ func (p *PopConcMutator) AdjustThreshold(msgChan chan string) DomainManipulator 
 			if willDivide {
 				break
 			}
-			p.popConcThreshold /= 2
+			p.popConcThreshold /= 3
 		}
 
 		if msgChan != nil {
@@ -659,7 +666,9 @@ func (config *VarGridConfig) cellGeometry(index [][2]int) geom.Polygonal {
 // createCell creates a new grid cell. If any of the census shapes
 // that intersect the cell are above the population density threshold,
 // then the grid cell is also set to being above the density threshold.
-func (config *VarGridConfig) createCell(data *CTMData, pop *Population, popIndices PopIndices, mort *MortalityRates, index [][2]int, layer int, webMapTrans proj.Transformer) (*Cell, error) {
+// If conc != nil, the concentration data for the new cell will be set to conc.
+func (config *VarGridConfig) createCell(data *CTMData, pop *Population, popIndices PopIndices,
+	mort *MortalityRates, index [][2]int, layer int, conc []float64, webMapTrans proj.Transformer) (*Cell, error) {
 
 	cell := new(Cell)
 	cell.PopData = make([]float64, len(popIndices))
@@ -686,6 +695,11 @@ func (config *VarGridConfig) createCell(data *CTMData, pop *Population, popIndic
 		return nil, err
 	}
 	cell.WebMapGeom = gg.(geom.Polygonal)
+
+	if conc != nil {
+		copy(cell.Cf, conc)
+		copy(cell.Ci, conc)
+	}
 
 	return cell, nil
 }

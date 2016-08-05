@@ -53,7 +53,7 @@ var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Run the model.",
 	Long: "run runs an InMAP simulation. Use the subcommands specified below to " +
-		" choose a run mode. (Currently 'steady' is the only avaible run mode.)",
+		" choose a run mode. (Currently 'steady' is the only available run mode.)",
 }
 
 // steadyCmd is a command that runs a steady-state simulation.
