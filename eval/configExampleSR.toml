@@ -97,6 +97,11 @@ PopDensityThreshold= 0.001
 # is a candidate for splitting into smaller cells.
 PopThreshold= 25000.0
 
+# PopConcThreshold is the limit for
+# Σ(|ΔConcentration|)*combinedVolume*|ΔPopulation| / {Σ(|totalMass|)*totalPopulation}.
+# See the documentation for PopConcMutator for more information.
+PopConcThreshold= 0.00000001
+
 # CensusFile is the path to the shapefile holding population information.
 CensusFile= "${GOPATH}/src/github.com/spatialmodel/inmap/testdata/census2012.shp"
 

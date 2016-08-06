@@ -88,7 +88,7 @@ func (s *Worker) Calculate(input *IOData, output *IOData) error {
 				s.CTMData, s.Pop, s.MR, input.Emis, nil)),
 		inmap.RunPeriodically(gridMutateInterval, inmap.SetTimestepCFL()),
 		inmap.SteadyStateConvergenceCheck(-1, s.Config.PopGridColumn, nil),
-		popConcMutator.AdjustThreshold(nil),
+		popConcMutator.AdjustThreshold(s.Config.PopConcThreshold, nil),
 	}
 
 	d := &inmap.InMAP{

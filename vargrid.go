@@ -55,6 +55,11 @@ type VarGridConfig struct {
 	PopDensityThreshold float64 // limit for people per unit area in the grid cell
 	PopThreshold        float64 // limit for total number of people in the grid cell
 
+	// PopConcThreshold is the limit for
+	// Σ(|ΔConcentration|)*combinedVolume*|ΔPopulation| / {Σ(|totalMass|)*totalPopulation}.
+	// See the documentation for PopConcMutator for more information.
+	PopConcThreshold float64
+
 	CensusFile          string   // Path to census shapefile
 	CensusPopColumns    []string // Shapefile fields containing populations for multiple demographics
 	PopGridColumn       string   // Name of field in shapefile to be used for determining variable grid resolution
@@ -527,8 +532,9 @@ type PopConcMutator struct {
 
 	// popConcThreshold is the limit for
 	// Σ(|ΔConcentration|)*combinedVolume*|ΔPopulation| / {Σ(|totalMass|)*totalPopulation}.
-	// It should only be set and changes by AdjustGridCriteria.
-	// See the documentation for PopConcMutator for more information.
+	// It is initially set to 1 (i.e., no grid mutations) and then reset to
+	// a user-specified value after the model converges, and then the model
+	// has to converge again.
 	popConcThreshold float64
 
 	config     *VarGridConfig
@@ -583,62 +589,24 @@ func (p *PopConcMutator) Mutate() GridMutator {
 	}
 }
 
-// AdjustThreshold decreases the InMAP.popConcThreshold
-// field until further decreases do not yield any further changes in
-// calculated health impacts. To do this, the threshold is initially set to 1,
-// and the algorithm waits until the
-// simulation has converged (i.e., the
-// Done field of the *InMAP object is true),
-// and then checks the total number of deaths in the population popGridColumn
-// calculated by the simulation.
-// If the number of deaths is more than 0.1% different than the previous
-// check, the threshold value is recursively divided by 3 until it is assured
-// continuing the simulation will produce addtional grid cells,
-// and the Done field of the InMAP object is set to false so the simulation
-// can continue.
-func (p *PopConcMutator) AdjustThreshold(msgChan chan string) DomainManipulator {
-	const tolerance = 0.001 // tolerance for convergence
-	var oldDeaths float64
+// AdjustThreshold allows the model converge without out adding any grid
+// cells, and then decreases the cell creation threshold to finalThreshold
+// so grid cells will be added and waits for the model to converge again.
+// This is useful because the model will converge faster with larger grid cells,
+// so using this function will tend to decrease overall model run time as
+// compared to initially setting the threshold to the desired value.
+func (p *PopConcMutator) AdjustThreshold(finalThreshold float64, msgChan chan string) DomainManipulator {
+	firstRun := true
 	return func(d *InMAP) error {
 		if !d.Done {
 			return nil
 		}
-		deaths := floats.Sum(d.toArray(p.config.PopGridColumn+" deaths", 0))
-
-		bias, converged := checkConvergence(deaths, oldDeaths, tolerance)
-		if !converged {
+		if firstRun {
 			d.Done = false
-		}
-		oldDeaths = deaths
-
-		p.popConcThreshold /= 3 // make sure we're changing the threshold.
-		divideRule := p.Mutate()
-		totalMass, totalPopulation := d.totalMassPopulation(p.config.PopGridColumn)
-		// Make sure that we're setting a threshold that will cause the cells to divide.
-		for {
-			willDivide := false
-			for _, cell := range *d.cells {
-				if len(cell.Index) < len(p.config.Xnests) {
-					if divideRule(cell.Cell, totalMass, totalPopulation) {
-						willDivide = true
-						break
-					}
-				}
-			}
-			if willDivide {
-				break
-			}
-			p.popConcThreshold /= 3
-		}
-
-		if msgChan != nil {
-			if d.Done {
-				msgChan <- fmt.Sprintf("Calculated deaths %.2g%% different from last "+
-					"grid threshold adjustment.", bias*100)
-			} else {
-				msgChan <- fmt.Sprintf("Calculated deaths %.2g%% different from last "+
-					"grid threshold adjustment. Continuing with new threshold=%.2g.",
-					bias*100, p.popConcThreshold)
+			p.popConcThreshold = finalThreshold
+			firstRun = false
+			if msgChan != nil {
+				msgChan <- fmt.Sprintf("The simulation has converged. Adjusting grid mutation threshold to %.2g.", finalThreshold)
 			}
 		}
 		return nil

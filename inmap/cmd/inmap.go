@@ -142,7 +142,7 @@ func Run(dynamic, createGrid bool) error {
 			inmap.RunPeriodically(gridMutateInterval, inmap.SetTimestepCFL()),
 			inmap.SteadyStateConvergenceCheck(Config.NumIterations,
 				Config.VarGrid.PopGridColumn, cConverge),
-			popConcMutator.AdjustThreshold(msgLog),
+			popConcMutator.AdjustThreshold(Config.VarGrid.PopConcThreshold, msgLog),
 		}
 	}
 

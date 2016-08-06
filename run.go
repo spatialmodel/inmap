@@ -197,7 +197,8 @@ func (c ConvergenceStatus) String() string {
 // that number of iterations have completed. Otherwise, the simulation has
 // finished if the change in mass and population-weighted concentration
 // of each pollutant in the domain since the
-// last check are both less than 0.1%.
+// last check are both less than 0.1%. Checks occur every 3 hours of
+// simulation time.
 // popGridColumn is the name of the population type used to determine grid
 // cell sizes as in VarGridConfig.PopGridColumn.
 // c is a channel over which the percent change between checks is
