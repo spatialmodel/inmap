@@ -256,7 +256,6 @@ func TestConcentrations(t *testing.T) {
 
 	for i, ee := range e {
 		c, err := sr.Concentrations(&ee)
-		fmt.Printf("%#v,\n", c)
 		if err != nil {
 			if want[i].err == nil {
 				t.Errorf("test %d: %v", i, err)
