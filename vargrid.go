@@ -508,9 +508,17 @@ type GridMutator func(cell *Cell, totalMass, totalPopulation float64) bool
 
 // PopulationMutator returns a function that determines whether a grid cell
 // should be split by determining whether either the cell population or
-// maximum poulation density are above the cutoffs specified in config.
-func PopulationMutator(config *VarGridConfig, popIndices PopIndices) GridMutator {
+// maximum poulation density are above the thresholds specified in config.
+func PopulationMutator(config *VarGridConfig, popIndices PopIndices) (GridMutator, error) {
 	popIndex := popIndices[config.PopGridColumn]
+	if config.PopThreshold <= 0 {
+		return nil, fmt.Errorf("PopThreshold=%g. It needs to be set to a positive value.",
+			config.PopConcThreshold)
+	}
+	if config.PopDensityThreshold <= 0 {
+		return nil, fmt.Errorf("PopDensityThreshold=%g. It needs to be set to a positive value.",
+			config.PopDensityThreshold)
+	}
 	return func(cell *Cell, _, _ float64) bool {
 		population := 0.
 		aboveDensityThreshold := false
@@ -522,7 +530,7 @@ func PopulationMutator(config *VarGridConfig, popIndices PopIndices) GridMutator
 		}
 		return cell.Layer < config.HiResLayers &&
 			(aboveDensityThreshold || population > config.PopThreshold)
-	}
+	}, nil
 }
 
 // PopConcMutator is a holds an algorithm for dividing grid cells based on
@@ -598,6 +606,9 @@ func (p *PopConcMutator) Mutate() GridMutator {
 func (p *PopConcMutator) AdjustThreshold(finalThreshold float64, msgChan chan string) DomainManipulator {
 	firstRun := true
 	return func(d *InMAP) error {
+		if finalThreshold <= 0 {
+			return fmt.Errorf("PopConcThreshold=%g. It needs to be set to a positive value.", finalThreshold)
+		}
 		if !d.Done {
 			return nil
 		}

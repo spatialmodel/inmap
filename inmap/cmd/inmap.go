@@ -100,11 +100,15 @@ func Run(dynamic, createGrid bool) error {
 	var initFuncs, runFuncs []inmap.DomainManipulator
 	if !dynamic {
 		if createGrid {
+			var mutator inmap.GridMutator
+			mutator, err = inmap.PopulationMutator(&Config.VarGrid, popIndices)
+			if err != nil {
+				return err
+			}
 			initFuncs = []inmap.DomainManipulator{
 				//inmap.HTMLUI(Config.HTTPAddress),
 				Config.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, emis),
-				Config.VarGrid.MutateGrid(inmap.PopulationMutator(&Config.VarGrid, popIndices),
-					ctmData, pop, mr, emis, msgLog),
+				Config.VarGrid.MutateGrid(mutator, ctmData, pop, mr, emis, msgLog),
 				inmap.SetTimestepCFL(),
 			}
 		} else { // pre-created static grid

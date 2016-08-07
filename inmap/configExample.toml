@@ -112,7 +112,7 @@ CensusFile= "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testPopu
 CensusPopColumns= ["TotalPop", "WhiteNoLat", "Black", "Native", "Asian", "Latino"]
 
 # PopGridColumn is the name of the field in CensusFile that contains the data
-# that should be compared to PopCutoff and PopDensityCutoff when determining
+# that should be compared to PopThreshold and PopDensityThreshold when determining
 # if a grid cell should be split. It should typically be one of the fields
 # in CensusPopColumns.
 PopGridColumn= "TotalPop"

@@ -73,11 +73,14 @@ func Grid() error {
 
 	log.Println("Creating grid")
 
+	mutator, err := inmap.PopulationMutator(&Config.VarGrid, popIndices)
+	if err != nil {
+		return err
+	}
 	d := &inmap.InMAP{
 		InitFuncs: []inmap.DomainManipulator{
 			Config.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, nil),
-			Config.VarGrid.MutateGrid(inmap.PopulationMutator(&Config.VarGrid, popIndices),
-				ctmData, pop, mr, nil, msgLog),
+			Config.VarGrid.MutateGrid(mutator, ctmData, pop, mr, nil, msgLog),
 			inmap.Save(w),
 		},
 	}

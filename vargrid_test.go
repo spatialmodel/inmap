@@ -34,10 +34,14 @@ func TestVarGridCreate(t *testing.T) {
 		data: rtree.NewTree(25, 50),
 	}
 
+	mutator, err := PopulationMutator(cfg, popIndices)
+	if err != nil {
+		t.Error(err)
+	}
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
-			cfg.MutateGrid(PopulationMutator(cfg, popIndices), ctmdata, pop, mr, emis, nil),
+			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
 		},
 	}
 	if err := d.Init(); err != nil {
@@ -527,10 +531,14 @@ func TestGetGeometry(t *testing.T) {
 		data: rtree.NewTree(25, 50),
 	}
 
+	mutator, err := PopulationMutator(cfg, popIndices)
+	if err != nil {
+		t.Error(err)
+	}
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
-			cfg.MutateGrid(PopulationMutator(cfg, popIndices), ctmdata, pop, mr, emis, nil),
+			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
 		},
 	}
 	if err := d.Init(); err != nil {

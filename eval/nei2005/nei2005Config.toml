@@ -60,17 +60,17 @@ HiResLayers= 8
 # GridProj gives projection info for the CTM grid in Proj4 or WKT format.
 GridProj= "+proj=lcc +lat_1=33.000000 +lat_2=45.000000 +lat_0=40.000000 +lon_0=-97.000000 +x_0=0 +y_0=0 +a=6370997.000000 +b=6370997.000000 +to_meter=1"
 
-# PopDensityCutoff is a limit for people per unit area in a grid cell
+# PopDensityThreshold is a limit for people per unit area in a grid cell
 # (units will typically be either people / m^2 or people / degree^2,
 # depending on the spatial projection of the model grid). If
 # the population density in a grid cell is above this level, the cell in question
 # is a candidate for splitting into smaller cells.
-PopDensityCutoff= 0.0055
+PopDensityThreshold= 0.0055
 
-# PopCutoff is a limit for the total number of people in a grid cell.
+# PopThreshold is a limit for the total number of people in a grid cell.
 # If the total population in a grid cell is above this level, the cell in question
 # is a candidate for splitting into smaller cells.
-PopCutoff= 40000.0
+PopThreshold= 40000.0
 
 # PopConcThreshold is the limit for
 # Σ(|ΔConcentration|)*combinedVolume*|ΔPopulation| / {Σ(|totalMass|)*totalPopulation}.
@@ -86,7 +86,7 @@ CensusFile= "${censusFile}"
 CensusPopColumns= ["TotalPop", "WhiteNoLat", "Black", "Native", "Asian", "Latino"]
 
 # PopGridColumn is the name of the field in CensusFile that contains the data
-# that should be compared to PopCutoff and PopDensityCutoff when determining
+# that should be compared to PopThreshold and PopDensityThreshold when determining
 # if a grid cell should be split. It should typically be one of the fields
 # in CensusPopColumns.
 PopGridColumn= "TotalPop"

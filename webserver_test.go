@@ -30,13 +30,17 @@ func TestVerticalProfile(t *testing.T) {
 	cfg, ctmdata, pop, popIndices, mr := VarGridData()
 	emis := NewEmissions()
 
+	mutator, err := PopulationMutator(cfg, popIndices)
+	if err != nil {
+		t.Error(err)
+	}
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
-			cfg.MutateGrid(PopulationMutator(cfg, popIndices), ctmdata, pop, mr, emis, nil),
+			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
 		},
 	}
-	if err := d.Init(); err != nil {
+	if err = d.Init(); err != nil {
 		t.Error(err)
 	}
 

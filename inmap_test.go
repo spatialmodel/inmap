@@ -37,11 +37,15 @@ func TestCellAlignment(t *testing.T) {
 	emis := &Emissions{
 		data: rtree.NewTree(25, 50),
 	}
+	mutator, err := PopulationMutator(cfg, popIndices)
+	if err != nil {
+		t.Error(err)
+	}
 
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
-			cfg.MutateGrid(PopulationMutator(cfg, popIndices), ctmdata, pop, mr, emis, nil),
+			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
 		},
 	}
 	if err := d.Init(); err != nil {
@@ -242,10 +246,14 @@ func TestConvectiveMixing(t *testing.T) {
 	cfg, ctmdata, pop, popIndices, mr := VarGridData()
 	emis := NewEmissions()
 
+	mutator, err := PopulationMutator(cfg, popIndices)
+	if err != nil {
+		t.Error(err)
+	}
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
-			cfg.MutateGrid(PopulationMutator(cfg, popIndices), ctmdata, pop, mr, emis, nil),
+			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
 		},
 	}
 	if err := d.Init(); err != nil {
@@ -279,10 +287,14 @@ func TestMixing(t *testing.T) {
 		},
 	}) // ground level emissions
 
+	mutator, err := PopulationMutator(cfg, popIndices)
+	if err != nil {
+		t.Error(err)
+	}
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
-			cfg.MutateGrid(PopulationMutator(cfg, popIndices), ctmdata, pop, mr, emis, nil),
+			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
 			SetTimestepCFL(),
 		},
 		RunFuncs: []DomainManipulator{
@@ -335,10 +347,14 @@ func TestChemistry(t *testing.T) {
 		Geom: geom.Point{X: -3999, Y: -3999.},
 	}) // ground level emissions
 
+	mutator, err := PopulationMutator(cfg, popIndices)
+	if err != nil {
+		t.Error(err)
+	}
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
-			cfg.MutateGrid(PopulationMutator(cfg, popIndices), ctmdata, pop, mr, emis, nil),
+			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
 			SetTimestepCFL(),
 		},
 		RunFuncs: []DomainManipulator{
@@ -380,10 +396,14 @@ func TestAdvection(t *testing.T) {
 		data: rtree.NewTree(25, 50),
 	}
 
+	mutator, err := PopulationMutator(cfg, popIndices)
+	if err != nil {
+		t.Error(err)
+	}
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
-			cfg.MutateGrid(PopulationMutator(cfg, popIndices), ctmdata, pop, mr, emis, nil),
+			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
 			SetTimestepCFL(),
 		},
 		RunFuncs: []DomainManipulator{
@@ -439,10 +459,14 @@ func TestMeanderMixing(t *testing.T) {
 		data: rtree.NewTree(25, 50),
 	}
 
+	mutator, err := PopulationMutator(cfg, popIndices)
+	if err != nil {
+		t.Error(err)
+	}
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
-			cfg.MutateGrid(PopulationMutator(cfg, popIndices), ctmdata, pop, mr, emis, nil),
+			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
 			SetTimestepCFL(),
 		},
 		RunFuncs: []DomainManipulator{
@@ -584,10 +608,14 @@ func BenchmarkRun(b *testing.B) {
 		Geom: geom.Point{X: -3999, Y: -3999.},
 	}) // ground level emissions
 
+	mutator, err := PopulationMutator(cfg, popIndices)
+	if err != nil {
+		b.Error(err)
+	}
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
-			cfg.MutateGrid(PopulationMutator(cfg, popIndices), ctmdata, pop, mr, emis, nil),
+			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
 			SetTimestepCFL(),
 		},
 		RunFuncs: []DomainManipulator{
@@ -603,10 +631,10 @@ func BenchmarkRun(b *testing.B) {
 			SteadyStateConvergenceCheck(1000, cfg.PopGridColumn, nil),
 		},
 	}
-	if err := d.Init(); err != nil {
+	if err = d.Init(); err != nil {
 		b.Error(err)
 	}
-	if err := d.Run(); err != nil {
+	if err = d.Run(); err != nil {
 		b.Error(err)
 	}
 
@@ -628,10 +656,14 @@ func TestDryDeposition(t *testing.T) {
 		data: rtree.NewTree(25, 50),
 	}
 
+	mutator, err := PopulationMutator(cfg, popIndices)
+	if err != nil {
+		t.Error(err)
+	}
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
-			cfg.MutateGrid(PopulationMutator(cfg, popIndices), ctmdata, pop, mr, emis, nil),
+			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
 			SetTimestepCFL(),
 		},
 		RunFuncs: []DomainManipulator{
@@ -671,10 +703,14 @@ func TestWetDeposition(t *testing.T) {
 		data: rtree.NewTree(25, 50),
 	}
 
+	mutator, err := PopulationMutator(cfg, popIndices)
+	if err != nil {
+		t.Error(err)
+	}
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
-			cfg.MutateGrid(PopulationMutator(cfg, popIndices), ctmdata, pop, mr, emis, nil),
+			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
 			SetTimestepCFL(),
 		},
 		RunFuncs: []DomainManipulator{
