@@ -26,7 +26,7 @@ func TestNEI2005Dynamic(t *testing.T) {
 	dynamic := true
 	createGrid := false // this isn't used for the dynamic grid
 	os.Setenv("InMAPRunType", "dynamic")
-	if err := cmd.Startup("nei2005/nei2005Config.toml"); err != nil {
+	if err := cmd.Startup("nei2005Config.toml"); err != nil {
 		t.Fatal(err)
 	}
 	if err := cmd.Run(dynamic, createGrid); err != nil {
@@ -48,7 +48,7 @@ func TestNEI2005Static(t *testing.T) {
 	dynamic := false
 	createGrid := false
 	os.Setenv("InMAPRunType", "static")
-	if err := cmd.Startup("nei2005/nei2005Config.toml"); err != nil {
+	if err := cmd.Startup("nei2005Config.toml"); err != nil {
 		t.Fatal(err)
 	}
 	if err := cmd.Run(dynamic, createGrid); err != nil {
