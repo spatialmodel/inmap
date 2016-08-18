@@ -24,6 +24,9 @@ import (
 )
 
 func TestWRF2InMAP(t *testing.T) {
+	if testing.Short() {
+		return
+	}
 	err := flag.Set("config", "configExample.json")
 	if err != nil {
 		t.Fatal(err)
