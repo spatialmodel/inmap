@@ -1,4 +1,4 @@
-package rpccluster
+package sr
 
 import (
 	"encoding/csv"
@@ -57,15 +57,14 @@ func (c *Cluster) NewWorker(addr string) error {
 	if err != nil {
 		return fmt.Errorf("while dialing %v: %v", addr, err)
 	}
-	for req := range c.requestChan {
-		err = client.Call(req.service, req.requestPayload, req.resultPayload)
-		if err != nil {
-			return err
+	go func() {
+		for req := range c.requestChan {
+			req.err = client.Call(req.service, req.requestPayload, &req.resultPayload)
+			req.returnChan <- req
 		}
-		req.returnChan <- req
-	}
-	// kill the slave after we're done with it.
-	client.Call(c.exitService, 0, 0)
+		// kill the slave after we're done with it.
+		client.Call(c.exitService, 0, 0)
+	}()
 	return nil
 }
 

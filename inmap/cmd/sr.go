@@ -23,7 +23,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/ctessum/rpccluster"
 	"github.com/kardianos/osext"
 	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/sr"
@@ -67,7 +66,7 @@ var srCmd = &cobra.Command{
 
 // RunSR runs the SR matrix creator.
 func RunSR(begin, end int, layers []int) error {
-	nodes, err := rpccluster.PBSNodes()
+	nodes, err := sr.PBSNodes()
 	if err != nil {
 		log.Printf("Problem reading $PBS_NODEFILE: %v. Continuing on local machine.", err)
 	}
@@ -101,7 +100,7 @@ var workerCmd = &cobra.Command{
 		if err != nil {
 			return labelErr(err)
 		}
-		return labelErr(worker.Listen(sr.RPCPort))
+		return labelErr(sr.WorkerListen(worker, sr.RPCPort))
 	},
 }
 

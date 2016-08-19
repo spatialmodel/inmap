@@ -16,10 +16,8 @@ You should have received a copy of the GNU General Public License
 along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-/*
-Package inmap is a air quality model for predicting health impacts of air
-pollutant emissions.
-*/
+/*Package inmap is an air quality model for predicting health impacts of air
+pollutant emissions.*/
 package inmap
 
 //go:generate go run internal/autogen.go

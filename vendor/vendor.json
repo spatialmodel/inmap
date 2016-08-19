@@ -139,12 +139,6 @@
 			"revisionTime": "2016-05-19T00:32:08Z"
 		},
 		{
-			"checksumSHA1": "nr4lOETxcD9PxnfqYJc492k8Ilg=",
-			"path": "github.com/ctessum/rpccluster",
-			"revision": "8fa56ab2e2983131eb9c5191d8ce2e5a5da79a45",
-			"revisionTime": "2016-06-18T02:54:02Z"
-		},
-		{
 			"checksumSHA1": "w01kP96jx5UAf+uWB8m0w8Xghas=",
 			"path": "github.com/golang/freetype",
 			"revision": "38b4c392adc5eed94207994c4848fff99f4ac234",

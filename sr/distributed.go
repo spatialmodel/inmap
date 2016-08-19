@@ -50,13 +50,13 @@ type Worker struct {
 
 // IOData holds the input to and output from a simulation request.
 type IOData struct {
-	Emis       *inmap.Emissions
+	Emis       []*inmap.EmisRecord
 	Output     map[string][]float64
 	Row, Layer int
 }
 
 // Result allows a local worker to look like a distributed request
-func (io *IOData) Result() (interface{}, error) {
+func (io *IOData) Result() (*IOData, error) {
 	return io, nil
 }
 
@@ -74,8 +74,13 @@ func (s *Worker) Calculate(input *IOData, output *IOData) error {
 		inmap.Chemistry(),
 	)
 
+	emis := inmap.NewEmissions()
+	for _, e := range input.Emis {
+		emis.Add(e)
+	}
+
 	initFuncs := []inmap.DomainManipulator{
-		s.Config.RegularGrid(s.CTMData, s.Pop, s.PopIndices, s.MR, input.Emis),
+		s.Config.RegularGrid(s.CTMData, s.Pop, s.PopIndices, s.MR, emis),
 		inmap.SetTimestepCFL(),
 	}
 	popConcMutator := inmap.NewPopConcMutator(s.Config, s.PopIndices)
@@ -85,7 +90,7 @@ func (s *Worker) Calculate(input *IOData, output *IOData) error {
 		scienceFuncs,
 		inmap.RunPeriodically(gridMutateInterval,
 			s.Config.MutateGrid(popConcMutator.Mutate(),
-				s.CTMData, s.Pop, s.MR, input.Emis, nil)),
+				s.CTMData, s.Pop, s.MR, emis, nil)),
 		inmap.RunPeriodically(gridMutateInterval, inmap.SetTimestepCFL()),
 		inmap.SteadyStateConvergenceCheck(-1, s.Config.PopGridColumn, nil),
 		popConcMutator.AdjustThreshold(s.Config.PopConcThreshold, nil),
@@ -124,7 +129,7 @@ func (s *Worker) Calculate(input *IOData, output *IOData) error {
 
 // Exit shuts down the worker. It meets the requirements for
 // use with rpc.Call.
-func (s *Worker) Exit(in, out interface{}) error {
+func (s *Worker) Exit(in, out *Empty) error {
 	os.Exit(0)
 	return nil
 }
@@ -154,8 +159,8 @@ func NewWorker(config *inmap.VarGridConfig, InMAPDataFile string, GridGeom []geo
 	return s, nil
 }
 
-// Listen directs s to start listening for requests over RPCPort
-func (s *Worker) Listen(RPCPort string) error {
+// WorkerListen directs s to start listening for requests over RPCPort
+func WorkerListen(s *Worker, RPCPort string) error {
 	rpc.Register(s)
 	rpc.HandleHTTP()
 	l, err := net.Listen("tcp", ":"+RPCPort)

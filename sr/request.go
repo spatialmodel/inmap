@@ -1,4 +1,4 @@
-package rpccluster
+package sr
 
 import "golang.org/x/net/context"
 
@@ -6,8 +6,8 @@ import "golang.org/x/net/context"
 // cluster
 type Request struct {
 	ctx            context.Context
-	requestPayload interface{}
-	resultPayload  interface{}
+	requestPayload *IOData
+	resultPayload  IOData
 	service        string
 	requestChan    chan *Request
 	returnChan     chan *Request
@@ -17,7 +17,8 @@ type Request struct {
 // NewRequest creates a new request where service is the RPC service that
 // should be called and requestPayload is the input data
 // that will be used to generate the results.
-func (c *Cluster) NewRequest(ctx context.Context, service string, requestPayload interface{}) *Request {
+// The result of the RPC call must be of the same type as the request payload.
+func (c *Cluster) NewRequest(ctx context.Context, service string, requestPayload *IOData) *Request {
 	return &Request{
 		requestPayload: requestPayload,
 		returnChan:     make(chan *Request),
@@ -35,7 +36,7 @@ func (r *Request) Send() {
 // Result waits for the result, and returns
 // the result and any errors that occurred while
 // processing. Result should be called after send.
-func (r *Request) Result() (interface{}, error) {
+func (r *Request) Result() (*IOData, error) {
 	rr := <-r.returnChan
-	return rr.resultPayload, rr.err
+	return &rr.resultPayload, rr.err
 }

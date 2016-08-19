@@ -27,7 +27,6 @@ import (
 	"strings"
 
 	"bitbucket.org/ctessum/cdf"
-	"github.com/ctessum/rpccluster"
 	"github.com/spatialmodel/inmap"
 	"golang.org/x/net/context"
 )
@@ -35,7 +34,7 @@ import (
 // SR can be used to create a source-receptor matrix.
 type SR struct {
 	d           *inmap.InMAP
-	c           *rpccluster.Cluster
+	c           *Cluster
 	numNodes    int     // The number of nodes for performing calculations.
 	localWorker *Worker // Worker for local processing where there are 0 nodes.
 }
@@ -60,7 +59,7 @@ func NewSR(varGridFile, inmapDataFile, command, logDir string, config *inmap.Var
 				inmap.Load(r, config, nil),
 			},
 		},
-		c:        rpccluster.NewCluster(command, logDir, "Worker.Exit", RPCPort),
+		c:        NewCluster(command, logDir, "Worker.Exit", RPCPort),
 		numNodes: len(nodes),
 	}
 	if err = sr.d.Init(); err != nil {
@@ -110,7 +109,7 @@ func (sr *SR) layerGridCells(layers []int) (int, error) {
 }
 
 type resulter interface {
-	Result() (interface{}, error)
+	Result() (*IOData, error)
 }
 
 // Run runs the simulations necessary to create a source-receptor matrix and writes out the
@@ -169,19 +168,19 @@ func (sr *SR) Run(outfile string, layers []int, begin, end int) error {
 }
 
 func (sr *SR) newRequestPayload(i int, cell *inmap.Cell) *IOData {
-
 	requestPayload := new(IOData)
 	requestPayload.Row = i
-	requestPayload.Emis = inmap.NewEmissions()
-	requestPayload.Emis.Add(&inmap.EmisRecord{
-		Height: cell.LayerHeight + cell.Dz/2,
-		VOC:    1, // all units = μg/s
-		NOx:    1,
-		NH3:    1,
-		SOx:    1,
-		PM25:   1,
-		Geom:   cell.Centroid(),
-	})
+	requestPayload.Emis = []*inmap.EmisRecord{
+		&inmap.EmisRecord{
+			Height: cell.LayerHeight + cell.Dz/2,
+			VOC:    1, // all units = μg/s
+			NOx:    1,
+			NH3:    1,
+			SOx:    1,
+			PM25:   1,
+			Geom:   cell.Centroid(),
+		},
+	}
 	return requestPayload
 }
 
@@ -315,12 +314,11 @@ func (sr *SR) writeResults(outfile string, layers []int, requestChan chan result
 	}
 
 	for req := range requestChan {
-		resultI, err := req.Result()
+		result, err := req.Result()
 		if err != nil {
 			errChan <- fmt.Errorf("SR simulation: %v", err)
 			return
 		}
-		result := resultI.(*IOData)
 
 		for _, v := range outputVars {
 			data := result.Output[v]
