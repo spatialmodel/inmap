@@ -76,7 +76,7 @@ func RunSR(begin, end int, layers []int) error {
 	if err != nil {
 		return err
 	}
-	command += " worker --rpcport=" + sr.RPCPort
+	command = fmt.Sprintf("%s  worker --config=%s --rpcport=%s", command, configFile, sr.RPCPort)
 
 	sr, err := sr.NewSR(Config.VariableGridData, Config.InMAPData, command,
 		Config.SRLogDir, &Config.VarGrid, nodes)
