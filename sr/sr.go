@@ -122,7 +122,7 @@ type resulter interface {
 func (sr *SR) Run(outfile string, layers []int, begin, end int) error {
 
 	errChan := make(chan error)
-	reqChan := make(chan resulter, sr.numNodes+1)
+	reqChan := make(chan resulter, 10*sr.numNodes+1) // make sure there is enough buffering.
 	ctx := context.TODO()
 
 	go sr.writeResults(outfile, layers, reqChan, errChan) // Start process to write results to file
