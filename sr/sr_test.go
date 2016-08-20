@@ -79,9 +79,9 @@ func TestSR(t *testing.T) {
 	}
 	outfile := "../inmap/testdata/testSR.ncf"
 	os.Remove(outfile)
-	layers := []int{0, 2}
+	layers := []int{0, 2, 4}
 	begin := 0 // layer 0
-	end := 2
+	end := -1
 	if err = sr.Run(outfile, layers, begin, end); err != nil {
 		t.Fatal(err)
 	}

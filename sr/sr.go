@@ -170,6 +170,7 @@ func (sr *SR) Run(outfile string, layers []int, begin, end int) error {
 func (sr *SR) newRequestPayload(i int, cell *inmap.Cell) *IOData {
 	requestPayload := new(IOData)
 	requestPayload.Row = i
+	requestPayload.Layer = cell.Layer
 	requestPayload.Emis = []*inmap.EmisRecord{
 		&inmap.EmisRecord{
 			Height: cell.LayerHeight + cell.Dz/2,
@@ -194,6 +195,7 @@ func (sr *SR) writeResults(outfile string, layers []int, requestChan chan result
 	}
 
 	var f *cdf.File
+	var ff *os.File
 
 	if _, err := os.Stat(outfile); err != nil { // file doesn't exist
 		log.Println("creating output file")
@@ -219,10 +221,13 @@ func (sr *SR) writeResults(outfile string, layers []int, requestChan chan result
 			[]int{len(layers), nGridCells, nGridCells, len(sr.d.Cells()), len(layers)})
 
 		h.AddVariable("layers", []string{"layers"}, []int32{0})
+		h.AddAttribute("layers", "description", "Layer indices for which the SR calculation was performed")
 
 		for _, vs := range outputVars {
 			h.AddVariable(vs, []string{"layer", "source", "receptor"},
 				[]float32{0})
+			h.AddAttribute(vs, "description", fmt.Sprintf("%s source-receptor relationships", vs))
+			h.AddAttribute(vs, "units", "μg m-3 concentration at receptor location per μg s-1 emissions at source location")
 		}
 		// InMAP data.
 		for i, v := range inmapVars {
@@ -233,11 +238,12 @@ func (sr *SR) writeResults(outfile string, layers []int, requestChan chan result
 		// Grid cell edges.
 		for _, v := range []string{"N", "S", "E", "W"} {
 			h.AddVariable(v, []string{"allcells"}, []float64{0.})
+			h.AddAttribute(v, "description", fmt.Sprintf("%s grid cell edge", v))
 		}
 
 		h.Define()
 
-		ff, err := os.Create(outfile)
+		ff, err = os.Create(outfile)
 		if err != nil {
 			errChan <- fmt.Errorf("creating SR netcdf file: %v", err)
 			return
@@ -247,7 +253,6 @@ func (sr *SR) writeResults(outfile string, layers []int, requestChan chan result
 			errChan <- fmt.Errorf("creating new SR netcdf file: %v", err)
 			return
 		}
-		defer cdf.UpdateNumRecs(ff)
 		defer ff.Close()
 
 		// Add included layers
@@ -299,7 +304,7 @@ func (sr *SR) writeResults(outfile string, layers []int, requestChan chan result
 
 	} else { // file exists.
 		log.Println("opening existing output file")
-		ff, err := os.OpenFile(outfile, os.O_RDWR, os.ModePerm)
+		ff, err = os.OpenFile(outfile, os.O_RDWR, os.ModePerm)
 		if err != nil {
 			errChan <- fmt.Errorf("opening SR netcdf file: %v", err)
 			return
@@ -309,10 +314,25 @@ func (sr *SR) writeResults(outfile string, layers []int, requestChan chan result
 			errChan <- fmt.Errorf("initializing exisiting SR netcdf file: %v", err)
 			return
 		}
-		defer cdf.UpdateNumRecs(ff)
 		defer ff.Close()
 	}
 
+	// Figure out the starting index for each layer.
+	layerStarts := make(map[int]int)
+	var il = -1
+	for i, c := range sr.d.Cells() {
+		l := c.Layer
+		if il != l {
+			il = l
+			layerStarts[l] = i
+		}
+	}
+
+	// make a map between the model layers and the SR layers
+	layerMap := make(map[int]int)
+	for i, l := range layers {
+		layerMap[l] = i
+	}
 	for req := range requestChan {
 		result, err := req.Result()
 		if err != nil {
@@ -326,8 +346,13 @@ func (sr *SR) writeResults(outfile string, layers []int, requestChan chan result
 			for i, val := range data {
 				data32[i] = float32(val)
 			}
-			begin := []int{result.Layer, result.Row, 0}
-			end := []int{result.Layer, result.Row, len(data32)}
+			l, ok := layerMap[result.Layer]
+			if !ok {
+				panic(fmt.Errorf("missing layer %d from %v", result.Layer, layerMap))
+			}
+			row := result.Row - layerStarts[result.Layer]
+			begin := []int{l, row, 0}
+			end := []int{l, row, len(data32)}
 			w := f.Writer(v, begin, end)
 			if _, err := w.Write(data32); err != nil {
 				errChan <- fmt.Errorf("writing results for for row=%v, layer=%v: %v\n",
@@ -337,5 +362,6 @@ func (sr *SR) writeResults(outfile string, layers []int, requestChan chan result
 		}
 		log.Printf("Finished writing results for row=%v, layer=%v", result.Row, result.Layer)
 	}
+	cdf.UpdateNumRecs(ff)
 	errChan <- nil
 }
