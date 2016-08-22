@@ -1,7 +1,6 @@
 package eval
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	_ "net/http/pprof" // pprof serves a performance profiler.
@@ -14,16 +13,7 @@ import (
 
 const evalDataEnv = "evaldata"
 
-var evalData string // the location of the downloaded evaluation data directory
-
 func init() {
-
-	evalData = os.Getenv(evalDataEnv)
-	if evalData == "" {
-		panic(fmt.Errorf("please set the '%s' environment variable to the location of the "+
-			"downloaded evaluation data and try again", evalDataEnv))
-	}
-
 	go func() {
 		// Start a web server for performance profiling.
 		log.Println(http.ListenAndServe("localhost:6060", nil))
@@ -33,6 +23,12 @@ func init() {
 func TestNEI2005Dynamic(t *testing.T) {
 	if testing.Short() {
 		return
+	}
+
+	evalData := os.Getenv(evalDataEnv)
+	if evalData == "" && !testing.Short() {
+		t.Fatalf("please set the '%s' environment variable to the location of the "+
+			"downloaded evaluation data and try again", evalDataEnv)
 	}
 
 	os.MkdirAll("nei2005", os.ModePerm)
@@ -57,6 +53,12 @@ func TestNEI2005Dynamic(t *testing.T) {
 func TestNEI2005Static(t *testing.T) {
 	if testing.Short() {
 		return
+	}
+
+	evalData := os.Getenv(evalDataEnv)
+	if evalData == "" && !testing.Short() {
+		t.Fatalf("please set the '%s' environment variable to the location of the "+
+			"downloaded evaluation data and try again", evalDataEnv)
 	}
 
 	os.MkdirAll("nei2005", os.ModePerm)
