@@ -12,7 +12,7 @@ Figure 1: InMAP spatial discretization of the model domain into variable resolut
 
 ## Getting InMAP
 
-Go to [releases](https://github.com/spatialmodel/inmap/releases) to download the most recent release for your type of computer. For Mac systems, download the file with "darwin" in the name. You will need both the executable program and the input data ("inmapData_xxx.zip"). All of the versions of the program are labeled "amd64" to denote that they are for 64-bit processors (i.e., all relatively recent notebook and desktop computers). It doesn't matter whether your computer processor is made by AMD or another brand, it should work either way.
+Go to [releases](https://github.com/spatialmodel/inmap/releases) to download the most recent release for your type of computer. For Mac systems, download the file with "darwin" in the name. You will need both the executable program and the input data ("evaldata_vX.X.X.zip"). All of the versions of the program are labeled "amd64" to denote that they are for 64-bit processors (i.e., all relatively recent notebook and desktop computers). It doesn't matter whether your computer processor is made by AMD or another brand, it should work either way.
 
 ### Compiling from source
 
@@ -29,18 +29,20 @@ You can also compile InMAP from its source code. It should work on most types of
 		go get github.com/spatialmodel/inmap/inmap
 	The Go language has an automatic system for finding and installing library dependencies; you may want to refer [here](http://golang.org/doc/code.html) to understand how it works.
 
-5. Optional: run the tests:
+5. Optional: run the tests and evaluations (this may take a while):
 
 		cd $GOPATH/src/github.com/spatialmodel/inmap
 		go test ./...
 
+	To only run the tests and not the evaluations, run `go test ./...  -short`.
+
 ## Running InMAP
 
-1. Make sure that you have downloaded the InMAP input data files: `InMAPData_vX.X.X.zip` from the [InMAP release page](https://github.com/spatialmodel/inmap/releases), where X.X.X corresponds to a version number.
+1. Make sure that you have downloaded the InMAP input data files: `evaldata_vX.X.X.zip` from the [InMAP release page](https://github.com/spatialmodel/inmap/releases), where X.X.X corresponds to a version number.
 
-3. Create an emissions scenario or use one of the evaluation emissions datasets available in the `InMAPEvalData_vX.X.X.zip` files on the [InMAP release page](https://github.com/spatialmodel/inmap/releases). Emissions files should be in [shapefile](http://en.wikipedia.org/wiki/Shapefile) format where the attribute columns correspond to the names of emitted pollutants. Refer [here](http://godoc.org/github.com/spatialmodel/inmap#pkg-variables) (the `EmisNames` variable) for acceptable pollutant names. Emissions units can be specified in the configuration file (discussed below) and can be either  short tons or kilograms per year. The model can handle multiple input emissions files, and emissions can be either elevated or ground level. Files with elevated emissions need to have attribute columns labeled "height", "diam", "temp", and "velocity" containing stack information in units of m, m, K, and m/s, respectively. Emissions will be allocated from the geometries in the shape file to the InMAP computational grid.
+3. Create an emissions scenario or use one of the evaluation emissions datasets available in the `evaldata_vX.X.X.zip` files on the [InMAP release page](https://github.com/spatialmodel/inmap/releases). Emissions files should be in [shapefile](http://en.wikipedia.org/wiki/Shapefile) format where the attribute columns correspond to the names of emitted pollutants. Refer [here](http://godoc.org/github.com/spatialmodel/inmap#pkg-variables) (the `EmisNames` variable) for acceptable pollutant names. Emissions units can be specified in the configuration file (discussed below) and can be either  short tons or kilograms per year. The model can handle multiple input emissions files, and emissions can be either elevated or ground level. Files with elevated emissions need to have attribute columns labeled "height", "diam", "temp", and "velocity" containing stack information in units of m, m, K, and m/s, respectively. Emissions will be allocated from the geometries in the shape file to the InMAP computational grid.
 
-1. Make a copy of the [configuration file template](inmap/configExample.json) and edit it so that the `VariableGridData`  variable points to the location where you downloaded the general corresponding input data file to, `EmissionsShapefiles` points to the location(s) of the emissions files, and the `OutputFile` variable points to the desired location for the output file. Refer to the source code documentation ([here](https://godoc.org/github.com/spatialmodel/inmap/inmap/cmd#ConfigData)) for information about other configuration options. The configuration file is a text file in [TOML](https://github.com/toml-lang/toml) format, and any changes made to the file will need to conform to that format or the model will not run correctly and will produce an error.
+1. Make a copy of the [configuration file template](inmap/configExample.toml) and edit it so that the `VariableGridData`  variable points to the location where you downloaded the general corresponding input data file to, `EmissionsShapefiles` points to the location(s) of the emissions files, and the `OutputFile` variable points to the desired location for the output file. Refer to the source code documentation ([here](https://godoc.org/github.com/spatialmodel/inmap/inmap/cmd#ConfigData)) for information about other configuration options. The configuration file is a text file in [TOML](https://github.com/toml-lang/toml) format, and any changes made to the file will need to conform to that format or the model will not run correctly and will produce an error.
 
 2. Run the program:
 
