@@ -1,11 +1,11 @@
 # InMAPData is the path to location of baseline meteorology and pollutant data.
 # The path can include environment variables.
-InMAPData = "${GOPATH}/src/github.com/spatialmodel/inmap/testdata/inmapData.ncf"
+InMAPData = "${evaldata}/la_test/inmapData.ncf"
 
 # VariableGridData is the path to the location of the variable-resolution gridded
 # InMAP data, or the location where it should be created if it doesn't already
 # exist. The path can include environment variables.
-VariableGridData = "${GOPATH}/src/github.com/spatialmodel/inmap/testdata/inmapVarGrid.gob"
+VariableGridData = "${evaldata}/la_test/inmapVarGrid.gob"
 
 # EmissionsShapefiles are the paths to any emissions shapefiles.
 # Can be elevated or ground level; elevated files need to have columns
@@ -24,7 +24,7 @@ EmissionsShapefiles = [
 EmissionUnits = "tons/year"
 
 # Path to desired output shapefile location. Can include environment variables.
-OutputFile = "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/output_${InMAPRunType}.shp"
+OutputFile = "./output.shp"
 
 # OutputVariables specifies which model variables should be included in the
 # output file.
@@ -51,7 +51,7 @@ HTTPAddress = ":8080"
 
 # SROutputFile is the path where the output file is or should be created
 # when creating a source-receptor matrix. It can contain environment variables.
-SROutputFile = "${GOPATH}/src/github.com/spatialmodel/inmap/eval/testSR.ncf"
+SROutputFile = "./testSR.ncf"
 
 # VarGrid provides information for specifying the variable resolution
 # grid.
@@ -103,7 +103,7 @@ PopThreshold= 25000.0
 PopConcThreshold= 0.00000001
 
 # CensusFile is the path to the shapefile holding population information.
-CensusFile= "${GOPATH}/src/github.com/spatialmodel/inmap/testdata/census2012.shp"
+CensusFile= "${eval_data}/la_test/census2012.shp"
 
 # CensusPopColumns is a list of the data fields in CensusFile that should
 # be included as population estimates in the model. They can be population
@@ -118,7 +118,7 @@ PopGridColumn= "TotalPop"
 
 # MortalityRateFile is the path to the shapefile containing baseline
 # mortality rate data.
-MortalityRateFile= "${GOPATH}/src/github.com/spatialmodel/inmap/testdata/MortalityRate.shp"
+MortalityRateFile= "${eval_data}/la_test/MortalityRate.shp"
 
 # MortalityRateColumn is the name of the field in MortalityRateFile that
 # contains the baseline mortality rate data, in units of deaths per year

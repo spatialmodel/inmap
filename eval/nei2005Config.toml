@@ -1,14 +1,14 @@
 
 
-InMAPData = "${inmapData}"
+InMAPData = "${evaldata}/InMAPData_v1.2.0.ncf"
 
-VariableGridData = "${vargridData}"
+VariableGridData = "${evaldata}/InMAPData_v1.2.0.gob"
 
 
 EmissionsShapefiles = [
-	"${nei2005BioFireEmissions}",
-	"${nei2005ElevatedEmissions}",
-	"${nei2005GroundLevelEmissions}"
+	"${evaldata}/2005_emissions/bioFireEmis.shp",
+	"${evaldata}/2005_emissions/Elevated.shp",
+	"${evaldata}/2005_emissions/GroundLevel.shp"
 ]
 EmissionUnits = "tons/year"
 
@@ -78,7 +78,7 @@ PopThreshold= 40000.0
 PopConcThreshold= 0.00000000001
 
 # CensusFile is the path to the shapefile holding population information.
-CensusFile= "${censusFile}"
+CensusFile= "${evaldata}/census2012blckgrp.shp"
 
 # CensusPopColumns is a list of the data fields in CensusFile that should
 # be included as population estimates in the model. They can be population
@@ -93,7 +93,7 @@ PopGridColumn= "TotalPop"
 
 # MortalityRateFile is the path to the shapefile containing baseline
 # mortality rate data.
-MortalityRateFile= "${mortalityRateFile}"
+MortalityRateFile= "${evaldata}/MortalityRate.shp"
 
 # MortalityRateColumn is the name of the field in MortalityRateFile that
 # contains the baseline mortality rate data, in units of deaths per year

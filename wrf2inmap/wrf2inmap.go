@@ -1300,6 +1300,13 @@ func ReadConfigFile(filename string) {
 		os.Exit(1)
 	}
 
+	config.OutputDir = os.ExpandEnv(config.OutputDir)
+	config.OutputFilePrefix = os.ExpandEnv(config.OutputFilePrefix)
+	config.Wrfout = os.ExpandEnv(config.Wrfout)
+	config.StartDate = os.ExpandEnv(config.StartDate)
+	config.EndDate = os.ExpandEnv(config.EndDate)
+	config.GridProj = os.ExpandEnv(config.GridProj)
+
 	err = os.MkdirAll(config.OutputDir, os.ModePerm)
 	if err != nil {
 		log.Println(err.Error())
