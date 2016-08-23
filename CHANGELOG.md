@@ -9,7 +9,7 @@
 * Changed the allocation from CTM cells to InMAP cells so that the InMAP cell sizes no longer have to be multiples of the CTM cell sizes
 * Added a source-receptor (SR) matrix generator
 * Fixed bug in stability calculation for plume rise
-* Temporally removed the HTML user interface
+* Temporarily removed the HTML user interface
 
 # Release 1.1.0 (2016-2-12)
 * Fixed a bug related to molar mass conversions
