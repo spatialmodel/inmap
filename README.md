@@ -42,7 +42,7 @@ You can also compile InMAP from its source code. It should work on most types of
 
 3. Create an emissions scenario or use one of the evaluation emissions datasets available in the `evaldata_vX.X.X.zip` files on the [InMAP release page](https://github.com/spatialmodel/inmap/releases). Emissions files should be in [shapefile](http://en.wikipedia.org/wiki/Shapefile) format where the attribute columns correspond to the names of emitted pollutants. Refer [here](http://godoc.org/github.com/spatialmodel/inmap#pkg-variables) (the `EmisNames` variable) for acceptable pollutant names. Emissions units can be specified in the configuration file (discussed below) and can be either  short tons or kilograms per year. The model can handle multiple input emissions files, and emissions can be either elevated or ground level. Files with elevated emissions need to have attribute columns labeled "height", "diam", "temp", and "velocity" containing stack information in units of m, m, K, and m/s, respectively. Emissions will be allocated from the geometries in the shape file to the InMAP computational grid.
 
-1. Make a copy of the [configuration file template](inmap/configExample.toml) and edit it so that the `VariableGridData`  variable points to the location where you downloaded the general corresponding input data file to, `EmissionsShapefiles` points to the location(s) of the emissions files, and the `OutputFile` variable points to the desired location for the output file. Refer to the source code documentation ([here](https://godoc.org/github.com/spatialmodel/inmap/inmap/cmd#ConfigData)) for information about other configuration options. The configuration file is a text file in [TOML](https://github.com/toml-lang/toml) format, and any changes made to the file will need to conform to that format or the model will not run correctly and will produce an error.
+1. Make a copy of the [configuration file template](eval/nei2005Config.toml) and edit it so that the `VariableGridData`  variable points to the location where you downloaded the general corresponding input data file to, `EmissionsShapefiles` points to the location(s) of the emissions files, and the `OutputFile` variable points to the desired location for the output file. Refer to the source code documentation ([here](https://godoc.org/github.com/spatialmodel/inmap/inmap/cmd#ConfigData)) for information about other configuration options. The configuration file is a text file in [TOML](https://github.com/toml-lang/toml) format, and any changes made to the file will need to conform to that format or the model will not run correctly and will produce an error.
 
 2. Run the program:
 
@@ -53,7 +53,7 @@ You can also compile InMAP from its source code. It should work on most types of
 
 
 3. View the program output. The output files are in [shapefile](http://en.wikipedia.org/wiki/Shapefile) format which can be viewed in most GIS programs. One free GIS program is [QGIS](http://www.qgis.org/). By default, the InMAP only outputs results from layer zero, but this can be changed using the configuration file.
-  Output variables are specified as `OutputVariables` in the configuration file. There is a complete list of options [here](OutputOptions.md). Some examples include:
+  Output variables are specified as `OutputVariables` in the configuration file. There is a complete list of options [here](OutputOptions.md).Some examples include:
 	* Pollutant concentrations in units of μg m<sup>-3</sup>:
 		* VOC (`VOC`)
 		* NO<sub>x</sub> (`NOx`)
@@ -72,6 +72,7 @@ You can also compile InMAP from its source code. It should work on most types of
     * Numbers of deaths attributable to PM<sub>2.5</sub> in each of the populations in units of deaths/year, which are specified as `POPULATION deaths` in the configuratio file, where `POPULATION` is one of the populations specified above. Attribute names in shapfiles are limited to 11 characters, so, for example, deaths in the `TotalPop` population would be labeled `TotalPop de`, deaths in the `Black` population would be labeled `Black death`, and—interestingly—deaths in the `WhiteNoLat` population would be labeled `WhiteNoLat_1`.
     * Baseline mortality rate in units of deaths per year per 100,000 people (`AllCause`), which can be used for performing alternative health impact calculations.
 
+   Note that some of the output variable options may contain characters that will prevent the file from being opened in ArcGIS. Output files containing these variables should still be able to be opened in QGIS.
 
 ## API
 
