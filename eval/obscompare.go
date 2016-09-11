@@ -45,7 +45,7 @@ var varnames = []string{
 }
 
 var inmapVars = []string{
-	"Total PM2.5",
+	"TotalPM25",
 	"SOx",
 	"pSO4",
 	"NOx",
@@ -489,7 +489,7 @@ func getObsData(obsFile string, oChan chan [][]*data, alts *rtree.Rtree) {
 
 type iData struct {
 	geom.Geom
-	TotalPM25                       float64 `shp:"Total PM2.5"`
+	TotalPM25                       float64
 	SOx, PSO4, NOx, PNO3, NH3, PNH4 float64
 }
 
@@ -794,7 +794,7 @@ func getStates(filename string) []geom.Geom {
 func getInmapVal(polName string, d *iData) float64 {
 	var val float64
 	switch polName {
-	case "Total PM2.5":
+	case "TotalPM25":
 		val = d.TotalPM25
 	case "SOx":
 		val = d.SOx

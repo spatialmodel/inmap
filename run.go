@@ -86,32 +86,32 @@ type polConv struct {
 
 // PolLabels are labels and conversions for InMAP pollutants.
 var PolLabels = map[string]polConv{
-	"Total PM2.5": {[]int{iPM2_5, ipOrg, ipNH, ipS, ipNO},
+	"TotalPM25": {[]int{iPM2_5, ipOrg, ipNH, ipS, ipNO},
 		[]float64{1, 1, NtoNH4, StoSO4, NtoNO3}},
-	"VOC":           {[]int{igOrg}, []float64{1.}},
-	"SOA":           {[]int{ipOrg}, []float64{1.}},
-	"Primary PM2.5": {[]int{iPM2_5}, []float64{1.}},
-	"NH3":           {[]int{igNH}, []float64{1. / NH3ToN}},
-	"pNH4":          {[]int{ipNH}, []float64{NtoNH4}},
-	"SOx":           {[]int{igS}, []float64{1. / SOxToS}},
-	"pSO4":          {[]int{ipS}, []float64{StoSO4}},
-	"NOx":           {[]int{igNO}, []float64{1. / NOxToN}},
-	"pNO3":          {[]int{ipNO}, []float64{NtoNO3}},
+	"VOC":         {[]int{igOrg}, []float64{1.}},
+	"SOA":         {[]int{ipOrg}, []float64{1.}},
+	"PrimaryPM25": {[]int{iPM2_5}, []float64{1.}},
+	"NH3":         {[]int{igNH}, []float64{1. / NH3ToN}},
+	"pNH4":        {[]int{ipNH}, []float64{NtoNH4}},
+	"SOx":         {[]int{igS}, []float64{1. / SOxToS}},
+	"pSO4":        {[]int{ipS}, []float64{StoSO4}},
+	"NOx":         {[]int{igNO}, []float64{1. / NOxToN}},
+	"pNO3":        {[]int{ipNO}, []float64{NtoNO3}},
 }
 
 // baselinePolLabels specifies labels for the baseline (i.e., background
 // concentrations) pollutant species. It is different than polLabels in that
 // TotalPM2_5 is its own category and there is no PrimaryPM2_5.
 var baselinePolLabels = map[string]polConv{
-	"Baseline Total PM2.5": {[]int{iPM2_5}, []float64{1}},
-	"Baseline VOC":         {[]int{igOrg}, []float64{1.}},
-	"Baseline SOA":         {[]int{ipOrg}, []float64{1.}},
-	"Baseline NH3":         {[]int{igNH}, []float64{1. / NH3ToN}},
-	"Baseline pNH4":        {[]int{ipNH}, []float64{NtoNH4}},
-	"Baseline SOx":         {[]int{igS}, []float64{1. / SOxToS}},
-	"Baseline pSO4":        {[]int{ipS}, []float64{StoSO4}},
-	"Baseline NOx":         {[]int{igNO}, []float64{1. / NOxToN}},
-	"Baseline pNO3":        {[]int{ipNO}, []float64{NtoNO3}},
+	"Baseline TotalPM25": {[]int{iPM2_5}, []float64{1}},
+	"Baseline VOC":       {[]int{igOrg}, []float64{1.}},
+	"Baseline SOA":       {[]int{ipOrg}, []float64{1.}},
+	"Baseline NH3":       {[]int{igNH}, []float64{1. / NH3ToN}},
+	"Baseline pNH4":      {[]int{ipNH}, []float64{NtoNH4}},
+	"Baseline SOx":       {[]int{igS}, []float64{1. / SOxToS}},
+	"Baseline pSO4":      {[]int{ipS}, []float64{StoSO4}},
+	"Baseline NOx":       {[]int{igNO}, []float64{1. / NOxToN}},
+	"Baseline pNO3":      {[]int{ipNO}, []float64{NtoNO3}},
 }
 
 // ResetCells clears concentration and emissions information from all of the

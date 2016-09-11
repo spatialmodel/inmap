@@ -185,7 +185,7 @@ func (sr *SR) newRequestPayload(i int, cell *inmap.Cell) *IOData {
 	return requestPayload
 }
 
-var outputVars = []string{"SOA", "Primary PM2.5", "pNH4", "pSO4", "pNO3"}
+var outputVars = []string{"SOA", "PrimaryPM25", "pNH4", "pSO4", "pNO3"}
 
 func (sr *SR) writeResults(outfile string, layers []int, requestChan chan resulter, errChan chan error) {
 	nGridCells, err := sr.layerGridCells(layers)

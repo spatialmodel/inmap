@@ -580,11 +580,11 @@ func TestConverge(t *testing.T) {
 			t.Logf("%s completed after %d iterations.", convergenceNames[i], iterations)
 		}
 
-		r, err := d.Results(false, "Primary PM2.5")
+		r, err := d.Results(false, "PrimaryPM25")
 		if err != nil {
 			t.Error(err)
 		}
-		results := r["Primary PM2.5"]
+		results := r["PrimaryPM25"]
 		total := floats.Sum(results)
 		if different(total, expectedConcentration[i], testTolerance) {
 			t.Errorf("%s concentration (%v) doesn't equal %v", convergenceNames[i], total, expectedConcentration[i])
@@ -781,11 +781,11 @@ func TestBigM2d(t *testing.T) {
 	if err := d.Run(); err != nil {
 		t.Error(err)
 	}
-	r, err := d.Results(false, "Total PM2.5")
+	r, err := d.Results(false, "TotalPM25")
 	if err != nil {
 		t.Error(err)
 	}
-	results := r["Total PM2.5"]
+	results := r["TotalPM25"]
 	sum := floats.Sum(results)
 	if math.IsNaN(sum) {
 		t.Errorf("concentration sum is NaN")

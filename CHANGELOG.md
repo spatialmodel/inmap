@@ -1,5 +1,6 @@
 # Release 1.2.1 (?)
 * Changed the time step calculation algorithm to work with larger grid cell sizes
+* Changed the "Total PM2.5" and "Primary PM2.5" output variables to "TotalPM25" and "PrimaryPM25" to allow opening in ArcGIS
 
 # Release 1.2.0 (2016-8-22)
 * Allowed the input emissions data shapefiles to have arbitrary spatial projections instead of requiring them to be the same as the InMAP grid

@@ -37,9 +37,9 @@ OutputVariables = [
 	"Asian deaths",
 	"Latino deaths",
   "TotalPop",
-	"Total PM2.5",
+	"TotalPM25",
 	"PM2.5 emissions",
-	"Baseline Total PM2.5",
+	"Baseline TotalPM25",
 	"WindSpeed"
 ]
 

@@ -49,7 +49,7 @@ func NewReader(r cdf.ReaderWriterAt) (*Reader, error) {
 	}
 	nCells := sr.Header.Lengths("N")[0] // number of InMAP cells.
 	cells := make([]*inmap.Cell, nCells)
-	sr.nCellsGroundLevel = sr.Header.Lengths("Primary PM2.5")[1]
+	sr.nCellsGroundLevel = sr.Header.Lengths("PrimaryPM25")[1]
 
 	// Get the grid cell geometry
 	g := make([][]float64, 4)
@@ -215,7 +215,7 @@ func (sr *Reader) Concentrations(e *inmap.EmisRecord) ([]float64, error) {
 			start := []int{layer, index, 0}
 			end := []int{layer, index, sr.nCellsGroundLevel - 1}
 
-			polNames := []string{"pNH4", "pNO3", "pSO4", "SOA", "Primary PM2.5"}
+			polNames := []string{"pNH4", "pNO3", "pSO4", "SOA", "PrimaryPM25"}
 			for i, emis := range []float64{e.NH3, e.NOx, e.SOx, e.VOC, e.PM25} {
 				if emis != 0 {
 					v, err := sr.get(polNames[i], start, end)

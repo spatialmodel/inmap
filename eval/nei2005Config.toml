@@ -17,10 +17,10 @@ OutputFile = "nei2005/2005nei_output_${InMAPRunType}.shp"
 OutputVariables = [
 	"NH3",
 	"NOx",
-	"Primary PM2.5",
+	"PrimaryPM25",
 	"SOA",
 	"SOx",
-	"Total PM2.5",
+	"TotalPM25",
 	"VOC",
 	"pNH4",
 	"pNO3",

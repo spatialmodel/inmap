@@ -222,7 +222,7 @@ func TestOutput(t *testing.T) {
 		},
 		CleanupFuncs: []DomainManipulator{
 			Output(TestOutputFilename, false, "TotalPop deaths", "TotalPop",
-				"Total PM2.5", "PM2.5 emissions", "Baseline Total PM2.5", "WindSpeed"),
+				"TotalPM25", "PM2.5 emissions", "Baseline TotalPM25", "WindSpeed"),
 		},
 	}
 	if err := d.Init(); err != nil {
@@ -234,7 +234,7 @@ func TestOutput(t *testing.T) {
 	type outData struct {
 		BaselineTotalPM25 float64 `shp:"Baseline To"`
 		PM25Emissions     float64 `shp:"PM2.5 emiss"`
-		TotalPM25         float64 `shp:"Total PM2.5"`
+		TotalPM25         float64
 		TotalPop          float64
 		Deaths            float64 `shp:"TotalPop de"`
 		WindSpeed         float64

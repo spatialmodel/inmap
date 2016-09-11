@@ -413,7 +413,7 @@ func (c *Cell) getValue(varName string, popIndices map[string]int) float64 {
 
 	} else if i, ok := popIndices[strings.Replace(varName, " deaths", "", 1)]; ok {
 		// Mortalities
-		rr := aqhealth.RRpm25Linear(c.getValue("Total PM2.5", popIndices))
+		rr := aqhealth.RRpm25Linear(c.getValue("TotalPM25", popIndices))
 		return aqhealth.Deaths(rr, c.PopData[i], c.MortalityRate)
 
 	} // Everything else
