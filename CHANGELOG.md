@@ -1,3 +1,6 @@
+# Release 1.2.1 (?)
+* Changed the time step calculation algorithm to work with larger grid cell sizes
+
 # Release 1.2.0 (2016-8-22)
 * Allowed the input emissions data shapefiles to have arbitrary spatial projections instead of requiring them to be the same as the InMAP grid
 * Changed the program to be able to create the variable grid at runtime from user supplied population and mortality data

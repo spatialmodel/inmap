@@ -314,22 +314,48 @@ func (d *InMAP) addTopBoundary(cell *Cell) {
 // (http://en.wikipedia.org/wiki/Von_Neumann_stability_analysis) for
 // diffusion, whichever one yields a smaller time step.
 func SetTimestepCFL() DomainManipulator {
+	sqrt3 := math.Pow(3., 0.5)
 	return func(d *InMAP) error {
-		const Cmax = 1.0
+		const (
+			// Cmax is the maximum CFL value allowed.
+			CMax = 1.0
+			// CFirstOrder is the empirically determined maximum
+			// allowed dimensionless step size for first-order
+			// differential equations.
+			CFirstOrder = 1.0 / 3.0
+		)
 		d.Dt = math.Inf(1)
-		sqrt3 := math.Pow(3., 0.5)
 		for _, c := range *d.cells {
 			// Advection time step
-			dt1 := Cmax / sqrt3 /
+			dt1 := CMax / sqrt3 /
 				max((math.Abs(c.UAvg)+c.UDeviation*2)/c.Dx,
 					(math.Abs(c.VAvg)+c.VDeviation*2)/c.Dy,
 					math.Abs(c.WAvg)/c.Dz)
 			// vertical diffusion time step
-			dt2 := Cmax * c.Dz * c.Dz / 2. / c.Kzz
+			dt2 := CMax * c.Dz * c.Dz / 2. / c.Kzz
 			// horizontal diffusion time step
-			dt3 := Cmax * c.Dx * c.Dx / 2. / c.Kxxyy
-			dt4 := Cmax * c.Dy * c.Dy / 2. / c.Kxxyy
-			d.Dt = amin(d.Dt, dt1, dt2, dt3, dt4) // seconds
+			dt3 := CMax * c.Dx * c.Dx / 2. / c.Kxxyy
+			dt4 := CMax * c.Dy * c.Dy / 2. / c.Kxxyy
+
+			// convective mixing time steps
+			dt5 := CFirstOrder / c.M2d
+			dt6 := CFirstOrder / c.M2u
+
+			// Chemistry time step
+			dt7 := CFirstOrder / c.SO2oxidation
+
+			// Deposition time steps
+			dt8 := CFirstOrder / c.ParticleWetDep
+			dt9 := CFirstOrder / c.SO2WetDep
+			dt10 := CFirstOrder / c.OtherGasWetDep
+			dt11 := CFirstOrder * c.Dy / c.ParticleDryDep
+			dt12 := CFirstOrder * c.Dy / c.NH3DryDep
+			dt13 := CFirstOrder * c.Dy / c.SO2DryDep
+			dt14 := CFirstOrder * c.Dy / c.VOCDryDep
+			dt15 := CFirstOrder * c.Dy / c.NOxDryDep
+
+			d.Dt = amin(d.Dt, dt1, dt2, dt3, dt4, dt5, dt6, dt7,
+				dt8, dt9, dt10, dt11, dt12, dt13, dt14, dt15) // seconds
 		}
 		return nil
 	}

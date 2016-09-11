@@ -740,6 +740,58 @@ func TestWetDeposition(t *testing.T) {
 	}
 }
 
+// TestBigM2d checks whether the model can run stably with a high rate of
+// convective mixing.
+func TestBigM2d(t *testing.T) {
+	cfg, ctmdata, pop, popIndices, mr := VarGridData()
+	ctmdata.data["M2d"].data.Scale(100)
+	ctmdata.data["M2u"].data.Scale(100)
+
+	emis := NewEmissions()
+	emis.Add(&EmisRecord{
+		SOx:  E,
+		NOx:  E,
+		PM25: E,
+		VOC:  E,
+		NH3:  E,
+		Geom: geom.Point{X: -3999, Y: -3999.},
+	}) // ground level emissions
+
+	d := &InMAP{
+		InitFuncs: []DomainManipulator{
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
+			SetTimestepCFL(),
+		},
+		RunFuncs: []DomainManipulator{
+			Calculations(AddEmissionsFlux()),
+			Calculations(
+				UpwindAdvection(),
+				Mixing(),
+				MeanderMixing(),
+				DryDeposition(),
+				WetDeposition(),
+				Chemistry(),
+			),
+			SteadyStateConvergenceCheck(-1, cfg.PopGridColumn, nil),
+		},
+	}
+	if err := d.Init(); err != nil {
+		t.Error(err)
+	}
+	if err := d.Run(); err != nil {
+		t.Error(err)
+	}
+	r, err := d.Results(false, "Total PM2.5")
+	if err != nil {
+		t.Error(err)
+	}
+	results := r["Total PM2.5"]
+	sum := floats.Sum(results)
+	if math.IsNaN(sum) {
+		t.Errorf("concentration sum is NaN")
+	}
+}
+
 func different(a, b, tolerance float64) bool {
 	if 2*math.Abs(a-b)/math.Abs(a+b) > tolerance || math.IsNaN(a) || math.IsNaN(b) {
 		return true
