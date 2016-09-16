@@ -345,17 +345,21 @@ func SetTimestepCFL() DomainManipulator {
 			dt7 := CFirstOrder / c.SO2oxidation
 
 			// Deposition time steps
-			dt8 := CFirstOrder / c.ParticleWetDep
-			dt9 := CFirstOrder / c.SO2WetDep
-			dt10 := CFirstOrder / c.OtherGasWetDep
+			// Including wet deposition can cause a negative time step
+			// because rounding error sometimes causes the wet deposition rate
+			// to be a very small negative number. Since wet deposition is unlikely
+			// to be the process with the smallest time step, we leave it out here.
+			// dt8 := CFirstOrder / c.ParticleWetDep
+			// dt9 := CFirstOrder / c.SO2WetDep
+			// dt10 := CFirstOrder / c.OtherGasWetDep
 			dt11 := CFirstOrder * c.Dy / c.ParticleDryDep
 			dt12 := CFirstOrder * c.Dy / c.NH3DryDep
 			dt13 := CFirstOrder * c.Dy / c.SO2DryDep
 			dt14 := CFirstOrder * c.Dy / c.VOCDryDep
 			dt15 := CFirstOrder * c.Dy / c.NOxDryDep
 
-			d.Dt = amin(d.Dt, dt1, dt2, dt3, dt4, dt5, dt6, dt7,
-				dt8, dt9, dt10, dt11, dt12, dt13, dt14, dt15) // seconds
+			d.Dt = amin(d.Dt, dt1, dt2, dt3, dt4, dt5, dt6, dt7, //dt8, dt9, dt10,
+				dt11, dt12, dt13, dt14, dt15) // seconds
 		}
 		return nil
 	}
