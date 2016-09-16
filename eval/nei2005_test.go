@@ -26,7 +26,7 @@ func TestNEI2005Dynamic(t *testing.T) {
 	}
 
 	evalData := os.Getenv(evalDataEnv)
-	if evalData == "" && !testing.Short() {
+	if evalData == "" {
 		t.Fatalf("please set the '%s' environment variable to the location of the "+
 			"downloaded evaluation data and try again", evalDataEnv)
 	}
@@ -56,7 +56,7 @@ func TestNEI2005Static(t *testing.T) {
 	}
 
 	evalData := os.Getenv(evalDataEnv)
-	if evalData == "" && !testing.Short() {
+	if evalData == "" {
 		t.Fatalf("please set the '%s' environment variable to the location of the "+
 			"downloaded evaluation data and try again", evalDataEnv)
 	}

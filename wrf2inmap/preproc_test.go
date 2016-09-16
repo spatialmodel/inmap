@@ -19,14 +19,24 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package main
 
 import (
+	"os"
 	"flag"
 	"testing"
 )
+
+const evalDataEnv = "evaldata"
 
 func TestWRF2InMAP(t *testing.T) {
 	if testing.Short() {
 		return
 	}
+
+	evalData := os.Getenv(evalDataEnv)
+	if evalData == "" {
+		t.Fatalf("please set the '%s' environment variable to the location of the "+
+			"downloaded evaluation data and try again", evalDataEnv)
+	}
+
 	err := flag.Set("config", "configExample.json")
 	if err != nil {
 		t.Fatal(err)
