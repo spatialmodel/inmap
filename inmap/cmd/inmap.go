@@ -178,7 +178,7 @@ func Run(dynamic, createGrid bool) error {
 	}
 
 	if err = d.Cleanup(); err != nil {
-		return fmt.Errorf("InMAP: problem shutting down model.: %v\n", err)
+		return fmt.Errorf("InMAP: problem shutting down model: %v\n", err)
 	}
 
 	fmt.Println("\nIntake fraction results:")
