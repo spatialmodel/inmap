@@ -40,12 +40,13 @@ var RPCPort = "6060"
 // Worker is a worker for performing InMAP simulations. It should not be interacted
 // with directly, but it is exported to meet RPC requirements.
 type Worker struct {
-	Config     *inmap.VarGridConfig
-	CTMData    *inmap.CTMData
-	Pop        *inmap.Population
-	PopIndices inmap.PopIndices
-	MR         *inmap.MortalityRates
-	GridGeom   []geom.Polygonal // Geometry of the output grid.
+	Config        *inmap.VarGridConfig
+	CTMData       *inmap.CTMData
+	Pop           *inmap.Population
+	PopIndices    inmap.PopIndices
+	MR            *inmap.MortalityRates
+	GridGeom      []geom.Polygonal // Geometry of the output grid.
+	InMAPDataFile string           // inmapDataFile is the path to the input data file in .gob format.
 }
 
 // IOData holds the input to and output from a simulation request.
@@ -55,7 +56,7 @@ type IOData struct {
 	Row, Layer int
 }
 
-// Result allows a local worker to look like a distributed request
+// Result allows a local worker to look like a distributed request.
 func (io *IOData) Result() (*IOData, error) {
 	return io, nil
 }
@@ -63,6 +64,13 @@ func (io *IOData) Result() (*IOData, error) {
 // Calculate performs an InMAP simulation. It meets the requirements for
 // use with rpc.Call.
 func (s *Worker) Calculate(input *IOData, output *IOData) error {
+	if s.Pop == nil {
+		// Initialize the worker if it hasn't already been done.
+		if err := s.Init(nil, nil); err != nil {
+			return err
+		}
+	}
+
 	log.Printf("Slave calculating row=%v, layer=%v\n", input.Row, input.Layer)
 
 	scienceFuncs := inmap.Calculations(
@@ -138,29 +146,37 @@ func (s *Worker) Exit(in, out *Empty) error {
 // InMAPDataFile specifies
 // the location of the inmap regular-gridded data, and GridGeom specifies the
 // output grid geometry.
-func NewWorker(config *inmap.VarGridConfig, InMAPDataFile string, GridGeom []geom.Polygonal) (*Worker, error) {
+func NewWorker(config *inmap.VarGridConfig, InMAPDataFile string, GridGeom []geom.Polygonal) *Worker {
 	s := new(Worker)
 	s.Config = config
 	s.GridGeom = GridGeom
-	f, err := os.Open(InMAPDataFile)
+	s.InMAPDataFile = InMAPDataFile
+	return s
+}
+
+// Init initializes the worker. It needs to be called after NewWorker and
+// before any simulations are performed. It meets the requirements for use
+// with rpc.Call.
+func (s *Worker) Init(_, _ *Empty) error {
+	f, err := os.Open(s.InMAPDataFile)
 	if err != nil {
-		return nil, fmt.Errorf("problem loading input data: %v\n", err)
+		return fmt.Errorf("problem loading input data: %v\n", err)
 	}
 	s.CTMData, err = s.Config.LoadCTMData(f)
 	if err != nil {
-		return nil, fmt.Errorf("problem loading input data: %v\n", err)
+		return fmt.Errorf("problem loading input data: %v\n", err)
 	}
 
 	log.Println("Loading population and mortality rate data")
 	s.Pop, s.PopIndices, s.MR, err = s.Config.LoadPopMort()
 	if err != nil {
-		return nil, fmt.Errorf("problem loading population or mortality data: %v", err)
+		return fmt.Errorf("problem loading population or mortality data: %v", err)
 	}
-	return s, nil
+	return nil
 }
 
-// WorkerListen directs s to start listening for requests over RPCPort
-func WorkerListen(s *Worker, RPCPort string) error {
+// Listen directs the worker to start listening for requests over RPCPort.
+func (s *Worker) Listen(RPCPort string) error {
 	rpc.Register(s)
 	rpc.HandleHTTP()
 	l, err := net.Listen("tcp", ":"+RPCPort)

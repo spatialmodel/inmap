@@ -96,17 +96,16 @@ var workerCmd = &cobra.Command{
 	Long: `Start an InMAP worker that listens over RPC for simulation requests,
 		does the simulations, and returns results.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		worker, err := InitWorker()
+		worker, err := NewWorker()
 		if err != nil {
 			return labelErr(err)
 		}
-		return labelErr(sr.WorkerListen(worker, sr.RPCPort))
+		return labelErr(worker.Listen(sr.RPCPort))
 	},
 }
 
-// InitWorker starts a new worker.
-func InitWorker() (*sr.Worker, error) {
-
+// NewWorker starts a new worker.
+func NewWorker() (*sr.Worker, error) {
 	r, err := os.Open(Config.VariableGridData)
 	if err != nil {
 		return nil, fmt.Errorf("problem opening file to load VariableGridData: %v", err)
@@ -120,9 +119,6 @@ func InitWorker() (*sr.Worker, error) {
 		return nil, err
 	}
 
-	worker, err := sr.NewWorker(&Config.VarGrid, Config.InMAPData, d.GetGeometry(0, false))
-	if err != nil {
-		return nil, err
-	}
+	worker := sr.NewWorker(&Config.VarGrid, Config.InMAPData, d.GetGeometry(0, false))
 	return worker, nil
 }

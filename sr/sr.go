@@ -47,7 +47,6 @@ type SR struct {
 // should be carried out on. If len(nodes) == 0, then calculations will be
 // carried out locally instead of on a cluster.
 func NewSR(varGridFile, inmapDataFile, command, logDir string, config *inmap.VarGridConfig, nodes []string) (*SR, error) {
-
 	r, err := os.Open(varGridFile)
 	if err != nil {
 		return nil, fmt.Errorf("problem opening file to load VariableGridData: %v", err)
@@ -79,10 +78,7 @@ func NewSR(varGridFile, inmapDataFile, command, logDir string, config *inmap.Var
 		}
 	}
 	if sr.numNodes == 0 {
-		sr.localWorker, err = NewWorker(config, inmapDataFile, sr.d.GetGeometry(0, false))
-		if err != nil {
-			return nil, err
-		}
+		sr.localWorker = NewWorker(config, inmapDataFile, sr.d.GetGeometry(0, false))
 	}
 	return sr, nil
 }

@@ -41,7 +41,11 @@ func TestWorkerInit(t *testing.T) {
 	if err := Startup("../configExample.toml"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := InitWorker(); err != nil {
+	w, err := NewWorker()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := w.Init(nil, nil); err != nil {
 		t.Fatal(err)
 	}
 }
