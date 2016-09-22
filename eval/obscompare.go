@@ -561,8 +561,8 @@ func getWRFdata(wrfDataLoc string, wChan chan []*rtree.Rtree) {
 			o.val = float64(v) * wrfConv[ii]
 			x := W + float64(i%nx)*dx
 			y := S + float64(i/nx)*dy
-			o.Geom = geom.Polygon([][]geom.Point{{{x, y}, {x + dx, y},
-				{x + dx, y + dy}, {x, y + dy}, {x, y}}})
+			o.Geom = geom.Polygon([][]geom.Point{{{X: x, Y: y}, {X: x + dx, Y: y},
+				{X: x + dx, Y: y + dy}, {X: x, Y: y + dy}, {X: x, Y: y}}})
 			out[ii].Insert(o)
 			mapData[i] = o
 		}
