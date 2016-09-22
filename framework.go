@@ -466,6 +466,7 @@ func (d *InMAP) GetGeometry(layer int, webMap bool) []geom.Polygonal {
 		if c.Layer > layer {
 			// The cells should be sorted with the lower layers first, so we
 			// should be done here.
+			c.mutex.RUnlock()
 			return o
 		}
 		if c.Layer == layer {

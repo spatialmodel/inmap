@@ -340,8 +340,11 @@ func (config *VarGridConfig) RegularGrid(data *CTMData, pop *Population, popInde
 
 // totalMassPopulation calculates the total pollution mass in the domain and the
 // total population of group popGridColumn.
-func (d *InMAP) totalMassPopulation(popGridColumn string) (totalMass, totalPopulation float64) {
-	iPop := d.popIndices[popGridColumn]
+func (d *InMAP) totalMassPopulation(popGridColumn string) (totalMass, totalPopulation float64, err error) {
+	iPop, ok := d.popIndices[popGridColumn]
+	if !ok {
+		return math.Inf(-1), math.Inf(-1), fmt.Errorf("inmap: PopGridColumn '%s' does not exist in census file", popGridColumn)
+	}
 	for _, c := range *d.cells {
 		totalMass += floats.Sum(c.Cf) * c.Volume
 		if c.Layer == 0 { // only track population at ground level
@@ -366,7 +369,10 @@ func (config *VarGridConfig) MutateGrid(divideRule GridMutator, data *CTMData, p
 
 		beginCells := d.cells.len()
 
-		totalMass, totalPopulation := d.totalMassPopulation(config.PopGridColumn)
+		totalMass, totalPopulation, err := d.totalMassPopulation(config.PopGridColumn)
+		if err != nil {
+			return err
+		}
 
 		webMapTrans, err := config.webMapTrans()
 		if err != nil {
@@ -778,7 +784,12 @@ func (config *VarGridConfig) loadPopulation(sr *proj.SR) (*rtree.Rtree, map[stri
 		if err != nil {
 			return nil, nil, err
 		}
-		p.Polygonal = gg.(geom.Polygonal)
+		switch gg.(type) {
+		case geom.Polygonal:
+			p.Polygonal = gg.(geom.Polygonal)
+		default:
+			return nil, nil, fmt.Errorf("inmap: loadPopulation: population shapes need to be polygons")
+		}
 		pop.Insert(p)
 	}
 	if err := popshp.Error(); err != nil {
@@ -822,7 +833,12 @@ func (config *VarGridConfig) loadMortality(sr *proj.SR) (*rtree.Rtree, error) {
 		if err != nil {
 			return nil, err
 		}
-		m.Polygonal = gg.(geom.Polygonal)
+		switch gg.(type) {
+		case geom.Polygonal:
+			m.Polygonal = gg.(geom.Polygonal)
+		default:
+			return nil, fmt.Errorf("inmap: loadMortality: mortality rate shapes need to be polygons")
+		}
 		mortalityrate.Insert(m)
 	}
 	if err := mortshp.Error(); err != nil {

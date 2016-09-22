@@ -39,7 +39,7 @@ func TestInMAPStaticCreateGrid(t *testing.T) {
 	if err := Startup("../configExample.toml"); err != nil {
 		t.Fatal(err)
 	}
-	if err := Run(dynamic, createGrid); err != nil {
+	if err := Run(dynamic, createGrid, DefaultScienceFuncs, nil, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -51,7 +51,7 @@ func TestInMAPStaticLoadGrid(t *testing.T) {
 	if err := Startup("../configExample.toml"); err != nil {
 		t.Fatal(err)
 	}
-	if err := Run(dynamic, createGrid); err != nil {
+	if err := Run(dynamic, createGrid, DefaultScienceFuncs, nil, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -63,7 +63,7 @@ func TestInMAPDynamic(t *testing.T) {
 	if err := Startup("../configExample.toml"); err != nil {
 		t.Fatal(err)
 	}
-	if err := Run(dynamic, createGrid); err != nil {
+	if err := Run(dynamic, createGrid, DefaultScienceFuncs, nil, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 }

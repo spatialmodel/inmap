@@ -64,7 +64,7 @@ var steadyCmd = &cobra.Command{
 	Long: "steady runs InMAP in steady-state mode to calculate annual average " +
 		"concentrations with no temporal variability.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return labelErr(Run(!static, createGrid))
+		return labelErr(Run(!static, createGrid, DefaultScienceFuncs, nil, nil, nil))
 	},
 }
 

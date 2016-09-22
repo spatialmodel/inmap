@@ -39,7 +39,7 @@ func TestNEI2005Dynamic(t *testing.T) {
 	if err := cmd.Startup("nei2005Config.toml"); err != nil {
 		t.Fatal(err)
 	}
-	if err := cmd.Run(dynamic, createGrid); err != nil {
+	if err := cmd.Run(dynamic, createGrid, cmd.DefaultScienceFuncs, nil, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -69,7 +69,7 @@ func TestNEI2005Static(t *testing.T) {
 	if err := cmd.Startup("nei2005Config.toml"); err != nil {
 		t.Fatal(err)
 	}
-	if err := cmd.Run(dynamic, createGrid); err != nil {
+	if err := cmd.Run(dynamic, createGrid, cmd.DefaultScienceFuncs, nil, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 

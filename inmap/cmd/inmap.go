@@ -44,8 +44,25 @@ func getCTMData() (*inmap.CTMData, error) {
 	return ctmData, nil
 }
 
-// Run runs the model.
-func Run(dynamic, createGrid bool) error {
+// DefaultScienceFuncs are the science functions that are run in
+// typical simulations.
+var DefaultScienceFuncs = []inmap.CellManipulator{
+	inmap.UpwindAdvection(),
+	inmap.Mixing(),
+	inmap.MeanderMixing(),
+	inmap.DryDeposition(),
+	inmap.WetDeposition(),
+	inmap.Chemistry(),
+}
+
+// Run runs the model. dynamic and createGrid specify whether the variable
+// resolution grid should be created dynamically and whether the static
+// grid should be created or read from a file, respectively. If dynamic is
+// true, createGrid is ignored. scienceFuncs specifies the science functions
+// to perform in each cell at each time step. addInit, addRun, and addCleanup
+// specifies functions beyond the default functions to run at initialization,
+// runtime, and cleanup, respectively.
+func Run(dynamic, createGrid bool, scienceFuncs []inmap.CellManipulator, addInit, addRun, addCleanup []inmap.DomainManipulator) error {
 
 	// Start a function to receive and print log messages.
 	cConverge := make(chan inmap.ConvergenceStatus)
@@ -88,14 +105,7 @@ func Run(dynamic, createGrid bool) error {
 		}
 	}
 
-	scienceFuncs := inmap.Calculations(
-		inmap.UpwindAdvection(),
-		inmap.Mixing(),
-		inmap.MeanderMixing(),
-		inmap.DryDeposition(),
-		inmap.WetDeposition(),
-		inmap.Chemistry(),
-	)
+	scienceCalcs := inmap.Calculations(scienceFuncs...)
 
 	var initFuncs, runFuncs []inmap.DomainManipulator
 	if !dynamic {
@@ -125,7 +135,7 @@ func Run(dynamic, createGrid bool) error {
 		runFuncs = []inmap.DomainManipulator{
 			inmap.Log(cLog),
 			inmap.Calculations(inmap.AddEmissionsFlux()),
-			scienceFuncs,
+			scienceCalcs,
 			inmap.SteadyStateConvergenceCheck(Config.NumIterations,
 				Config.VarGrid.PopGridColumn, cConverge),
 		}
@@ -139,7 +149,7 @@ func Run(dynamic, createGrid bool) error {
 		runFuncs = []inmap.DomainManipulator{
 			inmap.Log(cLog),
 			inmap.Calculations(inmap.AddEmissionsFlux()),
-			scienceFuncs,
+			scienceCalcs,
 			inmap.RunPeriodically(gridMutateInterval,
 				Config.VarGrid.MutateGrid(popConcMutator.Mutate(),
 					ctmData, pop, mr, emis, msgLog)),
@@ -151,11 +161,11 @@ func Run(dynamic, createGrid bool) error {
 	}
 
 	d := &inmap.InMAP{
-		InitFuncs: initFuncs,
-		RunFuncs:  runFuncs,
-		CleanupFuncs: []inmap.DomainManipulator{
+		InitFuncs: append(initFuncs, addInit...),
+		RunFuncs:  append(runFuncs, addRun...),
+		CleanupFuncs: append([]inmap.DomainManipulator{
 			inmap.Output(Config.OutputFile, Config.OutputAllLayers, Config.OutputVariables...),
-		},
+		}, addCleanup...),
 	}
 	log.Println("Initializing model...")
 	if err = d.Init(); err != nil {
