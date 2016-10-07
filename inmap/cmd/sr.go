@@ -100,7 +100,7 @@ var workerCmd = &cobra.Command{
 		if err != nil {
 			return labelErr(err)
 		}
-		return labelErr(worker.Listen(sr.RPCPort))
+		return labelErr(sr.WorkerListen(worker, sr.RPCPort))
 	},
 }
 

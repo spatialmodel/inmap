@@ -175,9 +175,13 @@ func (s *Worker) Init(_, _ *Empty) error {
 	return nil
 }
 
-// Listen directs the worker to start listening for requests over RPCPort.
-func (s *Worker) Listen(RPCPort string) error {
-	rpc.Register(s)
+// WorkerListen directs the Worker to start listening for requests over RPCPort.
+// It is a top-level function rather than a method of s to avoid problems with
+// RPC registration.
+func WorkerListen(s *Worker, RPCPort string) error {
+	if err := rpc.Register(s); err != nil {
+		return err
+	}
 	rpc.HandleHTTP()
 	l, err := net.Listen("tcp", ":"+RPCPort)
 	if err != nil {
