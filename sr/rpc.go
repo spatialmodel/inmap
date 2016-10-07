@@ -20,7 +20,7 @@ type Cluster struct {
 	rpcPort         string
 
 	// StartupTime specifies how long a worker is expected to take to initialize.
-	// The default is 10 seconds.
+	// The default is 3 minutes.
 	StartupTime time.Duration
 }
 
@@ -35,7 +35,7 @@ func NewCluster(command, logDir, exitService string, RPCPort string) *Cluster {
 		command:     command,
 		logDir:      logDir,
 		rpcPort:     RPCPort,
-		StartupTime: time.Second * 10,
+		StartupTime: time.Minute * 3,
 	}
 }
 
