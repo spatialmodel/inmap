@@ -519,7 +519,7 @@ func PopulationMutator(config *VarGridConfig, popIndices PopIndices) (GridMutato
 	popIndex := popIndices[config.PopGridColumn]
 	if config.PopThreshold <= 0 {
 		return nil, fmt.Errorf("PopThreshold=%g. It needs to be set to a positive value.",
-			config.PopConcThreshold)
+			config.PopThreshold)
 	}
 	if config.PopDensityThreshold <= 0 {
 		return nil, fmt.Errorf("PopDensityThreshold=%g. It needs to be set to a positive value.",
@@ -543,21 +543,13 @@ func PopulationMutator(config *VarGridConfig, popIndices PopIndices) (GridMutato
 // gradients in population density and concentration. Refer to the methods
 // for additional documentation.
 type PopConcMutator struct {
-
-	// popConcThreshold is the limit for
-	// Σ(|ΔConcentration|)*combinedVolume*|ΔPopulation| / {Σ(|totalMass|)*totalPopulation}.
-	// It is initially set to 1 (i.e., no grid mutations) and then reset to
-	// a user-specified value after the model converges, and then the model
-	// has to converge again.
-	popConcThreshold float64
-
 	config     *VarGridConfig
 	popIndices PopIndices
 }
 
 // NewPopConcMutator initializes a new PopConcMutator object.
 func NewPopConcMutator(config *VarGridConfig, popIndices PopIndices) *PopConcMutator {
-	return &PopConcMutator{popConcThreshold: 1, config: config, popIndices: popIndices}
+	return &PopConcMutator{config: config, popIndices: popIndices}
 }
 
 // Mutate returns a function that takes a grid cell and returns whether
@@ -594,39 +586,12 @@ func (p *PopConcMutator) Mutate() GridMutator {
 					ΣΔC += math.Abs(conc - cell.Cf[i])
 				}
 				ΔP := math.Abs(groundCellPop - groundNeighborPop)
-				if ΣΔC*(cell.Volume+neighbor.Volume)*ΔP/totalMassPop > p.popConcThreshold {
+				if ΣΔC*(cell.Volume+neighbor.Volume)*ΔP/totalMassPop > p.config.PopConcThreshold {
 					return true
 				}
 			}
 		}
 		return false
-	}
-}
-
-// AdjustThreshold allows the model converge without out adding any grid
-// cells, and then decreases the cell creation threshold to finalThreshold
-// so grid cells will be added and waits for the model to converge again.
-// This is useful because the model will converge faster with larger grid cells,
-// so using this function will tend to decrease overall model run time as
-// compared to initially setting the threshold to the desired value.
-func (p *PopConcMutator) AdjustThreshold(finalThreshold float64, msgChan chan string) DomainManipulator {
-	firstRun := true
-	return func(d *InMAP) error {
-		if finalThreshold <= 0 {
-			return fmt.Errorf("PopConcThreshold=%g. It needs to be set to a positive value.", finalThreshold)
-		}
-		if !d.Done {
-			return nil
-		}
-		if firstRun {
-			d.Done = false
-			p.popConcThreshold = finalThreshold
-			firstRun = false
-			if msgChan != nil {
-				msgChan <- fmt.Sprintf("The simulation has converged. Adjusting grid mutation threshold to %.2g.", finalThreshold)
-			}
-		}
-		return nil
 	}
 }
 

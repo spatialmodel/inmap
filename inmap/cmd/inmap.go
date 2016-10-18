@@ -156,7 +156,6 @@ func Run(dynamic, createGrid bool, scienceFuncs []inmap.CellManipulator, addInit
 			inmap.RunPeriodically(gridMutateInterval, inmap.SetTimestepCFL()),
 			inmap.SteadyStateConvergenceCheck(Config.NumIterations,
 				Config.VarGrid.PopGridColumn, cConverge),
-			popConcMutator.AdjustThreshold(Config.VarGrid.PopConcThreshold, msgLog),
 		}
 	}
 
