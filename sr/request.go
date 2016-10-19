@@ -21,7 +21,7 @@ type Request struct {
 func (c *Cluster) NewRequest(ctx context.Context, service string, requestPayload *IOData) *Request {
 	return &Request{
 		requestPayload: requestPayload,
-		returnChan:     make(chan *Request),
+		returnChan:     make(chan *Request, 1),
 		requestChan:    c.requestChan,
 		service:        service,
 		ctx:            ctx,
