@@ -248,7 +248,7 @@ func SteadyStateConvergenceCheck(numIterations int, popGridColumn string, c chan
 				status[ii*2] = bias
 				oldSum[ii*2] = sum
 				sum = 0
-				// Calculate population-weighted concetration.
+				// Calculate population-weighted concentration.
 				for _, c := range *d.cells {
 					sum += c.Cf[ii] * c.PopData[popIndex]
 				}
