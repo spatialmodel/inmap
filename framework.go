@@ -327,39 +327,44 @@ func SetTimestepCFL() DomainManipulator {
 		d.Dt = math.Inf(1)
 		for _, c := range *d.cells {
 			// Advection time step
-			dt1 := CMax / sqrt3 /
-				max((math.Abs(c.UAvg)+c.UDeviation*2)/c.Dx,
-					(math.Abs(c.VAvg)+c.VDeviation*2)/c.Dy,
-					math.Abs(c.WAvg)/c.Dz)
-			// vertical diffusion time step
-			dt2 := CMax * c.Dz * c.Dz / 2. / c.Kzz
+			cUadv := (math.Abs(c.UAvg) + c.UDeviation*2) / c.Dx
+			cVadv := (math.Abs(c.VAvg) + c.VDeviation*2) / c.Dy
+			cWadv := math.Abs(c.WAvg) / c.Dz
 			// horizontal diffusion time step
-			dt3 := CMax * c.Dx * c.Dx / 2. / c.Kxxyy
-			dt4 := CMax * c.Dy * c.Dy / 2. / c.Kxxyy
+			cXdiff := 2. * c.Kxxyy / (c.Dx * c.Dx)
+			cYdiff := 2. * c.Kxxyy / (c.Dy * c.Dy)
+			// vertical diffusion time step
+			cZdiff := 2. * c.Kzz / (c.Dz * c.Dz)
 
-			// convective mixing time steps
-			dt5 := CFirstOrder / c.M2d
-			dt6 := CFirstOrder / c.M2u
+			dt1 := CMax / sqrt3 / max(cUadv+cXdiff, cVadv+cYdiff,
+				cWadv+cZdiff+c.M2d+c.M2u)
 
 			// Chemistry time step
 			dt7 := CFirstOrder / c.SO2oxidation
 
 			// Deposition time steps
-			// Including wet deposition can cause a negative time step
+			// Wet deposition can cause a negative time step
 			// because rounding error sometimes causes the wet deposition rate
-			// to be a very small negative number. Since wet deposition is unlikely
-			// to be the process with the smallest time step, we leave it out here.
-			// dt8 := CFirstOrder / c.ParticleWetDep
-			// dt9 := CFirstOrder / c.SO2WetDep
-			// dt10 := CFirstOrder / c.OtherGasWetDep
+			// to be a very small negative number. So we check for that here.
+			dt8 := math.Inf(1)
+			if c.ParticleWetDep > 0 {
+				dt8 = CFirstOrder / c.ParticleWetDep
+			}
+			dt9 := math.Inf(1)
+			if c.SO2WetDep > 0 {
+				dt9 = CFirstOrder / c.SO2WetDep
+			}
+			dt10 := math.Inf(1)
+			if c.OtherGasWetDep > 0 {
+				dt10 = CFirstOrder / c.OtherGasWetDep
+			}
 			dt11 := CFirstOrder * c.Dy / c.ParticleDryDep
 			dt12 := CFirstOrder * c.Dy / c.NH3DryDep
 			dt13 := CFirstOrder * c.Dy / c.SO2DryDep
 			dt14 := CFirstOrder * c.Dy / c.VOCDryDep
 			dt15 := CFirstOrder * c.Dy / c.NOxDryDep
 
-			d.Dt = amin(d.Dt, dt1, dt2, dt3, dt4, dt5, dt6, dt7, //dt8, dt9, dt10,
-				dt11, dt12, dt13, dt14, dt15) // seconds
+			d.Dt = amin(d.Dt, dt1, dt7, dt8, dt9, dt10, dt11, dt12, dt13, dt14, dt15) // seconds
 		}
 		return nil
 	}

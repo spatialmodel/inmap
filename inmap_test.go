@@ -538,7 +538,7 @@ func TestConverge(t *testing.T) {
 	convergences := []DomainManipulator{SteadyStateConvergenceCheck(2, cfg.PopGridColumn, nil),
 		SteadyStateConvergenceCheck(-1, cfg.PopGridColumn, nil)}
 	convergenceNames := []string{"fixed", "criterion"}
-	expectedConcentration := []float64{0.46486263752954793, 83.7425598603494}
+	expectedConcentration := []float64{0.4648001961552183, 83.76142781736117}
 
 	for i, conv := range convergences {
 
