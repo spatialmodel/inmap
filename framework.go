@@ -318,7 +318,7 @@ func SetTimestepCFL() DomainManipulator {
 	return func(d *InMAP) error {
 		const (
 			// Cmax is the maximum CFL value allowed.
-			CMax = 1.0
+			CMax = 0.75
 			// CFirstOrder is the empirically determined maximum
 			// allowed dimensionless step size for first-order
 			// differential equations.
