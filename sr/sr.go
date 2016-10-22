@@ -135,6 +135,7 @@ func (sr *SR) Run(outfile string, layers []int, begin, end int) error {
 		// check for errors in writer.
 		select {
 		case err := <-errChan:
+			sr.c.Shutdown()
 			return fmt.Errorf("sr.writeOutput: %v", err)
 		default:
 		}
@@ -154,12 +155,14 @@ func (sr *SR) Run(outfile string, layers []int, begin, end int) error {
 		} else {
 			o := new(IOData)
 			if err := sr.localWorker.Calculate(rp, o); err != nil {
+				sr.c.Shutdown()
 				return err
 			}
 			reqChan <- o
 		}
 	}
 	close(reqChan)
+	sr.c.Shutdown()
 	return <-errChan // Wait for writer to finish.
 }
 
