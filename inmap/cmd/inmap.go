@@ -163,7 +163,7 @@ func Run(dynamic, createGrid bool, scienceFuncs []inmap.CellManipulator, addInit
 		InitFuncs: append(initFuncs, addInit...),
 		RunFuncs:  append(runFuncs, addRun...),
 		CleanupFuncs: append([]inmap.DomainManipulator{
-			inmap.Output(Config.OutputFile, Config.OutputAllLayers, Config.OutputVariables...),
+			inmap.Output(Config.OutputFile, Config.OutputAllLayers, Config.OutputVariables),
 		}, addCleanup...),
 	}
 	log.Println("Initializing model...")

@@ -224,7 +224,7 @@ type geomConc struct {
 
 func saveConc(outChan chan []geomConc) inmap.DomainManipulator {
 	return func(d *inmap.InMAP) error {
-		res, err := d.Results(false, "TotalPM25")
+		res, err := d.Results(false, true, map[string]string{"TotalPM25": "TotalPM25"})
 		if err != nil {
 			return err
 		}

@@ -43,6 +43,12 @@
 			"revisionTime": "2013-01-22T00:17:00Z"
 		},
 		{
+			"checksumSHA1": "YdyNHq+9L5PcwWTVVWApXl0Bv3w=",
+ 			"path": "github.com/Knetic/govaluate",
+ 			"revision": "36d12fdf60d2eced73454479e9935c9ea8bbe46a",
+ 			"revisionTime": "2016-11-28T19:08:11Z"
+ 		},
+		{
 			"checksumSHA1": "6qccqKKVnwL9ECLdP+lVzTegdwk=",
 			"path": "github.com/ajstarks/svgo",
 			"revision": "672fe547df4e49efc6db67a74391368bcb149b37",

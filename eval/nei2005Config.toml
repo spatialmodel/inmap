@@ -1,35 +1,67 @@
-
-
+# InMAPData is the path to location of baseline meteorology and pollutant data.
+# The path can include environment variables.
 InMAPData = "${evaldata}/InMAPData_v1.2.0.ncf"
 
+# VariableGridData is the path to the location of the variable-resolution gridded
+# InMAP data, or the location where it should be created if it doesn't already
+# exist. The path can include environment variables.
 VariableGridData = "${evaldata}/InMAPData_v1.2.0.gob"
 
-
+# EmissionsShapefiles are the paths to any emissions shapefiles.
+# Can be elevated or ground level; elevated files need to have columns
+# labeled "height", "diam", "temp", and "velocity" containing stack
+# information in units of m, m, K, and m/s, respectively.
+# Emissions will be allocated from the geometries in the shape file
+# to the InMAP computational grid, but the mapping projection of the
+# shapefile must be the same as the projection InMAP uses.
+# Can include environment variables.
 EmissionsShapefiles = [
 	"${evaldata}/2005_emissions/bioFireEmis.shp",
 	"${evaldata}/2005_emissions/Elevated.shp",
 	"${evaldata}/2005_emissions/GroundLevel.shp"
 ]
+
+# EmissionUnits gives the units that the input emissions are in.
+# Acceptable values are 'tons/year' and 'kg/year'.
 EmissionUnits = "tons/year"
 
-OutputFile = "nei2005/2005nei_output_${InMAPRunType}.shp"
-
-OutputVariables = [
-	"NH3",
-	"NOx",
-	"PrimaryPM25",
-	"SOA",
-	"SOx",
-	"TotalPM25",
-	"VOC",
-	"pNH4",
-	"pNO3",
-	"pSO4"
-]
-
-
+# HTTPAddress is the address for hosting the HTML user interface.
+# If HTTPAddress is `:8080`, then the GUI
+# would be viewed by visiting `localhost:8080` in a web browser.
+# If HTTPport is "", then the web server doesn't run.
 HTTPAddress = ":8080"
 
+# Path to desired output shapefile location. Can include environment variables.
+OutputFile = "nei2005/2005nei_output_${InMAPRunType}.shp"
+
+# OutputVariables specifies which model variables should be included in the
+# output file. Each output variable is defined by the desired name and an
+# expression that can be used to calculate it
+# (in the form VariableName = "Expression"). These expressions can utilize
+# variables built into the model, user-defined variables, and functions.
+# Available functions include:
+# 'exp(x)' which applies the exponetional function e^x.
+# 'loglogRR(PM 2.5 Concentration)' which calculates relative risk (or risk ratio)
+# 		associated with a given change in PM 2.5 concentration, assumung a log-log
+# 		dose response (almost a linear relationship).
+# 'coxHazard(Relative Risk, Population, Mortality Rate)' which calculates a
+#		deaths estimate based on the relative risk associated with PM 2.5 changes
+#		and the baseline number of deaths.
+# Note: Environment variables can be used in both variable names and expressions.
+[OutputVariables]
+TotalPopD = "coxHazard(loglogRR(TotalPM25), TotalPop, MortalityRate)"
+WhitNoLatD = "coxHazard(loglogRR(TotalPM25), WhiteNoLat, MortalityRate)"
+BlackD = "coxHazard(loglogRR(TotalPM25), Black, MortalityRate)"
+NativeD = "coxHazard(loglogRR(TotalPM25), Native, MortalityRate)"
+AsianD = "coxHazard(loglogRR(TotalPM25), Asian, MortalityRate)"
+LatinoD = "coxHazard(loglogRR(TotalPM25), Latino, MortalityRate)"
+TotalPop = "TotalPop"
+TotalPM25 = "TotalPM25"
+PM25Emiss = "PM25Emissions"
+BasePM25 = "BaselineTotalPM25"
+WindSpeed = "WindSpeed"
+
+# VarGrid provides information for specifying the variable resolution grid.
 [VarGrid]
 
 # VariableGridXo and VariableGridYo are the X and Y coordinates of the

@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 
 	"bitbucket.org/ctessum/cdf"
 	"github.com/spatialmodel/inmap"
@@ -184,7 +183,12 @@ func (sr *SR) newRequestPayload(i int, cell *inmap.Cell) *IOData {
 	return requestPayload
 }
 
-var outputVars = []string{"SOA", "PrimaryPM25", "pNH4", "pSO4", "pNO3"}
+var outputVars = map[string]string{"SOA": "SOA",
+	"PrimaryPM25": "PrimaryPM25",
+	"pNH4":        "pNH4",
+	"pSO4":        "pSO4",
+	"pNO3":        "pNO3",
+}
 
 func (sr *SR) writeResults(outfile string, layers []int, requestChan chan resulter, errChan chan error) {
 	nGridCells, err := sr.layerGridCells(layers)
@@ -201,19 +205,16 @@ func (sr *SR) writeResults(outfile string, layers []int, requestChan chan result
 
 		// Get model variable names for inclusion in the SR matrix.
 		vars, descriptions, units := sr.d.OutputOptions()
-		inmapVars := make([]string, 0, len(vars))
-		inmapDescriptions := make([]string, 0, len(vars))
-		inmapUnits := make([]string, 0, len(vars))
+		inmapVars := make(map[string]string)
+		inmapDescriptions := make(map[string]string)
+		inmapUnits := make(map[string]string)
 		for i, v := range vars {
 			if _, ok := inmap.PolLabels[v]; ok {
 				continue // ignore modeled pollutants
 			}
-			if strings.Contains(v, " deaths") {
-				continue
-			}
-			inmapVars = append(inmapVars, v)
-			inmapDescriptions = append(inmapDescriptions, descriptions[i])
-			inmapUnits = append(inmapUnits, units[i])
+			inmapVars[v] = v
+			inmapDescriptions[v] = descriptions[i]
+			inmapUnits[v] = units[i]
 		}
 
 		h := cdf.NewHeader([]string{"layer", "source", "receptor", "allcells", "layers"},
@@ -266,7 +267,7 @@ func (sr *SR) writeResults(outfile string, layers []int, requestChan chan result
 		}
 
 		// Add InMAP data
-		data, err := sr.d.Results(true, inmapVars...)
+		data, err := sr.d.Results(true, false, inmapVars)
 		if err != nil {
 			errChan <- fmt.Errorf("writing InMAP variables to SR netcdf file: %v", err)
 			return

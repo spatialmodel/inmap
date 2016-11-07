@@ -85,11 +85,11 @@ func TestDynamicGrid(t *testing.T) {
 		t.Errorf("dynamic grid should have %v cells but instead has %v", wantCells, cells)
 	}
 
-	r, err := d.Results(false, "TotalPop deaths")
+	r, err := d.Results(false, true, map[string]string{"TotalPopD": "coxHazard(loglogRR(TotalPM25), TotalPop, MortalityRate)"})
 	if err != nil {
 		t.Error(err)
 	}
-	results := r["TotalPop deaths"]
+	results := r["TotalPopD"]
 	totald := floats.Sum(results)
 	const expectedDeaths = 1.706171742850251e-05
 	if different(totald, expectedDeaths, testTolerance) {
