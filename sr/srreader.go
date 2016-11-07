@@ -212,13 +212,10 @@ func (sr *Reader) Concentrations(e *inmap.EmisRecord) ([]float64, error) {
 		for i, layer := range layers {
 			layerfrac := layerfracs[i]
 
-			start := []int{layer, index, 0}
-			end := []int{layer, index, sr.nCellsGroundLevel - 1}
-
 			polNames := []string{"pNH4", "pNO3", "pSO4", "SOA", "PrimaryPM25"}
 			for i, emis := range []float64{e.NH3, e.NOx, e.SOx, e.VOC, e.PM25} {
 				if emis != 0 {
-					v, err := sr.get(polNames[i], start, end)
+					v, err := sr.Source(polNames[i], layer, index)
 					if err != nil {
 						return nil, err
 					}
@@ -259,6 +256,15 @@ func (sr *Reader) layerFracs(c *inmap.Cell, plumeHeight float64) ([]int, []float
 		return nil, nil, fmt.Errorf("plume height (%g m) is above the top layer in the SR matrix", plumeHeight)
 	}
 	panic("problem in layerFracs")
+}
+
+// Source returns concentrations in μg m-3 for emissions in μg s-1 of
+// pollutant pol in SR layer index 'layer' and horizontal grid cell index
+// 'index'. If the layer and index are not known, use Concentrations instead.
+func (sr *Reader) Source(pol string, layer, index int) ([]float64, error) {
+	start := []int{layer, index, 0}
+	end := []int{layer, index, sr.nCellsGroundLevel - 1}
+	return sr.get(pol, start, end)
 }
 
 // get returns data from a variable starting and ending at the given indices.

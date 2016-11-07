@@ -91,7 +91,7 @@ func TestDynamicGrid(t *testing.T) {
 	}
 	results := r["TotalPop deaths"]
 	totald := floats.Sum(results)
-	const expectedDeaths = 1.4997688844342045e-05
+	const expectedDeaths = 1.706171742850251e-05
 	if different(totald, expectedDeaths, testTolerance) {
 		t.Errorf("Deaths (%v) doesn't equal %v", totald, expectedDeaths)
 	}
