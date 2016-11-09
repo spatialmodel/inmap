@@ -62,10 +62,10 @@ func NewReader(r cdf.ReaderWriterAt) (*Reader, error) {
 	for i := range cells {
 		cells[i] = new(inmap.Cell)
 		cells[i].Polygonal = geom.Polygon{{
-			geom.Point{X: g[1][i], Y: g[3][i]}, // S, W
-			geom.Point{X: g[1][i], Y: g[2][i]}, // S, E
-			geom.Point{X: g[0][i], Y: g[2][i]}, // N, E
-			geom.Point{X: g[0][i], Y: g[3][i]}, // N, W
+			geom.Point{X: g[3][i], Y: g[1][i]}, // W, S
+			geom.Point{X: g[2][i], Y: g[1][i]}, // E, S
+			geom.Point{X: g[2][i], Y: g[0][i]}, // E, N
+			geom.Point{X: g[3][i], Y: g[0][i]}, // W, N
 		}}
 	}
 
@@ -131,8 +131,15 @@ func NewReader(r cdf.ReaderWriterAt) (*Reader, error) {
 
 	// Add cell indices for easy searching later.
 	sr.indices = make(map[*inmap.Cell]int)
-	for i, c := range sr.d.Cells() {
-		sr.indices[c] = i
+	ii := 0
+	prevLayer := 0
+	for _, c := range sr.d.Cells() {
+		if c.Layer != prevLayer {
+			ii = 0
+		}
+		sr.indices[c] = ii
+		ii++
+		prevLayer = c.Layer
 	}
 
 	return sr, nil
@@ -212,7 +219,6 @@ func (sr *Reader) Concentrations(e *inmap.EmisRecord) ([]float64, error) {
 		for i, layer := range layers {
 			layerfrac := layerfracs[i]
 
-			polNames := []string{"pNH4", "pNO3", "pSO4", "SOA", "PrimaryPM25"}
 			for i, emis := range []float64{e.NH3, e.NOx, e.SOx, e.VOC, e.PM25} {
 				if emis != 0 {
 					v, err := sr.Source(polNames[i], layer, index)
@@ -226,6 +232,9 @@ func (sr *Reader) Concentrations(e *inmap.EmisRecord) ([]float64, error) {
 	}
 	return out, nil
 }
+
+// polNames lists the pollutant names.
+var polNames = []string{"pNH4", "pNO3", "pSO4", "SOA", "PrimaryPM25"}
 
 // layerFracs interpolates the height of c among the layers in the
 // SR matrix and returns a list of layers that should be used to represent
@@ -262,6 +271,22 @@ func (sr *Reader) layerFracs(c *inmap.Cell, plumeHeight float64) ([]int, []float
 // pollutant pol in SR layer index 'layer' and horizontal grid cell index
 // 'index'. If the layer and index are not known, use Concentrations instead.
 func (sr *Reader) Source(pol string, layer, index int) ([]float64, error) {
+	if layer >= len(sr.layers) {
+		return nil, fmt.Errorf("sr: requested layer %d >= number of layers (%d)", layer, len(sr.layers))
+	}
+	if index >= sr.nCellsGroundLevel {
+		return nil, fmt.Errorf("sr: requested index %d >= number of grid cells (%d)", index, sr.nCellsGroundLevel)
+	}
+	foundPol := false
+	for _, p := range polNames {
+		if p == pol {
+			foundPol = true
+			break
+		}
+	}
+	if !foundPol {
+		return nil, fmt.Errorf("sr: requested pollutant %s not one of valid pollutants (%+v)", pol, polNames)
+	}
 	start := []int{layer, index, 0}
 	end := []int{layer, index, sr.nCellsGroundLevel - 1}
 	return sr.get(pol, start, end)

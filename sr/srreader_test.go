@@ -23,6 +23,7 @@ import (
 	"math"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/ctessum/geom"
@@ -97,63 +98,85 @@ func TestGeometry(t *testing.T) {
 	}
 	g := sr.Geometry()
 
-	want := []geom.Polygonal{
-		geom.Polygon{[]geom.Point{
-			geom.Point{X: -4000, Y: -4000},
-			geom.Point{X: -4000, Y: -3000},
-			geom.Point{X: -3000, Y: -3000},
-			geom.Point{X: -3000, Y: -4000},
-		}},
-		geom.Polygon{[]geom.Point{
-			geom.Point{X: -4000, Y: -3000},
-			geom.Point{X: -4000, Y: -2000},
-			geom.Point{X: -3000, Y: -2000},
-			geom.Point{X: -3000, Y: -3000},
-		}},
-		geom.Polygon{[]geom.Point{
-			geom.Point{X: -4000, Y: -2000},
-			geom.Point{X: -4000, Y: 0},
-			geom.Point{X: -2000, Y: 0},
-			geom.Point{X: -2000, Y: -2000}}},
-		geom.Polygon{[]geom.Point{
+	want := []geom.Polygonal{geom.Polygon{
+		[]geom.Point{geom.Point{X: -4000, Y: -4000},
 			geom.Point{X: -3000, Y: -4000},
 			geom.Point{X: -3000, Y: -3000},
-			geom.Point{X: -2000, Y: -3000},
-			geom.Point{X: -2000, Y: -4000}}},
-		geom.Polygon{[]geom.Point{
+			geom.Point{X: -4000, Y: -3000}}},
+		geom.Polygon{[]geom.Point{geom.Point{X: -4000, Y: -3000},
 			geom.Point{X: -3000, Y: -3000},
 			geom.Point{X: -3000, Y: -2000},
+			geom.Point{X: -4000, Y: -2000}}},
+		geom.Polygon{[]geom.Point{geom.Point{X: -4000, Y: -2000},
 			geom.Point{X: -2000, Y: -2000},
-			geom.Point{X: -2000, Y: -3000}}},
-		geom.Polygon{[]geom.Point{
-			geom.Point{X: -4000, Y: 0},
-			geom.Point{X: -4000, Y: 4000},
-			geom.Point{X: 0, Y: 4000},
-			geom.Point{X: 0, Y: 0}}},
-		geom.Polygon{[]geom.Point{
+			geom.Point{X: -2000, Y: 0},
+			geom.Point{X: -4000, Y: 0}}},
+		geom.Polygon{[]geom.Point{geom.Point{X: -3000, Y: -4000},
 			geom.Point{X: -2000, Y: -4000},
+			geom.Point{X: -2000, Y: -3000},
+			geom.Point{X: -3000, Y: -3000}}},
+		geom.Polygon{[]geom.Point{geom.Point{X: -3000, Y: -3000},
+			geom.Point{X: -2000, Y: -3000},
 			geom.Point{X: -2000, Y: -2000},
-			geom.Point{X: 0, Y: -2000},
-			geom.Point{X: 0, Y: -4000}}},
-		geom.Polygon{[]geom.Point{
-			geom.Point{X: -2000, Y: -2000},
-			geom.Point{X: -2000, Y: 0},
-			geom.Point{X: 0, Y: 0},
-			geom.Point{X: 0, Y: -2000}}},
-		geom.Polygon{[]geom.Point{
-			geom.Point{X: 0, Y: -4000},
-			geom.Point{X: 0, Y: 0},
-			geom.Point{X: 4000, Y: 0},
-			geom.Point{X: 4000, Y: -4000}}},
-		geom.Polygon{[]geom.Point{
+			geom.Point{X: -3000, Y: -2000}}},
+		geom.Polygon{[]geom.Point{geom.Point{X: -4000, Y: 0},
 			geom.Point{X: 0, Y: 0},
 			geom.Point{X: 0, Y: 4000},
+			geom.Point{X: -4000, Y: 4000}}},
+		geom.Polygon{[]geom.Point{geom.Point{X: -2000, Y: -4000},
+			geom.Point{X: 0, Y: -4000},
+			geom.Point{X: 0, Y: -2000},
+			geom.Point{X: -2000, Y: -2000}}},
+		geom.Polygon{[]geom.Point{geom.Point{X: -2000, Y: -2000},
+			geom.Point{X: 0, Y: -2000},
+			geom.Point{X: 0, Y: 0},
+			geom.Point{X: -2000, Y: 0}}},
+		geom.Polygon{[]geom.Point{geom.Point{X: 0, Y: -4000},
+			geom.Point{X: 4000, Y: -4000},
+			geom.Point{X: 4000, Y: 0},
+			geom.Point{X: 0, Y: 0}}},
+		geom.Polygon{[]geom.Point{geom.Point{X: 0, Y: 0},
+			geom.Point{X: 4000, Y: 0},
 			geom.Point{X: 4000, Y: 4000},
-			geom.Point{X: 4000, Y: 0}}},
-	}
+			geom.Point{X: 0, Y: 4000}}}}
 
 	if !reflect.DeepEqual(want, g) {
 		t.Errorf("geometry doesn't match")
+	}
+}
+
+func TestSR_Source(t *testing.T) {
+	r, err := os.Open("../inmap/testdata/testSR.ncf")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sr, err := NewReader(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = sr.Source("xxxx", 0, 0)
+	if err == nil {
+		t.Errorf("should have an error")
+	}
+	if !strings.Contains(err.Error(), "valid pollutant") {
+		t.Errorf("error should be about invalid pollutant")
+	}
+
+	_, err = sr.Source("PrimaryPM25", 0, 1000000000)
+	if err == nil {
+		t.Errorf("should have an error")
+	}
+	if !strings.Contains(err.Error(), "grid cells") {
+		t.Errorf("error should be about too many grid cells")
+	}
+
+	_, err = sr.Source("PrimaryPM25", 100, 0)
+	if err == nil {
+		t.Errorf("should have an error")
+	}
+	if !strings.Contains(err.Error(), "layer") {
+		t.Errorf("error should be about too many layers")
 	}
 }
 
@@ -237,14 +260,14 @@ func TestConcentrations(t *testing.T) {
 				7.03697711212925e-10, 1.4490984800996642e-10, 1.6441238995246188e-11},
 		},
 		{ // PM25 100m
-			d: []float64{5.611809754041488e-09, 5.65484465381776e-09, 4.6655953143699175e-09,
-				5.147377787511767e-09, 5.912693070554996e-09, 1.3921809138359893e-09, 3.936972981057887e-09,
-				4.512377096261103e-09, 1.6007739160615037e-09, 6.99381278071264e-10},
+			d: []float64{1.0384010211692146e-06, 4.806783900520519e-07, 1.3779393223094143e-07,
+				3.255835884765454e-07, 2.3568499479334203e-07, 1.6861865123153858e-08, 6.997017131502968e-08,
+				6.392452770298667e-08, 1.537270302735229e-08, 5.577751434206565e-09},
 		},
 		{ // PM25 200m
-			d: []float64{2.737697180066334e-09, 2.7530715485113433e-09, 2.2632349327977863e-09,
-				2.5054136543189998e-09, 2.874128046670421e-09, 7.997795758996062e-10, 1.907466185002704e-09,
-				2.1818344908552945e-09, 4.712191747913153e-10, 2.5783555845926287e-10},
+			d: []float64{3.835866693724377e-11, 6.099889343635923e-11, 8.292484754424123e-11,
+				5.750595138964698e-11, 8.120485534002242e-11, 4.1053837412929894e-11, 7.843142801888803e-11,
+				1.0826346763526118e-10, 4.48883083481455e-11, 2.5135810099996547e-11},
 		},
 		{ // PM25 800m
 			d:   []float64(nil),

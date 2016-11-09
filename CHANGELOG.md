@@ -4,6 +4,7 @@
 * Changed SR matrix generator to allow variable startup time
 * Removed the population concentration threshold adjuster
 * Fixed bug in time step calculation that was causing very occasional crashes
+* Fixed bugs in source-receptor matrix reader
 
 # Release 1.2.0 (2016-8-22)
 * Allowed the input emissions data shapefiles to have arbitrary spatial projections instead of requiring them to be the same as the InMAP grid
