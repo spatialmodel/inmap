@@ -23,7 +23,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"go/build"
 	"html/template"
 	"io"
 	"io/ioutil"
@@ -680,7 +679,7 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func init() {
+/*func init() {
 	pkg, err := build.Import("github.com/ctessum/aep", "", build.FindOnly)
 	if err != nil {
 		panic(err)
@@ -693,7 +692,7 @@ func init() {
 		filepath.Join(reportfiles, "header.html"),
 		filepath.Join(reportfiles, "nav.html"),
 		filepath.Join(reportfiles, "footer.html")))
-}
+}*/
 
 var (
 	templates   = template.New("x")
