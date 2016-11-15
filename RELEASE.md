@@ -8,6 +8,8 @@ This file contains a checklist for steps to take to release a new version of InM
 
 1. If the input data format has changed since the last release, change the `DataVersion` and/or `VarGridDataVersion` variables in `framework.go` and regenerate the input data with the new version number.
 
+1. Set the release date in `CHANGELOG.md`.
+
 1. Commit the results.
 
 1. Run `inmap/build.sh` to create executables for different platforms.
