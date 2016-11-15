@@ -1,7 +1,6 @@
 /*
 Package geom holds geometry objects and functions to operate on them.
-They can be encoded and decoded by other packages in this repository.
-*/
+They can be encoded and decoded by other packages in this repository.*/
 package geom
 
 import "github.com/ctessum/geom/proj"
@@ -24,6 +23,9 @@ type Linear interface {
 	// Within determines whether this geometry is within the Polygonal geometry.
 	// Points that lie on the edge of the polygon are considered within.
 	Within(Polygonal) WithinStatus
+
+	// Distance calculates the shortest distance to the given Point.
+	Distance(Point) float64
 }
 
 // Polygonal is an interface for types that are polygonal in nature.

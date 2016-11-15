@@ -49,10 +49,16 @@
 			"revisionTime": "2016-03-25T11:55:36Z"
 		},
 		{
-			"checksumSHA1": "5g4gVjxDJzTdjMYTat1AtAyDjNI=",
+			"checksumSHA1": "+bpg0tl42j8UUohT9Bb9fWPhV2k=",
+			"path": "github.com/biogo/graphics/bezier",
+			"revision": "ee9e4a4ad8d5c6c55688ec8da3f96f8bd3f09b85",
+			"revisionTime": "2016-09-06T23:06:34Z"
+		},
+		{
+			"checksumSHA1": "ntacCkWfMT63DaehXLG5FeXWyNM=",
 			"path": "github.com/cpuguy83/go-md2man/md2man",
-			"revision": "2724a9c9051aa62e9cca11304e7dd518e9e41599",
-			"revisionTime": "2016-01-05T01:15:47Z"
+			"revision": "a65d4d2de4d5f7c74868dfa9b202a3c8be315aaa",
+			"revisionTime": "2016-09-04T16:08:59Z"
 		},
 		{
 			"checksumSHA1": "Ax0hBKnWZXbNoFLOHbKkQA3Qj+c=",
@@ -97,46 +103,46 @@
 			"revisionTime": "2016-06-28T22:49:28Z"
 		},
 		{
-			"checksumSHA1": "dd30IAbNFyUqNi9Hn2CuZAqFpJg=",
+			"checksumSHA1": "hKFW8M5VoeZXHZfuuD5bIFWGLuU=",
 			"path": "github.com/ctessum/geom",
-			"revision": "1b82c4535de4d267963854f15a29e5f11d62bb38",
-			"revisionTime": "2016-08-02T16:17:21Z"
+			"revision": "c3900f6738a05594fd484f9d7a2ba14242bb8e1b",
+			"revisionTime": "2016-10-05T16:04:28Z"
 		},
 		{
 			"checksumSHA1": "FumcFC7M30N+XttDSYQWW71QUBM=",
 			"path": "github.com/ctessum/geom/carto",
-			"revision": "1b82c4535de4d267963854f15a29e5f11d62bb38",
-			"revisionTime": "2016-08-02T16:17:21Z"
+			"revision": "c3900f6738a05594fd484f9d7a2ba14242bb8e1b",
+			"revisionTime": "2016-10-05T16:04:28Z"
 		},
 		{
 			"checksumSHA1": "TvGp9XD2f4xEw+5JFgmJb7dSQRA=",
 			"path": "github.com/ctessum/geom/encoding/geojson",
-			"revision": "1b82c4535de4d267963854f15a29e5f11d62bb38",
-			"revisionTime": "2016-08-02T16:17:21Z"
+			"revision": "c3900f6738a05594fd484f9d7a2ba14242bb8e1b",
+			"revisionTime": "2016-10-05T16:04:28Z"
 		},
 		{
 			"checksumSHA1": "XapJqyrMadCaAQ9s7zpz3CAY37Q=",
 			"path": "github.com/ctessum/geom/encoding/shp",
-			"revision": "1b82c4535de4d267963854f15a29e5f11d62bb38",
-			"revisionTime": "2016-08-02T16:17:21Z"
+			"revision": "c3900f6738a05594fd484f9d7a2ba14242bb8e1b",
+			"revisionTime": "2016-10-05T16:04:28Z"
 		},
 		{
 			"checksumSHA1": "bGtaHRdc+ZW7uNcGsNpdPvDTFv0=",
 			"path": "github.com/ctessum/geom/index/rtree",
-			"revision": "1b82c4535de4d267963854f15a29e5f11d62bb38",
-			"revisionTime": "2016-08-02T16:17:21Z"
+			"revision": "c3900f6738a05594fd484f9d7a2ba14242bb8e1b",
+			"revisionTime": "2016-10-05T16:04:28Z"
 		},
 		{
 			"checksumSHA1": "kL1G+k1i+aJsWA6bfCJoEJ9x59c=",
 			"path": "github.com/ctessum/geom/op",
-			"revision": "1b82c4535de4d267963854f15a29e5f11d62bb38",
-			"revisionTime": "2016-08-02T16:17:21Z"
+			"revision": "c3900f6738a05594fd484f9d7a2ba14242bb8e1b",
+			"revisionTime": "2016-10-05T16:04:28Z"
 		},
 		{
 			"checksumSHA1": "KLFt5Xy6S3/O8uYchxBdV30ewnA=",
 			"path": "github.com/ctessum/geom/proj",
-			"revision": "1b82c4535de4d267963854f15a29e5f11d62bb38",
-			"revisionTime": "2016-08-02T16:17:21Z"
+			"revision": "c3900f6738a05594fd484f9d7a2ba14242bb8e1b",
+			"revisionTime": "2016-10-05T16:04:28Z"
 		},
 		{
 			"checksumSHA1": "/xn+Pi9NjLtVofLrNNqPIa0OVM0=",
@@ -189,134 +195,134 @@
 		{
 			"checksumSHA1": "tJLFSeWyXG8RWcdQ3oNtI7meD3c=",
 			"path": "github.com/gonum/blas",
-			"revision": "aba9649bffd550ef7ff0d3ab9d92d4d0748233b1",
-			"revisionTime": "2016-07-26T03:55:12Z"
+			"revision": "ae153b67db9bc5e765798776fb211c9777cd3cc0",
+			"revisionTime": "2016-10-25T15:10:57Z"
 		},
 		{
 			"checksumSHA1": "Hc4+U8HpN0345fLzyzrxlqYBBMs=",
 			"path": "github.com/gonum/blas/blas64",
-			"revision": "aba9649bffd550ef7ff0d3ab9d92d4d0748233b1",
-			"revisionTime": "2016-07-26T03:55:12Z"
+			"revision": "ae153b67db9bc5e765798776fb211c9777cd3cc0",
+			"revisionTime": "2016-10-25T15:10:57Z"
 		},
 		{
 			"checksumSHA1": "J9gEA5+8UjrU/7vNbGBeeJEQikM=",
 			"path": "github.com/gonum/blas/native",
-			"revision": "aba9649bffd550ef7ff0d3ab9d92d4d0748233b1",
-			"revisionTime": "2016-07-26T03:55:12Z"
+			"revision": "ae153b67db9bc5e765798776fb211c9777cd3cc0",
+			"revisionTime": "2016-10-25T15:10:57Z"
 		},
 		{
 			"checksumSHA1": "4URlS0sh4+VMLN6iDIYdt0JfpFg=",
 			"path": "github.com/gonum/blas/native/internal/math32",
-			"revision": "aba9649bffd550ef7ff0d3ab9d92d4d0748233b1",
-			"revisionTime": "2016-07-26T03:55:12Z"
+			"revision": "ae153b67db9bc5e765798776fb211c9777cd3cc0",
+			"revisionTime": "2016-10-25T15:10:57Z"
 		},
 		{
 			"checksumSHA1": "Z/2UmBcGPVG2JKszHGwoS4e1UsE=",
 			"path": "github.com/gonum/floats",
-			"revision": "71104dde078efa80be993024d67e847c88164dc9",
-			"revisionTime": "2016-07-22T13:59:26Z"
+			"revision": "69e84bedb455b879a901c5b8f45f5c99db9e3267",
+			"revisionTime": "2016-10-25T15:11:50Z"
 		},
 		{
 			"checksumSHA1": "c9Iryr2u6jMi4TlwBHfLxS1vnYc=",
 			"path": "github.com/gonum/internal/asm",
-			"revision": "dce19b50b924d0835555ad5d271e0c8ef8b804f0",
-			"revisionTime": "2016-07-22T13:26:03Z"
+			"revision": "bd2e27558441c2cc983b90fbf8a462b39e65e240",
+			"revisionTime": "2016-10-25T15:11:29Z"
 		},
 		{
-			"checksumSHA1": "VjHwqpjHL0sZYw3Jkv6ypgPr39c=",
+			"checksumSHA1": "nAIOtfSdshVgyCDukk5xmrwrtdc=",
 			"path": "github.com/gonum/lapack",
-			"revision": "51f71f9e4e19b20b799bf0a4256aee7bde560a87",
-			"revisionTime": "2016-08-04T00:16:55Z"
+			"revision": "ab9be2d0162b800028a0b89fff1087069f011c8a",
+			"revisionTime": "2016-11-10T14:13:51Z"
 		},
 		{
-			"checksumSHA1": "sMw2mRupPf0XP8AGjs+UNrV8a0E=",
+			"checksumSHA1": "duOxKDxW5hl5pFfXzuaw2wiO+eA=",
 			"path": "github.com/gonum/lapack/lapack64",
-			"revision": "51f71f9e4e19b20b799bf0a4256aee7bde560a87",
-			"revisionTime": "2016-08-04T00:16:55Z"
+			"revision": "ab9be2d0162b800028a0b89fff1087069f011c8a",
+			"revisionTime": "2016-11-10T14:13:51Z"
 		},
 		{
-			"checksumSHA1": "ofy2Jbm+cuorS14Bp1V8sFe2+2Q=",
+			"checksumSHA1": "ljCW5dnjGY47sN+e0Vj1z/5AnAI=",
 			"path": "github.com/gonum/lapack/native",
-			"revision": "51f71f9e4e19b20b799bf0a4256aee7bde560a87",
-			"revisionTime": "2016-08-04T00:16:55Z"
+			"revision": "ab9be2d0162b800028a0b89fff1087069f011c8a",
+			"revisionTime": "2016-11-10T14:13:51Z"
 		},
 		{
 			"checksumSHA1": "Kc/zUGRoA9S4HyhXvEHM7ye12d0=",
 			"path": "github.com/gonum/matrix",
-			"revision": "a4e29827f08e30ac988a5270fff75a598a6d3526",
-			"revisionTime": "2016-07-22T13:59:14Z"
+			"revision": "dbfe3ea464ecb7c5f04b9d1c042185ce9ed9fac1",
+			"revisionTime": "2016-10-25T15:11:20Z"
 		},
 		{
-			"checksumSHA1": "JgwEzXaRfXETtiXJ23tXqyjv1gg=",
+			"checksumSHA1": "ZmOKG+xa9+VU11djrBoADyEsObU=",
 			"path": "github.com/gonum/matrix/mat64",
-			"revision": "a4e29827f08e30ac988a5270fff75a598a6d3526",
-			"revisionTime": "2016-07-22T13:59:14Z"
+			"revision": "dbfe3ea464ecb7c5f04b9d1c042185ce9ed9fac1",
+			"revisionTime": "2016-10-25T15:11:20Z"
 		},
 		{
-			"checksumSHA1": "YzAsjqWdZjOyo63gvn7IW7y2JDM=",
+			"checksumSHA1": "+7ki7ezuoZPBV96AKnsEDmmr45A=",
 			"path": "github.com/gonum/plot",
-			"revision": "42c6a3ef55d4743aa0bd64e56dbaeb151944d9e0",
-			"revisionTime": "2016-07-26T01:53:10Z"
+			"revision": "e1023e3931006c9a7e793133a75587c6bc296cfb",
+			"revisionTime": "2016-11-13T13:35:29Z"
 		},
 		{
 			"checksumSHA1": "rkqgMRSzXuFa3ZPvDnFiuobWalQ=",
 			"path": "github.com/gonum/plot/palette",
-			"revision": "42c6a3ef55d4743aa0bd64e56dbaeb151944d9e0",
-			"revisionTime": "2016-07-26T01:53:10Z"
+			"revision": "e1023e3931006c9a7e793133a75587c6bc296cfb",
+			"revisionTime": "2016-11-13T13:35:29Z"
 		},
 		{
-			"checksumSHA1": "tuNVwihXafn2aX8PKoeoj32iydE=",
+			"checksumSHA1": "e3k+4rVRlOmpJ26IFZGwkaGPHHU=",
 			"path": "github.com/gonum/plot/plotter",
-			"revision": "42c6a3ef55d4743aa0bd64e56dbaeb151944d9e0",
-			"revisionTime": "2016-07-26T01:53:10Z"
+			"revision": "e1023e3931006c9a7e793133a75587c6bc296cfb",
+			"revisionTime": "2016-11-13T13:35:29Z"
 		},
 		{
 			"checksumSHA1": "p/mtvTd5N+oaWYbkxPuQ1p/+fkQ=",
 			"path": "github.com/gonum/plot/plotutil",
-			"revision": "42c6a3ef55d4743aa0bd64e56dbaeb151944d9e0",
-			"revisionTime": "2016-07-26T01:53:10Z"
+			"revision": "e1023e3931006c9a7e793133a75587c6bc296cfb",
+			"revisionTime": "2016-11-13T13:35:29Z"
 		},
 		{
 			"checksumSHA1": "r3HK29WYdwmvvnn8XmLfbaIwrVM=",
 			"path": "github.com/gonum/plot/vg",
-			"revision": "42c6a3ef55d4743aa0bd64e56dbaeb151944d9e0",
-			"revisionTime": "2016-07-26T01:53:10Z"
+			"revision": "e1023e3931006c9a7e793133a75587c6bc296cfb",
+			"revisionTime": "2016-11-13T13:35:29Z"
 		},
 		{
 			"checksumSHA1": "V3F5LxpKSV0IbWe+HzBs0o45flA=",
 			"path": "github.com/gonum/plot/vg/draw",
-			"revision": "42c6a3ef55d4743aa0bd64e56dbaeb151944d9e0",
-			"revisionTime": "2016-07-26T01:53:10Z"
+			"revision": "e1023e3931006c9a7e793133a75587c6bc296cfb",
+			"revisionTime": "2016-11-13T13:35:29Z"
 		},
 		{
 			"checksumSHA1": "xwJDiEVIejTZW1N6n7i0gvZ/k8s=",
 			"path": "github.com/gonum/plot/vg/fonts",
-			"revision": "42c6a3ef55d4743aa0bd64e56dbaeb151944d9e0",
-			"revisionTime": "2016-07-26T01:53:10Z"
+			"revision": "e1023e3931006c9a7e793133a75587c6bc296cfb",
+			"revisionTime": "2016-11-13T13:35:29Z"
 		},
 		{
 			"checksumSHA1": "2rjFKntHTvecbkXSAQgnyddfVEs=",
 			"path": "github.com/gonum/plot/vg/vgeps",
-			"revision": "42c6a3ef55d4743aa0bd64e56dbaeb151944d9e0",
-			"revisionTime": "2016-07-26T01:53:10Z"
+			"revision": "e1023e3931006c9a7e793133a75587c6bc296cfb",
+			"revisionTime": "2016-11-13T13:35:29Z"
 		},
 		{
 			"checksumSHA1": "vJqauzBuS6Ti+Q5qSgIc1NzNq5A=",
 			"path": "github.com/gonum/plot/vg/vgimg",
-			"revision": "42c6a3ef55d4743aa0bd64e56dbaeb151944d9e0",
-			"revisionTime": "2016-07-26T01:53:10Z"
+			"revision": "e1023e3931006c9a7e793133a75587c6bc296cfb",
+			"revisionTime": "2016-11-13T13:35:29Z"
 		},
 		{
 			"checksumSHA1": "cO7lYsPt/3ekcaPNt3Tm29GYGAg=",
 			"path": "github.com/gonum/plot/vg/vgpdf",
-			"revision": "42c6a3ef55d4743aa0bd64e56dbaeb151944d9e0",
-			"revisionTime": "2016-07-26T01:53:10Z"
+			"revision": "e1023e3931006c9a7e793133a75587c6bc296cfb",
+			"revisionTime": "2016-11-13T13:35:29Z"
 		},
 		{
 			"checksumSHA1": "3Cb8+Q1oz//B1MpaGgV0dXynDOY=",
 			"path": "github.com/gonum/plot/vg/vgsvg",
-			"revision": "42c6a3ef55d4743aa0bd64e56dbaeb151944d9e0",
-			"revisionTime": "2016-07-26T01:53:10Z"
+			"revision": "e1023e3931006c9a7e793133a75587c6bc296cfb",
+			"revisionTime": "2016-11-13T13:35:29Z"
 		},
 		{
 			"checksumSHA1": "40vJyUB4ezQSn/NSadsKEOrudMc=",
@@ -331,100 +337,100 @@
 			"revisionTime": "2016-02-02T12:42:13Z"
 		},
 		{
-			"checksumSHA1": "6nmAJBw2phU9MUmkUnqFvbO5urg=",
+			"checksumSHA1": "g+afVQQVopBLiLB5pFZp/8s6aBs=",
 			"path": "github.com/kardianos/osext",
-			"revision": "29ae4ffbc9a6fe9fb2bc5029050ce6996ea1d3bc",
-			"revisionTime": "2015-12-22T15:32:29Z"
+			"revision": "c2c54e542fb797ad986b31721e1baedf214ca413",
+			"revisionTime": "2016-08-11T00:15:26Z"
 		},
 		{
-			"checksumSHA1": "1FGuA7GFYR1+W1RnwxxkMiky1tk=",
+			"checksumSHA1": "v+KQute8LPvgJyGwdPNaMrcdAPI=",
 			"path": "github.com/llgcode/draw2d",
-			"revision": "13548be874707c45a83f9c2c282d76d671c7acf8",
-			"revisionTime": "2016-07-12T08:12:54Z"
+			"revision": "1286d3b2030ac9952e59c5ef29ef3cc24a8e83d5",
+			"revisionTime": "2016-11-04T08:10:29Z"
 		},
 		{
-			"checksumSHA1": "i03xBENW+GtlNefPBKEZ/h+JLUk=",
+			"checksumSHA1": "04IVHArLe4lH6hwzpQrIhuJ92fQ=",
 			"path": "github.com/llgcode/draw2d/draw2dbase",
-			"revision": "13548be874707c45a83f9c2c282d76d671c7acf8",
-			"revisionTime": "2016-07-12T08:12:54Z"
+			"revision": "1286d3b2030ac9952e59c5ef29ef3cc24a8e83d5",
+			"revisionTime": "2016-11-04T08:10:29Z"
 		},
 		{
-			"checksumSHA1": "Zh3R0wjTVOoAYF/QueYsU4t1wmo=",
+			"checksumSHA1": "inDKxVFa6iMet6S+HKxTIAODq0c=",
 			"path": "github.com/llgcode/draw2d/draw2dimg",
-			"revision": "13548be874707c45a83f9c2c282d76d671c7acf8",
-			"revisionTime": "2016-07-12T08:12:54Z"
+			"revision": "1286d3b2030ac9952e59c5ef29ef3cc24a8e83d5",
+			"revisionTime": "2016-11-04T08:10:29Z"
 		},
 		{
-			"checksumSHA1": "JdYdBoNxMR+CDqTfs78cQmY8JtI=",
+			"checksumSHA1": "c7jHQZk5ZEsFR9EXsWJXkszPBZA=",
 			"path": "github.com/russross/blackfriday",
-			"revision": "93622da34e54fb6529bfb7c57e710f37a8d9cbd8",
-			"revisionTime": "2016-07-16T15:34:03Z"
+			"revision": "5f33e7b7878355cd2b7e6b8eefc48a5472c69f70",
+			"revisionTime": "2016-10-03T16:27:22Z"
 		},
 		{
-			"checksumSHA1": "XXTR/ftEYSqQn4+Y7wNfiJJmq9U=",
+			"checksumSHA1": "kbgJvKG3NRoqU91rYnXGnyR+8HQ=",
 			"path": "github.com/shurcooL/sanitized_anchor_name",
-			"revision": "10ef21a441db47d8b13ebcc5fd2310f636973c77",
-			"revisionTime": "2015-10-28T00:19:15Z"
+			"revision": "1dba4b3954bc059efc3991ec364f9f9a35f597d2",
+			"revisionTime": "2016-09-18T04:11:01Z"
 		},
 		{
-			"checksumSHA1": "hvkXE4HQ2zgWaCkt3CQTki5hvqc=",
+			"checksumSHA1": "FZ0r4TzEy9UxXLkFVXFygApni4M=",
 			"path": "github.com/spf13/cobra",
-			"revision": "7c674d9e72017ed25f6d2b5e497a1368086b6a6f",
-			"revisionTime": "2016-08-02T22:37:37Z"
+			"revision": "6b74a60562f5c1c920299b8f02d153e16f4897fc",
+			"revisionTime": "2016-11-15T14:16:05Z"
 		},
 		{
-			"checksumSHA1": "tInTz3Bd2AqK3sgH0sdSOV9xNtM=",
+			"checksumSHA1": "he67PAFMs5zpWF9ckxcjApu8Cdg=",
 			"path": "github.com/spf13/cobra/doc",
-			"revision": "7c674d9e72017ed25f6d2b5e497a1368086b6a6f",
-			"revisionTime": "2016-08-02T22:37:37Z"
+			"revision": "6b74a60562f5c1c920299b8f02d153e16f4897fc",
+			"revisionTime": "2016-11-15T14:16:05Z"
 		},
 		{
-			"checksumSHA1": "EBZXhJUT52KSJIOmcKG6rus7NtQ=",
+			"checksumSHA1": "GxPD7A0NjMDom1xte0mghkpzr0E=",
 			"path": "github.com/spf13/pflag",
-			"revision": "f676131e2660dc8cd88de99f7486d34aa8172635",
-			"revisionTime": "2016-08-04T14:13:50Z"
+			"revision": "5ccb023bc27df288a957c5e994cd44fd19619465",
+			"revisionTime": "2016-10-24T13:13:51Z"
 		},
 		{
 			"checksumSHA1": "7E3Y1HU/UbsQF/dxMRdjFmx9QDQ=",
 			"path": "golang.org/x/image/draw",
-			"revision": "c348254d65821a0aaca538bf5e7774bb522c1dec",
-			"revisionTime": "2016-07-15T23:11:08Z"
+			"revision": "507b1a44bd72830c136e6ecf7c05f9089796d572",
+			"revisionTime": "2016-11-06T02:21:55Z"
 		},
 		{
 			"checksumSHA1": "ZG6tBwXNShvXeDlqXHQ+5z8JxZw=",
 			"path": "golang.org/x/image/font",
-			"revision": "c348254d65821a0aaca538bf5e7774bb522c1dec",
-			"revisionTime": "2016-07-15T23:11:08Z"
+			"revision": "507b1a44bd72830c136e6ecf7c05f9089796d572",
+			"revisionTime": "2016-11-06T02:21:55Z"
 		},
 		{
 			"checksumSHA1": "o7VkCGBiKM5HXzVzrIci1YDlpvc=",
 			"path": "golang.org/x/image/math/f64",
-			"revision": "c348254d65821a0aaca538bf5e7774bb522c1dec",
-			"revisionTime": "2016-07-15T23:11:08Z"
+			"revision": "507b1a44bd72830c136e6ecf7c05f9089796d572",
+			"revisionTime": "2016-11-06T02:21:55Z"
 		},
 		{
-			"checksumSHA1": "KDV8C7GLbL2QcT1yQysYlFlQ+a8=",
+			"checksumSHA1": "m1TqtllJUaOuHc3MT1877jGtNT4=",
 			"path": "golang.org/x/image/math/fixed",
-			"revision": "c348254d65821a0aaca538bf5e7774bb522c1dec",
-			"revisionTime": "2016-07-15T23:11:08Z"
+			"revision": "507b1a44bd72830c136e6ecf7c05f9089796d572",
+			"revisionTime": "2016-11-06T02:21:55Z"
 		},
 		{
-			"checksumSHA1": "ctyyddkXAz6xBcMGo2Brocz1iuY=",
+			"checksumSHA1": "0ozDsaLc0goE9CvU2E/J9Md3KOQ=",
 			"path": "golang.org/x/image/tiff",
-			"revision": "c348254d65821a0aaca538bf5e7774bb522c1dec",
-			"revisionTime": "2016-07-15T23:11:08Z"
+			"revision": "507b1a44bd72830c136e6ecf7c05f9089796d572",
+			"revisionTime": "2016-11-06T02:21:55Z"
 		},
 		{
 			"checksumSHA1": "Xnm81x3lWS6xRxSthJuLt+fpfi0=",
 			"path": "golang.org/x/image/tiff/lzw",
-			"revision": "c348254d65821a0aaca538bf5e7774bb522c1dec",
-			"revisionTime": "2016-07-15T23:11:08Z"
+			"revision": "507b1a44bd72830c136e6ecf7c05f9089796d572",
+			"revisionTime": "2016-11-06T02:21:55Z"
 		},
 		{
 			"checksumSHA1": "9jjO5GjLa0XF/nfWihF02RoH4qc=",
 			"path": "golang.org/x/net/context",
-			"revision": "075e191f18186a8ff2becaf64478e30f4545cdad",
-			"revisionTime": "2016-08-05T06:12:51Z"
+			"revision": "e57319ce2bbbdc638169d4756554fbaedc805399",
+			"revisionTime": "2016-11-15T18:38:51Z"
 		}
 	],
 	"rootPath": "github.com/spatialmodel/inmap"

@@ -32,3 +32,13 @@ func (l LineString) Within(p Polygonal) WithinStatus {
 	}
 	return Inside
 }
+
+// Distance calculates the shortest distance from p to the LineString.
+func (l LineString) Distance(p Point) float64 {
+	d := math.Inf(1)
+	for i := 0; i < len(l)-1; i++ {
+		segDist := distPointToSegment(p, l[i], l[i+1])
+		d = math.Min(d, segDist)
+	}
+	return d
+}

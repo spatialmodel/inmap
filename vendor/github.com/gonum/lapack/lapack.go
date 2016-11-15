@@ -10,13 +10,7 @@ const None = 'N'
 
 type Job byte
 
-// CompSV determines if the singular values are to be computed in compact form.
-type CompSV byte
-
-const (
-	Compact  CompSV = 'P'
-	Explicit CompSV = 'I'
-)
+type Comp byte
 
 // Complex128 defines the public complex128 LAPACK API supported by gonum/lapack.
 type Complex128 interface{}
@@ -24,6 +18,7 @@ type Complex128 interface{}
 // Float64 defines the public float64 LAPACK API supported by gonum/lapack.
 type Float64 interface {
 	Dgecon(norm MatrixNorm, n int, a []float64, lda int, anorm float64, work []float64, iwork []int) float64
+	Dgeev(jobvl LeftEVJob, jobvr RightEVJob, n int, a []float64, lda int, wr, wi []float64, vl []float64, ldvl int, vr []float64, ldvr int, work []float64, lwork int) (first int)
 	Dgels(trans blas.Transpose, m, n, nrhs int, a []float64, lda int, b []float64, ldb int, work []float64, lwork int) bool
 	Dgelqf(m, n int, a []float64, lda int, tau, work []float64, lwork int)
 	Dgeqrf(m, n int, a []float64, lda int, tau, work []float64, lwork int)
@@ -38,7 +33,7 @@ type Float64 interface {
 	Dormlq(side blas.Side, trans blas.Transpose, m, n, k int, a []float64, lda int, tau, c []float64, ldc int, work []float64, lwork int)
 	Dpocon(uplo blas.Uplo, n int, a []float64, lda int, anorm float64, work []float64, iwork []int) float64
 	Dpotrf(ul blas.Uplo, n int, a []float64, lda int) (ok bool)
-	Dsyev(jobz EigComp, uplo blas.Uplo, n int, a []float64, lda int, w, work []float64, lwork int) (ok bool)
+	Dsyev(jobz EVJob, uplo blas.Uplo, n int, a []float64, lda int, w, work []float64, lwork int) (ok bool)
 	Dtrcon(norm MatrixNorm, uplo blas.Uplo, diag blas.Diag, n int, a []float64, lda int, work []float64, iwork []int) float64
 	Dtrtri(uplo blas.Uplo, diag blas.Diag, n int, a []float64, lda int) (ok bool)
 	Dtrtrs(uplo blas.Uplo, trans blas.Transpose, diag blas.Diag, n, nrhs int, a []float64, lda int, b []float64, ldb int) (ok bool)
@@ -113,16 +108,68 @@ const (
 	SVDNone      SVDJob = 'N' // Do not compute singular vectors
 )
 
-// EigComp specifies the type of eigenvalue decomposition.
-type EigComp byte
+// EVComp specifies how eigenvectors are computed.
+type EVComp byte
 
 const (
-	// EigValueOnly specifies to compute only the eigenvalues of the input matrix.
-	EigValueOnly EigComp = 'N'
-	// EigDecomp specifies to compute the eigenvalues and eigenvectors of the
-	// full symmetric matrix.
-	EigDecomp EigComp = 'V'
-	// EigBoth specifies to compute both the eigenvalues and eigenvectors of the
-	// input tridiagonal matrix.
-	EigBoth EigComp = 'I'
+	// OriginalEV specifies to compute the eigenvectors of the original
+	// matrix.
+	OriginalEV EVComp = 'V'
+	// TridiagEV specifies to compute both the eigenvectors of the input
+	// tridiagonal matrix.
+	TridiagEV EVComp = 'I'
+	// HessEV specifies to compute both the eigenvectors of the input upper
+	// Hessenberg matrix.
+	HessEV EVComp = 'I'
+
+	// UpdateSchur specifies that the matrix of Schur vectors will be
+	// updated by Dtrexc.
+	UpdateSchur EVComp = 'V'
+)
+
+// Job types for computation of eigenvectors.
+type (
+	EVJob      byte
+	LeftEVJob  byte
+	RightEVJob byte
+)
+
+// Job constants for computation of eigenvectors.
+const (
+	ComputeEV      EVJob      = 'V' // Compute eigenvectors in Dsyev.
+	ComputeLeftEV  LeftEVJob  = 'V' // Compute left eigenvectors.
+	ComputeRightEV RightEVJob = 'V' // Compute right eigenvectors.
+)
+
+// Jobs for Dgebal.
+const (
+	Permute      Job = 'P'
+	Scale        Job = 'S'
+	PermuteScale Job = 'B'
+)
+
+// Job constants for Dhseqr.
+const (
+	EigenvaluesOnly     EVJob = 'E'
+	EigenvaluesAndSchur EVJob = 'S'
+)
+
+// EVSide specifies what eigenvectors will be computed.
+type EVSide byte
+
+// EVSide constants for Dtrevc3.
+const (
+	RightEV     EVSide = 'R' // Compute right eigenvectors only.
+	LeftEV      EVSide = 'L' // Compute left eigenvectors only.
+	RightLeftEV EVSide = 'B' // Compute both right and left eigenvectors.
+)
+
+// HowMany specifies which eigenvectors will be computed.
+type HowMany byte
+
+// HowMany constants for Dhseqr.
+const (
+	AllEV      HowMany = 'A' // Compute all right and/or left eigenvectors.
+	AllEVMulQ  HowMany = 'B' // Compute all right and/or left eigenvectors multiplied by an input matrix.
+	SelectedEV HowMany = 'S' // Compute selected right and/or left eigenvectors.
 )

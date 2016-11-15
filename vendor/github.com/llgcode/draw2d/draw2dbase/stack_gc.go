@@ -4,6 +4,7 @@
 package draw2dbase
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 
@@ -132,6 +133,10 @@ func (gc *StackGraphicContext) BeginPath() {
 	gc.Current.Path.Clear()
 }
 
+func (gc *StackGraphicContext) GetPath() draw2d.Path {
+	return *gc.Current.Path.Copy()
+}
+
 func (gc *StackGraphicContext) IsEmpty() bool {
 	return gc.Current.Path.IsEmpty()
 }
@@ -190,4 +195,9 @@ func (gc *StackGraphicContext) Restore() {
 		gc.Current = gc.Current.Previous
 		oldContext.Previous = nil
 	}
+}
+
+func (gc *StackGraphicContext) GetFontName() string {
+	fontData := gc.Current.FontData
+	return fmt.Sprintf("%s:%d:%d:%d", fontData.Name, fontData.Family, fontData.Style, gc.Current.FontSize)
 }

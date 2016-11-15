@@ -1,5 +1,7 @@
 package geom
 
+import "math"
+
 // MultiLineString is a holder for multiple related LineStrings.
 type MultiLineString []LineString
 
@@ -29,4 +31,14 @@ func (ml MultiLineString) Within(p Polygonal) WithinStatus {
 		}
 	}
 	return Inside
+}
+
+// Distance calculates the shortest distance from p to the MultiLineString.
+func (ml MultiLineString) Distance(p Point) float64 {
+	d := math.Inf(1)
+	for _, l := range ml {
+		lDist := l.Distance(p)
+		d = math.Min(d, lDist)
+	}
+	return d
 }

@@ -105,7 +105,19 @@ func (s *SymDense) SetRawSymmetric(b blas64.Symmetric) {
 	s.mat = b
 }
 
+// Reset zeros the dimensions of the matrix so that it can be reused as the
+// receiver of a dimensionally restricted operation.
+//
+// See the Reseter interface for more information.
+func (s *SymDense) Reset() {
+	// N and Stride must be zeroed in unison.
+	s.mat.N, s.mat.Stride = 0, 0
+	s.mat.Data = s.mat.Data[:0]
+}
+
 func (s *SymDense) isZero() bool {
+	// It must be the case that m.Dims() returns
+	// zeros in this case. See comment in Reset().
 	return s.mat.N == 0
 }
 
@@ -252,10 +264,11 @@ func (s *SymDense) SymRankK(a Symmetric, alpha float64, x Matrix) {
 	blas64.Syrk(t, alpha, g, 1, s.mat)
 }
 
-// SymOuterK calculates the outer product of a times its transpose and stores
-// the result into the receiver. In order to update an existing matrix, see
-// SymRankOne
-//  s = alpha * x * x'
+// SymOuterK calculates the outer product of x with itself and stores
+// the result into the receiver. It is equivalent to the matrix
+// multiplication
+//  s = alpha * x * x'.
+// In order to update an existing matrix, see SymRankOne.
 func (s *SymDense) SymOuterK(alpha float64, x Matrix) {
 	n, _ := x.Dims()
 	switch {

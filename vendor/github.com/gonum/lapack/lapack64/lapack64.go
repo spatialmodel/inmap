@@ -293,24 +293,33 @@ func Ormlq(side blas.Side, trans blas.Transpose, a blas64.General, tau []float64
 	lapack64.Dormlq(side, trans, c.Rows, c.Cols, a.Rows, a.Data, a.Stride, tau, c.Data, c.Stride, work, lwork)
 }
 
-// Ormqr multiplies the matrix C by the othogonal matrix Q defined by
-// A and tau. A and tau are as returned from Geqrf.
-//  C = Q * C    if side == blas.Left and trans == blas.NoTrans
-//  C = Q^T * C  if side == blas.Left and trans == blas.Trans
-//  C = C * Q    if side == blas.Right and trans == blas.NoTrans
-//  C = C * Q^T  if side == blas.Right and trans == blas.Trans
-// If side == blas.Left, A is a matrix of side k×m, and if side == blas.Right
-// A is of size k×n. This uses a blocked algorithm.
+// Ormqr multiplies an m×n matrix C by an orthogonal matrix Q as
+//  C = Q * C,    if side == blas.Left  and trans == blas.NoTrans,
+//  C = Q^T * C,  if side == blas.Left  and trans == blas.Trans,
+//  C = C * Q,    if side == blas.Right and trans == blas.NoTrans,
+//  C = C * Q^T,  if side == blas.Right and trans == blas.Trans,
+// where Q is defined as the product of k elementary reflectors
+//  Q = H_0 * H_1 * ... * H_{k-1}.
 //
-// tau contains the Householder scales and must have length at least k, and
-// this function will panic otherwise.
+// If side == blas.Left, A is an m×k matrix and 0 <= k <= m.
+// If side == blas.Right, A is an n×k matrix and 0 <= k <= n.
+// The ith column of A contains the vector which defines the elementary
+// reflector H_i and tau[i] contains its scalar factor. tau must have length k
+// and Ormqr will panic otherwise. Geqrf returns A and tau in the required
+// form.
 //
-// Work is temporary storage, and lwork specifies the usable memory length.
-// At minimum, lwork >= m if side == blas.Left and lwork >= n if side == blas.Right,
-// and this function will panic otherwise.
-// Ormqr uses a block algorithm, but the block size is limited
-// by the temporary space available. If lwork == -1, instead of performing Ormqr,
-// the optimal work length will be stored into work[0].
+// work must have length at least max(1,lwork), and lwork must be at least n if
+// side == blas.Left and at least m if side == blas.Right, otherwise Ormqr will
+// panic.
+//
+// work is temporary storage, and lwork specifies the usable memory length. At
+// minimum, lwork >= m if side == blas.Left and lwork >= n if side ==
+// blas.Right, and this function will panic otherwise. Larger values of lwork
+// will generally give better performance. On return, work[0] will contain the
+// optimal value of lwork.
+//
+// If lwork is -1, instead of performing Ormqr, the optimal workspace size will
+// be stored into work[0].
 func Ormqr(side blas.Side, trans blas.Transpose, a blas64.General, tau []float64, c blas64.General, work []float64, lwork int) {
 	lapack64.Dormqr(side, trans, c.Rows, c.Cols, a.Cols, a.Data, a.Stride, tau, c.Data, c.Stride, work, lwork)
 }
@@ -335,7 +344,7 @@ func Pocon(a blas64.Symmetric, anorm float64, work []float64, iwork []int) float
 // at least n, and Syev will panic otherwise.
 //
 // On entry, a contains the elements of the symmetric matrix A in the triangular
-// portion specified by uplo. If jobz == lapack.EigDecomp a contains the
+// portion specified by uplo. If jobz == lapack.ComputeEV a contains the
 // orthonormal eigenvectors of A on exit, otherwise on exit the specified
 // triangular region is overwritten.
 //
@@ -343,7 +352,7 @@ func Pocon(a blas64.Symmetric, anorm float64, work []float64, iwork []int) float
 // lwork >= 3*n-1, and Syev will panic otherwise. The amount of blocking is
 // limited by the usable length. If lwork == -1, instead of computing Syev the
 // optimal work length is stored into work[0].
-func Syev(jobz lapack.EigComp, a blas64.Symmetric, w, work []float64, lwork int) (ok bool) {
+func Syev(jobz lapack.EVJob, a blas64.Symmetric, w, work []float64, lwork int) (ok bool) {
 	return lapack64.Dsyev(jobz, a.Uplo, a.N, a.Data, a.Stride, w, work, lwork)
 }
 
@@ -370,4 +379,66 @@ func Trtri(a blas64.Triangular) (ok bool) {
 // returns whether the solve completed successfully. If A is singular, no solve is performed.
 func Trtrs(trans blas.Transpose, a blas64.Triangular, b blas64.General) (ok bool) {
 	return lapack64.Dtrtrs(a.Uplo, trans, a.Diag, a.N, b.Cols, a.Data, a.Stride, b.Data, b.Stride)
+}
+
+// Geev computes the eigenvalues and, optionally, the left and/or right
+// eigenvectors for an n×n real nonsymmetric matrix A.
+//
+// The right eigenvector v_j of A corresponding to an eigenvalue λ_j
+// is defined by
+//  A v_j = λ_j v_j,
+// and the left eigenvector u_j corresponding to an eigenvalue λ_j is defined by
+//  u_j^H A = λ_j u_j^H,
+// where u_j^H is the conjugate transpose of u_j.
+//
+// On return, A will be overwritten and the left and right eigenvectors will be
+// stored, respectively, in the columns of the n×n matrices VL and VR in the
+// same order as their eigenvalues. If the j-th eigenvalue is real, then
+//  u_j = VL[:,j],
+//  v_j = VR[:,j],
+// and if it is not real, then j and j+1 form a complex conjugate pair and the
+// eigenvectors can be recovered as
+//  u_j     = VL[:,j] + i*VL[:,j+1],
+//  u_{j+1} = VL[:,j] - i*VL[:,j+1],
+//  v_j     = VR[:,j] + i*VR[:,j+1],
+//  v_{j+1} = VR[:,j] - i*VR[:,j+1],
+// where i is the imaginary unit. The computed eigenvectors are normalized to
+// have Euclidean norm equal to 1 and largest component real.
+//
+// Left eigenvectors will be computed only if jobvl == lapack.ComputeLeftEV,
+// otherwise jobvl must be lapack.None.
+// Right eigenvectors will be computed only if jobvr == lapack.ComputeRightEV,
+// otherwise jobvr must be lapack.None.
+// For other values of jobvl and jobvr Geev will panic.
+//
+// On return, wr and wi will contain the real and imaginary parts, respectively,
+// of the computed eigenvalues. Complex conjugate pairs of eigenvalues appear
+// consecutively with the eigenvalue having the positive imaginary part first.
+// wr and wi must have length n, and Geev will panic otherwise.
+//
+// work must have length at least lwork and lwork must be at least max(1,4*n) if
+// the left or right eigenvectors are computed, and at least max(1,3*n) if no
+// eigenvectors are computed. For good performance, lwork must generally be
+// larger. On return, optimal value of lwork will be stored in work[0].
+//
+// If lwork == -1, instead of performing Geev, the function only calculates the
+// optimal vaule of lwork and stores it into work[0].
+//
+// On return, first will be the index of the first valid eigenvalue.
+// If first == 0, all eigenvalues and eigenvectors have been computed.
+// If first is positive, Geev failed to compute all the eigenvalues, no
+// eigenvectors have been computed and wr[first:] and wi[first:] contain those
+// eigenvalues which have converged.
+func Geev(jobvl lapack.LeftEVJob, jobvr lapack.RightEVJob, a blas64.General, wr, wi []float64, vl, vr blas64.General, work []float64, lwork int) (first int) {
+	n := a.Rows
+	if a.Cols != n {
+		panic("lapack64: matrix not square")
+	}
+	if jobvl == lapack.ComputeLeftEV && (vl.Rows != n || vl.Cols != n) {
+		panic("lapack64: bad size of VL")
+	}
+	if jobvr == lapack.ComputeRightEV && (vr.Rows != n || vr.Cols != n) {
+		panic("lapack64: bad size of VR")
+	}
+	return lapack64.Dgeev(jobvl, jobvr, n, a.Data, a.Stride, wr, wi, vl.Data, vl.Stride, vr.Data, vr.Stride, work, lwork)
 }
