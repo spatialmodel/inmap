@@ -1,0 +1,126 @@
+# InMAPData is the path to location of baseline meteorology and pollutant data.
+# The path can include environment variables.
+InMAPData = "${evaldata}/singleSource/InMAPData_9km.ncf"
+
+# VariableGridData is the path to the location of the variable-resolution gridded
+# InMAP data, or the location where it should be created if it doesn't already
+# exist. The path can include environment variables.
+VariableGridData = "xxx"
+
+# EmissionsShapefiles are the paths to any emissions shapefiles.
+# Can be elevated or ground level; elevated files need to have columns
+# labeled "height", "diam", "temp", and "velocity" containing stack
+# information in units of m, m, K, and m/s, respectively.
+# Emissions will be allocated from the geometries in the shape file
+# to the InMAP computational grid, but the mapping projection of the
+# shapefile must be the same as the projection InMAP uses.
+# Can include environment variables.
+EmissionsShapefiles = [
+	"${evaldata}/singleSource/inmapEmis.shp"
+]
+
+# EmissionUnits gives the units that the input emissions are in.
+# Acceptable values are 'tons/year' and 'kg/year'.
+EmissionUnits = "tons/year"
+
+# Path to desired output shapefile location. Can include environment variables.
+OutputFile = "singleSource/LosAngeles_9km.shp"
+
+# OutputVariables specifies which model variables should be included in the
+# output file.
+# Can include environment variables.
+OutputVariables = [
+  "TotalPop deaths",
+	"WhiteNoLat deaths",
+	"Black deaths",
+	"Native deaths",
+	"Asian deaths",
+	"Latino deaths",
+  "TotalPop",
+	"TotalPM25",
+	"PM2.5 emissions",
+	"Baseline TotalPM25",
+	"WindSpeed"
+]
+
+# HTTPAddress is the address for hosting the HTML user interface.
+# If HTTPAddress is `:8080`, then the GUI
+# would be viewed by visiting `localhost:8080` in a web browser.
+# If HTTPport is "", then the web server doesn't run.
+HTTPAddress = ":8080"
+
+# SROutputFile is the path where the output file is or should be created
+# when creating a source-receptor matrix. It can contain environment variables.
+SROutputFile = "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testSR.ncf"
+
+# VarGrid provides information for specifying the variable resolution
+# grid.
+[VarGrid]
+
+# VariableGridXo and VariableGridYo are the X and Y coordinates of the
+# lower-left corner of the InMAP grid.
+VariableGridXo= -148500.0
+VariableGridYo= -148500.0
+
+# VariableGridDx and VariableGridDy are the X and Y edge lengths of grid
+# cells in the outermost nest, in meters.
+VariableGridDx= 9000.0
+VariableGridDy= 9000.0
+
+# Xnests and Ynests specify nesting multiples in the X and Y directions.
+# For instance, if Xnests and Ynests are both [100, 2, 2, 2] and
+# VariableGridDy and VariableGridDx are both 40000, the outermost
+# nest would have 100 grid cells in each direction with 40 km resolution,
+# and there would be three levels of inner nesting, each at double the
+# resolution of the previous nest, with the innermost nest having a grid
+# cell length of 5 km.
+Xnests= [33]
+Ynests= [33]
+
+# HiResLayers is the number of layers, starting at ground level, to do
+# nesting in. Layers above this will have all grid cells in the lowest
+# spatial resolution.
+HiResLayers= 8
+
+# GridProj gives projection info for the CTM grid in Proj4 or WKT format.
+GridProj= "+proj=lcc +lat_1=26.0 +lat_2=39.0 +lat_0=34.11 +lon_0=-118.18 +x_0=0 +y_0=0 +a=6370997.000000 +b=6370997.000000 +to_meter=1"
+
+# PopDensityThreshold is a limit for people per unit area in a grid cell
+# (units will typically be either people / m^2 or people / degree^2,
+# depending on the spatial projection of the model grid). If
+# the population density in a grid cell is above this level, the cell in question
+# is a candidate for splitting into smaller cells.
+PopDensityThreshold= 0.001
+
+# PopThreshold is a limit for the total number of people in a grid cell.
+# If the total population in a grid cell is above this level, the cell in question
+# is a candidate for splitting into smaller cells.
+PopThreshold= 25000.0
+
+# PopConcThreshold is the limit for
+# Σ(|ΔConcentration|)*combinedVolume*|ΔPopulation| / {Σ(|totalMass|)*totalPopulation}.
+# See the documentation for PopConcMutator for more information.
+PopConcThreshold= 0.00000001
+
+# CensusFile is the path to the shapefile holding population information.
+CensusFile= "${evaldata}/census2012blckgrp.shp"
+
+# CensusPopColumns is a list of the data fields in CensusFile that should
+# be included as population estimates in the model. They can be population
+# of different demographics or for different population scenarios.
+CensusPopColumns= ["TotalPop", "WhiteNoLat", "Black", "Native", "Asian", "Latino"]
+
+# PopGridColumn is the name of the field in CensusFile that contains the data
+# that should be compared to PopThreshold and PopDensityThreshold when determining
+# if a grid cell should be split. It should typically be one of the fields
+# in CensusPopColumns.
+PopGridColumn= "TotalPop"
+
+# MortalityRateFile is the path to the shapefile containing baseline
+# mortality rate data.
+MortalityRateFile= "${evaldata}/MortalityRate.shp"
+
+# MortalityRateColumn is the name of the field in MortalityRateFile that
+# contains the baseline mortality rate data, in units of deaths per year
+# per 100,000 people.
+MortalityRateColumn= "AllCause"

@@ -55,6 +55,12 @@
 			"revisionTime": "2016-01-05T01:15:47Z"
 		},
 		{
+			"checksumSHA1": "Ax0hBKnWZXbNoFLOHbKkQA3Qj+c=",
+			"path": "github.com/ctessum/aep",
+			"revision": "d8c4a74a3f912ef200f9f37e3041d4de6b276152",
+			"revisionTime": "2016-11-14T18:53:05Z"
+		},
+		{
 			"checksumSHA1": "6hndEGMyu9wMLrEn2r0+ORM4ge8=",
 			"path": "github.com/ctessum/atmos/acm2",
 			"revision": "5ef7db56662a6db015cd846aca3c17ed2a049532",
@@ -139,6 +145,24 @@
 			"revisionTime": "2016-05-19T00:32:08Z"
 		},
 		{
+			"checksumSHA1": "tCjP3oyX2NocGIhuRaU1Bq4XO0I=",
+			"path": "github.com/ctessum/requestcache",
+			"revision": "3f635a54be4da3e827aa9ae50257c0b86a33bd9c",
+			"revisionTime": "2016-11-14T18:06:22Z"
+		},
+		{
+			"checksumSHA1": "7EMKbI6WPbwMDOTn4ITPGWeXHZ4=",
+			"path": "github.com/ctessum/unit",
+			"revision": "755774ac2fcbe68f090798b4cdc47c5cd056b1f5",
+			"revisionTime": "2016-06-21T20:04:50Z"
+		},
+		{
+			"checksumSHA1": "t7LqXe4gEorZuliWIlUaplYzU64=",
+			"path": "github.com/ctessum/unit/badunit",
+			"revision": "755774ac2fcbe68f090798b4cdc47c5cd056b1f5",
+			"revisionTime": "2016-06-21T20:04:50Z"
+		},
+		{
 			"checksumSHA1": "w01kP96jx5UAf+uWB8m0w8Xghas=",
 			"path": "github.com/golang/freetype",
 			"revision": "38b4c392adc5eed94207994c4848fff99f4ac234",
@@ -155,6 +179,12 @@
 			"path": "github.com/golang/freetype/truetype",
 			"revision": "38b4c392adc5eed94207994c4848fff99f4ac234",
 			"revisionTime": "2016-06-26T06:51:47Z"
+		},
+		{
+			"checksumSHA1": "Bra/9XucW0ivjIalL27XqSw2dTk=",
+			"path": "github.com/golang/groupcache/lru",
+			"revision": "a6b377e3400b08991b80d6805d627f347f983866",
+			"revisionTime": "2016-08-03T20:04:08Z"
 		},
 		{
 			"checksumSHA1": "tJLFSeWyXG8RWcdQ3oNtI7meD3c=",
