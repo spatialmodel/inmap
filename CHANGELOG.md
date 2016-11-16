@@ -1,3 +1,6 @@
+# Release 1.2.2 (?)
+* Removed vendored libraries
+
 # Release 1.2.1 (2016-11-15)
 * Changed the time step calculation algorithm to work with larger grid cell sizes
 * Changed the "Total PM2.5" and "Primary PM2.5" output variables to "TotalPM25" and "PrimaryPM25" to allow opening in ArcGIS
