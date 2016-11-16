@@ -38,7 +38,7 @@ You can also compile InMAP from its source code. It should work on most types of
 
 ## Running InMAP
 
-1. Make sure that you have downloaded the InMAP input data files: `evaldata_vX.X.X.zip` from the [InMAP release page](https://github.com/spatialmodel/inmap/releases), where X.X.X corresponds to a version number.
+1. Make sure that you have downloaded the InMAP input data files: `evaldata_vX.X.X.zip` from the [InMAP release page](https://github.com/spatialmodel/inmap/releases), where X.X.X corresponds to a version number. The data files may need to be downloaded from a separate link included in the release information rather than directly from the release page.
 
 3. Create an emissions scenario or use one of the evaluation emissions datasets available in the `evaldata_vX.X.X.zip` files on the [InMAP release page](https://github.com/spatialmodel/inmap/releases). Emissions files should be in [shapefile](http://en.wikipedia.org/wiki/Shapefile) format where the attribute columns correspond to the names of emitted pollutants. Refer [here](http://godoc.org/github.com/spatialmodel/inmap#pkg-variables) (the `EmisNames` variable) for acceptable pollutant names. Emissions units can be specified in the configuration file (discussed below) and can be either  short tons or kilograms per year. The model can handle multiple input emissions files, and emissions can be either elevated or ground level. Files with elevated emissions need to have attribute columns labeled "height", "diam", "temp", and "velocity" containing stack information in units of m, m, K, and m/s, respectively. Emissions will be allocated from the geometries in the shape file to the InMAP computational grid.
 
