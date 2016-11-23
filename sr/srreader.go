@@ -248,7 +248,7 @@ func (sr *Reader) layerFracs(c *inmap.Cell, plumeHeight float64) ([]int, []float
 
 	for i := 0; i < len(sr.layers); i++ {
 		if c.Layer == sr.layers[i] {
-			return []int{c.Layer}, []float64{1.}, nil
+			return []int{i}, []float64{1.}, nil
 		}
 	}
 
