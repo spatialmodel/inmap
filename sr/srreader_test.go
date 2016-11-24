@@ -19,7 +19,6 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package sr
 
 import (
-	"fmt"
 	"math"
 	"os"
 	"reflect"
@@ -270,8 +269,10 @@ func TestConcentrations(t *testing.T) {
 				8.650599347959087e-09, 9.892478836093233e-09, 3.5014566801550018e-09, 1.5230451344550033e-09},
 		},
 		{ // PM25 800m
-			d:   []float64(nil),
-			err: fmt.Errorf("plume height (800 m) is above the top layer in the SR matrix"),
+			d: []float64{3.835866693724377e-11, 6.099889343635923e-11, 8.292484754424123e-11,
+				5.750595138964698e-11, 8.120485534002242e-11, 4.1053837412929894e-11, 7.843142801888803e-11,
+				1.0826346763526118e-10, 4.48883083481455e-11, 2.5135810099996547e-11},
+			err: AboveTopErr{PlumeHeight: 800},
 		},
 	}
 

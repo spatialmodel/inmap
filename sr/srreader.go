@@ -182,13 +182,22 @@ func (sr *Reader) Variables(names ...string) (map[string][]float64, error) {
 
 // Concentrations returns the change in Total PM2.5 concentrations caused
 // by the emissions specified by e, after accounting for plume rise.
-//  As specified in the EmisRecord documentation
+// If the emission plume height is above the highest layer in the SR
+// matrix, the function will allocate the emissions to the top layer
+// and an error of type AboveTopErr will be returned. In some cases it
+// may be appropriate to ignore errors of this type.
+// As specified in the EmisRecord documentation
 // emission units should be in μg/s.
 func (sr *Reader) Concentrations(e *inmap.EmisRecord) ([]float64, error) {
 
 	out := make([]float64, sr.nCellsGroundLevel)
 
 	cells, fractions := sr.d.CellIntersections(e.Geom)
+
+	// stickyErr is used for errors that shouldn't immediately
+	// cause the function to fail but should be returned with the
+	// result anyway.
+	var stickyErr error
 
 	for i, c := range cells {
 		// Figure out if this cell is the right layer.
@@ -213,7 +222,12 @@ func (sr *Reader) Concentrations(e *inmap.EmisRecord) ([]float64, error) {
 
 		layers, layerfracs, err := sr.layerFracs(c, plumeHeight)
 		if err != nil {
-			return nil, err
+			switch err.(type) {
+			case AboveTopErr:
+				stickyErr = err
+			default:
+				return nil, err
+			}
 		}
 
 		for i, layer := range layers {
@@ -230,7 +244,7 @@ func (sr *Reader) Concentrations(e *inmap.EmisRecord) ([]float64, error) {
 			}
 		}
 	}
-	return out, nil
+	return out, stickyErr
 }
 
 // polNames lists the pollutant names.
@@ -262,9 +276,19 @@ func (sr *Reader) layerFracs(c *inmap.Cell, plumeHeight float64) ([]int, []float
 	}
 
 	if c.Layer > sr.layers[len(sr.layers)-1] {
-		return nil, nil, fmt.Errorf("plume height (%g m) is above the top layer in the SR matrix", plumeHeight)
+		return []int{len(sr.layers) - 1}, []float64{1.}, AboveTopErr{PlumeHeight: plumeHeight}
 	}
 	panic("problem in layerFracs")
+}
+
+// AboveTopErr is returned when the plume height of an emissions
+// source is above the top layer in the SR matrix.
+type AboveTopErr struct {
+	PlumeHeight float64
+}
+
+func (e AboveTopErr) Error() string {
+	return fmt.Sprintf("plume height (%g m) is above the top layer in the SR matrix", e.PlumeHeight)
 }
 
 // Source returns concentrations in μg m-3 for emissions in μg s-1 of
