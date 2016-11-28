@@ -167,10 +167,12 @@ func (sr *Reader) Geometry() []geom.Polygonal {
 func (sr *Reader) Variables(names ...string) (map[string][]float64, error) {
 	o := make(map[string][]float64)
 	for _, name := range names {
+		n := make(map[string]string)
+		n[name] = name
 		if d, ok := sr.extraData[name]; ok {
 			o[name] = d[0:sr.nCellsGroundLevel] // only return ground-level data.
 		} else {
-			d, err := sr.d.Results(false, name)
+			d, err := sr.d.Results(false, false, n)
 			if err != nil {
 				return nil, err
 			}

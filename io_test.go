@@ -207,6 +207,98 @@ func TestEmissions(t *testing.T) {
 	DeleteShapefile(TestEmisFilename)
 }
 
+func TestOutputEquation(t *testing.T) {
+	cfg, ctmdata, pop, popIndices, mr := VarGridData()
+
+	emis := NewEmissions()
+	emis.Add(&EmisRecord{
+		PM25: E,
+		Geom: geom.Point{X: -3999, Y: -3999.},
+	}) // ground level emissions
+
+	d := &InMAP{
+		InitFuncs: []DomainManipulator{
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
+		},
+		CleanupFuncs: []DomainManipulator{
+			Output(TestOutputFilename, false, map[string]string{
+				"WindSpeed":  "WindSpeed",
+				"DoubleWind": "WindSpeed * 2",
+				"ExpWind":    "exp(WindSpeed)",
+				"ExpTwoWind": "exp(DoubleWind)"}),
+		},
+	}
+	if err := d.Init(); err != nil {
+		t.Error(err)
+	}
+	if err := d.Cleanup(); err != nil {
+		t.Error(err)
+	}
+	type outData struct {
+		WindSpeed  float64
+		DoubleWind float64
+		ExpWind    float64
+		ExpTwoWind float64
+	}
+	dec, err := shp.NewDecoder(TestOutputFilename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var recs []outData
+	for {
+		var rec outData
+		if more := dec.DecodeRow(&rec); !more {
+			break
+		}
+		recs = append(recs, rec)
+	}
+	if err := dec.Error(); err != nil {
+		t.Fatal(err)
+	}
+
+	want := []outData{
+		{
+			WindSpeed:  2.16334701,
+			DoubleWind: 4.32669401,
+			ExpWind:    8.70020863,
+			ExpTwoWind: 75.69363021,
+		},
+		{
+			WindSpeed:  1.88434911,
+			DoubleWind: 1.88434911 * 2,
+			ExpWind:    6.58206883,
+			ExpTwoWind: 43.32363008,
+		},
+		{
+			WindSpeed:  2.7272017,
+			DoubleWind: 2.7272017 * 2,
+			ExpWind:    15.29004098,
+			ExpTwoWind: 233.78535321,
+		},
+		{
+			WindSpeed:  2.56135321,
+			DoubleWind: 5.12270641,
+			ExpWind:    12.953334,
+			ExpTwoWind: 167.78886168,
+		},
+	}
+
+	if len(recs) != len(want) {
+		t.Errorf("want %d records but have %d", len(want), len(recs))
+	}
+	for i, w := range want {
+		if i >= len(recs) {
+			continue
+		}
+		h := recs[i]
+		if !reflect.DeepEqual(w, h) {
+			t.Errorf("record %d: want %+v but have %+v", i, w, h)
+		}
+	}
+	dec.Close()
+	DeleteShapefile(TestOutputFilename)
+}
+
 func TestOutput(t *testing.T) {
 	cfg, ctmdata, pop, popIndices, mr := VarGridData()
 
@@ -221,8 +313,13 @@ func TestOutput(t *testing.T) {
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
 		},
 		CleanupFuncs: []DomainManipulator{
-			Output(TestOutputFilename, false, "TotalPop deaths", "TotalPop",
-				"TotalPM25", "PM2.5 emissions", "Baseline TotalPM25", "WindSpeed"),
+			Output(TestOutputFilename, false, map[string]string{
+				"TotalPopD": "coxHazard(loglogRR(TotalPM25), TotalPop, MortalityRate)",
+				"TotalPop":  "TotalPop",
+				"TotalPM25": "TotalPM25",
+				"PM25Emiss": "PM25Emissions",
+				"BasePM25":  "BaselineTotalPM25",
+				"WindSpeed": "WindSpeed"}),
 		},
 	}
 	if err := d.Init(); err != nil {
@@ -232,11 +329,11 @@ func TestOutput(t *testing.T) {
 		t.Error(err)
 	}
 	type outData struct {
-		BaselineTotalPM25 float64 `shp:"Baseline To"`
-		PM25Emissions     float64 `shp:"PM2.5 emiss"`
+		BaselineTotalPM25 float64 `shp:"BasePM25"`
+		PM25Emissions     float64 `shp:"PM25Emiss"`
 		TotalPM25         float64
 		TotalPop          float64
-		Deaths            float64 `shp:"TotalPop de"`
+		Deaths            float64 `shp:"TotalPopD"`
 		WindSpeed         float64
 	}
 	dec, err := shp.NewDecoder(TestOutputFilename)

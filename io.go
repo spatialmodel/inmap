@@ -258,8 +258,12 @@ func (c *Cell) setEmissionsFlux(e *Emissions) {
 // shapefiles.
 // If  allLayers` is true, the function writes out data for all of the vertical
 // layers, otherwise only the ground-level layer is written.
-// outputVariables is a list of the names of the variables to be output.
-func Output(fileName string, allLayers bool, outputVariables ...string) DomainManipulator {
+// outputVariables is a map of the names of the variables for which data
+// should be returned to expressions that define how the data should be calculated.
+// These expressions can contain built-in InMAP variables, user-defined variables,
+// and functions. For more information on the functions available for defining
+// output variables see the documentation for the Results function.
+func Output(fileName string, allLayers bool, outputVariables map[string]string) DomainManipulator {
 	return func(d *InMAP) error {
 
 		// Projection definition. This may need to be changed for a different
@@ -268,7 +272,15 @@ func Output(fileName string, allLayers bool, outputVariables ...string) DomainMa
 		// matches the InMAPProj configuration variable.
 		const proj4 = `PROJCS["Lambert_Conformal_Conic",GEOGCS["GCS_unnamed ellipse",DATUM["D_unknown",SPHEROID["Unknown",6370997,0]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],PROJECTION["Lambert_Conformal_Conic"],PARAMETER["standard_parallel_1",33],PARAMETER["standard_parallel_2",45],PARAMETER["latitude_of_origin",40],PARAMETER["central_meridian",-97],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]`
 
-		results, err := d.Results(allLayers, outputVariables...)
+		// Create slice of output variable names
+		outputVariableNames := make([]string, len(outputVariables))
+		i := 0
+		for k := range outputVariables {
+			outputVariableNames[i] = k
+			i++
+		}
+
+		results, err := d.Results(allLayers, true, outputVariables)
 		if err != nil {
 			return err
 		}
@@ -291,7 +303,7 @@ func Output(fileName string, allLayers bool, outputVariables ...string) DomainMa
 			return fmt.Errorf("error creating output shapefile: %v", err)
 		}
 		cells := d.cells.array()
-		for i, c := range cells[0:len(results[outputVariables[0]])] {
+		for i, c := range cells[0:len(results[outputVariableNames[0]])] {
 			outFields := make([]interface{}, len(vars))
 			for j, v := range vars {
 				outFields[j] = results[v][i]

@@ -25,7 +25,6 @@ import (
 	"strings"
 	"sync"
 
-	"bitbucket.org/ctessum/aqhealth"
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/index/rtree"
 )
@@ -419,11 +418,6 @@ func (c *Cell) getValue(varName string, popIndices map[string]int) float64 {
 
 	} else if i, ok := popIndices[varName]; ok { // Population
 		return c.PopData[i]
-
-	} else if i, ok := popIndices[strings.Replace(varName, " deaths", "", 1)]; ok {
-		// Mortalities
-		rr := aqhealth.RRpm25Linear(c.getValue("TotalPM25", popIndices))
-		return aqhealth.Deaths(rr, c.PopData[i], c.MortalityRate)
 
 	} // Everything else
 	val := reflect.ValueOf(c).Elem().FieldByName(varName)

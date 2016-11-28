@@ -580,11 +580,11 @@ func TestConverge(t *testing.T) {
 			t.Logf("%s completed after %d iterations.", convergenceNames[i], iterations)
 		}
 
-		r, err := d.Results(false, "PrimaryPM25")
+		r, err := d.Results(false, true, map[string]string{"PrimPM25": "PrimaryPM25"})
 		if err != nil {
 			t.Error(err)
 		}
-		results := r["PrimaryPM25"]
+		results := r["PrimPM25"]
 		total := floats.Sum(results)
 		if different(total, expectedConcentration[i], testTolerance) {
 			t.Errorf("%s concentration (%v) doesn't equal %v", convergenceNames[i], total, expectedConcentration[i])
@@ -638,11 +638,11 @@ func BenchmarkRun(b *testing.B) {
 		b.Error(err)
 	}
 
-	r, err := d.Results(false, "TotalPop deaths")
+	r, err := d.Results(false, true, map[string]string{"TotalPopDeaths": "coxHazard(loglogRR(TotalPM25), TotalPop, MortalityRate)"})
 	if err != nil {
 		b.Error(err)
 	}
-	results := r["TotalPop deaths"]
+	results := r["TotalPopDeaths"]
 	totald := floats.Sum(results)
 	const expectedDeaths = 1.1582659761054755e-06
 	if different(totald, expectedDeaths, testTolerance) {
@@ -781,7 +781,7 @@ func TestBigM2d(t *testing.T) {
 	if err := d.Run(); err != nil {
 		t.Error(err)
 	}
-	r, err := d.Results(false, "TotalPM25")
+	r, err := d.Results(false, true, map[string]string{"TotalPM25": "TotalPM25"})
 	if err != nil {
 		t.Error(err)
 	}

@@ -46,7 +46,7 @@ func (d *InMAP) OutputOptions() (names []string, descriptions []string, units []
 	}
 	sort.Strings(names)
 	for _, n := range names {
-		descriptions = append(descriptions, n+" Concentration")
+		descriptions = append(descriptions, n+"Concentration")
 	}
 
 	// Baseline pollutant concentrations
@@ -57,23 +57,19 @@ func (d *InMAP) OutputOptions() (names []string, descriptions []string, units []
 	sort.Strings(tempBaseline)
 	names = append(names, tempBaseline...)
 	for _, n := range tempBaseline {
-		descriptions = append(descriptions, n+" Concentration")
+		descriptions = append(descriptions, n+"Concentration")
 	}
 
 	// Population and deaths
 	var tempPop []string
-	var tempDeaths []string
 	for pop := range d.popIndices {
 		tempPop = append(tempPop, pop)
-		tempDeaths = append(tempDeaths, pop+" deaths")
 	}
 	sort.Strings(tempPop)
 	names = append(names, tempPop...)
-	names = append(names, tempDeaths...)
 	for _, n := range tempPop {
-		descriptions = append(descriptions, n+" Population")
+		descriptions = append(descriptions, n+"Population")
 	}
-	descriptions = append(descriptions, tempDeaths...)
 
 	// Emissions.
 	var tempEmis []string
@@ -281,7 +277,7 @@ func (d *InMAP) verticalProfileHandler(w http.ResponseWriter, r *http.Request) {
 // VerticalProfile retrieves the vertical profile for a given
 // variable at the given location p in the native grid projection.
 func (d *InMAP) VerticalProfile(variable string, p geom.Point) (height, vals []float64, err error) {
-	if err := d.checkOutputNames(variable); err != nil {
+	if err := d.checkGetNames(variable); err != nil {
 		return nil, nil, err
 	}
 

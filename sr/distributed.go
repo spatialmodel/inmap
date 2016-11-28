@@ -119,7 +119,7 @@ func (s *Worker) Calculate(input *IOData, output *IOData) error {
 	output.Output = make(map[string][]float64)
 	output.Row = input.Row
 	output.Layer = input.Layer
-	o, err := d.Results(false, outputVars...)
+	o, err := d.Results(false, false, outputVars)
 	if err != nil {
 		return err
 	}

@@ -70,7 +70,7 @@ type ConfigData struct {
 	// OutputVariables specifies which model variables should be included in the
 	// output file.
 	// Can include environment variables.
-	OutputVariables []string
+	OutputVariables map[string]string
 
 	// NumIterations is the number of iterations to calculate. If < 1, convergence
 	// is automatically calculated.
@@ -118,8 +118,8 @@ func ReadConfigFile(filename string) (config *ConfigData, err error) {
 			"there has been an error parsing the configuration file: %v\n", err)
 	}
 
-	for i, v := range config.OutputVariables {
-		config.OutputVariables[i] = os.ExpandEnv(v)
+	for k, v := range config.OutputVariables {
+		config.OutputVariables[os.ExpandEnv(k)] = os.ExpandEnv(v)
 	}
 
 	config.InMAPData = os.ExpandEnv(config.InMAPData)
