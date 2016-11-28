@@ -422,15 +422,18 @@ func (d *InMAP) checkOutputNames(o map[string]string) error {
 // outputVariables maps the names of the variables for which data
 // should be returned to expressions that define how the
 // requested data should be calculated. These expressions can utilize variables
-// built into the model, user-defined variables, and functions.
-// Available functions include:
+// built into the model, user-defined variables, and functions. Available
+// functions include:
+//
 // 'exp(x)' which applies the exponetional function e^x.
+//
 // 'loglogRR(PM 2.5 Concentration)' which calculates relative risk (or risk ratio)
-// 		associated with a given change in PM 2.5 concentration, assumung a log-log
-// 		dose response (almost a linear relationship).
+// associated with a given change in PM 2.5 concentration, assumung a log-log
+// dose response (almost a linear relationship).
+//
 // 'coxHazard(Relative Risk, Population, Mortality Rate)' which calculates a
-//		deaths estimate based on the relative risk associated with PM 2.5 changes
-//		and the baseline number of deaths.
+// deaths estimate based on the relative risk associated with PM 2.5 changes
+// and the baseline number of deaths.
 func (d *InMAP) Results(allLayers bool, checkNames bool, outputVariables map[string]string) (map[string][]float64, error) {
 
 	functions := map[string]govaluate.ExpressionFunction{
