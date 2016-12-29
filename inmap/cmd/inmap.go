@@ -91,6 +91,13 @@ func Run(dynamic, createGrid bool, scienceFuncs []inmap.CellManipulator, addInit
 		}
 	}()
 
+	o, err := inmap.NewOutputter(Config.OutputFile, Config.OutputAllLayers, Config.OutputVariables, nil)
+	if err != nil {
+		return err
+	} else {
+		log.Println("Parsing output variable expressions...")
+	}
+
 	emis, err := inmap.ReadEmissionShapefiles(Config.sr, Config.EmissionUnits,
 		msgLog, Config.EmissionsShapefiles...)
 	if err != nil {
@@ -140,6 +147,7 @@ func Run(dynamic, createGrid bool, scienceFuncs []inmap.CellManipulator, addInit
 			initFuncs = []inmap.DomainManipulator{
 				inmap.Load(r, &Config.VarGrid, emis),
 				inmap.SetTimestepCFL(),
+				o.CheckOutputVars(),
 			}
 		}
 		runFuncs = []inmap.DomainManipulator{
@@ -153,6 +161,7 @@ func Run(dynamic, createGrid bool, scienceFuncs []inmap.CellManipulator, addInit
 		initFuncs = []inmap.DomainManipulator{
 			Config.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, emis),
 			inmap.SetTimestepCFL(),
+			o.CheckOutputVars(),
 		}
 		popConcMutator := inmap.NewPopConcMutator(&Config.VarGrid, popIndices)
 		const gridMutateInterval = 3 * 60 * 60 // every 3 hours in seconds
@@ -173,9 +182,10 @@ func Run(dynamic, createGrid bool, scienceFuncs []inmap.CellManipulator, addInit
 		InitFuncs: append(initFuncs, addInit...),
 		RunFuncs:  append(runFuncs, addRun...),
 		CleanupFuncs: append([]inmap.DomainManipulator{
-			inmap.Output(Config.OutputFile, Config.OutputAllLayers, Config.OutputVariables),
+			o.Output(),
 		}, addCleanup...),
 	}
+
 	log.Println("Initializing model...")
 	if err = d.Init(); err != nil {
 		return fmt.Errorf("InMAP: problem initializing model: %v\n", err)

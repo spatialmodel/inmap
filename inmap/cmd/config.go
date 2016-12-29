@@ -124,6 +124,8 @@ func ReadConfigFile(filename string) (config *ConfigData, err error) {
 	}
 
 	for k, v := range config.OutputVariables {
+		v = strings.Replace(v, "\r\n", " ", -1)
+		v = strings.Replace(v, "\n", " ", -1)
 		config.OutputVariables[os.ExpandEnv(k)] = os.ExpandEnv(v)
 	}
 

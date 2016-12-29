@@ -219,22 +219,28 @@ func TestOutputEquation(t *testing.T) {
 		Geom: geom.Point{X: -3999, Y: -3999.},
 	}) // ground level emissions
 
+	o, err := NewOutputter(TestOutputFilename, false, map[string]string{
+		"WindSpeed":  "WindSpeed",
+		"DoubleWind": "WindSpeed * 2",
+		"ExpWind":    "exp(WindSpeed)",
+		"ExpTwoWind": "exp(DoubleWind)"},
+		nil)
+	if err != nil {
+		t.Error(err)
+	}
+
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
 		},
 		CleanupFuncs: []DomainManipulator{
-			Output(TestOutputFilename, false, map[string]string{
-				"WindSpeed":  "WindSpeed",
-				"DoubleWind": "WindSpeed * 2",
-				"ExpWind":    "exp(WindSpeed)",
-				"ExpTwoWind": "exp(DoubleWind)"}),
+			o.Output(),
 		},
 	}
-	if err := d.Init(); err != nil {
+	if err = d.Init(); err != nil {
 		t.Error(err)
 	}
-	if err := d.Cleanup(); err != nil {
+	if err = d.Cleanup(); err != nil {
 		t.Error(err)
 	}
 	type outData struct {
@@ -302,6 +308,56 @@ func TestOutputEquation(t *testing.T) {
 	DeleteShapefile(TestOutputFilename)
 }
 
+func BenchmarkOutput(b *testing.B) {
+	cfg, ctmdata, pop, popIndices, mr := VarGridData()
+
+	emis := NewEmissions()
+	emis.Add(&EmisRecord{
+		PM25: E,
+		Geom: geom.Point{X: -3999, Y: -3999.},
+	}) // ground level emissions
+
+	var o *Outputter
+
+	b.Run("NewOutputter", func(b *testing.B) {
+		oBench, err := NewOutputter(TestOutputFilename, false, map[string]string{
+			"TotalPop":   "TotalPop",
+			"WhiteNoLat": "WhiteNoLat",
+			"NPctWNoLat": "{sum(WhiteNoLat) / sum(TotalPop)}",
+			"NPctOther":  "1 - NPctWNoLat",
+			"TotalPopD":  "coxHazard(loglogRR(TotalPM25), TotalPop, MortalityRate)",
+			"TotalPM25":  "TotalPM25",
+			"PM25Emiss":  "PM25Emissions",
+			"BasePM25":   "BaselineTotalPM25",
+			"WindSpeed":  "WindSpeed"},
+			nil)
+		if err != nil {
+			b.Error(err)
+		}
+		o = oBench
+	})
+
+	d := &InMAP{
+		InitFuncs: []DomainManipulator{
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
+			o.CheckOutputVars(),
+		},
+		CleanupFuncs: []DomainManipulator{
+			o.Output(),
+		},
+	}
+	b.Run("InitFuncs", func(b *testing.B) {
+		if err := d.Init(); err != nil {
+			b.Error(err)
+		}
+	})
+	b.Run("CleanupFuncs", func(b *testing.B) {
+		if err := d.Cleanup(); err != nil {
+			b.Error(err)
+		}
+	})
+}
+
 func TestOutput(t *testing.T) {
 	cfg, ctmdata, pop, popIndices, mr := VarGridData()
 
@@ -311,18 +367,28 @@ func TestOutput(t *testing.T) {
 		Geom: geom.Point{X: -3999, Y: -3999.},
 	}) // ground level emissions
 
+	o, err := NewOutputter(TestOutputFilename, false, map[string]string{
+		"TotalPop":   "TotalPop",
+		"WhiteNoLat": "WhiteNoLat",
+		"NPctWNoLat": "{sum(WhiteNoLat) / sum(TotalPop)}",
+		"NPctOther":  "1 - NPctWNoLat",
+		"TotalPopD":  "coxHazard(loglogRR(TotalPM25), TotalPop, MortalityRate)",
+		"TotalPM25":  "TotalPM25",
+		"PM25Emiss":  "PM25Emissions",
+		"BasePM25":   "BaselineTotalPM25",
+		"WindSpeed":  "WindSpeed"},
+		nil)
+	if err != nil {
+		t.Error(err)
+	}
+
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
+			o.CheckOutputVars(),
 		},
 		CleanupFuncs: []DomainManipulator{
-			Output(TestOutputFilename, false, map[string]string{
-				"TotalPopD": "coxHazard(loglogRR(TotalPM25), TotalPop, MortalityRate)",
-				"TotalPop":  "TotalPop",
-				"TotalPM25": "TotalPM25",
-				"PM25Emiss": "PM25Emissions",
-				"BasePM25":  "BaselineTotalPM25",
-				"WindSpeed": "WindSpeed"}),
+			o.Output(),
 		},
 	}
 	if err := d.Init(); err != nil {
@@ -336,6 +402,9 @@ func TestOutput(t *testing.T) {
 		PM25Emissions     float64 `shp:"PM25Emiss"`
 		TotalPM25         float64
 		TotalPop          float64
+		WhiteNoLat        float64
+		NPctWNoLat        float64
+		NPctOther         float64
 		Deaths            float64 `shp:"TotalPopD"`
 		WindSpeed         float64
 	}
@@ -360,19 +429,28 @@ func TestOutput(t *testing.T) {
 			BaselineTotalPM25: 4.90770054,
 			PM25Emissions:     0.00112376, //E / d.Cells[0].Volume,
 			TotalPop:          100000.,
+			WhiteNoLat:        50000.,
+			NPctWNoLat:        0.5,
+			NPctOther:         0.5,
 			WindSpeed:         2.16334701,
 		},
 		{
 			BaselineTotalPM25: 10.34742928,
 			WindSpeed:         1.88434911,
+			NPctWNoLat:        0.5,
+			NPctOther:         0.5,
 		},
 		{
 			BaselineTotalPM25: 4.2574172,
 			WindSpeed:         2.7272017,
+			NPctWNoLat:        0.5,
+			NPctOther:         0.5,
 		},
 		{
 			BaselineTotalPM25: 5.36232233,
 			WindSpeed:         2.56135321,
+			NPctWNoLat:        0.5,
+			NPctOther:         0.5,
 		},
 	}
 

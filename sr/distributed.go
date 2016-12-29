@@ -119,12 +119,17 @@ func (s *Worker) Calculate(input *IOData, output *IOData) error {
 	output.Output = make(map[string][]float64)
 	output.Row = input.Row
 	output.Layer = input.Layer
-	o, err := d.Results(false, false, outputVars)
+
+	o, err := inmap.NewOutputter("", false, outputVars, nil)
+	if err != nil {
+		return err
+	}
+	r, err := d.Results(o)
 	if err != nil {
 		return err
 	}
 	g := d.GetGeometry(0, false)
-	for pol, data := range o {
+	for pol, data := range r {
 		d, err := inmap.Regrid(g, s.GridGeom, data)
 		if err != nil {
 			return err

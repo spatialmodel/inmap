@@ -85,7 +85,12 @@ func TestDynamicGrid(t *testing.T) {
 		t.Errorf("dynamic grid should have %v cells but instead has %v", wantCells, cells)
 	}
 
-	r, err := d.Results(false, true, map[string]string{"TotalPopD": "coxHazard(loglogRR(TotalPM25), TotalPop, MortalityRate)"})
+	o, err := NewOutputter("", false, map[string]string{"TotalPopD": "coxHazard(loglogRR(TotalPM25), TotalPop, MortalityRate)"}, nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	r, err := d.Results(o)
 	if err != nil {
 		t.Error(err)
 	}

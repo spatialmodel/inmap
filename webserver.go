@@ -277,7 +277,7 @@ func (d *InMAP) verticalProfileHandler(w http.ResponseWriter, r *http.Request) {
 // VerticalProfile retrieves the vertical profile for a given
 // variable at the given location p in the native grid projection.
 func (d *InMAP) VerticalProfile(variable string, p geom.Point) (height, vals []float64, err error) {
-	if err := d.checkGetNames(variable); err != nil {
+	if err := d.checkModelVars(variable); err != nil {
 		return nil, nil, err
 	}
 

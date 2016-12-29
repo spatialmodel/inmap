@@ -165,21 +165,25 @@ func (sr *Reader) Geometry() []geom.Polygonal {
 // Variables returns the data for the InMAP variables named by names. Any
 // changes to the returned data may also alter the underlying data.
 func (sr *Reader) Variables(names ...string) (map[string][]float64, error) {
-	o := make(map[string][]float64)
+	r := make(map[string][]float64)
 	for _, name := range names {
 		n := make(map[string]string)
 		n[name] = name
 		if d, ok := sr.extraData[name]; ok {
-			o[name] = d[0:sr.nCellsGroundLevel] // only return ground-level data.
+			r[name] = d[0:sr.nCellsGroundLevel] // only return ground-level data.
 		} else {
-			d, err := sr.d.Results(false, false, n)
+			o, err := inmap.NewOutputter("", false, n, nil)
 			if err != nil {
 				return nil, err
 			}
-			o[name] = d[name]
+			d, err := sr.d.Results(o)
+			if err != nil {
+				return nil, err
+			}
+			r[name] = d[name]
 		}
 	}
-	return o, nil
+	return r, nil
 }
 
 // Concentrations holds pollutant concentration information [μg/m3]

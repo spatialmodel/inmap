@@ -2,6 +2,9 @@
 * Removed vendored libraries
 * A log file containing information about each model run is now automatically created
 * Added a GEOS-Chem preprocessor
+* Allowed new output variables to be defined as expressions of existing output variables
+* Added "Outputter", a holder for output parameters.
+* Allowed output variable expressions to now be evaluated at the grid level in addition to the grid cell level
 
 # Release 1.2.1 (2016-11-15)
 * Changed the time step calculation algorithm to work with larger grid cell sizes

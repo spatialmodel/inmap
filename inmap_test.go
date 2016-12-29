@@ -580,7 +580,12 @@ func TestConverge(t *testing.T) {
 			t.Logf("%s completed after %d iterations.", convergenceNames[i], iterations)
 		}
 
-		r, err := d.Results(false, true, map[string]string{"PrimPM25": "PrimaryPM25"})
+		o, err := NewOutputter("", false, map[string]string{"PrimPM25": "PrimaryPM25"}, nil)
+		if err != nil {
+			t.Error(err)
+		}
+
+		r, err := d.Results(o)
 		if err != nil {
 			t.Error(err)
 		}
@@ -638,13 +643,19 @@ func BenchmarkRun(b *testing.B) {
 		b.Error(err)
 	}
 
-	r, err := d.Results(false, true, map[string]string{"TotalPopDeaths": "coxHazard(loglogRR(TotalPM25), TotalPop, MortalityRate)"})
+	o, err := NewOutputter("", false, map[string]string{"TotalPopDeaths": "coxHazard(loglogRR(TotalPM25), TotalPop, MortalityRate)"}, nil)
+	if err != nil {
+		b.Error(err)
+	}
+
+	r, err := d.Results(o)
 	if err != nil {
 		b.Error(err)
 	}
 	results := r["TotalPopDeaths"]
 	totald := floats.Sum(results)
-	const expectedDeaths = 1.1582659761054755e-06
+	const expectedDeaths = 6.614182415997713e-06
+
 	if different(totald, expectedDeaths, testTolerance) {
 		b.Errorf("Deaths (%v) doesn't equal %v", totald, expectedDeaths)
 	}
@@ -781,7 +792,13 @@ func TestBigM2d(t *testing.T) {
 	if err := d.Run(); err != nil {
 		t.Error(err)
 	}
-	r, err := d.Results(false, true, map[string]string{"TotalPM25": "TotalPM25"})
+
+	o, err := NewOutputter("", false, map[string]string{"TotalPM25": "TotalPM25"}, nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	r, err := d.Results(o)
 	if err != nil {
 		t.Error(err)
 	}

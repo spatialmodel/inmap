@@ -24,12 +24,11 @@ import (
 	"math"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"text/tabwriter"
 	"time"
-
-	"bitbucket.org/ctessum/aqhealth"
 
 	"github.com/Knetic/govaluate"
 )
@@ -332,178 +331,66 @@ func Log(c chan *SimulationStatus) DomainManipulator {
 	}
 }
 
-// removeDuplicates removes all duplicated strings from a slice, returning a
-// slice that contains only unique strings.
-func removeDuplicates(s []string) []string {
-	result := make([]string, 0, len(s))
-	seen := make(map[string]string)
-	for _, val := range s {
-		if _, ok := seen[val]; !ok {
-			result = append(result, val)
-			seen[val] = val
-		}
-	}
-	return result
-}
-
-// checkForDerivitives identifies the unique input variables that are required
-// to calculate the requested output variables.
-// Inputs:
-// (1) Map of requested output variable names to their corresponding expressions.
-// (2) Map of all function names to function definitions that are used in expressions.
-// Outputs:
-// (1) Map of output variable names to revised expressions where any user-defined
-// output variable showing up in a subsequent expression is replaced by its
-// corresponding user-defined expression.
-// (2) Slice of all unique input variables required to calculate the requested
-// output variables.
-func checkForDerivitives(m map[string]string, f map[string]govaluate.ExpressionFunction) (map[string]string, []string, error) {
-	getVariables := make([]string, 0, len(m))
-	for key, val := range m {
-		expression, err := govaluate.NewEvaluableExpressionWithFunctions(val, f)
-		if err != nil {
-			return nil, nil, fmt.Errorf("inmap OutputVariables: %v", err)
-		}
-		uniqueVars := removeDuplicates(expression.Vars())
-		getVariables = append(getVariables, uniqueVars...)
-		for _, uniqueVar := range uniqueVars {
-			if m[uniqueVar] != "" && m[uniqueVar] != uniqueVar {
-				m[key] = strings.Replace(m[key], uniqueVar, "("+m[uniqueVar]+")", -1)
-				return checkForDerivitives(m, f)
-			}
-		}
-	}
-	return m, removeDuplicates(getVariables), nil
-}
-
-// checkGetNames checks whether the unique input variables required to calculate
-// the user-requested output variables are available in the model.
-func (d *InMAP) checkGetNames(g ...string) error {
-	tempOutputNames, _, _ := d.OutputOptions()
-	outputNames := make(map[string]uint8)
-	for _, n := range tempOutputNames {
-		outputNames[n] = 0
-	}
-	for _, v := range g {
-		if _, ok := outputNames[v]; !ok {
-			return fmt.Errorf("inmap: unsupported variable name '%s'", v)
-		}
-	}
-	return nil
-}
-
-// checkOutputNames checks (1) if any output variable names exceed 10 characters
-// and (2) if any output variable names include characters that are unsupported
-// in shapefile field names.
-func (d *InMAP) checkOutputNames(o map[string]string) error {
-	for key := range o {
-		long := len(key) > 10
-		noCharError, err := regexp.MatchString("^[A-Za-z]\\w*$", key)
-		if err != nil {
-			panic(err)
-		}
-		if long && !noCharError {
-			return fmt.Errorf("inmap: output variable name '%s' exceeds 10 characters and includes unsupported character(s)", key)
-		} else if long {
-			return fmt.Errorf("inmap: output variable name '%s' exceeds 10 characters", key)
-		} else if !noCharError {
-			return fmt.Errorf("inmap: output variable name '%s' includes unsupported characters", key)
-		}
-	}
-	return nil
-}
-
 // Results returns the simulation results.
 // Output is in the form of map[variable][row]concentration.
-// If allLayers is true, the function returns data for all of the vertical
-// layers, otherwise only the ground-level layer is returned.
-// If checkNames is true, the length and characters of output variable names
-// will be checked for compatibility with shapefiles.
-// outputVariables maps the names of the variables for which data
-// should be returned to expressions that define how the
-// requested data should be calculated. These expressions can utilize variables
-// built into the model, user-defined variables, and functions. Available
-// functions include:
-//
-// 'exp(x)' which applies the exponetional function e^x.
-//
-// 'loglogRR(PM 2.5 Concentration)' which calculates relative risk (or risk ratio)
-// associated with a given change in PM 2.5 concentration, assumung a log-log
-// dose response (almost a linear relationship).
-//
-// 'coxHazard(Relative Risk, Population, Mortality Rate)' which calculates a
-// deaths estimate based on the relative risk associated with PM 2.5 changes
-// and the baseline number of deaths.
-func (d *InMAP) Results(allLayers bool, checkNames bool, outputVariables map[string]string) (map[string][]float64, error) {
+func (d *InMAP) Results(o *Outputter) (map[string][]float64, error) {
 
-	functions := map[string]govaluate.ExpressionFunction{
-		"exp": func(arg ...interface{}) (interface{}, error) {
-			if len(arg) != 1 {
-				return nil, fmt.Errorf("inmap: got %d arguments for function 'exp', but needs 1", len(arg))
-			}
-			return (float64)(math.Exp(arg[0].(float64))), nil
-		},
-		"loglogRR": func(arg ...interface{}) (interface{}, error) {
-			if len(arg) != 1 {
-				return nil, fmt.Errorf("inmap: got %d arguments for function 'exp', but needs 1", len(arg))
-			}
-			return (float64)(aqhealth.RRpm25Linear(arg[0].(float64))), nil
-		},
-		"coxHazard": func(args ...interface{}) (interface{}, error) {
-			if len(args) != 3 {
-				return nil, fmt.Errorf("inmap: got %d arguments for function 'exp', but needs 3", len(args))
-			}
-			return (float64)((args[0].(float64) - 1) * args[1].(float64) * args[2].(float64) / 100000), nil
-		},
-	}
-
-	outputVariables, getVariables, err := checkForDerivitives(outputVariables, functions)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := d.checkGetNames(getVariables...); err != nil {
-		return nil, err
-	}
-
-	if checkNames {
-		if err := d.checkOutputNames(outputVariables); err != nil {
-			return nil, err
-		}
-	}
-
-	// Prepare output data
-	getConc := make(map[string][]float64)
-	concByRow := make(map[string]interface{})
-	outputConc := make(map[string][]float64)
+	// Prepare output data.
+	modelVals := make(map[string]interface{})
+	valByRow := make(map[string]interface{})
+	output := make(map[string][]float64)
 	var nCells int
 
-	for _, name := range getVariables {
-		if allLayers {
+	// Get the model variables that are to be used in the output.
+	for _, name := range o.modelVariables {
+		if o.allLayers {
 			data := d.toArray(name, -1)
-			getConc[name] = data
+			modelVals[name] = data
 			nCells = len(data)
 		} else {
 			data := d.toArray(name, 0)
-			getConc[name] = data
+			modelVals[name] = data
 			nCells = len(data)
 		}
 	}
-	for k, v := range outputVariables {
-		expression, err := govaluate.NewEvaluableExpressionWithFunctions(v, functions)
+
+	// Identify segments of output variable expressions that are surrounded by braces.
+	for k, v := range o.outputVariables {
+		regx, _ := regexp.Compile("\\{(.*?)\\}")
+		matches := regx.FindAllString(v, -1)
+		if len(matches) > 0 {
+			// For each segment of an expression that is surrounded by braces, evaluate
+			// across all grid cells.
+			for _, m := range matches {
+				expression, err := govaluate.NewEvaluableExpressionWithFunctions(m[1:len(m)-1], o.outputFunctions)
+				if err != nil {
+					return nil, err
+				}
+				result, err := expression.Evaluate(modelVals)
+				if err != nil {
+					return nil, err
+				}
+				// Replace segments surrounded by braces with corresponding result
+				// calculated above.
+				o.outputVariables[k] = strings.Replace(v, m, strconv.FormatFloat(result.(float64), 'f', -1, 64), 1)
+			}
+		}
+	}
+	for k, v := range o.outputVariables {
+		expression, err := govaluate.NewEvaluableExpressionWithFunctions(v, o.outputFunctions)
 		if err != nil {
 			return nil, err
 		}
 		for i := 0; i < nCells; i++ {
-			for name := range getConc {
-				concByRow[name] = getConc[name][i]
+			for name := range modelVals {
+				valByRow[name] = modelVals[name].([]float64)[i]
 			}
-			result, err := expression.Evaluate(concByRow)
+			result, err := expression.Evaluate(valByRow)
 			if err != nil {
 				return nil, err
 			}
-			outputConc[k] = append(outputConc[k], result.(float64))
+			output[k] = append(output[k], result.(float64))
 		}
 	}
-	return outputConc, nil
+	return output, nil
 }

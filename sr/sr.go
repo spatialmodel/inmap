@@ -267,7 +267,12 @@ func (sr *SR) writeResults(outfile string, layers []int, requestChan chan result
 		}
 
 		// Add InMAP data
-		data, err := sr.d.Results(true, false, inmapVars)
+		o, err := inmap.NewOutputter("", true, inmapVars, nil)
+		if err != nil {
+			errChan <- fmt.Errorf("inmap: preparing output variables: %v", err)
+			return
+		}
+		data, err := sr.d.Results(o)
 		if err != nil {
 			errChan <- fmt.Errorf("writing InMAP variables to SR netcdf file: %v", err)
 			return

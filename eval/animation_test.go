@@ -278,21 +278,27 @@ type geomConc struct {
 
 func saveConc(outChan chan []geomConc) inmap.DomainManipulator {
 	return func(d *inmap.InMAP) error {
-		res, err := d.Results(false, true, map[string]string{"TotalPM25": "TotalPM25"})
+
+		o, err := inmap.NewOutputter("", false, map[string]string{"TotalPM25": "TotalPM25"}, nil)
+		if err != nil {
+			return err
+		}
+
+		res, err := d.Results(o)
 		if err != nil {
 			return err
 		}
 		vals := res["TotalPM25"]
 		g := d.GetGeometry(0, false)
 
-		o := make([]geomConc, len(g))
+		c := make([]geomConc, len(g))
 		for i, gg := range g {
-			o[i] = geomConc{
+			c[i] = geomConc{
 				Polygonal: gg,
 				val:       vals[i],
 			}
 		}
-		outChan <- o
+		outChan <- c
 		return nil
 	}
 }

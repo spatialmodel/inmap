@@ -24,9 +24,12 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
+	"bitbucket.org/ctessum/aqhealth"
+	"github.com/Knetic/govaluate"
 	"github.com/ctessum/aep"
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/encoding/shp"
@@ -34,6 +37,7 @@ import (
 	"github.com/ctessum/geom/op"
 	"github.com/ctessum/geom/proj"
 	"github.com/ctessum/unit"
+	"github.com/gonum/floats"
 	goshp "github.com/jonas-p/go-shp"
 )
 
@@ -360,18 +364,265 @@ func (c *Cell) setEmissionsFlux(e *Emissions) {
 	}
 }
 
-// Output returns a function that writes simulation results to a shapefile or
-// shapefiles.
-// If  allLayers` is true, the function writes out data for all of the vertical
-// layers, otherwise only the ground-level layer is written.
-// outputVariables is a map of the names of the variables for which data
-// should be returned to expressions that define how the data should be calculated.
-// These expressions can contain built-in InMAP variables, user-defined variables,
-// and functions. For more information on the functions available for defining
-// output variables see the documentation for the Results function.
-func Output(fileName string, allLayers bool, outputVariables map[string]string) DomainManipulator {
-	return func(d *InMAP) error {
+// Outputter is a holder for output parameters.
+//
+// fileName contains the path where the output will be saved.
+//
+// If allLayers is true, output will contain data for all of the vertical
+// layers, otherwise only the ground-level layer is returned.
+//
+// outputVariables maps the names of the variables for which data
+// should be returned to expressions that define how the
+// requested data should be calculated. These expressions can utilize variables
+// built into the model, user-defined variables, and functions.
+//
+// modelVariables is automatically generated based on the model variables that
+// are required to calculate the requested output variables.
+//
+// Functions are defined in the outputFunctions variable.
+type Outputter struct {
+	fileName        string
+	allLayers       bool
+	outputVariables map[string]string
+	modelVariables  []string
+	outputFunctions map[string]govaluate.ExpressionFunction
+}
 
+// NewOutputter initializes a new Outputter holder and adds a set of default
+// output functions. Default functions include:
+//
+// 'exp(x)' which applies the exponetional function e^x.
+//
+// 'loglogRR(PM 2.5 Concentration)' which calculates relative risk (or risk ratio)
+// associated with a given change in PM2.5 concentration, assumung a log-log
+// dose response (almost a linear relationship).
+//
+// 'coxHazard(Relative Risk, Population, Mortality Rate)' which calculates a
+// deaths estimate based on the relative risk associated with PM 2.5 changes,
+// population, and the baseline mortality rate (deaths per 100,000 people per year).
+//
+// 'sum(x)' which sums a variable across all grid cells.
+func NewOutputter(fileName string, allLayers bool, outputVariables map[string]string, outputFunctions map[string]govaluate.ExpressionFunction) (*Outputter, error) {
+	defaultOutputFuncs := map[string]govaluate.ExpressionFunction{
+		"exp": func(arg ...interface{}) (interface{}, error) {
+			if len(arg) != 1 {
+				return nil, fmt.Errorf("inmap: got %d arguments for function 'exp', but needs 1", len(arg))
+			}
+			return (float64)(math.Exp(arg[0].(float64))), nil
+		},
+		"loglogRR": func(arg ...interface{}) (interface{}, error) {
+			if len(arg) != 1 {
+				return nil, fmt.Errorf("inmap: got %d arguments for function 'loglogRR', but needs 1", len(arg))
+			}
+			return (float64)(aqhealth.RRpm25Linear(arg[0].(float64))), nil
+		},
+		"coxHazard": func(args ...interface{}) (interface{}, error) {
+			if len(args) != 3 {
+				return nil, fmt.Errorf("inmap: got %d arguments for function 'coxHazard', but needs 3", len(args))
+			}
+			return (float64)((args[0].(float64) - 1) * args[1].(float64) * args[2].(float64) / 100000), nil
+		},
+		"sum": func(arg ...interface{}) (interface{}, error) {
+			if len(arg) != 1 {
+				return nil, fmt.Errorf("inmap: got %d arguments for function 'sum', but needs 1", len(arg))
+			}
+			return floats.Sum(arg[0].([]float64)), nil
+		},
+	}
+
+	for key, val := range outputFunctions {
+		defaultOutputFuncs[key] = val
+	}
+
+	o := Outputter{
+		fileName:        fileName,
+		allLayers:       allLayers,
+		outputVariables: outputVariables,
+		outputFunctions: defaultOutputFuncs,
+	}
+
+	for _, val := range o.outputVariables {
+		regx, _ := regexp.Compile("\\{(.*?)\\}")
+		matches := regx.FindAllString(val, -1)
+		if len(matches) > 0 {
+			for _, m := range matches {
+				if strings.Count(m, "{") > 1 || strings.Count(m, "}") > 1 {
+					fmt.Println("inmap o.outputVariables: unsupported use of braces {}")
+				}
+				o.outputVariables[m] = m[1 : len(m)-1]
+			}
+		}
+	}
+
+	err := o.checkForDerivatives()
+
+	for k1, v1 := range o.outputVariables {
+		if strings.Contains(k1, "{") {
+			for k2, v2 := range o.outputVariables {
+				if k1 != k2 {
+					o.outputVariables[k2] = strings.Replace(v2, v1, "{"+v1+"}", -1)
+				}
+			}
+			delete(o.outputVariables, k1)
+		}
+	}
+
+	return &o, err
+}
+
+// removeDuplicates removes all duplicated strings from a slice, returning a
+// slice that contains only unique strings.
+func removeDuplicates(s []string) []string {
+	result := make([]string, 0, len(s))
+	seen := make(map[string]string)
+	for _, val := range s {
+		if _, ok := seen[val]; !ok {
+			result = append(result, val)
+			seen[val] = val
+		}
+	}
+	return result
+}
+
+func checkPrefix(s string) (bool, error) {
+	var isPrefix bool
+	var err error
+	if string(s) != "" {
+		isPrefix, err = regexp.MatchString("[a-zA-Z0-9_]", string(s[0]))
+		if err != nil {
+			return false, err
+		}
+	} else {
+		isPrefix = false
+	}
+	return isPrefix, nil
+}
+
+func checkSuffix(s string) (bool, error) {
+	var isSuffix bool
+	var err error
+	if string(s) != "" {
+		isSuffix, err = regexp.MatchString("[a-zA-Z0-9_]", string(s[len(s)-1]))
+		if err != nil {
+			return false, err
+		}
+	} else {
+		isSuffix = false
+	}
+	return isSuffix, nil
+}
+
+// checkForDerivatives identifies the unique input variables that are required
+// to calculate the requested output variables.
+// Inputs:
+// (1) Map of requested output variable names to their corresponding expressions.
+// (2) Map of all function names to function definitions that are used in expressions.
+// Outputs:
+// (1) Map of output variable names to revised expressions where any user-defined
+// output variable showing up in a subsequent expression is replaced by its
+// corresponding user-defined expression.
+// (2) Slice of all unique input variables required to calculate the requested
+// output variables.
+func (o *Outputter) checkForDerivatives() error {
+	o.modelVariables = make([]string, 0, len(o.outputVariables))
+	for key, val := range o.outputVariables {
+		o.outputVariables[key] = strings.Replace(val, "{", "", -1)
+		o.outputVariables[key] = strings.Replace(o.outputVariables[key], "}", "", -1)
+		expression, err := govaluate.NewEvaluableExpressionWithFunctions(o.outputVariables[key], o.outputFunctions)
+		if err != nil {
+			return fmt.Errorf("inmap o.outputVariables: %v", err)
+		}
+		uniqueVars := removeDuplicates(expression.Vars())
+		o.modelVariables = append(o.modelVariables, uniqueVars...)
+		// For each variable name identified in an output variable expression,
+		// check if the variable is defined in terms of other variables within a
+		// separate expression. If so, any instance of the variable name in the
+		// current will be replaced by the expression that defines it.
+		var isSuffix bool
+		var isPrefix bool
+		for _, uniqueVar := range uniqueVars {
+			if o.outputVariables[uniqueVar] != "" && o.outputVariables[uniqueVar] != uniqueVar {
+				// In order to verify that an instance of a variable name is not part of
+				// a longer variable name, the text preceding and following the variable
+				// name is analyzed. For example, 'White' is not a standalone variable
+				// in an expression if it appears as 'PctWhite'.
+				splitVal := strings.Split(val, uniqueVar)
+				for i := 0; i < len(splitVal)-1; i++ {
+					isSuffix, err = checkSuffix(splitVal[i])
+					if err != nil {
+						return fmt.Errorf("inmap o.outputVariables: %v", err)
+					}
+					isPrefix, err = checkPrefix(splitVal[i+1])
+					if err != nil {
+						return fmt.Errorf("inmap o.outputVariables: %v", err)
+					}
+					splitVal[i] = splitVal[i] + uniqueVar
+					// For every instance of the variable name that is not part of a
+					// longer variable name, replace it by the expression that defines it.
+					if !isSuffix && !isPrefix {
+						splitVal[i] = strings.Replace(splitVal[i], uniqueVar, "("+o.outputVariables[uniqueVar]+")", -1)
+					}
+				}
+				o.outputVariables[key] = strings.Join(splitVal, "")
+				return o.checkForDerivatives()
+			}
+		}
+	}
+	o.modelVariables = removeDuplicates(o.modelVariables)
+	return nil
+}
+
+// CheckModelVars checks whether the unique input variables required to calculate
+// the user-requested output variables are available in the model.
+func (d *InMAP) checkModelVars(g ...string) error {
+	outputOps, _, _ := d.OutputOptions()
+	mapOutputOps := make(map[string]uint8)
+	for _, n := range outputOps {
+		mapOutputOps[n] = 0
+	}
+	for _, v := range g {
+		if _, ok := mapOutputOps[v]; !ok {
+			return fmt.Errorf("inmap: undefined variable name '%s'", v)
+		}
+	}
+	return nil
+}
+
+// checkOutputNames checks (1) if any output variable names exceed 10 characters
+// and (2) if any output variable names include characters that are unsupported
+// in shapefile field names.
+func checkOutputNames(o map[string]string) error {
+	for key, _ := range o {
+		long := len(key) > 10
+		noCharError, err := regexp.MatchString("^[A-Za-z]\\w*$", key)
+		if err != nil {
+			panic(err)
+		}
+		if long && !noCharError {
+			return fmt.Errorf("inmap: output variable name '%s' exceeds 10 characters and includes unsupported character(s)", key)
+		} else if long {
+			return fmt.Errorf("inmap: output variable name '%s' exceeds 10 characters", key)
+		} else if !noCharError {
+			return fmt.Errorf("inmap: output variable name '%s' includes unsupported characters", key)
+		}
+	}
+	return nil
+}
+
+func (o *Outputter) CheckOutputVars() DomainManipulator {
+	return func(d *InMAP) error {
+		if err := d.checkModelVars(o.modelVariables...); err != nil {
+			return err
+		} else if err := checkOutputNames(o.outputVariables); err != nil {
+			return err
+		} else {
+			return nil
+		}
+	}
+}
+
+func (o *Outputter) Output() DomainManipulator {
+	return func(d *InMAP) error {
 		// Projection definition. This may need to be changed for a different
 		// spatial domain.
 		// TODO: Make this settable by the user, or at least check to make sure it
@@ -379,14 +630,14 @@ func Output(fileName string, allLayers bool, outputVariables map[string]string) 
 		const proj4 = `PROJCS["Lambert_Conformal_Conic",GEOGCS["GCS_unnamed ellipse",DATUM["D_unknown",SPHEROID["Unknown",6370997,0]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],PROJECTION["Lambert_Conformal_Conic"],PARAMETER["standard_parallel_1",33],PARAMETER["standard_parallel_2",45],PARAMETER["latitude_of_origin",40],PARAMETER["central_meridian",-97],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]`
 
 		// Create slice of output variable names
-		outputVariableNames := make([]string, len(outputVariables))
+		outputVariableNames := make([]string, len(o.outputVariables))
 		i := 0
-		for k := range outputVariables {
+		for k := range o.outputVariables {
 			outputVariableNames[i] = k
 			i++
 		}
 
-		results, err := d.Results(allLayers, true, outputVariables)
+		results, err := d.Results(o)
 		if err != nil {
 			return err
 		}
@@ -402,9 +653,9 @@ func Output(fileName string, allLayers bool, outputVariables map[string]string) 
 		}
 
 		// remove extension and replace it with .shp
-		fileBase := strings.TrimSuffix(fileName, filepath.Ext(fileName))
-		fileName = fileBase + ".shp"
-		shape, err := shp.NewEncoderFromFields(fileName, goshp.POLYGON, fields...)
+		fileBase := strings.TrimSuffix(o.fileName, filepath.Ext(o.fileName))
+		o.fileName = fileBase + ".shp"
+		shape, err := shp.NewEncoderFromFields(o.fileName, goshp.POLYGON, fields...)
 		if err != nil {
 			return fmt.Errorf("error creating output shapefile: %v", err)
 		}
