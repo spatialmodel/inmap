@@ -610,7 +610,7 @@ func (config *VarGridConfig) cellGeometry(index [][2]int) geom.Polygonal {
 	}
 	r := l + config.VariableGridDx/xResFac
 	u := b + config.VariableGridDy/yResFac
-	return geom.Polygon([][]geom.Point{{{l, b}, {r, b}, {r, u}, {l, u}, {l, b}}})
+	return geom.Polygon([]geom.Path{{{l, b}, {r, b}, {r, u}, {l, u}, {l, b}}})
 }
 
 // createCell creates a new grid cell. If any of the census shapes

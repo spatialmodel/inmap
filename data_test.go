@@ -49,7 +49,7 @@ var WriteTestPopShapefile = func() {
 	// write out test population data.
 	popData := []pop{
 		{
-			Polygon: [][]geom.Point{{
+			Polygon: []geom.Path{{
 				geom.Point{X: -3999, Y: -3999},
 				geom.Point{X: -3998, Y: -3999},
 				geom.Point{X: -3998, Y: -3998},
@@ -94,7 +94,7 @@ func WriteTestMortalityShapefile() {
 	// write out test mortality rate data.
 	mortData := []mort{
 		{
-			Polygon: [][]geom.Point{{
+			Polygon: []geom.Path{{
 				geom.Point{X: -3999, Y: -3999},
 				geom.Point{X: -3998, Y: -3999},
 				geom.Point{X: -3998, Y: -3998},

@@ -44,10 +44,10 @@
 		},
 		{
 			"checksumSHA1": "YdyNHq+9L5PcwWTVVWApXl0Bv3w=",
- 			"path": "github.com/Knetic/govaluate",
- 			"revision": "36d12fdf60d2eced73454479e9935c9ea8bbe46a",
- 			"revisionTime": "2016-11-28T19:08:11Z"
- 		},
+			"path": "github.com/Knetic/govaluate",
+			"revision": "36d12fdf60d2eced73454479e9935c9ea8bbe46a",
+			"revisionTime": "2016-11-28T19:08:11Z"
+		},
 		{
 			"checksumSHA1": "6qccqKKVnwL9ECLdP+lVzTegdwk=",
 			"path": "github.com/ajstarks/svgo",
@@ -67,10 +67,10 @@
 			"revisionTime": "2016-09-04T16:08:59Z"
 		},
 		{
-			"checksumSHA1": "crZaEhsoTwuWAnqQfPbJ6XXwMo4=",
+			"checksumSHA1": "aFgV98lBIC3FDmjZnvin3lHAcnI=",
 			"path": "github.com/ctessum/aep",
-			"revision": "63b6754377b22025c9c3100f0490437b1a022544",
-			"revisionTime": "2016-11-22T18:44:18Z"
+			"revision": "4724f250fa865ad62ac50b012ce6d033a76ef344",
+			"revisionTime": "2017-01-18T03:39:53Z"
 		},
 		{
 			"checksumSHA1": "6hndEGMyu9wMLrEn2r0+ORM4ge8=",
@@ -115,46 +115,46 @@
 			"revisionTime": "2016-06-28T22:49:28Z"
 		},
 		{
-			"checksumSHA1": "hKFW8M5VoeZXHZfuuD5bIFWGLuU=",
+			"checksumSHA1": "IM+2UjW9gFxG6R2v8rVG1C1Xli0=",
 			"path": "github.com/ctessum/geom",
-			"revision": "c3900f6738a05594fd484f9d7a2ba14242bb8e1b",
-			"revisionTime": "2016-10-05T16:04:28Z"
+			"revision": "5abb297483572ff3e0ab2ba5285023d6d8baff3a",
+			"revisionTime": "2017-01-18T03:30:20Z"
 		},
 		{
-			"checksumSHA1": "FumcFC7M30N+XttDSYQWW71QUBM=",
+			"checksumSHA1": "yK5f44Obb1EZtcKNRAvDPGaAObQ=",
 			"path": "github.com/ctessum/geom/carto",
-			"revision": "c3900f6738a05594fd484f9d7a2ba14242bb8e1b",
-			"revisionTime": "2016-10-05T16:04:28Z"
+			"revision": "5abb297483572ff3e0ab2ba5285023d6d8baff3a",
+			"revisionTime": "2017-01-18T03:30:20Z"
 		},
 		{
-			"checksumSHA1": "TvGp9XD2f4xEw+5JFgmJb7dSQRA=",
+			"checksumSHA1": "IwYM6alZXKIwEhz7VrEqjnkww4M=",
 			"path": "github.com/ctessum/geom/encoding/geojson",
-			"revision": "c3900f6738a05594fd484f9d7a2ba14242bb8e1b",
-			"revisionTime": "2016-10-05T16:04:28Z"
+			"revision": "5abb297483572ff3e0ab2ba5285023d6d8baff3a",
+			"revisionTime": "2017-01-18T03:30:20Z"
 		},
 		{
-			"checksumSHA1": "XapJqyrMadCaAQ9s7zpz3CAY37Q=",
+			"checksumSHA1": "LCL/GYq7zU0GmoKWcm6JcK0EYmo=",
 			"path": "github.com/ctessum/geom/encoding/shp",
-			"revision": "c3900f6738a05594fd484f9d7a2ba14242bb8e1b",
-			"revisionTime": "2016-10-05T16:04:28Z"
+			"revision": "5abb297483572ff3e0ab2ba5285023d6d8baff3a",
+			"revisionTime": "2017-01-18T03:30:20Z"
 		},
 		{
-			"checksumSHA1": "bGtaHRdc+ZW7uNcGsNpdPvDTFv0=",
+			"checksumSHA1": "XqeWLnimqsythMFhv3W88MVX8BQ=",
 			"path": "github.com/ctessum/geom/index/rtree",
-			"revision": "c3900f6738a05594fd484f9d7a2ba14242bb8e1b",
-			"revisionTime": "2016-10-05T16:04:28Z"
+			"revision": "5abb297483572ff3e0ab2ba5285023d6d8baff3a",
+			"revisionTime": "2017-01-18T03:30:20Z"
 		},
 		{
-			"checksumSHA1": "kL1G+k1i+aJsWA6bfCJoEJ9x59c=",
+			"checksumSHA1": "jB/za4VYQHGFXqdtQsXnZnjiKPQ=",
 			"path": "github.com/ctessum/geom/op",
-			"revision": "c3900f6738a05594fd484f9d7a2ba14242bb8e1b",
-			"revisionTime": "2016-10-05T16:04:28Z"
+			"revision": "5abb297483572ff3e0ab2ba5285023d6d8baff3a",
+			"revisionTime": "2017-01-18T03:30:20Z"
 		},
 		{
-			"checksumSHA1": "KLFt5Xy6S3/O8uYchxBdV30ewnA=",
+			"checksumSHA1": "yfW4EC12aeAXjRBIXMXOsXRl6CI=",
 			"path": "github.com/ctessum/geom/proj",
-			"revision": "c3900f6738a05594fd484f9d7a2ba14242bb8e1b",
-			"revisionTime": "2016-10-05T16:04:28Z"
+			"revision": "5abb297483572ff3e0ab2ba5285023d6d8baff3a",
+			"revisionTime": "2017-01-18T03:30:20Z"
 		},
 		{
 			"checksumSHA1": "/xn+Pi9NjLtVofLrNNqPIa0OVM0=",
