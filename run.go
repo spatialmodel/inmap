@@ -396,7 +396,7 @@ func (d *InMAP) checkGetNames(g ...string) error {
 // and (2) if any output variable names include characters that are unsupported
 // in shapefile field names.
 func (d *InMAP) checkOutputNames(o map[string]string) error {
-	for key, _ := range o {
+	for key := range o {
 		long := len(key) > 10
 		noCharError, err := regexp.MatchString("^[A-Za-z]\\w*$", key)
 		if err != nil {
@@ -495,7 +495,7 @@ func (d *InMAP) Results(allLayers bool, checkNames bool, outputVariables map[str
 			return nil, err
 		}
 		for i := 0; i < nCells; i++ {
-			for name, _ := range getConc {
+			for name := range getConc {
 				concByRow[name] = getConc[name][i]
 			}
 			result, err := expression.Evaluate(concByRow)

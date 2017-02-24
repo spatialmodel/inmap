@@ -23,6 +23,7 @@ import (
 	"math"
 	"os"
 	"runtime"
+	"sort"
 
 	"bitbucket.org/ctessum/cdf"
 	"bitbucket.org/ctessum/sparse"
@@ -72,26 +73,37 @@ type VarGridConfig struct {
 // CTMData holds processed data from a chemical transport model
 type CTMData struct {
 	gridTree *rtree.Rtree
-	data     map[string]ctmVariable
-}
 
-type ctmVariable struct {
-	dims        []string           // netcdf dimensions for this variable
-	description string             // variable description
-	units       string             // variable units
-	data        *sparse.DenseArray // variable data
+	// Data is a map of information about processed CTM variables,
+	// with the keys being the variable names.
+	Data map[string]struct {
+		Dims        []string           // netcdf dimensions for this variable
+		Description string             // variable description
+		Units       string             // variable units
+		Data        *sparse.DenseArray // variable data
+	}
 }
 
 // AddVariable adds data for a new variable to d.
 func (d *CTMData) AddVariable(name string, dims []string, description, units string, data *sparse.DenseArray) {
-	if d.data == nil {
-		d.data = make(map[string]ctmVariable)
+	if d.Data == nil {
+		d.Data = make(map[string]struct {
+			Dims        []string
+			Description string
+			Units       string
+			Data        *sparse.DenseArray
+		})
 	}
-	d.data[name] = ctmVariable{
-		dims:        dims,
-		description: description,
-		units:       units,
-		data:        data,
+	d.Data[name] = struct {
+		Dims        []string           // netcdf dimensions for this variable
+		Description string             // variable description
+		Units       string             // variable units
+		Data        *sparse.DenseArray // variable data
+	}{
+		Dims:        dims,
+		Description: description,
+		Units:       units,
+		Data:        data,
 	}
 }
 
@@ -121,20 +133,30 @@ func (config *VarGridConfig) LoadCTMData(rw cdf.ReaderWriterAt) (*CTMData, error
 
 	o.gridTree = config.makeCTMgrid(nz)
 
-	od := make(map[string]ctmVariable)
+	od := make(map[string]struct {
+		Dims        []string
+		Description string
+		Units       string
+		Data        *sparse.DenseArray
+	})
 	for _, v := range f.Header.Variables() {
-		d := ctmVariable{}
-		d.description = f.Header.GetAttribute(v, "description").(string)
-		d.units = f.Header.GetAttribute(v, "units").(string)
+		d := struct {
+			Dims        []string
+			Description string
+			Units       string
+			Data        *sparse.DenseArray
+		}{}
+		d.Description = f.Header.GetAttribute(v, "description").(string)
+		d.Units = f.Header.GetAttribute(v, "units").(string)
 		dims := f.Header.Lengths(v)
 		r := f.Reader(v, nil, nil)
-		d.data = sparse.ZerosDense(dims...)
-		tmp := make([]float32, len(d.data.Elements))
+		d.Data = sparse.ZerosDense(dims...)
+		tmp := make([]float32, len(d.Data.Elements))
 		_, err = r.Read(tmp)
 		if err != nil {
 			return nil, fmt.Errorf("inmap.LoadCTMData: %v", err)
 		}
-		d.dims = f.Header.Dimensions(v)
+		d.Dims = f.Header.Dimensions(v)
 
 		// Check that data matches dimensions.
 		n := 1
@@ -147,11 +169,11 @@ func (config *VarGridConfig) LoadCTMData(rw cdf.ReaderWriterAt) (*CTMData, error
 		}
 
 		for i, v := range tmp {
-			d.data.Elements[i] = float64(v)
+			d.Data.Elements[i] = float64(v)
 		}
 		od[v] = d
 	}
-	o.data = od
+	o.Data = od
 	return o, nil
 }
 
@@ -159,10 +181,10 @@ func (config *VarGridConfig) LoadCTMData(rw cdf.ReaderWriterAt) (*CTMData, error
 // lower-left corner of the domain, and dx and dy are the x and y edge
 // lengths of the grid cells, respectively.
 func (d *CTMData) Write(w *os.File, x0, y0, dx, dy float64) error {
-	windSpeed := d.data["WindSpeed"].data
-	uAvg := d.data["UAvg"].data
-	vAvg := d.data["VAvg"].data
-	wAvg := d.data["WAvg"].data
+	windSpeed := d.Data["WindSpeed"].Data
+	uAvg := d.Data["UAvg"].Data
+	vAvg := d.Data["VAvg"].Data
+	wAvg := d.Data["WAvg"].Data
 	h := cdf.NewHeader(
 		[]string{"x", "y", "z", "xStagger", "yStagger", "zStagger"},
 		[]int{windSpeed.Shape[2], windSpeed.Shape[1], windSpeed.Shape[0],
@@ -178,10 +200,18 @@ func (d *CTMData) Write(w *os.File, x0, y0, dx, dy float64) error {
 
 	h.AddAttribute("", "data_version", InMAPDataVersion)
 
-	for name, dd := range d.data {
-		h.AddVariable(name, dd.dims, []float32{0})
-		h.AddAttribute(name, "description", dd.description)
-		h.AddAttribute(name, "units", dd.units)
+	// Sort the names so they write in the same order every time.
+	names := make([]string, 0, len(d.Data))
+	for n := range d.Data {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
+		dd := d.Data[name]
+		h.AddVariable(name, dd.Dims, []float32{0})
+		h.AddAttribute(name, "description", dd.Description)
+		h.AddAttribute(name, "units", dd.Units)
 	}
 	h.Define()
 
@@ -189,8 +219,10 @@ func (d *CTMData) Write(w *os.File, x0, y0, dx, dy float64) error {
 	if err != nil {
 		return err
 	}
-	for name, dd := range d.data {
-		if err = writeNCF(f, name, dd.data); err != nil {
+
+	for _, name := range names {
+		dd := d.Data[name]
+		if err = writeNCF(f, name, dd.Data); err != nil {
 			return fmt.Errorf("inmap: writing variable %s to netcdf file: %v", name, err)
 		}
 	}
@@ -309,7 +341,7 @@ func (config *VarGridConfig) RegularGrid(data *CTMData, pop *Population, popInde
 
 		d.popIndices = (map[string]int)(popIndex)
 
-		nz := data.data["UAvg"].data.Shape[0]
+		nz := data.Data["UAvg"].Data.Shape[0]
 		d.nlayers = nz
 
 		type cellErr struct {
@@ -610,7 +642,7 @@ func (config *VarGridConfig) cellGeometry(index [][2]int) geom.Polygonal {
 	}
 	r := l + config.VariableGridDx/xResFac
 	u := b + config.VariableGridDy/yResFac
-	return geom.Polygon([]geom.Path{{{l, b}, {r, b}, {r, u}, {l, u}, {l, b}}})
+	return geom.Polygon([]geom.Path{{{X: l, Y: b}, {X: r, Y: b}, {X: r, Y: u}, {X: l, Y: u}, {X: l, Y: b}}})
 }
 
 // createCell creates a new grid cell. If any of the census shapes
@@ -842,87 +874,87 @@ func (c *Cell) loadData(data *CTMData, k int) error {
 
 		// TODO: Average velocity is on a staggered grid, so we should
 		// do some sort of interpolation here.
-		c.UAvg += data.data["UAvg"].data.Get(k, ctmrow, ctmcol) * frac
-		c.VAvg += data.data["VAvg"].data.Get(k, ctmrow, ctmcol) * frac
-		c.WAvg += data.data["WAvg"].data.Get(k, ctmrow, ctmcol) * frac
+		c.UAvg += data.Data["UAvg"].Data.Get(k, ctmrow, ctmcol) * frac
+		c.VAvg += data.Data["VAvg"].Data.Get(k, ctmrow, ctmcol) * frac
+		c.WAvg += data.Data["WAvg"].Data.Get(k, ctmrow, ctmcol) * frac
 
-		c.UDeviation += data.data["UDeviation"].data.Get(
+		c.UDeviation += data.Data["UDeviation"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.VDeviation += data.data["VDeviation"].data.Get(
+		c.VDeviation += data.Data["VDeviation"].Data.Get(
 			k, ctmrow, ctmcol) * frac
 
-		c.AOrgPartitioning += data.data["aOrgPartitioning"].data.Get(
+		c.AOrgPartitioning += data.Data["aOrgPartitioning"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.BOrgPartitioning += data.data["bOrgPartitioning"].data.Get(
+		c.BOrgPartitioning += data.Data["bOrgPartitioning"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.NOPartitioning += data.data["NOPartitioning"].data.Get(
+		c.NOPartitioning += data.Data["NOPartitioning"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.SPartitioning += data.data["SPartitioning"].data.Get(
+		c.SPartitioning += data.Data["SPartitioning"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.NHPartitioning += data.data["NHPartitioning"].data.Get(
+		c.NHPartitioning += data.Data["NHPartitioning"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.SO2oxidation += data.data["SO2oxidation"].data.Get(
+		c.SO2oxidation += data.Data["SO2oxidation"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.ParticleDryDep += data.data["ParticleDryDep"].data.Get(
+		c.ParticleDryDep += data.Data["ParticleDryDep"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.SO2DryDep += data.data["SO2DryDep"].data.Get(
+		c.SO2DryDep += data.Data["SO2DryDep"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.NOxDryDep += data.data["NOxDryDep"].data.Get(
+		c.NOxDryDep += data.Data["NOxDryDep"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.NH3DryDep += data.data["NH3DryDep"].data.Get(
+		c.NH3DryDep += data.Data["NH3DryDep"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.VOCDryDep += data.data["VOCDryDep"].data.Get(
+		c.VOCDryDep += data.Data["VOCDryDep"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.Kxxyy += data.data["Kxxyy"].data.Get(
+		c.Kxxyy += data.Data["Kxxyy"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.LayerHeight += data.data["LayerHeights"].data.Get(
+		c.LayerHeight += data.Data["LayerHeights"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.Dz += data.data["Dz"].data.Get(
+		c.Dz += data.Data["Dz"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.ParticleWetDep += data.data["ParticleWetDep"].data.Get(
+		c.ParticleWetDep += data.Data["ParticleWetDep"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.SO2WetDep += data.data["SO2WetDep"].data.Get(
+		c.SO2WetDep += data.Data["SO2WetDep"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.OtherGasWetDep += data.data["OtherGasWetDep"].data.Get(
+		c.OtherGasWetDep += data.Data["OtherGasWetDep"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.Kzz += data.data["Kzz"].data.Get(
+		c.Kzz += data.Data["Kzz"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.M2u += data.data["M2u"].data.Get(
+		c.M2u += data.Data["M2u"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.M2d += data.data["M2d"].data.Get(
+		c.M2d += data.Data["M2d"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.WindSpeed += data.data["WindSpeed"].data.Get(
+		c.WindSpeed += data.Data["WindSpeed"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.WindSpeedInverse += data.data["WindSpeedInverse"].data.Get(
+		c.WindSpeedInverse += data.Data["WindSpeedInverse"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.WindSpeedMinusThird += data.data["WindSpeedMinusThird"].data.Get(
+		c.WindSpeedMinusThird += data.Data["WindSpeedMinusThird"].Data.Get(
 			k, ctmrow, ctmcol) * frac
 		c.WindSpeedMinusOnePointFour +=
-			data.data["WindSpeedMinusOnePointFour"].data.Get(
+			data.Data["WindSpeedMinusOnePointFour"].Data.Get(
 				k, ctmrow, ctmcol) * frac
-		c.Temperature += data.data["Temperature"].data.Get(
+		c.Temperature += data.Data["Temperature"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.S1 += data.data["S1"].data.Get(
+		c.S1 += data.Data["S1"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.SClass += data.data["Sclass"].data.Get(
+		c.SClass += data.Data["Sclass"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.CBaseline[iPM2_5] += data.data["TotalPM25"].data.Get(
+		c.CBaseline[iPM2_5] += data.Data["TotalPM25"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.CBaseline[igNH] += data.data["gNH"].data.Get(
+		c.CBaseline[igNH] += data.Data["gNH"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.CBaseline[ipNH] += data.data["pNH"].data.Get(
+		c.CBaseline[ipNH] += data.Data["pNH"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.CBaseline[igNO] += data.data["gNO"].data.Get(
+		c.CBaseline[igNO] += data.Data["gNO"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.CBaseline[ipNO] += data.data["pNO"].data.Get(
+		c.CBaseline[ipNO] += data.Data["pNO"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.CBaseline[igS] += data.data["gS"].data.Get(
+		c.CBaseline[igS] += data.Data["gS"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.CBaseline[ipS] += data.data["pS"].data.Get(
+		c.CBaseline[ipS] += data.Data["pS"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.CBaseline[igOrg] += data.data["aVOC"].data.Get(
+		c.CBaseline[igOrg] += data.Data["aVOC"].Data.Get(
 			k, ctmrow, ctmcol) * frac
-		c.CBaseline[ipOrg] += data.data["aSOA"].data.Get(
+		c.CBaseline[ipOrg] += data.Data["aSOA"].Data.Get(
 			k, ctmrow, ctmcol) * frac
 	}
 	return nil

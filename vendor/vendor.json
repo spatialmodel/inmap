@@ -15,10 +15,10 @@
 			"revisionTime": "2016-12-14T18:45:48Z"
 		},
 		{
-			"checksumSHA1": "/yvm5HghXzIn9jOJ86fQtZ7fNJo=",
+			"checksumSHA1": "vBleeECCWuflWl+I5tl8UOeAI6M=",
 			"path": "bitbucket.org/ctessum/sparse",
-			"revision": "92ebea9bb96d",
-			"revisionTime": "2016-05-19T15:23:35Z"
+			"revision": "b9009f0cad79",
+			"revisionTime": "2017-02-27T04:32:30Z"
 		},
 		{
 			"checksumSHA1": "t99BwSqDR/BYWkcfLnoAnAuqOPQ=",
@@ -359,6 +359,10 @@
 			"path": "github.com/kardianos/osext",
 			"revision": "c2c54e542fb797ad986b31721e1baedf214ca413",
 			"revisionTime": "2016-08-11T00:15:26Z"
+		},
+		{
+			"path": "github.com/kr/pretty",
+			"revision": ""
 		},
 		{
 			"checksumSHA1": "hSVdGhmcFzA45t3pZTHm+cYEgA8=",

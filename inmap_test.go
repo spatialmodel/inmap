@@ -744,8 +744,8 @@ func TestWetDeposition(t *testing.T) {
 // convective mixing.
 func TestBigM2d(t *testing.T) {
 	cfg, ctmdata, pop, popIndices, mr := VarGridData()
-	ctmdata.data["M2d"].data.Scale(100)
-	ctmdata.data["M2u"].data.Scale(100)
+	ctmdata.Data["M2d"].Data.Scale(100)
+	ctmdata.Data["M2u"].Data.Scale(100)
 
 	emis := NewEmissions()
 	emis.Add(&EmisRecord{

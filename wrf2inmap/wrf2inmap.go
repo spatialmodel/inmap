@@ -40,10 +40,9 @@ import (
 	"bitbucket.org/ctessum/sparse"
 	"github.com/ctessum/atmos/acm2"
 	"github.com/ctessum/atmos/emep"
-	"github.com/spatialmodel/inmap"
-	//"github.com/ctessum/atmos/gocart"
 	"github.com/ctessum/atmos/seinfeld"
 	"github.com/ctessum/atmos/wesely1989"
+	"github.com/spatialmodel/inmap"
 )
 
 // ConfigInfo holds the configuration information for the program run.
@@ -203,8 +202,8 @@ func main() {
 	// Only calculate horizontal deviations.
 	deviationChanU := make(chan *sparse.DenseArray)
 	deviationChanV := make(chan *sparse.DenseArray)
-	go windDeviation(uAvg, deviationChanU, 2)
-	go windDeviation(vAvg, deviationChanV, 1)
+	go windDeviation(uAvg, deviationChanU)
+	go windDeviation(vAvg, deviationChanV)
 
 	// calculate gas/particle partitioning
 	aVOCchan := make(chan *sparse.DenseArray)
@@ -611,7 +610,14 @@ func readParticleGroup(Vars map[string]float64, datachans ...chan *sparse.DenseA
 	}
 }
 
-// Calculate marginal partitioning
+// calcPartitioning calculates marginal partitioning between gas and particle
+// phase of a chemical compound or group of compounds as defined by the
+// equation f = Δp / (Δp + Δg), where f is the fraction in particle phase,
+// Δp is the change in particle phase concentration between one time step
+// and the next, and Δg is the change in gas phase concentration from
+// one time step to the next. The fraction is forced to be
+// between zero and one. Both gas phase and particle phase concentration
+// should be in units of [mass/volume].
 func calcPartitioning(gaschan, particlechan chan *sparse.DenseArray) {
 	var gas, particle, oldgas, oldparticle, partitioning *sparse.DenseArray
 	firstData := true
@@ -626,22 +632,19 @@ func calcPartitioning(gaschan, particlechan chan *sparse.DenseArray) {
 		}
 		particledata := <-particlechan
 		if firstData {
-			// In the first time step, just copy the arrays to the
-			// old arrays; don't do any calculations.
 			partitioning = sparse.ZerosDense(gasdata.Shape...)
 			gas = sparse.ZerosDense(gasdata.Shape...)
 			particle = sparse.ZerosDense(gasdata.Shape...)
-			oldgas = gasdata.Copy()
-			oldparticle = particledata.Copy()
+			oldgas = sparse.ZerosDense(gasdata.Shape...)
+			oldparticle = sparse.ZerosDense(gasdata.Shape...)
 			firstData = false
-			continue
 		}
 		gas.AddDense(gasdata)
 		particle.AddDense(particledata)
+
 		for i, particleval := range particledata.Elements {
 			particlechange := particleval - oldparticle.Elements[i]
-			totalchange := particlechange + (gasdata.Elements[i] -
-				oldgas.Elements[i])
+			totalchange := particlechange + (gasdata.Elements[i] - oldgas.Elements[i])
 			// Calculate the marginal partitioning coefficient, which is the
 			// change in particle concentration divided by the change in overall
 			// concentration. Force the coefficient to be between zero and
@@ -656,37 +659,8 @@ func calcPartitioning(gaschan, particlechan chan *sparse.DenseArray) {
 	}
 }
 
-// Calculate fraction of the time that the atmosphere is ammonia-poor, where
-// total ammonia [moles] < 2 * total sulfur VI [moles].
-func ammoniaStatus(NH3chan, pNHchan, pSchan chan *sparse.DenseArray) {
-	var fracAmmoniaPoor *sparse.DenseArray
-	firstData := true
-	for {
-		nh3array := <-NH3chan // μg/m3 N
-		pnharray := <-pNHchan // μg/m3 N
-		psarray := <-pSchan   // μg/m3 S
-		if nh3array == nil {
-			NH3chan <- arrayAverage(fracAmmoniaPoor)
-			return
-		}
-		if firstData {
-			fracAmmoniaPoor = sparse.ZerosDense(nh3array.Shape...)
-			firstData = false
-		}
-		for i, nh3 := range nh3array.Elements {
-			pnh := pnharray.Elements[i]
-			ps := psarray.Elements[i]
-			var poor float64
-			if (nh3+pnh)/mwN < 2.*ps/mwS {
-				poor = 1.
-			} else {
-				poor = 0.
-			}
-			fracAmmoniaPoor.Elements[i] += poor
-		}
-	}
-}
-
+// average calculates the arithmatic mean of a
+// set of arrays.
 func average(datachan chan *sparse.DenseArray) {
 	var avgdata *sparse.DenseArray
 	firstData := true
@@ -711,8 +685,7 @@ func average(datachan chan *sparse.DenseArray) {
 // of the layers (in meters).
 // For more information, refer to
 // http://www.openwfm.org/wiki/How_to_interpret_WRF_variables
-func calcLayerHeights(ph, phb *sparse.DenseArray) (
-	layerHeights, Dz *sparse.DenseArray) {
+func calcLayerHeights(ph, phb *sparse.DenseArray) (layerHeights, Dz *sparse.DenseArray) {
 	layerHeights = sparse.ZerosDense(ph.Shape...)
 	Dz = sparse.ZerosDense(ph.Shape[0]-1, ph.Shape[1], ph.Shape[2])
 	for k := 0; k < ph.Shape[0]; k++ {
@@ -730,7 +703,9 @@ func calcLayerHeights(ph, phb *sparse.DenseArray) (
 	return
 }
 
-// calculate wet deposition
+// calcWetDeposition calculates wet deposition based on layer heights,
+// mass fraction of rain in the grid cells, fraction of the grid cells
+// filled with clouds, and inverse density.
 func calcWetDeposition(layerHeights *sparse.DenseArray, qrainChan,
 	cloudFracChan, altChan chan *sparse.DenseArray) {
 	var wdParticle, wdSO2, wdOtherGas *sparse.DenseArray
@@ -775,9 +750,7 @@ func calcWetDeposition(layerHeights *sparse.DenseArray, qrainChan,
 
 // windDeviation calculates the average absolute deviation of the wind velocity.
 // Output is based on a staggered grid.
-// index dictates which directional index (i, j, or k) that
-// we are calculating deviations in.
-func windDeviation(uAvg *sparse.DenseArray, uChan chan *sparse.DenseArray, index int) {
+func windDeviation(uAvg *sparse.DenseArray, uChan chan *sparse.DenseArray) {
 	var uDeviation *sparse.DenseArray
 	firstData := true
 	for {
