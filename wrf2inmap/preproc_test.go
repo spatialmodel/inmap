@@ -20,6 +20,8 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"io"
 	"math"
 	"os"
 	"reflect"
@@ -30,11 +32,8 @@ import (
 	"bitbucket.org/ctessum/sparse"
 )
 
-const evalDataEnv = "evaldata"
-
 func TestWRF2InMAP(t *testing.T) {
-	const tolerance = 2.0 // TODO: The preprocessor gives different results
-	// every time. This needs to be fixed.
+	const tolerance = 1.0e-8
 
 	err := flag.Set("config", "configExample.json")
 	if err != nil {
@@ -65,7 +64,7 @@ func TestWRF2InMAP(t *testing.T) {
 
 func compareCTMData(ctmdata, ctmdata2 *inmap.CTMData, tolerance float64, t *testing.T) {
 	if len(ctmdata.Data) != len(ctmdata2.Data) {
-		t.Fatalf("new and old ctmdata have different number of variables (%d vs. %d)",
+		t.Errorf("new and old ctmdata have different number of variables (%d vs. %d)",
 			len(ctmdata2.Data), len(ctmdata.Data))
 	}
 	for name, dd1 := range ctmdata.Data {
@@ -83,66 +82,56 @@ func compareCTMData(ctmdata, ctmdata2 *inmap.CTMData, tolerance float64, t *test
 		if dd1.Units != dd2.Units {
 			t.Errorf("%s units problem: %s != %s", name, dd1.Units, dd2.Units)
 		}
-		if !reflect.DeepEqual(dd1.Data.Shape, dd2.Data.Shape) {
-			t.Errorf("%s data shape problem: %v != %v", name, dd1.Data.Shape, dd2.Data.Shape)
+		arrayCompare(dd1.Data, dd2.Data, tolerance, name, t)
+	}
+}
+
+func testNextData(v []*sparse.DenseArray) NextData {
+	var i int
+	return func() (*sparse.DenseArray, error) {
+		if i == 2 {
+			return nil, io.EOF
 		}
-		if arrayDifferent(dd1.Data, dd2.Data, tolerance) {
-			t.Errorf("%s data problem: %v != %v", name, dd1.Data.Elements, dd2.Data.Elements)
-		}
+		i++
+		return v[i-1], nil
 	}
 }
 
 func TestCalcPartitioning(t *testing.T) {
-	numTsteps = 2
 	const tolerance = 1.0e-8
 
-	gasChan := make(chan *sparse.DenseArray)
-	particleChan := make(chan *sparse.DenseArray)
-	go calcPartitioning(gasChan, particleChan)
-	gasChan <- so2[0]
-	particleChan <- sulf[0]
-	gasChan <- so2[1]
-	particleChan <- sulf[1]
-	gasChan <- nil
-	partitioning := <-gasChan
-	gasResult := <-gasChan
-	particleResult := <-gasChan
+	gasFunc := testNextData(so2)
+	particleFunc := testNextData(sulf)
+	gasResult, particleResult, partitioning, err := marginalPartitioning(gasFunc, particleFunc)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	gasWant := sparse.ZerosDense(10, 2, 2)
 	gasWant.Elements = []float64{1.305e-05, 3.415e-05, 2.4999999999999998e-05, 6.85e-05, 1.2775e-05, 3.075e-05, 1.76e-05, 5.4499999999999997e-05, 1.2145e-05, 2.89e-05, 1.3949999999999999e-05, 4.7000000000000004e-05, 1.1565e-05, 2.79e-05, 1.164e-05, 4.2e-05, 1.3555e-06, 2.605e-05, 1.000355e-05, 3.79e-05, 3.85e-08, 2.0255000000000002e-05, 3.615e-07, 3.4512e-05, 1.12e-09, 5.17e-07, 6.0499999999999996e-09, 3.3507e-05, 1.855e-09, 2.5e-09, 3.305e-09, 3.65095e-06, 1.80165e-06, 1.55075e-06, 1.949e-06, 1.6006499999999999e-06, 2.025e-06, 2.314e-06, 2.3699999999999998e-06, 2.645e-06}
-	if arrayDifferent(gasResult, gasWant, tolerance) {
-		t.Errorf("gas: want %v but have %v", gasWant, gasResult)
-	}
+	arrayCompare(gasResult, gasWant, tolerance, "gas", t)
 
 	particleWant := sparse.ZerosDense(10, 2, 2)
 	particleWant.Elements = []float64{2.15e-05, 2.25e-05, 2.2499999999999998e-05, 2.35e-05, 2.2e-05, 2.3e-05, 2.2499999999999998e-05, 2.35e-05, 2.2e-05, 2.3e-05, 2.2499999999999998e-05, 2.35e-05, 2.2e-05, 2.3e-05, 2.2499999999999998e-05, 2.35e-05, 2.2499999999999998e-05, 2.3e-05, 2.3e-05, 2.4e-05, 2.3e-05, 2.3500000000000002e-05, 2.3500000000000002e-05, 2.4e-05, 2.2499999999999998e-05, 2.4e-05, 2.3e-05, 2.4999999999999998e-05, 2.2499999999999998e-05, 2.3e-05, 2.3500000000000002e-05, 2.3e-05, 3.45e-05, 2.7e-05, 3.35e-05, 2.7e-05, 4.6e-05, 3.65e-05, 4.4e-05, 3.65e-05}
-	if arrayDifferent(particleResult, particleWant, tolerance) {
-		t.Errorf("particle: want %#v but have %#v", particleWant, particleResult)
-	}
+	arrayCompare(particleResult, particleWant, tolerance, "particle", t)
 
 	partitioningWant := sparse.ZerosDense(10, 2, 2)
 	partitioningWant.Elements = []float64{0.20930232558139536, 0.125, 0.16964285714285715, 0.08750000000000001, 0.20930232558139536, 0.12987012987012989, 0.19387755102040818, 0.09722222222222222, 0.21428571428571427, 0.13333333333333333, 0.21111111111111114, 0.10294117647058823, 0.21951219512195122, 0.13513513513513514, 0.2261904761904762, 0.10714285714285714, 0.9347826086956521, 0.14084507042253522, 0.2435897435897436, 0.11052631578947368, 0.9978977649922549, 0.16666666666666666, 0.9819888381532218, 0.11666666666666667, 0.9999122339365392, 0.9761904761904762, 0.9993530690641208, 0.12359550561797754, 0.9998614168586635, 0.999887234991758, 0.9997255680087973, 0.8557312252964426, 0.7870222750769289, 0.4467353951890034, 0.6748447147643264, 0.9432624113475178, 0.8820058997050148, 0.7811263902461725, 0.8502055271130794, 0.7681937338109415}
-	if arrayDifferent(partitioning, partitioningWant, tolerance) {
-		t.Errorf("partitioning: want %#v but have %#v", partitioningWant, partitioning)
-	}
+	arrayCompare(partitioning, partitioningWant, tolerance, "partitioning", t)
 }
 
 func TestAverage(t *testing.T) {
-	numTsteps = 2
 	const tolerance = 1.0e-8
 
-	dataChan := make(chan *sparse.DenseArray)
-	go average(dataChan)
-	dataChan <- PHB[0]
-	dataChan <- PHB[1]
-	dataChan <- nil
-	result := <-dataChan
+	dataFunc := testNextData(PHB)
+	result, err := average(dataFunc)
+	if err != nil {
+		t.Fatal(err)
+	}
 	want := PHB[0].Copy()
 	want.AddDense(PHB[1])
 	want.Scale(0.5)
-	if arrayDifferent(result, want, tolerance) {
-		t.Errorf("want %#v but have %#v", want, result)
-	}
+	arrayCompare(result, want, tolerance, "average", t)
 }
 
 func TestCalcLayerHeights(t *testing.T) {
@@ -152,95 +141,61 @@ func TestCalcLayerHeights(t *testing.T) {
 
 	heightsWant := sparse.ZerosDense(11, 2, 2)
 	heightsWant.Elements = []float64{0, 0, 0, 0, 60.57114305088894, 60.693508996446276, 50.455558218147914, 50.59831848796478, 141.23069549744307, 131.33944823155716, 131.13550498896157, 131.54339147415274, 241.7747140970668, 242.28457220355577, 231.8834668311809, 242.79443031004473, 362.3051704710579, 373.21613394992175, 362.7130569562491, 373.92993529900633, 563.4951792916032, 534.025380736541, 482.63168360245345, 535.045096949519, 763.7674435204683, 714.1072639484432, 785.1814839930048, 746.0243814146523, 963.6318212641422, 1015.6373481260166, 985.0458617366787, 996.262740079436, 1465.332198049283, 1415.3661036133644, 1384.7746172240265, 1395.991495566784, 1868.1201021755646, 1918.086196611483, 1888.5144264351231, 1898.7115885649025, 2375.938776238573, 2423.8654382485356, 2394.2936680721755, 2403.471113988977}
-	if arrayDifferent(layerHeights, heightsWant, tolerance) {
-		t.Errorf("layerHeights: want %#v but have %#v", heightsWant, layerHeights)
-	}
+	arrayCompare(layerHeights, heightsWant, tolerance, "layerHeights", t)
 
 	dzWant := sparse.ZerosDense(10, 2, 2)
 	dzWant.Elements = []float64{60.57114305088894, 60.693508996446276, 50.455558218147914, 50.59831848796478, 80.65955244655413, 70.64593923511089, 80.67994677081366, 80.94507298618797, 100.54401859962374, 110.94512397199861, 100.74796184221933, 111.25103883589199, 120.53045637399111, 130.931561746366, 130.8295901250682, 131.1355049889616, 201.1900088205453, 160.80924678661927, 119.91862664620436, 161.11516165051268, 200.27226422886508, 180.0818832119022, 302.54980039055135, 210.97928446513333, 199.8643777436739, 301.53008417757337, 199.8643777436739, 250.23835866478362, 501.70037678514086, 399.7287554873478, 399.7287554873478, 399.72875548734794, 402.78790412628155, 502.7200929981186, 503.7398092110966, 502.7200929981186, 507.81867406300853, 505.77924163705256, 505.77924163705234, 504.75952542407435}
-	if arrayDifferent(dz, dzWant, tolerance) {
-		t.Errorf("dz: want %#v but have %#v", dzWant, dz)
-	}
+	arrayCompare(dz, dzWant, tolerance, "dz", t)
 }
 
-func TestCalcWetDeposition(t *testing.T) {
-	layerHeights, _ := calcLayerHeights(PH[0], PHB[0])
-	qrainChan := make(chan *sparse.DenseArray)
-	cloudFracChan := make(chan *sparse.DenseArray)
-	altChan := make(chan *sparse.DenseArray)
-	go calcWetDeposition(layerHeights, qrainChan, cloudFracChan, altChan)
-	qrainChan <- QRAIN[0]
-	cloudFracChan <- QCLOUD[0]
-	altChan <- ALT[0]
-	qrainChan <- QRAIN[1]
-	cloudFracChan <- QCLOUD[0]
-	altChan <- ALT[0]
-	qrainChan <- nil
-	wdParticle := <-qrainChan
-	wdSO2 := <-qrainChan
-	wdOtherGas := <-qrainChan
+func TestWetDeposition(t *testing.T) {
+	_, dz := calcLayerHeights(PH[0], PHB[0])
+	qrainFunc := testNextData(QRAIN)
+	cloudFracFunc := testNextData(QCLOUD)
+	altFunc := testNextData(ALT)
+
+	wdParticle, wdSO2, wdOtherGas, err := wetDeposition(dz, qrainFunc, cloudFracFunc, altFunc)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Want values are taken from existing function output, just to avoid regression.
 	wdParticleWant := sparse.ZerosDense(10, 2, 2)
-	wdParticleWant.Elements = []float64{5.977011494252873e-06, 0, 3.3255813953488373e-06, 0, 6.5000000000000004e-06, 0, 3.885057471264367e-06, 0, 7.386363636363637e-06, 0, 4.183908045977011e-06, 0, 8.179775280898877e-06, 0, 4.727272727272727e-06, 5.744186046511629e-08, 8.285714285714285e-06, 1.8022727272727276e-07, 5.258426966292135e-06, 2.988505747126436e-07, 8.478260869565217e-06, 4.0898876404494386e-07, 5.428571428571429e-06, 5.842696629213484e-07, 6.085106382978724e-06, 4.857142857142856e-07, 6.430107526881721e-06, 7.142857142857143e-07, 6.367346938775511e-06, 2.271578947368421e-07, 7.237113402061857e-06, 4.702127659574468e-07, 0, 0, 0, 0, 0, 0, 0, 0}
-	if arrayDifferent(wdParticle, wdParticleWant, tolerance) {
-		t.Errorf("wdParticle: want %#v but have %#v", wdParticleWant, wdParticle)
-	}
+	wdParticleWant.Elements = []float64{5.977011494252873e-06, 0, 3.3255813953488373e-06, 0, 6.5000000000000004e-06, 0, 3.885057471264367e-06, 0, 7.386363636363637e-06, 0, 4.183908045977011e-06, 0, 8.179775280898877e-06, 0, 4.727272727272727e-06, 5.744186046511629e-08, 8.28571429759415e-06, 1.8022727272727276e-07, 5.258426966292135e-06, 2.988505747126436e-07, 8.478261073092499e-06, 4.0898876404494386e-07, 5.428571459626166e-06, 5.842696629213484e-07, 6.085106529354578e-06, 4.857142861634599e-07, 6.430107628967074e-06, 7.142857142857143e-07, 6.367346948782296e-06, 2.2715789483519827e-07, 7.237113416859262e-06, 4.7021276991624836e-07, 0, 0, 0, 0, 0, 0, 0, 0}
+	arrayCompare(wdParticle, wdParticleWant, tolerance, "wdParticle", t)
 	wdSO2Want := sparse.ZerosDense(10, 2, 2)
-	wdSO2Want.Elements = []float64{1.4232337745268778e-10, 0, 9.50640880271098e-11, 0, 1.1622925884955751e-10, 0, 6.945280085248075e-11, 0, 1.0595766152268119e-10, 0, 5.989682221136394e-11, 0, 9.788192266012663e-11, 0, 5.2114982640119044e-11, 6.317803650222431e-13, 5.939931868688835e-11, 1.6164691211016316e-12, 6.324513443017658e-11, 2.6753191837625487e-12, 6.105818455016383e-11, 3.275663436700725e-12, 2.5878947266080734e-11, 3.9942150308730816e-12, 4.3912756458966567e-11, 2.3233152753570407e-12, 4.640243375576037e-11, 4.1169538743652434e-12, 1.8305095818815327e-11, 8.196347509398497e-13, 2.6113068391016206e-11, 1.696629226823708e-12, 0, 0, 0, 0, 0, 0, 0, 0}
-	if arrayDifferent(wdSO2, wdSO2Want, tolerance) {
-		t.Errorf("wdSO2: want %#v but have %#v", wdSO2Want, wdSO2)
-	}
+	wdSO2Want.Elements = []float64{1.4232337745268778e-10, 0, 9.50640880271098e-11, 0, 1.1622925884955751e-10, 0, 6.945280085248075e-11, 0, 1.0595766152268119e-10, 0, 5.989682221136394e-11, 0, 9.788192266012663e-11, 0, 5.2114982640119044e-11, 6.317803650222431e-13, 5.940110066644896e-11, 1.6164691211016316e-12, 6.324513443017658e-11, 2.6753191837625487e-12, 6.108871364243891e-11, 3.275663436700725e-12, 2.5883605476588623e-11, 3.9942150308730816e-12, 4.393471283719606e-11, 2.323382651500026e-12, 4.641774655889978e-11, 4.1169538743652434e-12, 1.8306596836672473e-11, 8.196495043653666e-13, 2.6115288001829442e-11, 1.6972230470530962e-12, 0, 0, 0, 0, 0, 0, 0, 0}
+	arrayCompare(wdSO2, wdSO2Want, tolerance, "wdSO2", t)
 	wdOtherGasWant := sparse.ZerosDense(10, 2, 2)
-	wdOtherGasWant.Elements = []float64{4.74411258175626e-10, 0, 3.1688029342369936e-10, 0, 3.8743086283185844e-10, 0, 2.3150933617493587e-10, 0, 3.5319220507560394e-10, 0, 1.996560740378798e-10, 0, 3.2627307553375545e-10, 0, 1.7371660880039682e-10, 2.1059345500741436e-12, 1.9799772895629453e-10, 5.388230403672106e-12, 2.1081711476725523e-10, 8.917730612541829e-12, 2.0352728183387943e-10, 1.091887812233575e-11, 8.626315755360243e-11, 1.3314050102910271e-11, 1.463758548632219e-10, 7.744384251190135e-12, 1.546747791858679e-10, 1.3723179581217477e-11, 6.101698606271776e-11, 2.7321158364661655e-12, 8.704356130338736e-11, 5.6554307560790266e-12, 0, 0, 0, 0, 0, 0, 0, 0}
-	if arrayDifferent(wdOtherGas, wdOtherGasWant, tolerance) {
-		t.Errorf("wdOtherGas: want %#v but have %#v", wdOtherGasWant, wdOtherGas)
-	}
+	wdOtherGasWant.Elements = []float64{4.74411258175626e-10, 0, 3.1688029342369936e-10, 0, 3.8743086283185844e-10, 0, 2.3150933617493587e-10, 0, 3.5319220507560394e-10, 0, 1.996560740378798e-10, 0, 3.2627307553375545e-10, 0, 1.7371660880039682e-10, 2.1059345500741436e-12, 1.980036688881632e-10, 5.388230403672106e-12, 2.1081711476725523e-10, 8.917730612541829e-12, 2.0362904547479636e-10, 1.091887812233575e-11, 8.627868492196207e-11, 1.3314050102910271e-11, 1.464490427906535e-10, 7.74460883833342e-12, 1.5472582186299924e-10, 1.3723179581217477e-11, 6.10219894555749e-11, 2.7321650145512225e-12, 8.705096000609814e-11, 5.657410156843654e-12, 0, 0, 0, 0, 0, 0, 0, 0}
+	arrayCompare(wdOtherGas, wdOtherGasWant, tolerance, "wdOtherGas", t)
 }
 
 func TestWindDeviation(t *testing.T) {
-	numTsteps = 2
 	const tolerance = 1.0e-8
-	uChan := make(chan *sparse.DenseArray)
-	go average(uChan)
-	uChan <- U[0]
-	uChan <- U[1]
-	uChan <- nil
-	uAvg := <-uChan
-	go windDeviation(uAvg, uChan)
-	uChan <- U[0]
-	uChan <- U[1]
-	uChan <- nil
-	uDev := <-uChan
+	uFunc1 := testNextData(U)
+	uFunc2 := testNextData(U)
+	uAvg, err := average(uFunc1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	uDev, err := windDeviation(uAvg, uFunc2)
+	if err != nil {
+		t.Fatal(err)
+	}
 	uDevWant := sparse.ZerosDense(10, 2, 3)
 	uDevWant.Elements = []float64{3.4499999999999997, 5.699999999999999, 3.6345, 2.3499999999999996, 4.54, 3.8449999999999998, 3.8499999999999996, 6.199999999999999, 4.26, 2.85, 4.91, 4.46, 3.8500000000000005, 6.2, 4.57, 2.9, 4.76, 4.7265, 3.7499999999999996, 5.9, 4.705, 3.05, 4.625, 4.790000000000001, 4.050000000000001, 5.35, 4.615, 3.75, 4.949999999999999, 4.84, 5, 5.1850000000000005, 4.22, 4.75, 4.949999999999999, 5.074999999999999, 6.045, 4.949999999999999, 3.8299999999999996, 5.550000000000001, 4.75, 5.35, 6.25, 4.4, 3.5, 5.75, 4.15, 3.4000000000000004, 4.55, 4.6, 3.4, 4.95, 3.55, 2.8499999999999996, 3.25, 3.55, 3.35, 3.45, 3.05, 2.7}
-	if arrayDifferent(uDev, uDevWant, tolerance) {
-		t.Errorf("want %#v but have %#v", uDevWant, uDev)
-	}
+	arrayCompare(uDev, uDevWant, tolerance, "windDeviation", t)
 }
 
 func TestWindSpeed(t *testing.T) {
-	uChan := make(chan *sparse.DenseArray)
-	vChan := make(chan *sparse.DenseArray)
-	wChan := make(chan *sparse.DenseArray)
-	go windSpeed(uChan, vChan, wChan)
-	uChan <- U[0]
-	vChan <- V[0]
-	wChan <- W[0]
-	uChan <- U[1]
-	vChan <- V[1]
-	wChan <- W[1]
-	uChan <- nil
-	vChan <- nil
-	wChan <- nil
-
-	speed := <-uChan
-	speedInverse := <-uChan
-	speedMinusThird := <-uChan
-	speedMinusOnePointFour := <-uChan
-	uAvg := <-uChan
-	vAvg := <-vChan
-	wAvg := <-wChan
+	uFunc := testNextData(U)
+	vFunc := testNextData(V)
+	wFunc := testNextData(W)
+	speed, speedInverse, speedMinusThird, speedMinusOnePointFour, uAvg, vAvg, wAvg, err := windSpeed(uFunc, vFunc, wFunc)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Want values are taken from existing function output, just to avoid regression.
 	speedWant := sparse.ZerosDense(10, 2, 2)
@@ -258,109 +213,67 @@ func TestWindSpeed(t *testing.T) {
 	wAvgWant := sparse.ZerosDense(11, 2, 2)
 	wAvgWant.Elements = []float64{-0.064, -0.07350000000000001, -0.132, -0.0733, -0.094, -0.106, -0.17149999999999999, -0.09275, -0.089, -0.12050000000000001, -0.172, -0.10350000000000001, -0.07500000000000001, -0.1263, -0.15785, -0.1014, -0.06, -0.128, -0.1465, -0.0912, -0.05, -0.127, -0.1185, -0.07300000000000001, -0.03499999999999999, -0.11299999999999999, -0.078, -0.036, -0.04, -0.0795, -0.037000000000000005, 0.006499999999999999, -0.05215, 0.01425, 0.0035000000000000014, 0.059500000000000004, -0.0185, 0.0995, 0.0534, 0.1128, 0.042499999999999996, 0.1535, 0.1173, 0.1492}
 
-	if arrayDifferent(speed, speedWant, tolerance) {
-		t.Errorf("speed: want %#v but have %#v", speedWant, speed)
-	}
-	if arrayDifferent(speedInverse, speedInverseWant, tolerance) {
-		t.Errorf("speedInverse: want %#v but have %#v", speedInverseWant, speedInverse)
-	}
-	if arrayDifferent(speedMinusThird, speedMinusThirdWant, tolerance) {
-		t.Errorf("speedMinusThird: want %#v but have %#v", speedMinusThirdWant, speedMinusThird)
-	}
-	if arrayDifferent(speedMinusOnePointFour, speedMinusOnePointFourWant, tolerance) {
-		t.Errorf("speedMinusOnePointFour: want %#v but have %#v", speedMinusOnePointFourWant, speedMinusOnePointFour)
-	}
-	if arrayDifferent(uAvg, uAvgWant, tolerance) {
-		t.Errorf("uAvg: want %#v but have %#v", uAvgWant, uAvg)
-	}
-	if arrayDifferent(vAvg, vAvgWant, tolerance) {
-		t.Errorf("vAvg: want %#v but have %#v", vAvgWant, vAvg)
-	}
-	if arrayDifferent(wAvg, wAvgWant, tolerance) {
-		t.Errorf("wAvg: want %#v but have %#v", wAvgWant, wAvg)
-	}
+	arrayCompare(speed, speedWant, tolerance, "speed", t)
+	arrayCompare(speedInverse, speedInverseWant, tolerance, "speedInverse", t)
+	arrayCompare(speedMinusThird, speedMinusThirdWant, tolerance, "speedMinusThird", t)
+	arrayCompare(speedMinusOnePointFour, speedMinusOnePointFourWant, tolerance, "speedMinusOnePointFour", t)
+	arrayCompare(uAvg, uAvgWant, tolerance, "uAvg", t)
+	arrayCompare(vAvg, vAvgWant, tolerance, "vAvg", t)
+	arrayCompare(wAvg, wAvgWant, tolerance, "wAvg", t)
 }
 
 func TestStabilityMixingChemistry(t *testing.T) {
 	const tolerance = 1.0e-8
-	numTsteps = 2
 	layerHeights, _ := calcLayerHeights(PH[0], PHB[0])
 
-	pblhChan := make(chan *sparse.DenseArray)
-	ustarChan := make(chan *sparse.DenseArray)
-	altChan := make(chan *sparse.DenseArray)
-	Tchan := make(chan *sparse.DenseArray)
-	PBchan := make(chan *sparse.DenseArray)
-	Pchan := make(chan *sparse.DenseArray)
-	surfaceHeatFluxChan := make(chan *sparse.DenseArray)
-	hoChan := make(chan *sparse.DenseArray)
-	h2o2Chan := make(chan *sparse.DenseArray)
-	luIndexChan := make(chan *sparse.DenseArray)
-	qCloudChan := make(chan *sparse.DenseArray)
-	swDownChan := make(chan *sparse.DenseArray)
-	glwChan := make(chan *sparse.DenseArray)
-	qrainChan := make(chan *sparse.DenseArray)
+	TFunc := testNextData(T)
+	PBFunc := testNextData(PB)
+	PFunc := testNextData(P)
+	surfaceHeatFluxFunc := testNextData(HFX)
+	hoFunc := testNextData(ho)
+	h2o2Func := testNextData(h2o2)
+	luIndexFunc := testNextData(LU_INDEX)
+	ustarFunc := testNextData(UST)
+	pblhFunc := testNextData(PBLH)
+	altFunc := testNextData(ALT)
+	qCloudFunc := testNextData(QCLOUD)
+	swDownFunc := testNextData(SWDOWN)
+	glwFunc := testNextData(GLW)
+	qrainFunc := testNextData(QRAIN)
 
-	go StabilityMixingChemistry(layerHeights, pblhChan, ustarChan, altChan, Tchan,
-		PBchan, Pchan, surfaceHeatFluxChan, hoChan, h2o2Chan, luIndexChan, qCloudChan, swDownChan, glwChan, qrainChan)
-
-	Tchan <- T[0]
-	PBchan <- PB[0]
-	Pchan <- P[0]
-	surfaceHeatFluxChan <- HFX[0]
-	hoChan <- ho[0]
-	h2o2Chan <- h2o2[0]
-	luIndexChan <- LU_INDEX[0]
-	ustarChan <- UST[0]
-	pblhChan <- PBLH[0]
-	altChan <- ALT[0]
-	qCloudChan <- QCLOUD[0]
-	swDownChan <- SWDOWN[0]
-	glwChan <- GLW[0]
-	qrainChan <- QRAIN[0]
-	Tchan <- nil
-
-	Temp := <-Tchan
-	Sclass := <-Tchan
-	S1 := <-Tchan
-	KzzUnstaggered := <-Tchan
-	M2u := <-Tchan
-	M2d := <-Tchan
-	SO2oxidation := <-Tchan
-	particleDryDep := <-Tchan
-	SO2DryDep := <-Tchan
-	NOxDryDep := <-Tchan
-	NH3DryDep := <-Tchan
-	VOCDryDep := <-Tchan
-	Kyy := <-Tchan
+	Temp, Sclass, S1, KzzUnstaggered, M2u, M2d, SO2oxidation, particleDryDep, SO2DryDep, NOxDryDep, NH3DryDep, VOCDryDep, Kyy, err := stabilityMixingChemistry(layerHeights, pblhFunc, ustarFunc, altFunc, TFunc,
+		PBFunc, PFunc, surfaceHeatFluxFunc, hoFunc, h2o2Func, luIndexFunc, qCloudFunc, swDownFunc, glwFunc, qrainFunc)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Want values are taken from existing function output, just to avoid regression.
 	TempWant := sparse.ZerosDense([]int{10, 2, 2}...)
-	TempWant.Elements = []float64{140.04125654073547, 141.77620056107904, 140.445497645103, 141.69594973493577, 139.60983418765272, 141.35794410278606, 139.9799361812147, 141.28220683090106, 139.17068260199952, 140.93656581868726, 139.55330791167367, 140.86540771218404, 138.7236332790822, 140.51200920992426, 139.12338877236473, 140.445497645103, 138.26851064234478, 139.60983418765272, 138.24466071217805, 139.59611782739063, 137.83898390963805, 138.73243367492665, 137.8230261570994, 139.17504766994244, 137.3976105608935, 138.30773406413087, 138.33852599736096, 138.77253980914966, 136.32788114429707, 137.40695961616467, 136.82143640358532, 137.8909312345815, 134.6641258240994, 136.12466668716573, 135.54498722332644, 135.95724674563974, 133.38488247333925, 134.29202874522622, 133.65061421309764, 134.54632072212553}
+	TempWant.Elements = []float64{279.808286167611, 282.77093912866354, 281.05933619833, 283.10148176991595, 278.90558942027724, 281.93887037798595, 280.1719711763049, 282.27694539848557, 278.03451473475184, 281.10060719333427, 279.3203375385492, 281.4463339873839, 277.1521520449787, 280.2138622644722, 278.4191440049893, 280.60953901975, 276.258261214384, 278.46139922055556, 276.67317947807453, 278.8744515464799, 274.8957773498135, 276.67693664094236, 275.37048717995606, 277.5965341996561, 273.56783559076655, 275.37425990858594, 275.42305570477583, 276.27980873583203, 271.98862752109744, 273.5771846460377, 272.4858597370849, 274.5202235464134, 269.9101027378091, 272.0081183292417, 271.14609288028373, 271.60681981346085, 268.3242695531737, 269.53336375045876, 268.53742776665933, 270.0273862217476}
 	SclassWant := sparse.ZerosDense([]int{10, 2, 2}...)
-	SclassWant.Elements = []float64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.5, 0.5, 0.5, 0.5, 0.5, 0, 0, 0.5, 0, 0.5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	SclassWant.Elements = []float64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.5, 0.5, 0.5, 0.5, 0.5, 0, 0.5, 1, 0.5, 1, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0, 0, 0, 0}
 	S1Want := sparse.ZerosDense([]int{10, 2, 2}...)
-	S1Want.Elements = []float64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8.659278305910272e-06, 0, 1.4578650516150517e-05, 1.0850944941134813e-05, 1.7337509193256397e-05, 9.674267325912213e-06, 1.727477866285235e-05, 8.25749448891299e-06, 6.9012315270936046e-06, 1.1515342595723896e-05, 6.901231527093604e-06, 1.3875659354342116e-05, 6.168842469889617e-06, 6.038577586206899e-06, 6.452105644527409e-06, 4.313269704433497e-06, 7.636454484888867e-06, 5.119711304870799e-06, 5.093615690717622e-06, 4.443182214229452e-06, 0, 0, 0, 0}
+	S1Want.Elements = []float64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8.659278305910272e-06, 0, 1.4578650516150517e-05, 1.0850944941134813e-05, 2.606688445139948e-05, 9.674267325912213e-06, 2.3053171991801797e-05, 8.25749448891299e-06, 2.433465611644154e-05, 2.315189932403436e-05, 1.561794382176757e-05, 2.7897378280835205e-05, 2.1687003285148284e-05, 2.1292824101886347e-05, 2.4259319806233757e-05, 1.7388338146444446e-05, 2.4554316171646257e-05, 1.9156943397541684e-05, 1.8685891088611138e-05, 1.7818692810858116e-05, 0, 0, 0, 0}
 	KzzUnstaggeredWant := sparse.ZerosDense([]int{10, 2, 2}...)
-	KzzUnstaggeredWant.Elements = []float64{2.454483897942035, 1.1141180228867564, 1.6106040457723587, 1.3216233282700538, 5.33460361555517, 2.304771712397139, 3.7302121104979435, 3.0552555443941665, 4.989764959167504, 2.093064605459659, 3.9684292060571718, 3.3060639985254765, 3.049696545874661, 1.4061627212384793, 3.0500969139779537, 2.7393318748287205, 1.690051304320292, 0.6499871570518773, 1.85008504946346, 1.8408000427976865, 1.5, 0.8962353517626742, 1.3988092768170937, 0.8792124776454997, 1.5, 1.5, 1.5, 0.9553125272751706, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5}
+	KzzUnstaggeredWant.Elements = []float64{2.485297294200668, 1.1340448458091898, 1.6639329618281913, 1.332171920586989, 5.3877057283586955, 2.340785854879271, 3.820439151898395, 3.0741603634637054, 5.025098099237127, 2.1197592664196927, 4.024342418942832, 3.320048145504126, 3.0678619129386795, 1.4223207453719247, 3.0734870511573096, 2.748042123865984, 2.44517224785958, 0.657088977103797, 2.6044600991017743, 1.8448742882747844, 3, 1.6477864890814842, 2.8988092768170937, 1.6302043943113804, 3, 3, 3, 2.4553125272751704, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3}
 	M2uWant := sparse.ZerosDense([]int{10, 2, 2}...)
 	M2uWant.Elements = []float64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	M2dWant := sparse.ZerosDense([]int{10, 2, 2}...)
 	M2dWant.Elements = []float64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	SO2oxidationWant := sparse.ZerosDense([]int{10, 2, 2}...)
-	SO2oxidationWant.Elements = []float64{1.0277819949068232e-07, 2.1620553322597986e-07, 1.4700212206278526e-07, 1.9649881524635097e-07, 9.826294095099549e-08, 2.0538412059613606e-07, 1.1176013997967447e-07, 2.0861396380353674e-07, 1.0297464271840184e-07, 1.8034823495072285e-07, 1.0758832545859143e-07, 1.945943091995075e-07, 1.0946074235633741e-07, 0.2528135305881805, 1.1075962796735504e-07, 1.8092568869265878e-07, 1.280624730773278e-07, 1.6561169823201485e-07, 1.207848836968412e-07, 1.5685594709021174e-07, 1.160932970223121e-07, 1.532361982162077e-07, 1.1773683999214064e-07, 1.0804544250863865e-07, 1.1327825708771841e-07, 1.1736011512578788e-07, 1.0166830122565492e-07, 9.359909244748123e-08, 1.1800545880132146e-07, 9.4477041178819e-08, 1.0923542037283018e-07, 8.724356669474563e-08, 1.259977463773005e-07, 9.72009858923421e-08, 1.1560632648328172e-07, 9.365721750084438e-08, 9.518241445456828e-08, 1.0688427887292786e-07, 9.500164758092751e-08, 9.699928370299036e-08}
+	SO2oxidationWant.Elements = []float64{1.721657225308307e-07, 2.81397237473639e-07, 2.407546336659953e-07, 2.61349340908674e-07, 1.657502677072367e-07, 2.6616347667235814e-07, 1.965803268391172e-07, 2.68991898227076e-07, 1.7287147453981165e-07, 2.3699094049610386e-07, 1.915248452652225e-07, 2.5193332436575475e-07, 1.8623149968362105e-07, 0.2528135843303613, 1.970548982458274e-07, 2.3530268601622454e-07, 2.926399319434474e-07, 2.1665156133438385e-07, 2.1729669290828353e-07, 2.0962361619205938e-07, 2.6956563786526554e-07, 2.093463026377419e-07, 3.626047816640662e-07, 1.6288422079864346e-07, 5.345276052707975e-07, 2.1937229945140494e-07, 8.698723439241161e-07, 1.5580791448153274e-07, 1.9863750471240534e-06, 3.599331457411426e-07, 5.001428803731995e-07, 6.339050075943203e-07, 4.831824472501523e-07, 4.477029865692818e-07, 4.622916727421153e-07, 3.603982632752272e-07, 2.0642162959544838e-07, 3.965027082274449e-07, 2.3196340932676016e-07, 3.6686577403379013e-07}
 	particleDryDepWant := sparse.ZerosDense([]int{10, 2, 2}...)
-	particleDryDepWant.Elements = []float64{0.00970722450479153, 0.0014495399149542074, 0.001932090281189961, 0.0015726221224152172, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	particleDryDepWant.Elements = []float64{0.010162865526722476, 0.0017065693477232012, 0.0023751725529831532, 0.0017312970049009032, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	SO2DryDepWant := sparse.ZerosDense([]int{10, 2, 2}...)
-	SO2DryDepWant.Elements = []float64{0.0003524927891196722, 0.0011202878614203435, 0.0011527597725163327, 0.0011248998144100868, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	SO2DryDepWant.Elements = []float64{0.0006568912613621955, 0.0015159703284781817, 0.0019091511896542302, 0.0013656110424365697, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	NOxDryDepWant := sparse.ZerosDense([]int{10, 2, 2}...)
-	NOxDryDepWant.Elements = []float64{0.00026007610320734933, 0.00036449321729952876, 0.00036766039908993646, 0.0003649553498378682, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	NOxDryDepWant.Elements = []float64{0.0005026924483343035, 0.0005932331015299358, 0.0007109444200385571, 0.0005316489167541452, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	NH3DryDepWant := sparse.ZerosDense([]int{10, 2, 2}...)
-	NH3DryDepWant.Elements = []float64{0.00014614568297576156, 0.00031874623910327127, 0.00032116056888837604, 0.0003190554297104977, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	NH3DryDepWant.Elements = []float64{0.0007134287459725018, 0.0005291881365846268, 0.0010781565788536144, 0.00047609893335600543, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	VOCDryDepWant := sparse.ZerosDense([]int{10, 2, 2}...)
-	VOCDryDepWant.Elements = []float64{0.0029273729275386953, 0.0038071817325971073, 0.004199026376285014, 0.0038582119063847167, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	VOCDryDepWant.Elements = []float64{0.004007289236558869, 0.004335934482798151, 0.005862160692304825, 0.004142667516734282, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	KyyWant := sparse.ZerosDense([]int{10, 2, 2}...)
-	KyyWant.Elements = []float64{3.2477573098203343, 1.6538686820553758, 2.0928389153326115, 1.7534139107693807, 5.763530068552916, 2.416387667237476, 4.037108658598404, 3.280978071554933, 5.144208178595066, 2.136791051259152, 4.07915010647612, 3.394201670481238, 3.007323491182678, 1.3935613240104898, 3.0672195935515694, 2.75621259016805, 0.5004418624270893, 0.6019842974870082, 1.8214095043449887, 1.8211805783462849, 1.5, 0.07411597819387362, 0.3373335564537299, 0.8178585189984321, 1.5, 1.5, 1.5, 0.10398036993223725, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5}
+	KyyWant.Elements = []float64{3.314078249333397, 1.6963492952810897, 2.2043457151327797, 1.7755557553414636, 5.81661362886252, 2.4524110263991976, 4.127658827070609, 3.2998877771882564, 5.178982032133868, 2.163232562976917, 4.133745757981916, 3.4080629388484924, 3.0245935106815245, 1.4093207475370766, 3.0880710514206777, 2.764735389058494, 0.5030066407522406, 0.6084716233029834, 1.8236003202595226, 1.8249670827324578, 3, 0.07489190318322451, 1.8373335564537299, 0.8183546621141308, 3, 3, 3, 1.6039803699322372, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3}
 
 	want := []*sparse.DenseArray{TempWant,
 		SclassWant, S1Want, KzzUnstaggeredWant, M2uWant, M2dWant, SO2oxidationWant,
@@ -369,22 +282,19 @@ func TestStabilityMixingChemistry(t *testing.T) {
 	for i, arr := range []*sparse.DenseArray{Temp,
 		Sclass, S1, KzzUnstaggered, M2u, M2d, SO2oxidation,
 		particleDryDep, SO2DryDep, NOxDryDep, NH3DryDep, VOCDryDep, Kyy} {
-
-		if arrayDifferent(arr, want[i], tolerance) {
-			t.Errorf("uAvg: want %#v but have %#v", arr, want[i])
-		}
+		arrayCompare(arr, want[i], tolerance, fmt.Sprintf("%d", i), t)
 	}
 }
 
-func arrayDifferent(a, b *sparse.DenseArray, tolerance float64) bool {
-	if !reflect.DeepEqual(a.Shape, b.Shape) {
-		return true
+func arrayCompare(have, want *sparse.DenseArray, tolerance float64, name string, t *testing.T) {
+	if !reflect.DeepEqual(want.Shape, have.Shape) {
+		t.Errorf("%s: want shape %v but have shape %v", name, want.Shape, have.Shape)
+		return
 	}
-	for i, av := range a.Elements {
-		bv := b.Elements[i]
-		if math.Abs(av-bv)/math.Abs(av+bv)*2 > tolerance {
-			return true
+	for i, wantv := range want.Elements {
+		havev := have.Elements[i]
+		if math.Abs(havev-wantv)/math.Abs(havev+wantv)*2 > tolerance {
+			t.Errorf("%s, element %d: want %g but have %g", name, i, wantv, havev)
 		}
 	}
-	return false
 }

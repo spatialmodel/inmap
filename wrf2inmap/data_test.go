@@ -1,5 +1,5 @@
 /*
-Copyright © 2013 the InMAP authors.
+Copyright © 2017 the InMAP authors.
 This file is part of InMAP.
 
 InMAP is free software: you can redistribute it and/or modify
