@@ -94,84 +94,124 @@ type Preprocessor interface {
 // based on the information available from the given
 // preprocessor.
 func Preprocess(p Preprocessor, config *ConfigInfo) error {
-	pblh, err := average(p.PBLH())
-	if err != nil {
-		return err
+	var pblh, ph, phb, windSpeed, windSpeedInverse, windSpeedMinusThird, windSpeedMinusOnePointFour, uAvg, vAvg, wAvg *sparse.DenseArray
+
+	errChan := make(chan error)
+
+	go func() {
+		var err error
+		pblh, err = average(p.PBLH())
+		errChan <- err
+	}()
+
+	go func() {
+		var err error
+		ph, err = average(p.PH())
+		errChan <- err
+	}()
+	go func() {
+		var err error
+		phb, err = average(p.PHB())
+		errChan <- err
+	}()
+
+	go func() {
+		var err error
+		windSpeed, windSpeedInverse, windSpeedMinusThird, windSpeedMinusOnePointFour, uAvg, vAvg, wAvg, err = calcWindSpeed(p.U(), p.V(), p.W())
+		errChan <- err
+	}()
+
+	for i := 0; i < 4; i++ {
+		err := <-errChan
+		if err != nil {
+			return err
+		}
 	}
-	ph, err := average(p.PH())
-	if err != nil {
-		return err
-	}
-	phb, err := average(p.PHB())
-	if err != nil {
-		return err
-	}
+
 	layerHeights, Dz := calcLayerHeights(ph, phb)
 
-	windSpeed, windSpeedInverse, windSpeedMinusThird, windSpeedMinusOnePointFour, uAvg, vAvg, wAvg, err := windSpeed(p.U(), p.V(), p.W())
-	if err != nil {
-		return err
-	}
+	var uDeviation, vDeviation, aOrgPartitioning, aVOC, aSOA, bOrgPartitioning, bVOC, bSOA,
+		NOPartitioning, gNO, pNO, SPartitioning, gS, pS, NHPartitioning, gNH, pNH, totalpm25,
+		alt, particleWetDep, SO2WetDep, otherGasWetDep, temperature, Sclass, S1, Kzz, M2u, M2d, SO2oxidation, particleDryDep, SO2DryDep,
+		NOxDryDep, NH3DryDep, VOCDryDep, Kxxyy *sparse.DenseArray
 
-	// calculate deviation from average wind speed.
-	// Only calculate horizontal deviations.
-	uDeviation, err := windDeviation(uAvg, p.U())
-	if err != nil {
-		return err
-	}
-	vDeviation, err := windDeviation(vAvg, p.V())
-	if err != nil {
-		return err
-	}
+	go func() {
+		var err error
+		// calculate deviation from average wind speed.
+		// Only calculate horizontal deviations.
+		uDeviation, err = windDeviation(uAvg, p.U())
+		errChan <- err
+	}()
+	go func() {
+		var err error
+		vDeviation, err = windDeviation(vAvg, p.V())
+		errChan <- err
+	}()
 
-	// calculate gas/particle partitioning
-	aOrgPartitioning, aVOC, aSOA, err := marginalPartitioning(p.AVOC(), p.ASOA())
-	if err != nil {
-		return err
-	}
-	bOrgPartitioning, bVOC, bSOA, err := marginalPartitioning(p.BVOC(), p.BSOA())
-	if err != nil {
-		return err
-	}
-	NOPartitioning, gNO, pNO, err := marginalPartitioning(p.NOx(), p.PNO())
-	if err != nil {
-		return err
-	}
-	SPartitioning, gS, pS, err := marginalPartitioning(p.SOx(), p.PS())
-	if err != nil {
-		return err
-	}
-	NHPartitioning, gNH, pNH, err := marginalPartitioning(p.NH3(), p.PNH())
-	if err != nil {
-		return err
-	}
+	go func() {
+		var err error
+		// calculate gas/particle partitioning
+		aOrgPartitioning, aVOC, aSOA, err = marginalPartitioning(p.AVOC(), p.ASOA())
+		errChan <- err
+	}()
+	go func() {
+		var err error
+		bOrgPartitioning, bVOC, bSOA, err = marginalPartitioning(p.BVOC(), p.BSOA())
+		errChan <- err
+	}()
+	go func() {
+		var err error
+		NOPartitioning, gNO, pNO, err = marginalPartitioning(p.NOx(), p.PNO())
+		errChan <- err
+	}()
+	go func() {
+		var err error
+		SPartitioning, gS, pS, err = marginalPartitioning(p.SOx(), p.PS())
+		errChan <- err
+	}()
+	go func() {
+		var err error
+		NHPartitioning, gNH, pNH, err = marginalPartitioning(p.NH3(), p.PNH())
+		errChan <- err
+	}()
 
-	// Get total PM2.5 averages for performance eval.
-	totalpm25, err := average(p.TotalPM25())
-	if err != nil {
-		return err
-	}
+	go func() {
+		var err error
+		// Get total PM2.5 averages for performance eval.
+		totalpm25, err = average(p.TotalPM25())
+		errChan <- err
+	}()
 
-	// average inverse density
-	alt, err := average(p.ALT())
-	if err != nil {
-		return err
-	}
+	go func() {
+		var err error
+		// average inverse density
+		alt, err = average(p.ALT())
+		errChan <- err
+	}()
 
-	// Calculate wet deposition.
-	particleWetDep, SO2WetDep, otherGasWetDep, err := wetDeposition(Dz, p.QRain(), p.CloudFrac(), p.ALT())
-	if err != nil {
-		return err
-	}
+	go func() {
+		var err error
+		// Calculate wet deposition.
+		particleWetDep, SO2WetDep, otherGasWetDep, err = wetDeposition(Dz, p.QRain(), p.CloudFrac(), p.ALT())
+		errChan <- err
+	}()
 
-	// Calculate stability for plume rise, vertical mixing,
-	// and chemical reaction rates.
-	temperature, Sclass, S1, Kzz, M2u, M2d, SO2oxidation, particleDryDep, SO2DryDep,
-		NOxDryDep, NH3DryDep, VOCDryDep, Kxxyy, err := stabilityMixingChemistry(layerHeights, p.PBLH(),
-		p.UStar(), p.ALT(), p.T(), p.PB(), p.P(), p.SurfaceHeatFlux(), p.HO(), p.H2O2(),
-		p.LUIndex(), p.QCloud(), p.SWDown(), p.GLW(), p.QRain())
-	if err != nil {
-		return err
+	go func() {
+		var err error
+		// Calculate stability for plume rise, vertical mixing,
+		// and chemical reaction rates.
+		temperature, Sclass, S1, Kzz, M2u, M2d, SO2oxidation, particleDryDep, SO2DryDep,
+			NOxDryDep, NH3DryDep, VOCDryDep, Kxxyy, err = stabilityMixingChemistry(layerHeights, p.PBLH(),
+			p.UStar(), p.ALT(), p.T(), p.PB(), p.P(), p.SurfaceHeatFlux(), p.HO(), p.H2O2(),
+			p.LUIndex(), p.QCloud(), p.SWDown(), p.GLW(), p.QRain())
+		errChan <- err
+	}()
+
+	for i := 0; i < 11; i++ {
+		err := <-errChan
+		if err != nil {
+			return err
+		}
 	}
 
 	// write out data to file
@@ -457,9 +497,9 @@ func windDeviation(uAvg *sparse.DenseArray, uFunc NextData) (*sparse.DenseArray,
 	}
 }
 
-// windSpeed calculates RMS wind speed as well as average speeds in each
+// calcWindSpeed calculates RMS wind speed as well as average speeds in each
 // direction.
-func windSpeed(uFunc, vFunc, wFunc NextData) (speed, speedInverse, speedMinusThird, speedMinusOnePointFour, uAvg, vAvg, wAvg *sparse.DenseArray, err error) {
+func calcWindSpeed(uFunc, vFunc, wFunc NextData) (speed, speedInverse, speedMinusThird, speedMinusOnePointFour, uAvg, vAvg, wAvg *sparse.DenseArray, err error) {
 	var n int
 	firstData := true
 	var dims []int

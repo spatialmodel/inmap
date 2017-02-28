@@ -62,6 +62,14 @@ func TestWRF2InMAP(t *testing.T) {
 	compareCTMData(goldenData, newData, tolerance, t)
 }
 
+func BenchmarkWRF2InMAP(b *testing.B) {
+	err := flag.Set("config", "configExample.json")
+	if err != nil {
+		b.Fatal(err)
+	}
+	main()
+}
+
 func compareCTMData(ctmdata, ctmdata2 *inmap.CTMData, tolerance float64, t *testing.T) {
 	if len(ctmdata.Data) != len(ctmdata2.Data) {
 		t.Errorf("new and old ctmdata have different number of variables (%d vs. %d)",
@@ -192,7 +200,7 @@ func TestWindSpeed(t *testing.T) {
 	uFunc := testNextData(U)
 	vFunc := testNextData(V)
 	wFunc := testNextData(W)
-	speed, speedInverse, speedMinusThird, speedMinusOnePointFour, uAvg, vAvg, wAvg, err := windSpeed(uFunc, vFunc, wFunc)
+	speed, speedInverse, speedMinusThird, speedMinusOnePointFour, uAvg, vAvg, wAvg, err := calcWindSpeed(uFunc, vFunc, wFunc)
 	if err != nil {
 		t.Fatal(err)
 	}
