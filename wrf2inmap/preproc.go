@@ -57,37 +57,77 @@ type NextData func() (*sparse.DenseArray, error)
 // Preprocessor specifies the methods that are necessary for a
 // variable to act as a preprocessor for InMAP inputs.
 type Preprocessor interface {
+	// PBLH is planetary boundary layer height [m].
 	PBLH() NextData
-	PH() NextData
+	// PHB is baseline geopotential height [m2/s].
 	PHB() NextData
-	U() NextData
-	V() NextData
-	W() NextData
-	AVOC() NextData
-	BVOC() NextData
-	ASOA() NextData
-	BSOA() NextData
-	NOx() NextData
-	PNO() NextData
-	SOx() NextData
-	PS() NextData
-	NH3() NextData
-	PNH() NextData
-	TotalPM25() NextData
+	// PH is perturbation geopotential height [m2/s].
+	PH() NextData
+	// ALT is inverse air density [m3/kg].
 	ALT() NextData
-	QRain() NextData
-	QCloud() NextData
-	CloudFrac() NextData
-	UStar() NextData
+	// T is temperature perturbation potential temperature [K].
 	T() NextData
+	// PB is baseline pressure [Pa].
 	PB() NextData
+	// PB is perturbation pressure [Pa].
 	P() NextData
-	SurfaceHeatFlux() NextData
-	HO() NextData
-	H2O2() NextData
+
+	// UStar is friction velocity [m/s].
+	UStar() NextData
+	// LUIndex is USGS land use index.
 	LUIndex() NextData
+
+	// QRain is the mass fraction of rain [mass/mass].
+	QRain() NextData
+	// QCloud is the mass fraction of cloud water in each grid cell [mass/mass].
+	QCloud() NextData
+	// CloudFrac is the fraction of each grid cell filled with clouds [volume/volume].
+	CloudFrac() NextData
+
+	// SurfaceHeatFlux is heat flux at the surface [W/m2].
+	SurfaceHeatFlux() NextData
+	// SWDown is downwelling short wave radiation at ground level [W/m2].
 	SWDown() NextData
+	// GLW is downwelling long wave radiation at ground level [W/m2].
 	GLW() NextData
+
+	// U is West-East wind speed [m/s].
+	U() NextData
+	// V is South-North wind speed [m/s].
+	V() NextData
+	// W is below-above wind speed [m/s].
+	W() NextData
+
+	// AVOC is total concentration of anthropogenic
+	// secondary organic aerosol precursors (VOCs) [μg/m3].
+	AVOC() NextData
+	// AVOC is total concentration of biogenic
+	// secondary organic aerosol precursors (VOCs) [μg/m3].
+	BVOC() NextData
+	// ASOA is total concentration of anthropogenic
+	// secondary organic aerosol [μg/m3].
+	ASOA() NextData
+	// BSOA is total concentration of biogenic
+	// secondary organic aerosol [μg/m3].
+	BSOA() NextData
+	// NOx is concentration of oxides of Nitrogen [μg/m3].
+	NOx() NextData
+	// PNO is concentration of particulate nitrate [μg/m3].
+	PNO() NextData
+	// SOx is concentration of Sulfur oxides [μg/m3].
+	SOx() NextData
+	// PS is concentration of particulate sulfate [μg/m3].
+	PS() NextData
+	// NH3 is concentration of ammonia [μg/m3].
+	NH3() NextData
+	// PNH is concentration of particulate ammonium [μg/m3].
+	PNH() NextData
+	// TotalPM25 is total concentration of fine particulate matter (PM2.5) [μg/m3].
+	TotalPM25() NextData
+	// HO is hydroxyl radical concentration [ppmv].
+	HO() NextData
+	// H2O2 is hydrogen peroxide concentration [ppmv].
+	H2O2() NextData
 }
 
 // Preprocess returns preprocessed InMAP input data
