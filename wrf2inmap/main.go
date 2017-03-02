@@ -26,6 +26,8 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
+	"reflect"
 )
 
 var (
@@ -34,45 +36,110 @@ var (
 
 const (
 	inDateFormat = "20060102"
-	tolerance    = 1.e-10 // tolerance for comparing floats
 )
 
 // ConfigInfo holds the configuration information for the program run.
 type ConfigInfo struct {
-	Wrfout           string  // Location of WRF output files. [DATE] is a wild card for the simulation date.
-	OutputDir        string  // Directory to put the output files in
-	OutputFilePrefix string  // name for output files
-	StartDate        string  // Format = "YYYYMMDD"
-	EndDate          string  // Format = "YYYYMMDD"
-	CtmGridXo        float64 // lower left of Chemical Transport Model (CTM) grid, x
-	CtmGridYo        float64 // lower left of grid, y
-	CtmGridDx        float64 // m
-	CtmGridDy        float64 // m
-	CtmGridNx        int
-	CtmGridNy        int
-	GridProj         string // projection info for CTM grid; Proj4 format
+	// CTMType specifies what type of chemical transport
+	// model we are going to be reading data from. Valid
+	// options are "GEOS-Chem" and "WRF-Chem".
+	CTMType string
+
+	WRFChem struct {
+		// WRFOut is the location of WRF-Chem output files.
+		// [DATE] should be used as a wild card for the simulation date.
+		WRFOut string
+	}
+
+	GEOSChem struct {
+		// GEOSA1 is the location of the GEOS 1-hour time average files.
+		// [DATE] should be used as a wild card for the simulation date.
+		GEOSA1 string
+
+		// GEOSA3Cld is the location of the GEOS 3-hour average cloud
+		// parameter files. [DATE] should be used as a wild card for
+		// the simulation date.
+		GEOSA3Cld string
+
+		// GEOSA3Cld is the location of the GEOS 3-hour average dynamical
+		// parameter files. [DATE] should be used as a wild card for
+		// the simulation date.
+		GEOSA3Dyn string
+
+		// GEOSI3 is the location of the GEOS 3-hour instantaneous parameter
+		// files. [DATE] should be used as a wild card for
+		// the simulation date.
+		GEOSI3 string
+
+		// GEOSA3MstE is the location of the GEOS 3-hour average moist parameters
+		// on level edges files. [DATE] should be used as a wild card for
+		// the simulation date.
+		GEOSA3MstE string
+
+		// GEOSChem is the location of GEOS-Chem output files.
+		// [DATE] should be used as a wild card for the simulation date.
+		GEOSChem string
+
+		// VegTypeGlobal is the location of the GEOS-Chem vegtype.global file,
+		// which is described here:
+		// http://wiki.seas.harvard.edu/geos-chem/index.php/Olson_land_map#Structure_of_the_vegtype.global_file
+		VegTypeGlobal string
+	}
+
+	// OutputFile is the location where the output file should go.
+	OutputFile string
+
+	// StartDate is the date of the beginning of the simulation.
+	// Format = "YYYYMMDD".
+	StartDate string
+
+	// EndDate is the date of the end of the simulation.
+	// Format = "YYYYMMDD".
+	EndDate string
+
+	CtmGridXo float64 // lower left of Chemical Transport Model (CTM) grid, x
+	CtmGridYo float64 // lower left of grid, y
+
+	CtmGridDx float64 // m
+	CtmGridDy float64 // m
+
+	GridProj string // projection info for CTM grid; Proj4 format
 }
 
 func main() {
-
 	flag.Parse()
 	if *configFile == "" {
-		log.Println("Please specify configuration file as in " +
+		log.Fatal("Please specify configuration file as in " +
 			"`wrf2inmap -config=configFile.json`")
-		os.Exit(1)
 	}
-	cfg := ReadConfigFile(*configFile)
-	w, err := NewWRFChem(cfg)
+	cfg, err := ReadConfigFile(*configFile)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := Preprocess(w, cfg); err != nil {
+	var ctm Preprocessor
+	switch cfg.CTMType {
+	case "GEOS-Chem":
+		var err error
+		ctm, err = NewGEOSChem(cfg)
+		if err != nil {
+			log.Fatal(err)
+		}
+	case "WRF-Chem":
+		var err error
+		ctm, err = NewWRFChem(cfg)
+		if err != nil {
+			log.Fatal(err)
+		}
+	default:
+		log.Fatalf("inmap preprocessor: the CTMType you specified, '%s', is invalid. Valid options are WRF-Chem and GEOS-Chem", cfg.CTMType)
+	}
+	if err := Preprocess(ctm, cfg); err != nil {
 		log.Fatal(err)
 	}
 }
 
 // ReadConfigFile Reads and parses a json configuration file.
-func ReadConfigFile(filename string) *ConfigInfo {
+func ReadConfigFile(filename string) (*ConfigInfo, error) {
 	// Open the configuration file
 	var (
 		file  *os.File
@@ -81,10 +148,9 @@ func ReadConfigFile(filename string) *ConfigInfo {
 	)
 	file, err = os.Open(filename)
 	if err != nil {
-		fmt.Printf("The configuration file you have specified, %v, does not "+
+		return nil, fmt.Errorf("The configuration file you have specified, %v, does not "+
 			"appear to exist. Please check the file name and location and "+
 			"try again.\n", filename)
-		os.Exit(1)
 	}
 	reader := bufio.NewReader(file)
 	bytes, err = ioutil.ReadAll(reader)
@@ -95,25 +161,55 @@ func ReadConfigFile(filename string) *ConfigInfo {
 	config := new(ConfigInfo)
 	err = json.Unmarshal(bytes, &config)
 	if err != nil {
-		fmt.Printf(
+		return nil, fmt.Errorf(
 			"There has been an error parsing the configuration file.\n"+
 				"Please ensure that the file is in valid JSON format\n"+
 				"(you can check for errors at http://jsonlint.com/)\n"+
 				"and try again!\n\n%v\n\n", err.Error())
-		os.Exit(1)
 	}
 
-	config.OutputDir = os.ExpandEnv(config.OutputDir)
-	config.OutputFilePrefix = os.ExpandEnv(config.OutputFilePrefix)
-	config.Wrfout = os.ExpandEnv(config.Wrfout)
+	config.OutputFile = os.ExpandEnv(config.OutputFile)
+	if _, err := os.Stat(filepath.Dir(config.OutputFile)); err != nil {
+		return nil, fmt.Errorf("inmap: preprocessor output directory '%s' does not exist", config.OutputFile)
+	}
 	config.StartDate = os.ExpandEnv(config.StartDate)
 	config.EndDate = os.ExpandEnv(config.EndDate)
 	config.GridProj = os.ExpandEnv(config.GridProj)
 
-	err = os.MkdirAll(config.OutputDir, os.ModePerm)
-	if err != nil {
-		log.Println(err.Error())
-		os.Exit(1)
+	switch config.CTMType {
+	case "WRF-Chem":
+		err := checkPaths(&config.WRFChem)
+		if err != nil {
+			return nil, err
+		}
+	case "GEOS-Chem":
+		err := checkPaths(&config.GEOSChem)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("inmap preprocessor: the CTMType you specified, '%s', is invalid. Valid options are WRF-Chem and GEOS-Chem", config.CTMType)
 	}
-	return config
+	return config, nil
+}
+
+// checkPaths makes sure that none of the String
+// fields in the given variable are empty and expands
+// any environment variables that they contain.
+// The given variable must be a pointer to a struct.
+func checkPaths(paths interface{}) error {
+	v := reflect.ValueOf(paths).Elem()
+	for i := 0; i < v.NumField(); i++ {
+		f := v.Field(i)
+		if f.Type().Kind() == reflect.String {
+			s := f.String()
+			if s == "" {
+				name := v.Type().Field(i).Name
+				return fmt.Errorf("inmap preprocessor: configuration file field %s is empty", name)
+			}
+			s = os.ExpandEnv(s)
+			f.SetString(s)
+		}
+	}
+	return nil
 }

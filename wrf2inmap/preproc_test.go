@@ -19,6 +19,7 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"io"
@@ -32,10 +33,10 @@ import (
 	"bitbucket.org/ctessum/sparse"
 )
 
-func TestWRF2InMAP(t *testing.T) {
+func TestWRFChemToInMAP(t *testing.T) {
 	const tolerance = 1.0e-8
 
-	err := flag.Set("config", "configExample.json")
+	err := flag.Set("config", "configExampleWRFChem.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,7 +44,7 @@ func TestWRF2InMAP(t *testing.T) {
 
 	cfg := inmap.VarGridConfig{}
 
-	f1, err := os.Open("testdata/inmapData.ncf")
+	f1, err := os.Open("testdata/inmapData_WRFChem.ncf")
 	if err != nil {
 		t.Fatalf("opening new file: %v", err)
 	}
@@ -51,7 +52,7 @@ func TestWRF2InMAP(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading new file: %v", err)
 	}
-	f2, err := os.Open("testdata/inmapData_golden.ncf")
+	f2, err := os.Open("testdata/inmapData_WRFChem_golden.ncf")
 	if err != nil {
 		t.Fatalf("opening golden file: %v", err)
 	}
@@ -62,25 +63,63 @@ func TestWRF2InMAP(t *testing.T) {
 	compareCTMData(goldenData, newData, tolerance, t)
 }
 
-func BenchmarkWRF2InMAP(b *testing.B) {
-	err := flag.Set("config", "configExample.json")
+func BenchmarkWRFChemToInMAP(b *testing.B) {
+	err := flag.Set("config", "configExampleWRFChem.json")
 	if err != nil {
 		b.Fatal(err)
 	}
 	main()
 }
 
-func compareCTMData(ctmdata, ctmdata2 *inmap.CTMData, tolerance float64, t *testing.T) {
-	if len(ctmdata.Data) != len(ctmdata2.Data) {
-		t.Errorf("new and old ctmdata have different number of variables (%d vs. %d)",
-			len(ctmdata2.Data), len(ctmdata.Data))
+func TestGEOSChemToInMAP(t *testing.T) {
+	const tolerance = 1.0e-8
+
+	err := flag.Set("config", "configExampleGEOSChem.json")
+	if err != nil {
+		t.Fatal(err)
 	}
-	for name, dd1 := range ctmdata.Data {
-		if _, ok := ctmdata2.Data[name]; !ok {
-			t.Errorf("ctmdata2 doesn't have variable %s", name)
+	main()
+
+	cfg := inmap.VarGridConfig{}
+
+	f1, err := os.Open("testdata/inmapData_GEOSChem.ncf")
+	if err != nil {
+		t.Fatalf("opening new file: %v", err)
+	}
+	newData, err := cfg.LoadCTMData(f1)
+	if err != nil {
+		t.Fatalf("reading new file: %v", err)
+	}
+	f2, err := os.Open("testdata/inmapData_GEOSChem_golden.ncf")
+	if err != nil {
+		t.Fatalf("opening golden file: %v", err)
+	}
+	goldenData, err := cfg.LoadCTMData(f2)
+	if err != nil {
+		t.Fatalf("reading golden file: %v", err)
+	}
+	compareCTMData(goldenData, newData, tolerance, t)
+}
+
+func BenchmarkGEOSChemToInMAP(b *testing.B) {
+	err := flag.Set("config", "configExample_GEOSChem.json")
+	if err != nil {
+		b.Fatal(err)
+	}
+	main()
+}
+
+func compareCTMData(goldenData, newData *inmap.CTMData, tolerance float64, t *testing.T) {
+	if len(goldenData.Data) != len(newData.Data) {
+		t.Errorf("new and old ctmdata have different number of variables (%d vs. %d)",
+			len(newData.Data), len(goldenData.Data))
+	}
+	for name, dd1 := range goldenData.Data {
+		if _, ok := newData.Data[name]; !ok {
+			t.Errorf("newData doesn't have variable %s", name)
 			continue
 		}
-		dd2 := ctmdata2.Data[name]
+		dd2 := newData.Data[name]
 		if !reflect.DeepEqual(dd1.Dims, dd2.Dims) {
 			t.Errorf("%s dims problem: %v != %v", name, dd1.Dims, dd2.Dims)
 		}
@@ -90,7 +129,7 @@ func compareCTMData(ctmdata, ctmdata2 *inmap.CTMData, tolerance float64, t *test
 		if dd1.Units != dd2.Units {
 			t.Errorf("%s units problem: %s != %s", name, dd1.Units, dd2.Units)
 		}
-		arrayCompare(dd1.Data, dd2.Data, tolerance, name, t)
+		arrayCompare(dd2.Data, dd1.Data, tolerance, name, t)
 	}
 }
 
@@ -145,7 +184,8 @@ func TestAverage(t *testing.T) {
 func TestCalcLayerHeights(t *testing.T) {
 	const tolerance = 1.0e-8
 
-	layerHeights, dz := calcLayerHeights(PH[0], PHB[0])
+	layerHeights := geopotentialToHeight(PH[0], PHB[0])
+	dz := layerThickness(layerHeights)
 
 	heightsWant := sparse.ZerosDense(11, 2, 2)
 	heightsWant.Elements = []float64{0, 0, 0, 0, 60.57114305088894, 60.693508996446276, 50.455558218147914, 50.59831848796478, 141.23069549744307, 131.33944823155716, 131.13550498896157, 131.54339147415274, 241.7747140970668, 242.28457220355577, 231.8834668311809, 242.79443031004473, 362.3051704710579, 373.21613394992175, 362.7130569562491, 373.92993529900633, 563.4951792916032, 534.025380736541, 482.63168360245345, 535.045096949519, 763.7674435204683, 714.1072639484432, 785.1814839930048, 746.0243814146523, 963.6318212641422, 1015.6373481260166, 985.0458617366787, 996.262740079436, 1465.332198049283, 1415.3661036133644, 1384.7746172240265, 1395.991495566784, 1868.1201021755646, 1918.086196611483, 1888.5144264351231, 1898.7115885649025, 2375.938776238573, 2423.8654382485356, 2394.2936680721755, 2403.471113988977}
@@ -157,7 +197,9 @@ func TestCalcLayerHeights(t *testing.T) {
 }
 
 func TestWetDeposition(t *testing.T) {
-	_, dz := calcLayerHeights(PH[0], PHB[0])
+	const tolerance = 1.0e-8
+	layerHeights := geopotentialToHeight(PH[0], PHB[0])
+	dz := layerThickness(layerHeights)
 	qrainFunc := testNextData(QRAIN)
 	cloudFracFunc := testNextData(QCLOUD)
 	altFunc := testNextData(ALT)
@@ -197,6 +239,7 @@ func TestWindDeviation(t *testing.T) {
 }
 
 func TestWindSpeed(t *testing.T) {
+	const tolerance = 1.0e-8
 	uFunc := testNextData(U)
 	vFunc := testNextData(V)
 	wFunc := testNextData(W)
@@ -230,34 +273,49 @@ func TestWindSpeed(t *testing.T) {
 	arrayCompare(wAvg, wAvgWant, tolerance, "wAvg", t)
 }
 
+func TestTemperature(t *testing.T) {
+	const tolerance = 1.0e-8
+	tempFunc := wrfTemperatureConvert(testNextData(T), wrfPressureConvert(testNextData(P), testNextData(PB)))
+	Temp, err := average(tempFunc)
+	if err != nil {
+		t.Error(err)
+	}
+	// Want values are taken from existing function output, just to avoid regression.
+	TempWant := sparse.ZerosDense([]int{10, 2, 2}...)
+	TempWant.Elements = []float64{279.808286167611, 282.77093912866354, 281.05933619833, 283.10148176991595, 278.90558942027724, 281.93887037798595, 280.1719711763049, 282.27694539848557, 278.03451473475184, 281.10060719333427, 279.3203375385492, 281.4463339873839, 277.1521520449787, 280.2138622644722, 278.4191440049893, 280.60953901975, 276.258261214384, 278.46139922055556, 276.67317947807453, 278.8744515464799, 274.8957773498135, 276.67693664094236, 275.37048717995606, 277.5965341996561, 273.56783559076655, 275.37425990858594, 275.42305570477583, 276.27980873583203, 271.98862752109744, 273.5771846460377, 272.4858597370849, 274.5202235464134, 269.9101027378091, 272.0081183292417, 271.14609288028373, 271.60681981346085, 268.3242695531737, 269.53336375045876, 268.53742776665933, 270.0273862217476}
+	arrayCompare(Temp, TempWant, tolerance, "temperature", t)
+
+}
+
 func TestStabilityMixingChemistry(t *testing.T) {
 	const tolerance = 1.0e-8
-	layerHeights, _ := calcLayerHeights(PH[0], PHB[0])
+	layerHeights := geopotentialToHeight(PH[0], PHB[0])
 
-	TFunc := testNextData(T)
-	PBFunc := testNextData(PB)
-	PFunc := testNextData(P)
 	surfaceHeatFluxFunc := testNextData(HFX)
 	hoFunc := testNextData(ho)
 	h2o2Func := testNextData(h2o2)
-	luIndexFunc := testNextData(LU_INDEX)
 	ustarFunc := testNextData(UST)
 	pblhFunc := testNextData(PBLH)
 	altFunc := testNextData(ALT)
 	qCloudFunc := testNextData(QCLOUD)
-	swDownFunc := testNextData(SWDOWN)
-	glwFunc := testNextData(GLW)
 	qrainFunc := testNextData(QRAIN)
 
-	Temp, Sclass, S1, KzzUnstaggered, M2u, M2d, SO2oxidation, particleDryDep, SO2DryDep, NOxDryDep, NH3DryDep, VOCDryDep, Kyy, err := stabilityMixingChemistry(layerHeights, pblhFunc, ustarFunc, altFunc, TFunc,
-		PBFunc, PFunc, surfaceHeatFluxFunc, hoFunc, h2o2Func, luIndexFunc, qCloudFunc, swDownFunc, glwFunc, qrainFunc)
+	pFunc := wrfPressureConvert(testNextData(P), testNextData(PB))
+	tempFunc := wrfTemperatureConvert(testNextData(T), wrfPressureConvert(testNextData(P), testNextData(PB)))
+
+	radiationDownFunc := wrfRadiationDown(testNextData(SWDOWN), testNextData(GLW))
+
+	z0Func := wrfZ0(testNextData(LUIndex))
+	seinfeldLandUseFunc := wrfSeinfeldLandUse(testNextData(LUIndex))
+	weselyLandUseFunc := wrfWeselyLandUse(testNextData(LUIndex))
+
+	Sclass, S1, KzzUnstaggered, M2u, M2d, SO2oxidation, particleDryDep, SO2DryDep, NOxDryDep, NH3DryDep, VOCDryDep, Kyy, err := stabilityMixingChemistry(layerHeights, pblhFunc, ustarFunc, altFunc, tempFunc,
+		pFunc, surfaceHeatFluxFunc, hoFunc, h2o2Func, z0Func, seinfeldLandUseFunc, weselyLandUseFunc, qCloudFunc, radiationDownFunc, qrainFunc)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Want values are taken from existing function output, just to avoid regression.
-	TempWant := sparse.ZerosDense([]int{10, 2, 2}...)
-	TempWant.Elements = []float64{279.808286167611, 282.77093912866354, 281.05933619833, 283.10148176991595, 278.90558942027724, 281.93887037798595, 280.1719711763049, 282.27694539848557, 278.03451473475184, 281.10060719333427, 279.3203375385492, 281.4463339873839, 277.1521520449787, 280.2138622644722, 278.4191440049893, 280.60953901975, 276.258261214384, 278.46139922055556, 276.67317947807453, 278.8744515464799, 274.8957773498135, 276.67693664094236, 275.37048717995606, 277.5965341996561, 273.56783559076655, 275.37425990858594, 275.42305570477583, 276.27980873583203, 271.98862752109744, 273.5771846460377, 272.4858597370849, 274.5202235464134, 269.9101027378091, 272.0081183292417, 271.14609288028373, 271.60681981346085, 268.3242695531737, 269.53336375045876, 268.53742776665933, 270.0273862217476}
 	SclassWant := sparse.ZerosDense([]int{10, 2, 2}...)
 	SclassWant.Elements = []float64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.5, 0.5, 0.5, 0.5, 0.5, 0, 0.5, 1, 0.5, 1, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0, 0, 0, 0}
 	S1Want := sparse.ZerosDense([]int{10, 2, 2}...)
@@ -283,11 +341,11 @@ func TestStabilityMixingChemistry(t *testing.T) {
 	KyyWant := sparse.ZerosDense([]int{10, 2, 2}...)
 	KyyWant.Elements = []float64{3.314078249333397, 1.6963492952810897, 2.2043457151327797, 1.7755557553414636, 5.81661362886252, 2.4524110263991976, 4.127658827070609, 3.2998877771882564, 5.178982032133868, 2.163232562976917, 4.133745757981916, 3.4080629388484924, 3.0245935106815245, 1.4093207475370766, 3.0880710514206777, 2.764735389058494, 0.5030066407522406, 0.6084716233029834, 1.8236003202595226, 1.8249670827324578, 3, 0.07489190318322451, 1.8373335564537299, 0.8183546621141308, 3, 3, 3, 1.6039803699322372, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3}
 
-	want := []*sparse.DenseArray{TempWant,
+	want := []*sparse.DenseArray{
 		SclassWant, S1Want, KzzUnstaggeredWant, M2uWant, M2dWant, SO2oxidationWant,
 		particleDryDepWant, SO2DryDepWant, NOxDryDepWant, NH3DryDepWant, VOCDryDepWant, KyyWant}
 
-	for i, arr := range []*sparse.DenseArray{Temp,
+	for i, arr := range []*sparse.DenseArray{
 		Sclass, S1, KzzUnstaggered, M2u, M2d, SO2oxidation,
 		particleDryDep, SO2DryDep, NOxDryDep, NH3DryDep, VOCDryDep, Kyy} {
 		arrayCompare(arr, want[i], tolerance, fmt.Sprintf("%d", i), t)
@@ -301,8 +359,233 @@ func arrayCompare(have, want *sparse.DenseArray, tolerance float64, name string,
 	}
 	for i, wantv := range want.Elements {
 		havev := have.Elements[i]
+		if math.IsNaN(havev) || math.IsInf(havev, 0) {
+			t.Errorf("%s, element %d: is %g", name, i, havev)
+		} else if math.IsNaN(wantv) || math.IsInf(wantv, 0) {
+			t.Errorf("%s, golden data element %d: is %g", name, i, wantv)
+		}
 		if math.Abs(havev-wantv)/math.Abs(havev+wantv)*2 > tolerance {
 			t.Errorf("%s, element %d: want %g but have %g", name, i, wantv, havev)
 		}
+	}
+}
+
+func TestReadVegTypeGlobal(t *testing.T) {
+	// vegtype.global example data from
+	// http://wiki.seas.harvard.edu/geos-chem/index.php/Olson_land_map#Structure_of_the_vegtype.global_file
+	const data = `  20  13   1   01000
+  21  13   1   01000
+  22  13   5   0  41  24  31  67 811  25  62  76  26
+  23  13   4  41  24  52  31 137 175 650  38
+  24  13   5  52   8   0  41  31 589  62 298  25  26
+`
+
+	b := bytes.NewBufferString(data)
+	result, err := readVegTypeGlobal(b, 13, 24)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := []struct {
+		index []int
+		val   float64
+	}{
+		{
+			index: []int{0, 12, 19},
+			val:   1,
+		},
+		{
+			index: []int{0, 12, 20},
+			val:   1,
+		},
+		{
+			index: []int{0, 12, 21},
+			val:   0.811,
+		},
+		{
+			index: []int{41, 12, 21},
+			val:   0.025,
+		},
+		{
+			index: []int{24, 12, 21},
+			val:   0.062,
+		},
+		{
+			index: []int{31, 12, 21},
+			val:   0.076,
+		},
+		{
+			index: []int{67, 12, 21},
+			val:   0.026,
+		},
+		{
+			index: []int{41, 12, 22},
+			val:   0.137,
+		},
+		{
+			index: []int{24, 12, 22},
+			val:   0.175,
+		},
+		{
+			index: []int{52, 12, 22},
+			val:   0.650,
+		},
+		{
+			index: []int{31, 12, 22},
+			val:   0.038,
+		},
+		{
+			index: []int{52, 12, 23},
+			val:   0.589,
+		},
+		{
+			index: []int{8, 12, 23},
+			val:   0.062,
+		},
+		{
+			index: []int{0, 12, 23},
+			val:   0.298,
+		},
+		{
+			index: []int{41, 12, 23},
+			val:   0.025,
+		},
+		{
+			index: []int{31, 12, 23},
+			val:   0.026,
+		},
+	}
+	for i, w := range want {
+		v := result.Get(w.index...)
+		if math.Abs(v-w.val)/(v+w.val)*2 > 1.0e-8 {
+			t.Errorf("%d: want %g but have %g", i, w.val, v)
+		}
+	}
+	lu := largestLandUse(result)
+	for j := 0; j < lu.Shape[0]; j++ {
+		for i := 0; i < lu.Shape[1]; i++ {
+			v := lu.Get(j, i)
+			if (j == 12 && i == 23) || (j == 12 && i == 22) {
+				if v != 52 {
+					t.Errorf("largestLandUse j=%d, i=%d: want 52 but have %g", j, i, v)
+				}
+			} else {
+				if v != 0 {
+					t.Errorf("largestLandUse j=%d, i=%d: want 0 but have %g", j, i, v)
+				}
+			}
+		}
+	}
+}
+
+func TestGeosLayerConvert(t *testing.T) {
+	convFull := geosLayerConvert(72)
+	convChem := geosLayerConvert(47)
+
+	a := sparse.ZerosDense(72, 1, 1)
+	for i := range a.Elements {
+		a.Elements[i] = float64(i)
+	}
+	b := sparse.ZerosDense(73, 1, 1)
+	for i := range b.Elements {
+		b.Elements[i] = float64(i)
+	}
+	c := sparse.ZerosDense(1, 1)
+	c.Elements[0] = 6
+	d := sparse.ZerosDense(1, 1, 1)
+	d.Elements[0] = 12
+
+	resultUnstaggered := sparse.ZerosDense(47, 1, 1)
+	resultUnstaggered.Elements = []float64{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36.5, 38.5, 40.5, 42.5, 45.5, 49.5, 53.5, 57.5, 61.5, 65.5, 69.5}
+
+	resultStaggered := sparse.ZerosDense(48, 1, 1)
+	resultStaggered.Elements = []float64{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 38, 40, 42, 44, 48, 52, 56, 60, 64, 68, 72}
+
+	tests := []struct {
+		name      string
+		f         func(NextData) NextData
+		v, result *sparse.DenseArray
+	}{
+		{
+			name:   "full",
+			f:      convFull,
+			v:      a,
+			result: a,
+		},
+		{
+			name:   "unstaggered",
+			f:      convChem,
+			v:      a,
+			result: resultUnstaggered,
+		},
+		{
+			name:   "staggered",
+			f:      convChem,
+			v:      b,
+			result: resultStaggered,
+		},
+		{
+			name:   "2d-c",
+			f:      convChem,
+			v:      c,
+			result: c,
+		},
+		{
+			name:   "2d-d",
+			f:      convChem,
+			v:      d,
+			result: d,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result, err := average(test.f(testNextData([]*sparse.DenseArray{test.v, test.v})))
+			if err != nil {
+				t.Fatal(err)
+			}
+			arrayCompare(result, test.result, 1.0e-8, test.name, t)
+		})
+	}
+}
+
+func TestStagger(t *testing.T) {
+	a := sparse.ZerosDense(2, 2, 2)
+	a.Elements = []float64{
+		0, 1,
+		2, 3,
+		4, 5,
+		6, 7,
+	}
+
+	k := sparse.ZerosDense(3, 2, 2)
+	k.Elements = []float64{
+		0, 1, 2, 3,
+		2, 3, 4, 5,
+		4, 5, 6, 7,
+	}
+
+	j := sparse.ZerosDense(2, 3, 2)
+	j.Elements = []float64{
+		0, 1,
+		1, 2,
+		2, 3,
+		4, 5,
+		5, 6,
+		6, 7,
+	}
+
+	i := sparse.ZerosDense(2, 2, 3)
+	i.Elements = []float64{
+		0, 0.5, 1,
+		2, 2.5, 3,
+		4, 4.5, 5,
+		6, 6.5, 7,
+	}
+
+	want := []*sparse.DenseArray{k, j, i}
+
+	for dim := 0; dim < 3; dim++ {
+		result := staggerWorker(a, dim)
+		arrayCompare(result, want[dim], 1.0e-8, fmt.Sprintf("dim %d", dim), t)
 	}
 }

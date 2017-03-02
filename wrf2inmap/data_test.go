@@ -21,73 +21,73 @@ package main
 import "bitbucket.org/ctessum/sparse"
 
 var (
-	h2o2      []*sparse.DenseArray
-	SWDOWN    []*sparse.DenseArray
-	cvbsoa3   []*sparse.DenseArray
-	so4aj     []*sparse.DenseArray
-	cvasoa2   []*sparse.DenseArray
-	cvbsoa2   []*sparse.DenseArray
-	asoa3j    []*sparse.DenseArray
-	PBLH      []*sparse.DenseArray
-	CLDFRA    []*sparse.DenseArray
-	nh4ai     []*sparse.DenseArray
-	PM2_5_DRY []*sparse.DenseArray
-	olt       []*sparse.DenseArray
-	cvbsoa1   []*sparse.DenseArray
-	lim       []*sparse.DenseArray
-	no3ai     []*sparse.DenseArray
-	bsoa2i    []*sparse.DenseArray
-	asoa1i    []*sparse.DenseArray
-	PH        []*sparse.DenseArray
-	api       []*sparse.DenseArray
-	sesq      []*sparse.DenseArray
-	iso       []*sparse.DenseArray
-	HFX       []*sparse.DenseArray
-	PB        []*sparse.DenseArray
-	ho        []*sparse.DenseArray
-	nh4aj     []*sparse.DenseArray
-	QCLOUD    []*sparse.DenseArray
-	asoa4j    []*sparse.DenseArray
-	W         []*sparse.DenseArray
-	ALT       []*sparse.DenseArray
-	P         []*sparse.DenseArray
-	no2       []*sparse.DenseArray
-	hc8       []*sparse.DenseArray
-	no3aj     []*sparse.DenseArray
-	cvasoa1   []*sparse.DenseArray
-	UST       []*sparse.DenseArray
-	tol       []*sparse.DenseArray
-	bsoa3i    []*sparse.DenseArray
-	LU_INDEX  []*sparse.DenseArray
-	oli       []*sparse.DenseArray
-	bsoa2j    []*sparse.DenseArray
-	bsoa4j    []*sparse.DenseArray
-	asoa4i    []*sparse.DenseArray
-	asoa2j    []*sparse.DenseArray
-	hc5       []*sparse.DenseArray
-	asoa2i    []*sparse.DenseArray
-	no        []*sparse.DenseArray
-	cvasoa3   []*sparse.DenseArray
-	xyl       []*sparse.DenseArray
-	asoa1j    []*sparse.DenseArray
-	so2       []*sparse.DenseArray
-	sulf      []*sparse.DenseArray
-	asoa3i    []*sparse.DenseArray
-	PHB       []*sparse.DenseArray
-	U         []*sparse.DenseArray
-	V         []*sparse.DenseArray
-	QRAIN     []*sparse.DenseArray
-	cvbsoa4   []*sparse.DenseArray
-	GLW       []*sparse.DenseArray
-	T         []*sparse.DenseArray
-	so4ai     []*sparse.DenseArray
-	nh3       []*sparse.DenseArray
-	bsoa3j    []*sparse.DenseArray
-	bsoa4i    []*sparse.DenseArray
-	cvasoa4   []*sparse.DenseArray
-	bsoa1i    []*sparse.DenseArray
-	bsoa1j    []*sparse.DenseArray
-	csl       []*sparse.DenseArray
+	h2o2    []*sparse.DenseArray
+	SWDOWN  []*sparse.DenseArray
+	cvbsoa3 []*sparse.DenseArray
+	so4aj   []*sparse.DenseArray
+	cvasoa2 []*sparse.DenseArray
+	cvbsoa2 []*sparse.DenseArray
+	asoa3j  []*sparse.DenseArray
+	PBLH    []*sparse.DenseArray
+	CLDFRA  []*sparse.DenseArray
+	nh4ai   []*sparse.DenseArray
+	PM25DRY []*sparse.DenseArray
+	olt     []*sparse.DenseArray
+	cvbsoa1 []*sparse.DenseArray
+	lim     []*sparse.DenseArray
+	no3ai   []*sparse.DenseArray
+	bsoa2i  []*sparse.DenseArray
+	asoa1i  []*sparse.DenseArray
+	PH      []*sparse.DenseArray
+	api     []*sparse.DenseArray
+	sesq    []*sparse.DenseArray
+	iso     []*sparse.DenseArray
+	HFX     []*sparse.DenseArray
+	PB      []*sparse.DenseArray
+	ho      []*sparse.DenseArray
+	nh4aj   []*sparse.DenseArray
+	QCLOUD  []*sparse.DenseArray
+	asoa4j  []*sparse.DenseArray
+	W       []*sparse.DenseArray
+	ALT     []*sparse.DenseArray
+	P       []*sparse.DenseArray
+	no2     []*sparse.DenseArray
+	hc8     []*sparse.DenseArray
+	no3aj   []*sparse.DenseArray
+	cvasoa1 []*sparse.DenseArray
+	UST     []*sparse.DenseArray
+	tol     []*sparse.DenseArray
+	bsoa3i  []*sparse.DenseArray
+	LUIndex []*sparse.DenseArray
+	oli     []*sparse.DenseArray
+	bsoa2j  []*sparse.DenseArray
+	bsoa4j  []*sparse.DenseArray
+	asoa4i  []*sparse.DenseArray
+	asoa2j  []*sparse.DenseArray
+	hc5     []*sparse.DenseArray
+	asoa2i  []*sparse.DenseArray
+	no      []*sparse.DenseArray
+	cvasoa3 []*sparse.DenseArray
+	xyl     []*sparse.DenseArray
+	asoa1j  []*sparse.DenseArray
+	so2     []*sparse.DenseArray
+	sulf    []*sparse.DenseArray
+	asoa3i  []*sparse.DenseArray
+	PHB     []*sparse.DenseArray
+	U       []*sparse.DenseArray
+	V       []*sparse.DenseArray
+	QRAIN   []*sparse.DenseArray
+	cvbsoa4 []*sparse.DenseArray
+	GLW     []*sparse.DenseArray
+	T       []*sparse.DenseArray
+	so4ai   []*sparse.DenseArray
+	nh3     []*sparse.DenseArray
+	bsoa3j  []*sparse.DenseArray
+	bsoa4i  []*sparse.DenseArray
+	cvasoa4 []*sparse.DenseArray
+	bsoa1i  []*sparse.DenseArray
+	bsoa1j  []*sparse.DenseArray
+	csl     []*sparse.DenseArray
 )
 
 func init() {
@@ -277,12 +277,12 @@ func init() {
 	}
 	nh4ai[0].Elements = []float64{0.014, 0.024, 0.0067, 0.013, 0.013, 0.02, 0.0064, 0.0097, 0.013, 0.018, 0.0061, 0.0083, 0.012, 0.017, 0.0057, 0.0075, 0.009, 0.016, 0.0039, 0.0067, 0.0013, 0.012, 0.00047, 0.0036, 0.00013, 0.0022, 7.5e-05, 0.00084, 9.2e-05, 0.00012, 9.3e-05, 0.00016, 8.1e-05, 6.4e-05, 0.0001, 0.00011, 3.7e-05, 5.4e-05, 5.3e-05, 9.3e-05}
 	nh4ai[1].Elements = []float64{0.068, 0.071, 0.056, 0.062, 0.067, 0.071, 0.054, 0.07, 0.065, 0.072, 0.053, 0.071, 0.063, 0.073, 0.052, 0.071, 0.046, 0.075, 0.05, 0.071, 0.049, 0.074, 0.044, 0.07, 0.048, 0.069, 0.042, 0.067, 0.034, 0.045, 0.033, 0.065, 0.0054, 0.017, 0.0069, 0.023, 7.6e-05, 0.0026, 0.00014, 0.0028}
-	PM2_5_DRY = []*sparse.DenseArray{
+	PM25DRY = []*sparse.DenseArray{
 		sparse.ZerosDense(10, 2, 2),
 		sparse.ZerosDense(10, 2, 2),
 	}
-	PM2_5_DRY[0].Elements = []float64{0.91, 1.1, 0.94, 1.2, 0.9, 1, 0.92, 1.1, 0.89, 1, 0.9, 0.99, 0.88, 0.96, 0.88, 0.94, 0.84, 0.93, 0.85, 0.89, 0.73, 0.88, 0.75, 0.82, 0.66, 0.75, 0.68, 0.75, 0.6, 0.65, 0.64, 0.68, 0.56, 0.59, 0.6, 0.62, 0.56, 0.56, 0.57, 0.59}
-	PM2_5_DRY[1].Elements = []float64{2.8, 2.9, 2.8, 3, 2.8, 2.8, 2.8, 2.9, 2.7, 2.7, 2.8, 2.8, 2.7, 2.7, 2.7, 2.7, 2.8, 2.6, 2.7, 2.7, 2.7, 2.6, 2.7, 2.6, 2.5, 2.5, 2.6, 2.6, 2.3, 2.3, 2.4, 2.5, 1.3, 1.8, 1.5, 2, 0.66, 1.1, 0.75, 1.1}
+	PM25DRY[0].Elements = []float64{0.91, 1.1, 0.94, 1.2, 0.9, 1, 0.92, 1.1, 0.89, 1, 0.9, 0.99, 0.88, 0.96, 0.88, 0.94, 0.84, 0.93, 0.85, 0.89, 0.73, 0.88, 0.75, 0.82, 0.66, 0.75, 0.68, 0.75, 0.6, 0.65, 0.64, 0.68, 0.56, 0.59, 0.6, 0.62, 0.56, 0.56, 0.57, 0.59}
+	PM25DRY[1].Elements = []float64{2.8, 2.9, 2.8, 3, 2.8, 2.8, 2.8, 2.9, 2.7, 2.7, 2.8, 2.8, 2.7, 2.7, 2.7, 2.7, 2.8, 2.6, 2.7, 2.7, 2.7, 2.6, 2.7, 2.6, 2.5, 2.5, 2.6, 2.6, 2.3, 2.3, 2.4, 2.5, 1.3, 1.8, 1.5, 2, 0.66, 1.1, 0.75, 1.1}
 	olt = []*sparse.DenseArray{
 		sparse.ZerosDense(10, 2, 2),
 		sparse.ZerosDense(10, 2, 2),
@@ -481,12 +481,12 @@ func init() {
 	}
 	hc5[0].Elements = []float64{0.0013, 0.0019, 0.0017, 0.0024, 0.0013, 0.0016, 0.0015, 0.002, 0.0013, 0.0015, 0.0014, 0.0017, 0.0013, 0.0014, 0.0013, 0.0015, 0.0012, 0.0013, 0.0012, 0.0014, 0.0011, 0.0012, 0.0011, 0.0012, 0.001, 0.0011, 0.0011, 0.0011, 0.001, 0.001, 0.001, 0.0011, 0.00086, 0.00096, 0.00092, 0.001, 0.00069, 0.00085, 0.00076, 0.0009}
 	hc5[1].Elements = []float64{0.0027, 0.0039, 0.0027, 0.0042, 0.0026, 0.0036, 0.0024, 0.0039, 0.0026, 0.0035, 0.0023, 0.0037, 0.0025, 0.0034, 0.0022, 0.0036, 0.0024, 0.0033, 0.0021, 0.0035, 0.0022, 0.003, 0.0019, 0.0033, 0.0021, 0.0026, 0.0018, 0.0032, 0.0016, 0.0018, 0.0016, 0.0023, 0.00082, 0.0011, 0.00091, 0.0013, 0.00057, 0.00071, 0.00062, 0.00075}
-	LU_INDEX = []*sparse.DenseArray{
+	LUIndex = []*sparse.DenseArray{
 		sparse.ZerosDense(2, 2),
 		sparse.ZerosDense(2, 2),
 	}
-	LU_INDEX[0].Elements = []float64{10, 8, 8, 8}
-	LU_INDEX[1].Elements = []float64{10, 8, 8, 8}
+	LUIndex[0].Elements = []float64{10, 8, 8, 8}
+	LUIndex[1].Elements = []float64{10, 8, 8, 8}
 	asoa2i = []*sparse.DenseArray{
 		sparse.ZerosDense(10, 2, 2),
 		sparse.ZerosDense(10, 2, 2),

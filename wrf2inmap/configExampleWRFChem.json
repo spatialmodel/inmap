@@ -1,14 +1,14 @@
 {
-	"Wrfout": "testdata/wrfout_d01_[DATE]",
-	"OutputDir": "testdata",
-	"OutputFilePrefix": "inmapData",
+	"CTMType": "WRF-Chem",
+	"WRFChem": {
+	  "WRFOut": "testdata/wrfout_d01_[DATE]"
+  },
+	"OutputFile": "testdata/inmapData_WRFChem.ncf",
 	"StartDate": "20050101",
-	"EndDate": "20050102",
+	"EndDate": "20050103",
 	"CtmGridXo": -2004000,
 	"CtmGridYo": -540000,
 	"CtmGridDx": 12000,
 	"CtmGridDy": 12000,
-	"CtmGridNx": 2,
-	"CtmGridNy": 2,
 	"GridProj": "+proj=lcc +lat_1=33.000000 +lat_2=45.000000 +lat_0=40.000000 +lon_0=-97.000000 +x_0=0 +y_0=0 +a=6370997.000000 +b=6370997.000000 +to_meter=1"
 }

@@ -23,7 +23,6 @@ import (
 	"io"
 	"math"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -48,6 +47,8 @@ const (
 	g        = 9.80665 // m/s2
 	κ        = 0.41    // Von Kármán constant
 	atmPerPa = 9.86923267e-6
+	rr       = 287.058    // (J /kg K), specific gas constant for dry air
+	avNum    = 6.02214e23 // molecules per mole
 )
 
 // NextData is a type of function that returns data for the next time step.
@@ -57,25 +58,34 @@ type NextData func() (*sparse.DenseArray, error)
 // Preprocessor specifies the methods that are necessary for a
 // variable to act as a preprocessor for InMAP inputs.
 type Preprocessor interface {
+	// Nx is the number of grid cells in the West-East direction.
+	Nx() (int, error)
+	// Ny is the number of grid cells in the South-North direction.
+	Ny() (int, error)
+	// Nz is the number of grid cells in the below-above direction.
+	Nz() (int, error)
+
 	// PBLH is planetary boundary layer height [m].
 	PBLH() NextData
-	// PHB is baseline geopotential height [m2/s].
-	PHB() NextData
-	// PH is perturbation geopotential height [m2/s].
-	PH() NextData
+	// Height is vertical layer height above ground [m].
+	Height() NextData
 	// ALT is inverse air density [m3/kg].
 	ALT() NextData
-	// T is temperature perturbation potential temperature [K].
+	// T temperature [K].
 	T() NextData
-	// PB is baseline pressure [Pa].
-	PB() NextData
-	// PB is perturbation pressure [Pa].
+	// P is pressure [Pa].
 	P() NextData
 
 	// UStar is friction velocity [m/s].
 	UStar() NextData
-	// LUIndex is USGS land use index.
-	LUIndex() NextData
+	// SeinfeldLandUse is land use categories as
+	// specified in github.com/ctessum/atmos/seinfeld.
+	SeinfeldLandUse() NextData
+	// WeselyLandUse is land use categories as
+	// specified in github.com/ctessum/atmos/wesely1989.
+	WeselyLandUse() NextData
+	// Z0 is surface roughness length [m].
+	Z0() NextData
 
 	// QRain is the mass fraction of rain [mass/mass].
 	QRain() NextData
@@ -86,10 +96,8 @@ type Preprocessor interface {
 
 	// SurfaceHeatFlux is heat flux at the surface [W/m2].
 	SurfaceHeatFlux() NextData
-	// SWDown is downwelling short wave radiation at ground level [W/m2].
-	SWDown() NextData
-	// GLW is downwelling long wave radiation at ground level [W/m2].
-	GLW() NextData
+	// RadiationDown is total downwelling radiation [W m-2].
+	RadiationDown() NextData
 
 	// U is West-East wind speed [m/s].
 	U() NextData
@@ -134,7 +142,7 @@ type Preprocessor interface {
 // based on the information available from the given
 // preprocessor.
 func Preprocess(p Preprocessor, config *ConfigInfo) error {
-	var pblh, ph, phb, windSpeed, windSpeedInverse, windSpeedMinusThird, windSpeedMinusOnePointFour, uAvg, vAvg, wAvg *sparse.DenseArray
+	var pblh, layerHeights, windSpeed, windSpeedInverse, windSpeedMinusThird, windSpeedMinusOnePointFour, uAvg, vAvg, wAvg *sparse.DenseArray
 
 	errChan := make(chan error)
 
@@ -146,12 +154,7 @@ func Preprocess(p Preprocessor, config *ConfigInfo) error {
 
 	go func() {
 		var err error
-		ph, err = average(p.PH())
-		errChan <- err
-	}()
-	go func() {
-		var err error
-		phb, err = average(p.PHB())
+		layerHeights, err = average(p.Height())
 		errChan <- err
 	}()
 
@@ -161,14 +164,14 @@ func Preprocess(p Preprocessor, config *ConfigInfo) error {
 		errChan <- err
 	}()
 
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 3; i++ {
 		err := <-errChan
 		if err != nil {
 			return err
 		}
 	}
 
-	layerHeights, Dz := calcLayerHeights(ph, phb)
+	Dz := layerThickness(layerHeights)
 
 	var uDeviation, vDeviation, aOrgPartitioning, aVOC, aSOA, bOrgPartitioning, bVOC, bSOA,
 		NOPartitioning, gNO, pNO, SPartitioning, gS, pS, NHPartitioning, gNH, pNH, totalpm25,
@@ -238,25 +241,27 @@ func Preprocess(p Preprocessor, config *ConfigInfo) error {
 
 	go func() {
 		var err error
-		// Calculate stability for plume rise, vertical mixing,
-		// and chemical reaction rates.
-		temperature, Sclass, S1, Kzz, M2u, M2d, SO2oxidation, particleDryDep, SO2DryDep,
-			NOxDryDep, NH3DryDep, VOCDryDep, Kxxyy, err = stabilityMixingChemistry(layerHeights, p.PBLH(),
-			p.UStar(), p.ALT(), p.T(), p.PB(), p.P(), p.SurfaceHeatFlux(), p.HO(), p.H2O2(),
-			p.LUIndex(), p.QCloud(), p.SWDown(), p.GLW(), p.QRain())
+		temperature, err = average(p.T())
 		errChan <- err
 	}()
 
-	for i := 0; i < 11; i++ {
+	go func() {
+		var err error
+		// Calculate stability for plume rise, vertical mixing,
+		// and chemical reaction rates.
+		Sclass, S1, Kzz, M2u, M2d, SO2oxidation, particleDryDep, SO2DryDep,
+			NOxDryDep, NH3DryDep, VOCDryDep, Kxxyy, err = stabilityMixingChemistry(layerHeights, p.PBLH(),
+			p.UStar(), p.ALT(), p.T(), p.P(), p.SurfaceHeatFlux(), p.HO(), p.H2O2(),
+			p.Z0(), p.SeinfeldLandUse(), p.WeselyLandUse(), p.QCloud(), p.RadiationDown(), p.QRain())
+		errChan <- err
+	}()
+
+	for i := 0; i < 12; i++ {
 		err := <-errChan
 		if err != nil {
 			return err
 		}
 	}
-
-	// write out data to file
-	outputFile := filepath.Join(config.OutputDir, config.OutputFilePrefix+".ncf")
-	fmt.Printf("Writing out data to %v...\n", outputFile)
 
 	data := new(inmap.CTMData)
 	data.AddVariable("UAvg", []string{"z", "y", "xStagger"},
@@ -363,9 +368,9 @@ func Preprocess(p Preprocessor, config *ConfigInfo) error {
 	data.AddVariable("TotalPM25", []string{"z", "y", "x"},
 		"Total PM2.5 concentration", "ug m-3", totalpm25)
 
-	ff, err := os.Create(outputFile)
+	ff, err := os.Create(config.OutputFile)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("inmap: preprocessor writing output file: %v", err)
 	}
 	data.Write(ff, config.CtmGridXo, config.CtmGridYo, config.CtmGridDx, config.CtmGridDy)
 	ff.Close()
@@ -450,26 +455,19 @@ func average(dataFunc NextData) (*sparse.DenseArray, error) {
 	}
 }
 
-// calcLayerHeights calculates the heights above the ground
-// of the layers (in meters).
-// For more information, refer to
-// http://www.openwfm.org/wiki/How_to_interpret_WRF_variables
-func calcLayerHeights(ph, phb *sparse.DenseArray) (layerHeights, Dz *sparse.DenseArray) {
-	layerHeights = sparse.ZerosDense(ph.Shape...)
-	Dz = sparse.ZerosDense(ph.Shape[0]-1, ph.Shape[1], ph.Shape[2])
-	for k := 0; k < ph.Shape[0]; k++ {
-		for j := 0; j < ph.Shape[1]; j++ {
-			for i := 0; i < ph.Shape[2]; i++ {
-				h := (ph.Get(k, j, i) + phb.Get(k, j, i) -
-					ph.Get(0, j, i) - phb.Get(0, j, i)) / g // m
-				layerHeights.Set(h, k, j, i)
-				if k > 0 {
-					Dz.Set(h-layerHeights.Get(k-1, j, i), k-1, j, i)
-				}
+// layerThckness calculates layer thickness. The given heights are
+// assumed to be on a vertically staggered grid; the returned
+// thicknesses are on an unstaggered grid.
+func layerThickness(heights *sparse.DenseArray) *sparse.DenseArray {
+	dz := sparse.ZerosDense(heights.Shape[0]-1, heights.Shape[1], heights.Shape[2])
+	for k := 1; k < heights.Shape[0]; k++ {
+		for j := 0; j < heights.Shape[1]; j++ {
+			for i := 0; i < heights.Shape[2]; i++ {
+				dz.Set(heights.Get(k, j, i)-heights.Get(k-1, j, i), k-1, j, i)
 			}
 		}
 	}
-	return
+	return dz
 }
 
 // wetDeposition calculates wet deposition based on layer heights,
@@ -560,7 +558,6 @@ func calcWindSpeed(uFunc, vFunc, wFunc NextData) (speed, speedInverse, speedMinu
 		if err != nil {
 			return nil, nil, nil, nil, nil, nil, nil, err
 		}
-
 		if firstData {
 			uAvg = sparse.ZerosDense(u.Shape...)
 			vAvg = sparse.ZerosDense(v.Shape...)
@@ -599,6 +596,7 @@ func calcWindSpeed(uFunc, vFunc, wFunc NextData) (speed, speedInverse, speedMinu
 				}
 			}
 		}
+		n++
 	}
 }
 
@@ -612,74 +610,6 @@ func minInt(vals ...int) int {
 	return minval
 }
 
-// USGSz0 holds Roughness lengths for USGS land classes ([m]), from WRF file
-// VEGPARM.TBL.
-var USGSz0 = []float64{.50, .1, .06, .1, 0.095, .20, .11,
-	.03, .035, .15, .50, .50, .50, .50, .35, 0.0001, .20, .40,
-	.01, .10, .30, .15, .075, 0.001, .01, .15, .01}
-
-// USGSseinfeld lookup table to go from USGS land classes to land classes for
-// particle dry deposition.
-var USGSseinfeld = []seinfeld.LandUseCategory{
-	seinfeld.Desert,    //'Urban and Built-Up Land'
-	seinfeld.Grass,     //'Dryland Cropland and Pasture'
-	seinfeld.Grass,     //'Irrigated Cropland and Pasture'
-	seinfeld.Grass,     //'Mixed Dryland/Irrigated Cropland and Pasture'
-	seinfeld.Grass,     //'Cropland/Grassland Mosaic'
-	seinfeld.Grass,     //'Cropland/Woodland Mosaic'
-	seinfeld.Grass,     //'Grassland'
-	seinfeld.Shrubs,    //'Shrubland'
-	seinfeld.Shrubs,    //'Mixed Shrubland/Grassland'
-	seinfeld.Grass,     //'Savanna'
-	seinfeld.Deciduous, //'Deciduous Broadleaf Forest'
-	seinfeld.Evergreen, //'Deciduous Needleleaf Forest'
-	seinfeld.Deciduous, //'Evergreen Broadleaf Forest'
-	seinfeld.Evergreen, //'Evergreen Needleleaf Forest'
-	seinfeld.Deciduous, //'Mixed Forest'
-	seinfeld.Desert,    //'Water Bodies'
-	seinfeld.Grass,     //'Herbaceous Wetland'
-	seinfeld.Deciduous, //'Wooded Wetland'
-	seinfeld.Desert,    //'Barren or Sparsely Vegetated'
-	seinfeld.Shrubs,    //'Herbaceous Tundra'
-	seinfeld.Deciduous, //'Wooded Tundra'
-	seinfeld.Shrubs,    //'Mixed Tundra'
-	seinfeld.Desert,    //'Bare Ground Tundra'
-	seinfeld.Desert,    //'Snow or Ice'
-	seinfeld.Desert,    //'Playa'
-	seinfeld.Desert,    //'Lava'
-	seinfeld.Desert}    //'White Sand'
-
-// USGSwesely lookup table to go from USGS land classes to land classes for
-// gas dry deposition.
-var USGSwesely = []wesely1989.LandUseCategory{
-	wesely1989.Urban,        //'Urban and Built-Up Land'
-	wesely1989.RangeAg,      //'Dryland Cropland and Pasture'
-	wesely1989.RangeAg,      //'Irrigated Cropland and Pasture'
-	wesely1989.RangeAg,      //'Mixed Dryland/Irrigated Cropland and Pasture'
-	wesely1989.RangeAg,      //'Cropland/Grassland Mosaic'
-	wesely1989.Agricultural, //'Cropland/Woodland Mosaic'
-	wesely1989.Range,        //'Grassland'
-	wesely1989.RockyShrubs,  //'Shrubland'
-	wesely1989.RangeAg,      //'Mixed Shrubland/Grassland'
-	wesely1989.Range,        //'Savanna'
-	wesely1989.Deciduous,    //'Deciduous Broadleaf Forest'
-	wesely1989.Coniferous,   //'Deciduous Needleleaf Forest'
-	wesely1989.Deciduous,    //'Evergreen Broadleaf Forest'
-	wesely1989.Coniferous,   //'Evergreen Needleleaf Forest'
-	wesely1989.MixedForest,  //'Mixed Forest'
-	wesely1989.Water,        //'Water Bodies'
-	wesely1989.Wetland,      //'Herbaceous Wetland'
-	wesely1989.Wetland,      //'Wooded Wetland'
-	wesely1989.Barren,       //'Barren or Sparsely Vegetated'
-	wesely1989.RockyShrubs,  //'Herbaceous Tundra'
-	wesely1989.MixedForest,  //'Wooded Tundra'
-	wesely1989.RockyShrubs,  //'Mixed Tundra'
-	wesely1989.Barren,       //'Bare Ground Tundra'
-	wesely1989.Barren,       //'Snow or Ice'
-	wesely1989.Barren,       //'Playa'
-	wesely1989.Barren,       //'Lava'
-	wesely1989.Barren}       //'White Sand'
-
 // stabilityMixingChemistry calculates:
 // 1) Stability parameters for use in plume rise calculation (ASME, 1973,
 // as described in Seinfeld and Pandis, 2006).
@@ -692,24 +622,22 @@ var USGSwesely = []wesely1989.LandUseCategory{
 // 5) Horizontal eddy diffusion coefficient (Kyy, [m2/s]) assumed to be the
 // same as vertical eddy diffusivity.
 //
-// Inputs are layer heights (m), friction velocity (ustar, m/s),
-// planetary boundary layer height (pblh, m), inverse density (m3/kg),
-// perturbation potential temperature (Temp,K), Pressure (Pb and P, Pa),
-// surface heat flux (W/m2), HO mixing ratio (ppmv), and USGS land use index
+// Inputs include layer heights (m), friction velocity (ustar, m/s),
+// planetary boundary layer height (pblh [m]), inverse density (alt, [m3/kg]),
+// temperature (T [K]), Pressure (P [Pa]),
+// surface heat flux [W/m2], HO mixing ratio [ppmv], and USGS land use index
 // (luIndex).
-func stabilityMixingChemistry(LayerHeights *sparse.DenseArray, pblhFunc, ustarFunc, altFunc, TFunc, PBFunc, PFunc, surfaceHeatFluxFunc, hoFunc, h2o2Func, luIndexFunc,
-	qCloudFunc, swDownFunc, glwFunc, qrainFunc NextData) (Temp, Sclass, S1, KzzUnstaggered, M2u, M2d, SO2oxidation, particleDryDep, SO2DryDep, NOxDryDep, NH3DryDep, VOCDryDep, Kyy *sparse.DenseArray, err error) {
+func stabilityMixingChemistry(LayerHeights *sparse.DenseArray, pblhFunc, ustarFunc, altFunc, TFunc, PFunc, surfaceHeatFluxFunc, hoFunc, h2o2Func, z0Func, seinfeldLandUseFunc, weselyLandUseFunc,
+	qCloudFunc, radiationDownFunc, qrainFunc NextData) (Sclass, S1, KzzUnstaggered, M2u, M2d, SO2oxidation, particleDryDep, SO2DryDep, NOxDryDep, NH3DryDep, VOCDryDep, Kyy *sparse.DenseArray, err error) {
 	const (
-		po    = 101300. // Pa, reference pressure
-		kappa = 0.2854  // related to von karman's constant
-		Cp    = 1006.   // m2/s2-K; specific heat of air
+		Cp = 1006. // m2/s2-K; specific heat of air
 	)
 
 	var Kzz *sparse.DenseArray
 	var n int
 	firstData := true
 	for {
-		T, err := TFunc() // K
+		T, err := TFunc() // ambient temperature [K]
 		if err != nil {
 			if err == io.EOF { // done reading data: return results
 				// Check for mass balance in convection coefficients
@@ -734,7 +662,7 @@ func stabilityMixingChemistry(LayerHeights *sparse.DenseArray, pblhFunc, ustarFu
 					}
 				}
 				// convert Kzz to unstaggered grid
-				KzzUnstaggered := sparse.ZerosDense(Temp.Shape...)
+				KzzUnstaggered := sparse.ZerosDense(Kzz.Shape[0]-1, Kzz.Shape[1], Kzz.Shape[2])
 				for j := 0; j < KzzUnstaggered.Shape[1]; j++ {
 					for i := 0; i < KzzUnstaggered.Shape[2]; i++ {
 						for k := 0; k < KzzUnstaggered.Shape[0]; k++ {
@@ -744,68 +672,67 @@ func stabilityMixingChemistry(LayerHeights *sparse.DenseArray, pblhFunc, ustarFu
 						}
 					}
 				}
-				return arrayAverage(Temp, n), arrayAverage(Sclass, n), arrayAverage(S1, n),
+				return arrayAverage(Sclass, n), arrayAverage(S1, n),
 					arrayAverage(KzzUnstaggered, n), arrayAverage(M2u, n), arrayAverage(M2d, n),
 					arrayAverage(SO2oxidation, n), arrayAverage(particleDryDep, n),
 					arrayAverage(SO2DryDep, n), arrayAverage(NOxDryDep, n), arrayAverage(NH3DryDep, n),
 					arrayAverage(VOCDryDep, n), arrayAverage(Kyy, n), nil
 			}
-			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
+			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 		}
-		PB, err := PBFunc() // Pa
+		P, err := PFunc() // pressure [Pa]
 		if err != nil {
-			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
-		}
-		P, err := PFunc() // Pa
-		if err != nil {
-			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
+			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 		}
 		hfx, err := surfaceHeatFluxFunc() // W/m2
 		if err != nil {
-			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
+			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 		}
 		ho, err := hoFunc() // ppmv
 		if err != nil {
-			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
+			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 		}
 		h2o2, err := h2o2Func() // ppmv
 		if err != nil {
-			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
+			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 		}
-		luIndex, err := luIndexFunc() // land use index
+		z0, err := z0Func() // roughness length [m]
 		if err != nil {
-			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
+			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
+		}
+		seinfeldLandUse, err := seinfeldLandUseFunc() // seinfeld land use index
+		if err != nil {
+			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
+		}
+		weselyLandUse, err := weselyLandUseFunc() // wesely land use index
+		if err != nil {
+			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 		}
 		ustar, err := ustarFunc() // friction velocity (m/s)
 		if err != nil {
-			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
+			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 		}
 		pblh, err := pblhFunc() // current boundary layer height (m)
 		if err != nil {
-			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
+			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 		}
 		alt, err := altFunc() // inverse density (m3/kg)
 		if err != nil {
-			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
+			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 		}
 		qCloud, err := qCloudFunc() // cloud water mixing ratio (kg/kg)
 		if err != nil {
-			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
+			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 		}
-		swDown, err := swDownFunc() // Downwelling short wave at ground level (W/m2)
+		radiationDown, err := radiationDownFunc() // Downwelling radiation at ground level (W/m2)
 		if err != nil {
-			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
-		}
-		glw, err := glwFunc() // Downwelling long wave at ground level (W/m2)
-		if err != nil {
-			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
+			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 		}
 		qrain, err := qrainFunc() // mass fraction rain
 		if err != nil {
-			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
+			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 		}
 		if firstData {
-			Temp = sparse.ZerosDense(T.Shape...) // units = K
 			S1 = sparse.ZerosDense(T.Shape...)
 			Sclass = sparse.ZerosDense(T.Shape...)
 			Kzz = sparse.ZerosDense(LayerHeights.Shape...) // units = m2/s
@@ -840,7 +767,7 @@ func stabilityMixingChemistry(LayerHeights *sparse.DenseArray, pblhFunc, ustarFu
 							To /= float64(k)
 							break
 						}
-						To += T.Get(k, j, i) + 300.
+						To += temperatureToTheta(T.Get(k, j, i), P.Get(k, j, i))
 					}
 					// Calculate convective mixing rate
 					u := ustar.Get(j, i) // friction velocity
@@ -853,14 +780,12 @@ func stabilityMixingChemistry(LayerHeights *sparse.DenseArray, pblhFunc, ustarFu
 						LayerHeights.Get(2, j, i), h, L, u, fconv)
 
 					// Calculate dry deposition
-					p := (P.Get(0, j, i) + PB.Get(0, j, i)) // Pressure [Pa]
+					p := P.Get(0, j, i) // Pressure [Pa]
 					//z: [m] surface layer; assumed to be 10% of boundary layer.
 					z := h / 10.
-					// z: [m] surface layer; assumed to be top of first model layer.
-					//z := LayerHeights.Get(1, j, i)
-					lu := f2i(luIndex.Get(j, i))
-					//gocartObk := gocart.ObhukovLen(hflux, ρ, To, u)
-					zo := USGSz0[lu]         // roughness length [m]
+					seinfeldLU := seinfeld.LandUseCategory(f2i(seinfeldLandUse.Get(j, i)))
+					weselyLU := wesely1989.LandUseCategory(f2i(weselyLandUse.Get(j, i)))
+					zo := z0.Get(j, i)       // roughness length [m]
 					const dParticle = 0.3e-6 // [m], Seinfeld & Pandis fig 8.11
 					const ρparticle = 1830.  // [kg/m3] Jacobson (2005) Ex. 13.5
 					const Θsurface = 0.      // surface slope [rad]; Assume surface is flat.
@@ -885,54 +810,50 @@ func stabilityMixingChemistry(LayerHeights *sparse.DenseArray, pblhFunc, ustarFu
 					const dew = false // don't know if there's dew.
 					rain := qrain.Get(0, j, i) > 1.e-6
 
-					G := swDown.Get(j, i) + glw.Get(j, i) // irradiation [W/m2]
+					G := radiationDown.Get(j, i) // irradiation [W/m2]
 					particleDryDep.AddVal(
 						//gocart.ParticleDryDep(gocartObk, u, To, h,
 						//	zo, dParticle/2., ρparticle, p), 0, j, i)
 						seinfeld.DryDepParticle(z, zo, u, L, dParticle,
 							To, p, ρparticle,
-							ρ, iSeasonP, USGSseinfeld[lu]), 0, j, i)
+							ρ, iSeasonP, seinfeldLU), 0, j, i)
 					SO2DryDep.AddVal(
 						seinfeld.DryDepGas(z, zo, u, L, To, ρ,
 							G, Θsurface,
 							wesely1989.So2Data, iSeasonG,
-							USGSwesely[lu], rain, dew, true, false), 0, j, i)
+							weselyLU, rain, dew, true, false), 0, j, i)
 					NOxDryDep.AddVal(
 						seinfeld.DryDepGas(z, zo, u, L, To, ρ,
 							G, Θsurface,
 							wesely1989.No2Data, iSeasonG,
-							USGSwesely[lu], rain, dew, false, false), 0, j, i)
+							weselyLU, rain, dew, false, false), 0, j, i)
 					NH3DryDep.AddVal(
 						seinfeld.DryDepGas(z, zo, u, L, To, ρ,
 							G, Θsurface,
 							wesely1989.Nh3Data, iSeasonG,
-							USGSwesely[lu], rain, dew, false, false), 0, j, i)
+							weselyLU, rain, dew, false, false), 0, j, i)
 					VOCDryDep.AddVal(
 						seinfeld.DryDepGas(z, zo, u, L, To, ρ,
 							G, Θsurface,
 							wesely1989.OraData, iSeasonG,
-							USGSwesely[lu], rain, dew, false, false), 0, j, i)
+							weselyLU, rain, dew, false, false), 0, j, i)
 
 					for k := 0; k < T.Shape[0]; k++ {
-						Tval := T.Get(k, j, i)
+						p := P.Get(k, j, i) // Pa
+						// Ambient temperature, K
+						t := T.Get(k, j, i)
+						// Potential temperature
+						theta := temperatureToTheta(t, p)
+
 						var dthetaDz = 0. // potential temperature gradient
 						if k < T.Shape[0]-1 {
-							dthetaDz = (T.Get(k+1, j, i) - Tval) /
-								(LayerHeights.Get(k+1, j, i) -
-									LayerHeights.Get(k, j, i)) // K/m
+							thetaAbove := temperatureToTheta(T.Get(k+1, j, i), P.Get(k+1, j, i))
+							dthetaDz = (thetaAbove - theta) /
+								(LayerHeights.Get(k+1, j, i) - LayerHeights.Get(k, j, i)) // K/m
 						}
 
-						p := P.Get(k, j, i) + PB.Get(k, j, i) // Pa
-						pressureCorrection := math.Pow(p/po, kappa)
-
-						// potential temperature, K
-						θ := Tval + 300.
-						// Ambient temperature, K
-						t := θ * pressureCorrection
-						Temp.AddVal(t, k, j, i)
-
 						// Stability parameter
-						s1 := dthetaDz / t * pressureCorrection
+						s1 := dthetaDz / theta
 						S1.AddVal(s1, k, j, i)
 
 						// Stability class
@@ -1037,8 +958,8 @@ func arrayAverage(s *sparse.DenseArray, numTsteps int) *sparse.DenseArray {
 // with the given file name template between the given start and end times.
 // recordDelta and fileDelta specify the length of time between each file
 // and each record within a file, respectively. dateFormat is the format
-// in which dates appear in the filename
-func nextDataNCF(fileTemplate string, dateFormat string, varName string, start, end time.Time, recordDelta, fileDelta time.Duration) NextData {
+// in which dates appear in the filename.
+func nextDataNCF(fileTemplate string, dateFormat string, varName string, start, end time.Time, recordDelta, fileDelta time.Duration, readFunc readNCFFunc) NextData {
 	recordsPerFile := int(fileDelta / recordDelta)
 	var i int
 	date := start
@@ -1046,15 +967,12 @@ func nextDataNCF(fileTemplate string, dateFormat string, varName string, start, 
 		if !date.Before(end) {
 			return nil, io.EOF
 		}
-		d := date.Format(dateFormat)
-		file := strings.Replace(fileTemplate, "[DATE]", d, -1)
-		f, err := os.Open(file)
+		f, ff, err := ncfFromTemplate(fileTemplate, dateFormat, date)
 		if err != nil {
 			return nil, err
 		}
 		defer f.Close()
-		ff, err := cdf.Open(f)
-		data, err := readNCF(varName, ff, i)
+		data, err := readFunc(varName, ff, i)
 		if err != nil {
 			return nil, err
 		}
@@ -1067,7 +985,12 @@ func nextDataNCF(fileTemplate string, dateFormat string, varName string, start, 
 	}
 }
 
-// read a variable out of a netcdf file.
+// readNCFFunc is a function that can read information from a
+// NetCDF file.
+type readNCFFunc func(varName string, file *cdf.File, index int) (*sparse.DenseArray, error)
+
+// readNCF reads variable pol out of netcdf file ff at the index 0 value
+// specified by hour.
 func readNCF(pol string, ff *cdf.File, hour int) (*sparse.DenseArray, error) {
 	dims := ff.Header.Lengths(pol)
 	if len(dims) == 0 {
@@ -1084,11 +1007,169 @@ func readNCF(pol string, ff *cdf.File, hour int) (*sparse.DenseArray, error) {
 	buf := r.Zero(nread)
 	_, err := r.Read(buf)
 	if err != nil {
-		return nil, fmt.Errorf("inmap: preprocessor read netcdf: %v", err)
+		return nil, fmt.Errorf("inmap: preprocessor read netcdf variable %s: %v", pol, err)
 	}
 	data := sparse.ZerosDense(dims...)
 	for i, val := range buf.([]float32) {
 		data.Elements[i] = float64(val)
 	}
 	return data, nil
+}
+
+// readNCFNoHour reads variable pol out of netcdf file ff.
+func readNCFNoHour(pol string, ff *cdf.File, _ int) (*sparse.DenseArray, error) {
+	dims := ff.Header.Lengths(pol)
+	if len(dims) == 0 {
+		return nil, fmt.Errorf("inmap: preprocessor read netcdf: variable %v not in file", pol)
+	}
+	r := ff.Reader(pol, nil, nil)
+	buf := r.Zero(-1)
+	_, err := r.Read(buf)
+	if err != nil {
+		return nil, fmt.Errorf("inmap: preprocessor read netcdf variable %s: %v", pol, err)
+	}
+	data := sparse.ZerosDense(dims...)
+	for i, val := range buf.([]float32) {
+		data.Elements[i] = float64(val)
+	}
+	return data, nil
+}
+
+// nextDataGroupNCF reads a group of variables, mulitplies each by the
+// factors that are the values given in varNames.
+func nextDataGroupNCF(fileTemplate string, dateFormat string, varNames map[string]float64, start, end time.Time, recordDelta, fileDelta time.Duration, readFunc readNCFFunc) NextData {
+	dataFuncs := make(map[string]NextData)
+	for v := range varNames {
+		dataFuncs[v] = nextDataNCF(fileTemplate, dateFormat, v, start, end, recordDelta, fileDelta, readFunc)
+	}
+	return func() (*sparse.DenseArray, error) {
+		var out *sparse.DenseArray
+		firstData := true
+		for varName, f := range dataFuncs {
+			data, err := f()
+			if err != nil {
+				return nil, err
+			}
+			if firstData {
+				out = sparse.ZerosDense(data.Shape...)
+				firstData = false
+			}
+			factor := varNames[varName]
+			for i, val := range data.Elements {
+				out.Elements[i] += val * factor
+			}
+		}
+		return out, nil
+	}
+}
+
+// nextDataGroupAltNCF reads a group of variables using nextDataGroupNCF
+// and divides the result by inverse density (alt), as specified by altVar.
+func nextDataGroupAltNCF(fileTemplate string, dateFormat string, varNames map[string]float64, altFunc NextData, start, end time.Time, recordDelta, fileDelta time.Duration, readFunc readNCFFunc) NextData {
+	f := nextDataGroupNCF(fileTemplate, dateFormat, varNames, start, end, recordDelta, fileDelta, readFunc)
+	return func() (*sparse.DenseArray, error) {
+		alt, err := altFunc()
+		if err != nil {
+			return nil, err
+		}
+		data, err := f()
+		if err != nil {
+			return nil, err
+		}
+		out := sparse.ZerosDense(data.Shape...)
+		for i, val := range data.Elements {
+			out.Elements[i] = val / alt.Elements[i]
+		}
+		return out, nil
+	}
+}
+
+// ncfFromTemplate opens a NetCDF file from the given template, where
+// the [DATE] wildcard in the given fileTemplate is replaced by the given
+// date, formatted as the given dateFormat.
+func ncfFromTemplate(fileTemplate, dateFormat string, date time.Time) (*os.File, *cdf.File, error) {
+	d := date.Format(dateFormat)
+	file := strings.Replace(fileTemplate, "[DATE]", d, -1)
+	f, err := os.Open(file)
+	if err != nil {
+		return nil, nil, err
+	}
+	ff, err := cdf.Open(f)
+	if err != nil {
+		return nil, nil, err
+	}
+	return f, ff, err
+}
+
+// stagger converts an unstaggered grid to a grid that
+// is staggered with regard to the given dimension.
+func stagger(inFunc NextData, staggerDim int) NextData {
+	return func() (*sparse.DenseArray, error) {
+		in, err := inFunc()
+		if err != nil {
+			return nil, err
+		}
+		return staggerWorker(in, staggerDim), nil
+	}
+}
+
+// staggerWorker converts an unstaggered grid to a grid that
+// is staggered with regard to the given dimension.
+func staggerWorker(in *sparse.DenseArray, staggerDim int) *sparse.DenseArray {
+	staggerK := func(in, out *sparse.DenseArray, k, j, i int) {
+		switch k {
+		case 0: // out[0,j,i] = in[0,j,i]
+			out.Set(in.Get(k, j, i), k, j, i)
+		case in.Shape[0] - 1: // out[kMax+1,j,i] = in[kMax,j,i]
+			out.Set(in.Get(k, j, i), k+1, j, i)
+			fallthrough
+		default: // out[k,j,i] = (in[k,j,i] + in[k-1,j,i])/2
+			out.Set((in.Get(k, j, i)+in.Get(k-1, j, i))/2, k, j, i)
+		}
+	}
+	staggerJ := func(in, out *sparse.DenseArray, k, j, i int) {
+		switch j {
+		case 0: // out[k,0,i] = in[k,0,i]
+			out.Set(in.Get(k, j, i), k, j, i)
+		case in.Shape[1] - 1: // out[k,jMax+1,i] = in[k,jMax,i]
+			out.Set(in.Get(k, j, i), k, j+1, i)
+			fallthrough
+		default: // out[k,j,i] = (in[k,j,i] + in[k,j-1,i])/2
+			out.Set((in.Get(k, j, i)+in.Get(k, j-1, i))/2, k, j, i)
+		}
+	}
+	staggerI := func(in, out *sparse.DenseArray, k, j, i int) {
+		switch i {
+		case 0: // out[k,j,0] = in[k,j,0]
+			out.Set(in.Get(k, j, i), k, j, i)
+		case in.Shape[2] - 1: // out[k,j,iMax+1] = in[k,j,iMax]
+			out.Set(in.Get(k, j, i), k, j, i+1)
+			fallthrough
+		default: // out[k,j,i] = (in[k,j,i] + in[k,j,i-1])/2
+			out.Set((in.Get(k, j, i)+in.Get(k, j, i-1))/2, k, j, i)
+		}
+	}
+
+	if len(in.Shape) != 3 {
+		panic(fmt.Errorf("inmap preprocessor: need a 3-d array instead of %d-d", len(in.Shape)))
+	}
+	outShape := make([]int, 3)
+	outShape[0], outShape[1], outShape[2] = in.Shape[0], in.Shape[1], in.Shape[2]
+	outShape[staggerDim]++
+	out := sparse.ZerosDense(outShape...)
+	for k := 0; k < in.Shape[0]; k++ {
+		for j := 0; j < in.Shape[1]; j++ {
+			for i := 0; i < in.Shape[2]; i++ {
+				switch staggerDim {
+				case 0:
+					staggerK(in, out, k, j, i)
+				case 1:
+					staggerJ(in, out, k, j, i)
+				case 2:
+					staggerI(in, out, k, j, i)
+				}
+			}
+		}
+	}
+	return out
 }

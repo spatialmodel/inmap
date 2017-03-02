@@ -1,6 +1,7 @@
-# Release 1.2.2 (?)
+# Release 1.3.0 (?)
 * Removed vendored libraries
 * A log file containing information about each model run is now automatically created
+* Added a GEOS-Chem preprocessor
 
 # Release 1.2.1 (2016-11-15)
 * Changed the time step calculation algorithm to work with larger grid cell sizes
