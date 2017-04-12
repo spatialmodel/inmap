@@ -286,7 +286,7 @@ func TestConcentrations(t *testing.T) {
 			}
 		}
 		if !reflect.DeepEqual(want[i].d, c) {
-			for j, v := range c {
+			for j, v := range c.TotalPM25() {
 				w := want[i].d[j]
 				if math.Abs(w-v)*2/(w+v) > 1.e-8 {
 					t.Errorf("test %d, row %d: want %v but have %v", i, j, w, v)
