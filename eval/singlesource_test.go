@@ -22,11 +22,6 @@ import (
 	"github.com/gonum/plot/vg/vgsvg"
 )
 
-const (
-	// GridProj is the grid projection
-	GridProj = "+proj=lcc +lat_1=26.0 +lat_2=39.0 +lat_0=34.11 +lon_0=-118.18 +x_0=0 +y_0=0 +a=6370997.000000 +b=6370997.000000 +to_meter=1"
-)
-
 func TestSingleSource(t *testing.T) {
 
 	if testing.Short() {
@@ -427,6 +422,10 @@ func getShp(filename string) *rtree.Rtree {
 
 	src, err := s.SR()
 	handle(err)
+	const (
+		// GridProj is the grid projection
+		GridProj = "+proj=lcc +lat_1=26.0 +lat_2=39.0 +lat_0=34.11 +lon_0=-118.18 +x_0=0 +y_0=0 +a=6370997.000000 +b=6370997.000000 +to_meter=1"
+	)
 	dst, err := proj.Parse(GridProj)
 	handle(err)
 	ct, err := src.NewTransform(dst)
@@ -458,6 +457,10 @@ func getPop() *rtree.Rtree {
 
 	src, err := s.SR()
 	handle(err)
+	const (
+		// GridProj is the grid projection
+		GridProj = "+proj=lcc +lat_1=26.0 +lat_2=39.0 +lat_0=34.11 +lon_0=-118.18 +x_0=0 +y_0=0 +a=6370997.000000 +b=6370997.000000 +to_meter=1"
+	)
 	dst, err := proj.Parse(GridProj)
 	handle(err)
 	ct, err := src.NewTransform(dst)

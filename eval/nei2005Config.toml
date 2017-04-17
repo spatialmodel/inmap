@@ -107,7 +107,7 @@ PopThreshold= 40000.0
 # PopConcThreshold is the limit for
 # Σ(|ΔConcentration|)*combinedVolume*|ΔPopulation| / {Σ(|totalMass|)*totalPopulation}.
 # See the documentation for PopConcMutator for more information.
-PopConcThreshold= 0.00000000001
+PopConcThreshold= 0.000000001
 
 # CensusFile is the path to the shapefile holding population information.
 CensusFile= "${evaldata}/census2012blckgrp.shp"

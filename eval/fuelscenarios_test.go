@@ -85,7 +85,7 @@ func TestFuelScenarios(t *testing.T) {
 	var err error
 
 	fmt.Println("Getting states...")
-	states = getStates(filepath.Join(os.Getenv(evalDataEnv), "states.shp"))
+	states = getStates(filepath.Join(os.Getenv(evalDataEnv), "states.shp"), 10000)
 
 	fmt.Println("Getting alt...")
 	alt = getAlt()

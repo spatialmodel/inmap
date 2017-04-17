@@ -13,6 +13,8 @@ import (
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/carto"
 	"github.com/ctessum/geom/encoding/shp"
+	"github.com/ctessum/geom/op"
+	"github.com/ctessum/geom/proj"
 	"github.com/gonum/plot/vg"
 	vgdraw "github.com/gonum/plot/vg/draw"
 	"github.com/gonum/plot/vg/vgimg"
@@ -167,14 +169,13 @@ func TestAnimation_logo(t *testing.T) {
 	cmd.Config.VarGrid.MortalityRateFile = "animation_logo/logo.shp"
 	cmd.Config.VarGrid.MortalityRateColumn = "MR"
 	cmd.Config.OutputFile = "animation_logo/logoOut.shp"
-	//cmd.Config.VarGrid.PopConcThreshold *= 10
 
 	dataChan := make(chan []geomConc)
 	errChan := make(chan error)
 
-	states := getStates(filepath.Join(evalData, "states.shp"))
+	states := getStates(filepath.Join(evalData, "states.shp"), 0)
 
-	go createImages("animation_logo/logoSimulation_%03d.png", dataChan, errChan, states)
+	go createImages("animation_logo/logoSimulation_%03d.png", dataChan, errChan, states, false)
 
 	// framePeriod is the interval in seconds between snapshots
 	const framePeriod = 3600.0 * 3
@@ -192,8 +193,10 @@ func TestAnimation_logo(t *testing.T) {
 
 // TestAnimation_nei creates a series of images that show the progression of a
 // simulation based on year 2005 NEI emissions.
-// This command can be used to convert the images to a video:
-// avconv -framerate 20 -f image2 -i inmapNEI_%03d.png -b 65536k inmapNEI.mp4
+// This command can be used to convert the images to different types of videos:
+// avconv -framerate 15 -f image2 -i inmapNEI_%03d.png -c:v libx264 -crf 28 inmapNEI.mp4
+// avconv -framerate 15 -f image2 -i inmapNEI_%03d.png -c:v libvpx -crf 10 -b:v 1M  inmapNEI.webm
+// avconv -framerate 15 -f image2 -i inmapNEI_%03d.png -c:v libtheora -qscale:v 7  inmapNEI.ogv
 func TestAnimation_nei(t *testing.T) {
 	if testing.Short() {
 		return
@@ -214,17 +217,16 @@ func TestAnimation_nei(t *testing.T) {
 		t.Fatal(err)
 	}
 	cmd.Config.OutputFile = "animation_nei/results.shp"
-	cmd.Config.VarGrid.PopConcThreshold *= 100
 
 	dataChan := make(chan []geomConc)
 	errChan := make(chan error)
 
-	states := getStates(filepath.Join(evalData, "states.shp"))
+	states := getStates(filepath.Join(evalData, "states.shp"), 0)
 
-	go createImages("animation_nei/inmapNEI_%03d.png", dataChan, errChan, states)
+	go createImages("animation_nei/inmapNEI_%03d.png", dataChan, errChan, states, true)
 
 	// framePeriod is the interval in seconds between snapshots
-	const framePeriod = 3600.0 * 3
+	const framePeriod = 3600.0
 
 	if err := cmd.Run(dynamic, createGrid, cmd.DefaultScienceFuncs, nil,
 		[]inmap.DomainManipulator{inmap.RunPeriodically(framePeriod, saveConc(dataChan))}, nil); err != nil {
@@ -237,7 +239,7 @@ func TestAnimation_nei(t *testing.T) {
 	}
 }
 
-func createImages(basename string, dataChan chan []geomConc, errChan chan error, states []geom.Geom) {
+func createImages(basename string, dataChan chan []geomConc, errChan chan error, states []geom.Geom, insets bool) {
 
 	cmap := carto.NewColorMap(carto.LinCutoff)
 	var data [][]geomConc
@@ -254,7 +256,12 @@ func createImages(basename string, dataChan chan []geomConc, errChan chan error,
 	cmap.Set()
 
 	for i, d := range data {
-		err := createImage(d, cmap, states, fmt.Sprintf(basename, i))
+		var err error
+		if insets {
+			err = createImageWithInsets(d, cmap, states, fmt.Sprintf(basename, i))
+		} else {
+			err = createImage(d, cmap, states, fmt.Sprintf(basename, i))
+		}
 		if err != nil {
 			errChan <- err
 			return
@@ -337,4 +344,182 @@ func createImage(data []geomConc, cmap *carto.ColorMap, states []geom.Geom, file
 	}
 	w.Close()
 	return nil
+}
+
+func createImageWithInsets(data []geomConc, cmap *carto.ColorMap, states []geom.Geom, filename string) error {
+	const (
+		// Wmain is the western edge of the main map
+		Wmain = -2736000.00
+		// Smain is the southerm edge of the main map
+		Smain = -2088000.00
+		// Emain is the eastern edge of the main map
+		Emain = 2592000.00
+		// Nmain is the norther edge of the main map
+		Nmain = 1944000.00
+
+		// ybuffer and xbuffer the the sizes of the insets
+		ybuffer = 40000.
+		xbuffer = ybuffer * 1.31
+
+		legendHeight = 0.4 * vg.Inch
+		figHeight    = 2.65*vg.Inch + legendHeight
+		mainWidth    = (figHeight - legendHeight) / (Nmain - Smain) * (Emain - Wmain)
+		insetWidth   = figHeight / vg.Length(ybuffer/xbuffer) * 0.5
+	)
+
+	img := vgimg.NewWith(vgimg.UseWH(2*insetWidth+mainWidth, figHeight), vgimg.UseDPI(300))
+	canvas := vgdraw.New(img)
+
+	stateLineStyle := vgdraw.LineStyle{
+		Width: 0.25 * vg.Millimeter,
+		Color: color.Black,
+	}
+	insetLineStyle := vgdraw.LineStyle{
+		Width: 0.4 * vg.Millimeter,
+		Color: color.RGBA{255, 0, 0, 255},
+	}
+	var clearFill = color.NRGBA{0, 255, 0, 0}
+
+	subfigs := []struct {
+		b *geom.Bounds
+		c vgdraw.Canvas
+	}{
+		{ // Main canvas
+			b: &geom.Bounds{
+				Min: geom.Point{X: Wmain, Y: Smain},
+				Max: geom.Point{X: Emain, Y: Nmain},
+			},
+			c: vgdraw.Crop(canvas, insetWidth, -insetWidth, legendHeight, 0),
+		},
+		{ // Las Vegas
+			b: getInset(36.169635, -115.130025, xbuffer, ybuffer),
+			c: vgdraw.Crop(canvas, 0, -mainWidth-insetWidth, figHeight/2., 0),
+		},
+		{ // Los Angeles
+			b: getInset(34.052932, -118.264104, xbuffer, ybuffer),
+			c: vgdraw.Crop(canvas, 0, -mainWidth-insetWidth, 0, -figHeight/2.),
+		},
+		{ // New York
+			b: getInset(40.714243, -73.998220, xbuffer, ybuffer),
+			c: vgdraw.Crop(canvas, insetWidth+mainWidth, 0, figHeight/2., 0),
+		},
+		{ // Miami
+			b: getInset(25.760527, -80.186963, xbuffer, ybuffer),
+			c: vgdraw.Crop(canvas, insetWidth+mainWidth, 0, 0, -figHeight/2.),
+		},
+	}
+
+	legendC := vgdraw.Crop(canvas, insetWidth, -insetWidth, 0, -figHeight+legendHeight)
+	if err := cmap.Legend(&legendC, "PM2.5 concentration (μg m-3)"); err != nil {
+		return err
+	}
+
+	var mainMapCanvas *carto.Canvas
+
+	for i, subfig := range subfigs {
+		rect := geom.Polygon{[]geom.Point{
+			subfig.b.Min,
+			geom.Point{X: subfig.b.Max.X, Y: subfig.b.Min.Y},
+			subfig.b.Max,
+			geom.Point{X: subfig.b.Min.X, Y: subfig.b.Max.Y},
+		}}
+		mapCanvas := carto.NewCanvas(subfig.b.Max.Y, subfig.b.Min.Y, subfig.b.Max.X, subfig.b.Min.X, subfig.c)
+		if i == 0 {
+			mainMapCanvas = mapCanvas
+		}
+
+		// draw data
+		for _, d := range data {
+			fill := cmap.GetColor(d.val)
+			ls := vgdraw.LineStyle{
+				Width: 0.1 * vg.Millimeter,
+				Color: fill,
+			}
+			g := d.Intersection(rect)
+			if g != nil {
+				err := mapCanvas.DrawVector(g, fill, ls, vgdraw.GlyphStyle{})
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		// Draw states
+		for _, g := range states {
+			gg, err := op.Construct(g, rect, op.INTERSECTION)
+			if err != nil {
+				return err
+			}
+			if gg != nil {
+				mapCanvas.DrawVector(gg, clearFill, stateLineStyle, vgdraw.GlyphStyle{})
+			}
+		}
+
+		// Draw inset locators
+		if i > 0 {
+			// Draw inset boundary
+			mainMapCanvas.DrawVector(rect, clearFill, insetLineStyle, vgdraw.GlyphStyle{})
+			mapCanvas.DrawVector(rect, clearFill, insetLineStyle, vgdraw.GlyphStyle{})
+
+			inSetUR := mapCanvas.Coordinates(geom.Point{X: subfig.b.Max.X, Y: subfig.b.Max.Y})
+			mainUR := mainMapCanvas.Coordinates(geom.Point{X: subfig.b.Max.X, Y: subfig.b.Max.Y})
+			inSetUL := mapCanvas.Coordinates(geom.Point{X: subfig.b.Min.X, Y: subfig.b.Max.Y})
+			mainUL := mainMapCanvas.Coordinates(geom.Point{X: subfig.b.Min.X, Y: subfig.b.Max.Y})
+			inSetLR := mapCanvas.Coordinates(geom.Point{X: subfig.b.Max.X, Y: subfig.b.Min.Y})
+			mainLR := mainMapCanvas.Coordinates(geom.Point{X: subfig.b.Max.X, Y: subfig.b.Min.Y})
+			mainLL := mainMapCanvas.Coordinates(geom.Point{X: subfig.b.Min.X, Y: subfig.b.Min.Y})
+			inSetLL := mapCanvas.Coordinates(geom.Point{X: subfig.b.Min.X, Y: subfig.b.Min.Y})
+			if i > 2 {
+				canvas.StrokeLine2(insetLineStyle, inSetUL.X, inSetUL.Y, mainUR.X, mainUR.Y)
+				canvas.StrokeLine2(insetLineStyle, inSetLL.X, inSetLL.Y, mainLR.X, mainLR.Y)
+			} else {
+				canvas.StrokeLine2(insetLineStyle, inSetUR.X, inSetUR.Y, mainUL.X, mainUL.Y)
+				canvas.StrokeLine2(insetLineStyle, inSetLR.X, inSetLR.Y, mainLL.X, mainLL.Y)
+			}
+		}
+	}
+
+	// Write out image file.
+	w, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	png := vgimg.PngCanvas{Canvas: img}
+	if _, err := png.WriteTo(w); err != nil {
+		return err
+	}
+	w.Close()
+
+	return nil
+}
+
+func getInset(lat, lon, xbuffer, ybuffer float64) (bounds *geom.Bounds) {
+	src, err := proj.Parse("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
+	if err != nil {
+		panic(err)
+	}
+	dst, err := proj.Parse("+proj=lcc +lat_1=33.000000 +lat_2=45.000000 +lat_0=40.000000 +lon_0=-97.000000 +x_0=0 +y_0=0 +a=6370997.000000 +b=6370997.000000 +to_meter=1")
+	if err != nil {
+		panic(err)
+	}
+	insetCT, err := src.NewTransform(dst)
+	if err != nil {
+		panic(err)
+	}
+
+	g := geom.Point{X: lon, Y: lat}
+	gg, err := g.Transform(insetCT)
+	if err != nil {
+		panic(err)
+	}
+	bounds = geom.NewBounds()
+	bounds.Min = geom.Point{
+		X: gg.(geom.Point).X - xbuffer,
+		Y: gg.(geom.Point).Y - ybuffer,
+	}
+	bounds.Max = geom.Point{
+		X: gg.(geom.Point).X + xbuffer,
+		Y: gg.(geom.Point).Y + ybuffer,
+	}
+	return
 }

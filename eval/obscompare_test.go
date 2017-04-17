@@ -143,7 +143,7 @@ var (
 func obsCompare(inmapDataLoc, wrfDataLoc, obsFile, statesLoc, outDir, fileprefix string) error {
 	plot.DefaultFont = "Helvetica"
 
-	states = getStates(statesLoc)
+	states = getStates(statesLoc, 10000)
 	fmt.Println("Getting data")
 	iChan := make(chan *rtree.Rtree)
 	go getInMAPdata(inmapDataLoc, iChan)
@@ -749,7 +749,7 @@ type gg struct {
 	geom.Geom
 }
 
-func getStates(filename string) []geom.Geom {
+func getStates(filename string, simplifyThreshold float64) []geom.Geom {
 	s, err := shp.NewDecoder(filename)
 	if err != nil {
 		panic(err)
@@ -779,7 +779,7 @@ func getStates(filename string) []geom.Geom {
 		if err != nil {
 			panic(err)
 		}
-		gg, err = op.Simplify(gg, 10000)
+		gg, err = op.Simplify(gg, simplifyThreshold)
 		if err != nil {
 			panic(err)
 		}
