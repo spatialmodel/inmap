@@ -46,6 +46,7 @@
                         <li><a href="#home">Home</a></li>
                         <li><a href="#about">About</a></li>
                         <li><a href="#methodology">Methodology</a></li>
+                        <li><a href="#video">Video</a></li>
                         <li><a href="#download">Download</a></li>
                     </ul>
                     <ul class="nav navbar-nav navbar-right">
@@ -125,10 +126,30 @@
                 </div>
             </div>
 
-            <hr>
+            <hr id="video">
 
             <div class="row">
-                <div class="col-md-5">
+              <div class="col-md-12">
+                <figure class="figure">
+                  <figcaption class="figure-caption"><h2><object data="svg/textLogo.svg" type="image/svg+xml">InMAP</object> in action</h2>
+                    This animation shows an InMAP model simulation. The model runs until it converges on a steady-state solution,
+                    adjusting the size of the grid cells as it runs.</figcaption>
+                    <div align="center" class="embed-responsive embed-responsive-16by9">
+                        <video autoplay loop class="embed-responsive-item">
+                          <source src="vid/inmapNEI.mp4" type="video/mp4">
+                          <source src="vid/inmapNEI.ogv" type="video/ogg">
+                          <source src="vid/inmapNEI.webm" type="video/webm">
+                          Your browser does not support the video tag.
+                        </video>
+                    </div>
+                </figure>
+              </div>
+            </div>
+
+            <hr id="download">
+
+            <div class="row">
+                <div class="col-md-8">
                     <h2> How is <object data="svg/textLogo.svg" type="image/svg+xml">InMAP</object> new?</h2>
                     <p>InMAP includes several features that together enable analyses to be done in InMAP that cannot be done or are much more difficult in other models. These features include:
                         <ul>
@@ -141,23 +162,6 @@
                             </li>
                         </ul>
                 </div>
-                <div class="col-md-7">
-                    <figure class="figure">
-                        <div align="center" class="embed-responsive embed-responsive-16by9">
-                            <video autoplay loop class="embed-responsive-item">
-                <source src="vid/logoSimulation.mp4" type="video/mp4">
-                Your browser does not support the video tag.
-              </video>
-                        </div>
-                        <figcaption class="figure-caption">An animation of an InMAP model simulation where emissions and population are distributed in a pattern matching the InMAP logo. The model runs until it converges on a steady-state solution, first with lower-resolution then with
-                            higher-resolution grid cells.</figcaption>
-                    </figure>
-                </div>
-            </div>
-
-            <hr id="download">
-
-            <div class="row">
                 <div class="col-md-4">
                     <h2> How do I use <object data="svg/textLogo.svg" type="image/svg+xml">InMAP</object>?</h2>
                     <p>The InMAP model is completely open-source. It is available to download
@@ -170,16 +174,10 @@
                     <p> Additional questions? Contact us at inmap@spatialmodel.com</p>
                 </div>
 
-                <div class="col-md-8">
-                    <figure class="figure">
-                        <img src="img/fig1.png" class="img-responsive img-rounded" alt="InMAP spatial grid">
-                        <figcaption class="figure-caption">A version of the InMAP computational grid with insets zoomed in over several cities. Blue areas are urban areas.</figcaption>
-                    </figure>
-                </div>
             </div>
 
             <hr>
-            
+
             <div class="row">
                 <div class="col-md-12">
                     <h2>Other models</h2>
@@ -188,7 +186,7 @@
                     <p><a href="http://barney.ce.cmu.edu/~jinhyok/easiur/">EASIUR</a></p>
                 </div>
             </div>
-            
+
             <hr>
 
         </div>
