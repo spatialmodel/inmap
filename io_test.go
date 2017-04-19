@@ -26,10 +26,13 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/ctessum/aep"
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/encoding/shp"
 	"github.com/ctessum/geom/proj"
+	"github.com/ctessum/unit"
 )
 
 const (
@@ -646,4 +649,334 @@ type cellsFracSorter struct {
 func (c *cellsFracSorter) Swap(i, j int) {
 	c.cells[i], c.cells[j] = c.cells[j], c.cells[i]
 	c.fractions[i], c.fractions[j] = c.fractions[j], c.fractions[i]
+}
+
+func TestFromAEP(t *testing.T) {
+	cfg, ctmdata, pop, popIndices, mr := VarGridData()
+
+	d := &InMAP{
+		InitFuncs: []DomainManipulator{
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, nil),
+		},
+	}
+	if err := d.Init(); err != nil {
+		t.Error(err)
+	}
+	grid := d.GetGeometry(0, false)
+	gridSR, err := proj.Parse(cfg.GridProj)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gridDef, err := aep.NewGridIrregular("inmap", grid, gridSR, gridSR)
+	if err != nil {
+		t.Fatal(err)
+	}
+	inputSR, err := proj.Parse("+proj=longlat")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sp := aep.NewSpatialProcessor(aep.NewSrgSpecs(), []*aep.GridDef{gridDef}, &aep.GridRef{}, inputSR, false)
+
+	e1 := new(aep.Emissions)
+	begin, _ := time.Parse("Jan 2006", "Jan 2005")
+	end, _ := time.Parse("Jan 2006", "Jan 2006")
+	rate := unit.New(1, map[unit.Dimension]int{unit.MassDim: 1, unit.TimeDim: -1})
+	e1.Add(begin, end, "pm25", "", rate)
+	r1 := &aep.PointRecord{
+		PointSourceData: aep.PointSourceData{
+			StackHeight:   unit.New(1, unit.Meter),
+			StackVelocity: unit.New(1, unit.MeterPerSecond),
+			StackDiameter: unit.New(1, unit.Meter),
+			StackTemp:     unit.New(1, unit.Kelvin),
+			Point:         geom.Point{X: -96.99, Y: 39.99},
+			SR:            inputSR,
+		},
+		Emissions: *e1,
+	}
+	r2 := &aep.PointRecord{
+		PointSourceData: aep.PointSourceData{
+			StackHeight:   unit.New(0, unit.Meter),
+			StackVelocity: unit.New(0, unit.MeterPerSecond),
+			Point:         geom.Point{X: -97.01, Y: 40.01},
+			SR:            inputSR,
+		},
+		Emissions: *e1,
+	}
+
+	const kgPerSecondToUgPerSecond = 1.0e9
+
+	tests := []struct {
+		name   string
+		recs   []aep.Record
+		result []*EmisRecord
+	}{
+		{
+			name: "r1",
+			recs: []aep.Record{r1},
+			result: []*EmisRecord{
+				&EmisRecord{
+					Geom:     geom.Point{X: 2000, Y: -2000},
+					PM25:     kgPerSecondToUgPerSecond,
+					Height:   1,
+					Diam:     1,
+					Temp:     1,
+					Velocity: 1,
+				},
+			},
+		},
+		{
+			name: "r2",
+			recs: []aep.Record{r2},
+			result: []*EmisRecord{
+				&EmisRecord{
+					Geom: geom.Point{X: -2000, Y: 2000},
+					PM25: kgPerSecondToUgPerSecond,
+				},
+			},
+		},
+		{
+			name: "r1, r2",
+			recs: []aep.Record{r1, r2},
+			result: []*EmisRecord{
+				&EmisRecord{
+					Geom:     geom.Point{X: 2000, Y: -2000},
+					PM25:     kgPerSecondToUgPerSecond,
+					Height:   1,
+					Diam:     1,
+					Temp:     1,
+					Velocity: 1,
+				},
+				&EmisRecord{
+					Geom: geom.Point{X: -2000, Y: 2000},
+					PM25: kgPerSecondToUgPerSecond,
+				},
+			},
+		},
+		{
+			name: "r1, r1, r1",
+			recs: []aep.Record{r1, r1, r1},
+			result: []*EmisRecord{
+				&EmisRecord{
+					Geom:     geom.Point{X: 2000, Y: -2000},
+					PM25:     kgPerSecondToUgPerSecond,
+					Height:   1,
+					Diam:     1,
+					Temp:     1,
+					Velocity: 1,
+				},
+				&EmisRecord{
+					Geom:     geom.Point{X: 2000, Y: -2000},
+					PM25:     kgPerSecondToUgPerSecond,
+					Height:   1,
+					Diam:     1,
+					Temp:     1,
+					Velocity: 1,
+				},
+				&EmisRecord{
+					Geom:     geom.Point{X: 2000, Y: -2000},
+					PM25:     kgPerSecondToUgPerSecond,
+					Height:   1,
+					Diam:     1,
+					Temp:     1,
+					Velocity: 1,
+				},
+			},
+		},
+		{
+			name: "r2, r2, r2",
+			recs: []aep.Record{r2, r2, r2},
+			result: []*EmisRecord{
+				&EmisRecord{
+					Geom: geom.Point{X: -2000, Y: 2000},
+					PM25: 3 * kgPerSecondToUgPerSecond,
+				},
+			},
+		},
+		{
+			name: "r1, r2, r1",
+			recs: []aep.Record{r1, r2, r1},
+			result: []*EmisRecord{
+				&EmisRecord{
+					Geom:     geom.Point{X: 2000, Y: -2000},
+					PM25:     kgPerSecondToUgPerSecond,
+					Height:   1,
+					Diam:     1,
+					Temp:     1,
+					Velocity: 1,
+				},
+				&EmisRecord{
+					Geom:     geom.Point{X: 2000, Y: -2000},
+					PM25:     kgPerSecondToUgPerSecond,
+					Height:   1,
+					Diam:     1,
+					Temp:     1,
+					Velocity: 1,
+				},
+				&EmisRecord{
+					Geom: geom.Point{X: -2000, Y: 2000},
+					PM25: kgPerSecondToUgPerSecond,
+				},
+			},
+		},
+		{
+			name: "r2, r1, r2",
+			recs: []aep.Record{r2, r1, r2},
+			result: []*EmisRecord{
+				&EmisRecord{
+					Geom:     geom.Point{X: 2000, Y: -2000},
+					PM25:     kgPerSecondToUgPerSecond,
+					Height:   1,
+					Diam:     1,
+					Temp:     1,
+					Velocity: 1,
+				},
+				&EmisRecord{
+					Geom: geom.Point{X: -2000, Y: 2000},
+					PM25: 2 * kgPerSecondToUgPerSecond,
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			er, err := FromAEP(test.recs, sp, 0,
+				[]aep.Pollutant{{Name: "voc"}},
+				[]aep.Pollutant{{Name: "nox"}},
+				[]aep.Pollutant{{Name: "nh3"}},
+				[]aep.Pollutant{{Name: "sox"}},
+				[]aep.Pollutant{{Name: "pm25"}},
+			)
+			if err != nil {
+				t.Error(err)
+			}
+			if len(er) != len(test.result) {
+				t.Fatalf("length: want %d but have %d", len(test.result), len(er))
+			}
+			for i, have := range er {
+				want := test.result[i]
+				if !reflect.DeepEqual(want, have) {
+					t.Errorf("want %v but have %v", want, have)
+				}
+			}
+		})
+	}
+}
+
+func BenchmarkFromAEP(b *testing.B) {
+	cfg, ctmdata, pop, popIndices, mr := VarGridData()
+
+	d := &InMAP{
+		InitFuncs: []DomainManipulator{
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, nil),
+		},
+	}
+	if err := d.Init(); err != nil {
+		b.Error(err)
+	}
+	grid := d.GetGeometry(0, false)
+	gridSR, err := proj.Parse(cfg.GridProj)
+	if err != nil {
+		b.Fatal(err)
+	}
+	gridDef, err := aep.NewGridIrregular("inmap", grid, gridSR, gridSR)
+	if err != nil {
+		b.Fatal(err)
+	}
+	inputSR, err := proj.Parse("+proj=longlat")
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	sp := aep.NewSpatialProcessor(aep.NewSrgSpecs(), []*aep.GridDef{gridDef}, &aep.GridRef{}, inputSR, false)
+
+	e1 := new(aep.Emissions)
+	begin, _ := time.Parse("Jan 2006", "Jan 2005")
+	end, _ := time.Parse("Jan 2006", "Jan 2006")
+	rate := unit.New(1, map[unit.Dimension]int{unit.MassDim: 1, unit.TimeDim: -1})
+	e1.Add(begin, end, "pm25", "", rate)
+	r1 := &aep.PointRecord{
+		PointSourceData: aep.PointSourceData{
+			StackHeight:   unit.New(1, unit.Meter),
+			StackVelocity: unit.New(1, unit.MeterPerSecond),
+			StackDiameter: unit.New(1, unit.Meter),
+			StackTemp:     unit.New(1, unit.Kelvin),
+			Point:         geom.Point{X: -96.99, Y: 39.99},
+			SR:            inputSR,
+		},
+		Emissions: *e1,
+	}
+	r2 := &aep.PointRecord{
+		PointSourceData: aep.PointSourceData{
+			StackHeight:   unit.New(0, unit.Meter),
+			StackVelocity: unit.New(0, unit.MeterPerSecond),
+			Point:         geom.Point{X: -97.01, Y: 40.01},
+			SR:            inputSR,
+		},
+		Emissions: *e1,
+	}
+
+	const kgPerSecondToUgPerSecond = 1.0e9
+
+	recs := []aep.Record{r1, r2}
+	name := []string{"elevated", "ground level"}
+
+	resultFuncs := []func(int) []*EmisRecord{
+		func(n int) []*EmisRecord { // elevated emissions
+			r := &EmisRecord{
+				Geom:     geom.Point{X: 2000, Y: -2000},
+				PM25:     kgPerSecondToUgPerSecond,
+				Height:   1,
+				Diam:     1,
+				Temp:     1,
+				Velocity: 1,
+			}
+			o := make([]*EmisRecord, n)
+			for i := 0; i < n; i++ {
+				o[i] = r
+			}
+			return o
+		},
+		func(n int) []*EmisRecord {
+			return []*EmisRecord{
+				&EmisRecord{
+					Geom: geom.Point{X: -2000, Y: 2000},
+					PM25: float64(n) * kgPerSecondToUgPerSecond,
+				},
+			}
+		},
+	}
+
+	for i, rec := range recs {
+		for _, n := range []int{10, 1000, 10000, 100000, 1000000} {
+			r := make([]aep.Record, n)
+			for j := 0; j < n; j++ {
+				r[j] = rec
+			}
+			result := resultFuncs[i](n)
+			b.Run(fmt.Sprintf("%s %d", name[i], n), func(b *testing.B) {
+				er, err := FromAEP(r, sp, 0,
+					[]aep.Pollutant{{Name: "voc"}},
+					[]aep.Pollutant{{Name: "nox"}},
+					[]aep.Pollutant{{Name: "nh3"}},
+					[]aep.Pollutant{{Name: "sox"}},
+					[]aep.Pollutant{{Name: "pm25"}},
+				)
+				if err != nil {
+					b.Error(err)
+				}
+				if len(er) != len(result) {
+					b.Fatalf("length: want %d but have %d", len(result), len(er))
+				}
+				for i, have := range er {
+					want := result[i]
+					if !reflect.DeepEqual(want, have) {
+						b.Errorf("want %v but have %v", want, have)
+					}
+				}
+			})
+		}
+	}
 }
