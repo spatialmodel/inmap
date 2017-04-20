@@ -200,7 +200,7 @@ func (sr *SR) writeResults(outfile string, layers []int, requestChan chan result
 	var f *cdf.File
 	var ff *os.File
 
-	if _, err := os.Stat(outfile); err != nil { // file doesn't exist
+	if _, fileErr := os.Stat(outfile); fileErr != nil { // file doesn't exist
 		log.Println("creating output file")
 
 		// Get model variable names for inclusion in the SR matrix.

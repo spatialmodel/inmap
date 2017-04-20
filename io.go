@@ -27,11 +27,13 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/ctessum/aep"
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/encoding/shp"
 	"github.com/ctessum/geom/index/rtree"
 	"github.com/ctessum/geom/op"
 	"github.com/ctessum/geom/proj"
+	"github.com/ctessum/unit"
 	goshp "github.com/jonas-p/go-shp"
 )
 
@@ -63,6 +65,15 @@ type EmisRecord struct {
 	Diam               float64 // stack diameter [m]
 	Temp               float64 // stack temperature [K]
 	Velocity           float64 // stack velocity [m/s]
+}
+
+// add adds the emissions in o to the receiver.
+func (e *EmisRecord) add(o *EmisRecord) {
+	e.VOC += o.VOC
+	e.NOx += o.NOx
+	e.NH3 += o.NH3
+	e.SOx += o.SOx
+	e.PM25 += o.PM25
 }
 
 // NewEmissions Initializes a new emissions holder.
@@ -160,6 +171,101 @@ func ReadEmissionShapefiles(gridSR *proj.SR, units string, c chan string, shapef
 		}
 	}
 	return emis, nil
+}
+
+// FromAEP converts the given AEP (github.com/ctessum/aep) records to
+// EmisRecords using the given SpatialProcessor and the SpatialProcessor
+// grid index gi. VOC, NOx, NH3, SOx, and PM25 are lists of
+// AEP Polluants that should be mapped to those InMAP species.
+// The returned EmisRecords will be grouped as much as possible to minimize
+// the number of records.
+func FromAEP(r []aep.Record, sp *aep.SpatialProcessor, gi int, VOC, NOx, NH3, SOx, PM25 []aep.Pollutant) ([]*EmisRecord, error) {
+	if gi > 0 || len(sp.Grids) <= gi {
+		return nil, fmt.Errorf("inmap: converting AEP record to EmisRecord: invalid gi (%d)", gi)
+	}
+
+	checkDim := func(v *unit.Unit) float64 {
+		if v == nil {
+			return 0
+		}
+		if !v.Dimensions().Matches(unit.Kilogram) {
+			panic(fmt.Errorf("bad dimensions: %v", v.Dimensions()))
+		}
+		return v.Value()
+	}
+
+	// Find the centroids of the grid cells.
+	grid := sp.Grids[gi]
+	centroids := make([]geom.Point, len(grid.Cells))
+	for i, c := range grid.Cells {
+		centroids[i] = c.Centroid()
+	}
+
+	var eRecs []*EmisRecord
+	groundERecs := make(map[geom.Point]*EmisRecord)
+
+	for _, rec := range r {
+		gridSrg, _, inGrid, err := rec.Spatialize(sp, gi)
+		if err != nil {
+			return nil, err
+		}
+		if !inGrid {
+			continue
+		}
+		for i, frac := range gridSrg.Elements {
+			p := centroids[i]
+			er := EmisRecord{
+				Geom: p,
+			}
+			e := rec.GetEmissions().Totals()
+
+			// Convert units.
+			const (
+				secPerYear        = 60 * 60 * 24 * 365
+				ugPerKg           = 1.0e9
+				kgPerYearToUgPerS = 1 * ugPerKg / secPerYear
+			)
+
+			// Add the emissions to the new record.
+			for _, p := range VOC {
+				er.VOC += checkDim(e[p]) * frac * kgPerYearToUgPerS
+			}
+			for _, p := range NOx {
+				er.NOx += checkDim(e[p]) * frac * kgPerYearToUgPerS
+			}
+			for _, p := range NH3 {
+				er.NH3 += checkDim(e[p]) * frac * kgPerYearToUgPerS
+			}
+			for _, p := range SOx {
+				er.SOx += checkDim(e[p]) * frac * kgPerYearToUgPerS
+			}
+			for _, p := range PM25 {
+				er.PM25 += checkDim(e[p]) * frac * kgPerYearToUgPerS
+			}
+
+			pointSource, ok := rec.(aep.PointSource)
+			if !ok || pointSource.PointData().GroundLevel() {
+				// For ground level sources, combine with other records
+				// at the same point.
+				if _, ok := groundERecs[p]; !ok {
+					groundERecs[p] = &er
+				} else {
+					groundERecs[p].add(&er)
+				}
+			} else {
+				stack := pointSource.PointData()
+				er.Height = stack.StackHeight.Value()
+				er.Diam = stack.StackDiameter.Value()
+				er.Temp = stack.StackTemp.Value()
+				er.Velocity = stack.StackVelocity.Value()
+				eRecs = append(eRecs, &er)
+			}
+		}
+	}
+	for _, groundERec := range groundERecs {
+		eRecs = append(eRecs, groundERec)
+	}
+	return eRecs, nil
 }
 
 // addEmisFlux calculates emissions flux given emissions array in units of μg/s

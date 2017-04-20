@@ -182,6 +182,23 @@ func (sr *Reader) Variables(names ...string) (map[string][]float64, error) {
 	return o, nil
 }
 
+// Concentrations holds pollutant concentration information [μg/m3]
+// for the PM2.5 subspecies.
+type Concentrations struct {
+	PNH4, PNO3, PSO4, SOA, PrimaryPM25 []float64
+}
+
+// TotalPM25 returns total combined PM2.5 concentration [μg/m3].
+func (c *Concentrations) TotalPM25() []float64 {
+	o := make([]float64, len(c.PNH4))
+	floats.Add(o, c.PNH4)
+	floats.Add(o, c.PNO3)
+	floats.Add(o, c.PSO4)
+	floats.Add(o, c.SOA)
+	floats.Add(o, c.PrimaryPM25)
+	return o
+}
+
 // Concentrations returns the change in Total PM2.5 concentrations caused
 // by the emissions specified by e, after accounting for plume rise.
 // If the emission plume height is above the highest layer in the SR
@@ -190,58 +207,79 @@ func (sr *Reader) Variables(names ...string) (map[string][]float64, error) {
 // may be appropriate to ignore errors of this type.
 // As specified in the EmisRecord documentation
 // emission units should be in μg/s.
-func (sr *Reader) Concentrations(e *inmap.EmisRecord) ([]float64, error) {
+func (sr *Reader) Concentrations(emis ...*inmap.EmisRecord) (*Concentrations, error) {
 
-	out := make([]float64, sr.nCellsGroundLevel)
-
-	cells, fractions := sr.d.CellIntersections(e.Geom)
+	out := &Concentrations{
+		PNH4:        make([]float64, sr.nCellsGroundLevel),
+		PNO3:        make([]float64, sr.nCellsGroundLevel),
+		PSO4:        make([]float64, sr.nCellsGroundLevel),
+		SOA:         make([]float64, sr.nCellsGroundLevel),
+		PrimaryPM25: make([]float64, sr.nCellsGroundLevel),
+	}
 
 	// stickyErr is used for errors that shouldn't immediately
 	// cause the function to fail but should be returned with the
 	// result anyway.
 	var stickyErr error
 
-	for i, c := range cells {
-		// Figure out if this cell is the right layer.
-		var plumeHeight float64
-		if e.Height != 0 {
-			var in bool
-			var err error
-			in, plumeHeight, err = c.IsPlumeIn(e.Height, e.Diam, e.Temp, e.Velocity)
+	for _, e := range emis {
+		cells, fractions := sr.d.CellIntersections(e.Geom)
+
+		for i, c := range cells {
+			// Figure out if this cell is the right layer.
+			var plumeHeight float64
+			if e.Height != 0 {
+				var in bool
+				var err error
+				in, plumeHeight, err = c.IsPlumeIn(e.Height, e.Diam, e.Temp, e.Velocity)
+				if err != nil {
+					return nil, err
+				}
+				if !in {
+					continue
+				}
+			} else { // ground-level emissions
+				if c.Layer != 0 {
+					continue
+				}
+			}
+			frac := fractions[i]
+			index := sr.indices[c]
+
+			layers, layerfracs, err := sr.layerFracs(c, plumeHeight)
 			if err != nil {
-				return nil, err
+				switch err.(type) {
+				case AboveTopErr:
+					stickyErr = err
+				default:
+					return nil, err
+				}
 			}
-			if !in {
-				continue
-			}
-		} else { // ground-level emissions
-			if c.Layer != 0 {
-				continue
-			}
-		}
-		frac := fractions[i]
-		index := sr.indices[c]
 
-		layers, layerfracs, err := sr.layerFracs(c, plumeHeight)
-		if err != nil {
-			switch err.(type) {
-			case AboveTopErr:
-				stickyErr = err
-			default:
-				return nil, err
-			}
-		}
+			for i, layer := range layers {
+				layerfrac := layerfracs[i]
 
-		for i, layer := range layers {
-			layerfrac := layerfracs[i]
-
-			for i, emis := range []float64{e.NH3, e.NOx, e.SOx, e.VOC, e.PM25} {
-				if emis != 0 {
-					v, err := sr.Source(polNames[i], layer, index)
-					if err != nil {
-						return nil, err
+				for i, emis := range []float64{e.NH3, e.NOx, e.SOx, e.VOC, e.PM25} {
+					if emis != 0 {
+						v, err := sr.Source(polNames[i], layer, index)
+						if err != nil {
+							return nil, err
+						}
+						switch polNames[i] {
+						case "pNH4":
+							floats.AddScaled(out.PNH4, emis*frac*layerfrac, v)
+						case "pNO3":
+							floats.AddScaled(out.PNO3, emis*frac*layerfrac, v)
+						case "pSO4":
+							floats.AddScaled(out.PSO4, emis*frac*layerfrac, v)
+						case "SOA":
+							floats.AddScaled(out.SOA, emis*frac*layerfrac, v)
+						case "PrimaryPM25":
+							floats.AddScaled(out.PrimaryPM25, emis*frac*layerfrac, v)
+						default:
+							panic(fmt.Errorf("invalid pollutant %s", polNames[i]))
+						}
 					}
-					floats.AddScaled(out, emis*frac*layerfrac, v)
 				}
 			}
 		}

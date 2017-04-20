@@ -19,7 +19,9 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package sr
 
 import (
+	"fmt"
 	"math"
+	"math/rand"
 	"os"
 	"reflect"
 	"strings"
@@ -286,12 +288,44 @@ func TestConcentrations(t *testing.T) {
 			}
 		}
 		if !reflect.DeepEqual(want[i].d, c) {
-			for j, v := range c {
+			for j, v := range c.TotalPM25() {
 				w := want[i].d[j]
 				if math.Abs(w-v)*2/(w+v) > 1.e-8 {
 					t.Errorf("test %d, row %d: want %v but have %v", i, j, w, v)
 				}
 			}
 		}
+	}
+}
+
+func BenchmarkConcentrations(b *testing.B) {
+	r, err := os.Open("../inmap/testdata/testSR.ncf")
+	if err != nil {
+		b.Fatal(err)
+	}
+	sr, err := NewReader(r)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	for _, n := range []int{10, 100, 1000, 10000, 100000} {
+		r := make([]*inmap.EmisRecord, n)
+		for i := 0; i < n; i++ {
+			r[i] = &inmap.EmisRecord{
+				Geom:   geom.Point{X: rand.Float64()*7000 - 3500, Y: rand.Float64()*7000 - 3500},
+				PM25:   1,
+				NOx:    1,
+				NH3:    1,
+				SOx:    1,
+				VOC:    1,
+				Height: rand.Float64() * 400,
+			}
+		}
+		b.Run(fmt.Sprintf("%d", n), func(b *testing.B) {
+			_, err := sr.Concentrations(r...)
+			if err != nil {
+				b.Fatal(err)
+			}
+		})
 	}
 }
