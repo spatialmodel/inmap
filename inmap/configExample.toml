@@ -33,8 +33,14 @@ HTTPAddress = ":8080"
 # when creating a source-receptor matrix. It can contain environment variables.
 SROutputFile = "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testSR.ncf"
 
-# Path to desired output shapefile location. Can include environment variables.
+# OutputFile is the path to the desired output shapefile location. It can
+# include environment variables.
 OutputFile = "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/output_${InMAPRunType}.shp"
+
+# LogFile is the path to the desired logfile location. It can include
+# environment variables. If LogFile is left blank, the logfile will be saved in
+# the same location as the OutputFile.
+LogFile = ""
 
 # OutputVariables specifies which model variables should be included in the
 # output file. Each output variable is defined by the desired name and an

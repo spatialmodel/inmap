@@ -26,6 +26,7 @@ import (
 	"sort"
 	"strings"
 	"text/tabwriter"
+	"time"
 
 	"github.com/spatialmodel/inmap"
 )
@@ -64,7 +65,16 @@ var DefaultScienceFuncs = []inmap.CellManipulator{
 // runtime, and cleanup, respectively.
 func Run(dynamic, createGrid bool, scienceFuncs []inmap.CellManipulator, addInit, addRun, addCleanup []inmap.DomainManipulator) error {
 
+	startTime := time.Now()
+
 	// Start a function to receive and print log messages.
+	logfile, err := os.Create(Config.LogFile)
+	if err != nil {
+		return fmt.Errorf("inmap: problem creating log file: %v", err)
+	}
+	defer logfile.Close()
+	mw := io.MultiWriter(os.Stdout, logfile)
+	log.SetOutput(mw)
 	cConverge := make(chan inmap.ConvergenceStatus)
 	cLog := make(chan *inmap.SimulationStatus)
 	msgLog := make(chan string)
@@ -72,9 +82,9 @@ func Run(dynamic, createGrid bool, scienceFuncs []inmap.CellManipulator, addInit
 		for {
 			select {
 			case msg := <-cConverge:
-				fmt.Println(msg.String())
+				log.Println(msg.String())
 			case msg := <-cLog:
-				fmt.Println(msg.String())
+				log.Println(msg.String())
 			case msg := <-msgLog:
 				log.Println(msg)
 			}
@@ -179,7 +189,7 @@ func Run(dynamic, createGrid bool, scienceFuncs []inmap.CellManipulator, addInit
 	}
 	log.Println("Emission totals:")
 	for i, pol := range inmap.PolNames {
-		fmt.Printf("%v, %g μg/s\n", pol, emisTotals[i])
+		log.Printf("%v, %g μg/s\n", pol, emisTotals[i])
 	}
 
 	if err = d.Run(); err != nil {
@@ -190,11 +200,13 @@ func Run(dynamic, createGrid bool, scienceFuncs []inmap.CellManipulator, addInit
 		return fmt.Errorf("InMAP: problem shutting down model: %v\n", err)
 	}
 
-	fmt.Println("\nIntake fraction results:")
+	log.Println("\nIntake fraction results:")
 	breathingRate := 15. // [m³/day]
 	iF := d.IntakeFraction(breathingRate)
 	// Write iF to stdout
-	w := tabwriter.NewWriter(os.Stdout, 0, 8, 1, '\t', 0)
+	w1 := tabwriter.NewWriter(os.Stdout, 0, 8, 1, '\t', 0)
+	// Write iF to log
+	w2 := tabwriter.NewWriter(logfile, 0, 8, 1, '\t', 0)
 	var popList []string
 	for _, m := range iF {
 		for p := range m {
@@ -203,15 +215,21 @@ func Run(dynamic, createGrid bool, scienceFuncs []inmap.CellManipulator, addInit
 		break
 	}
 	sort.Strings(popList)
-	fmt.Fprintln(w, strings.Join(append([]string{"pol"}, popList...), "\t"))
+	fmt.Fprintln(w1, strings.Join(append([]string{"pol"}, popList...), "\t"))
+	fmt.Fprintln(w2, strings.Join(append([]string{"pol"}, popList...), "\t"))
 	for pol, m := range iF {
 		temp := make([]string, len(popList))
 		for i, pop := range popList {
 			temp[i] = fmt.Sprintf("%.3g", m[pop])
 		}
-		fmt.Fprintln(w, strings.Join(append([]string{pol}, temp...), "\t"))
+		fmt.Fprintln(w1, strings.Join(append([]string{pol}, temp...), "\t"))
+		fmt.Fprintln(w2, strings.Join(append([]string{pol}, temp...), "\t"))
 	}
-	w.Flush()
+	w1.Flush()
+	w2.Flush()
+
+	elapsedTime := time.Since(startTime)
+	log.Printf("Elapsed time: %f hours", elapsedTime.Hours())
 
 	return nil
 }

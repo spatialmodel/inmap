@@ -31,8 +31,14 @@ EmissionUnits = "tons/year"
 # If HTTPport is "", then the web server doesn't run.
 HTTPAddress = ":8080"
 
-# Path to desired output shapefile location. Can include environment variables.
+# OutputFile specifies the path to the desired output shapefile location. It can
+# include environment variables.
 OutputFile = "nei2005/2005nei_output_${InMAPRunType}.shp"
+
+# LogFile specifies the path to the desired logfile location. It can include
+# environment variables. If LogFile is left blank, the logfile will be saved in
+# the same location as the OutputFile.
+LogFile = "nei2005/logfile_${InMAPRunType}.log"
 
 # OutputVariables specifies which model variables should be included in the
 # output file. Each output variable is defined by the desired name and an

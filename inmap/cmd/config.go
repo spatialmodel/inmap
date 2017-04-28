@@ -24,6 +24,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 	"github.com/ctessum/geom/proj"
@@ -33,8 +34,7 @@ import (
 // ConfigData holds information about an InMAP configuration.
 type ConfigData struct {
 
-	// VarGrid provides information for specifying the variable resolution
-	// grid.
+	// VarGrid provides information for specifying the variable resolution grid.
 	VarGrid inmap.VarGridConfig
 
 	// InMAPData is the path to location of baseline meteorology and pollutant data.
@@ -60,16 +60,21 @@ type ConfigData struct {
 	// Acceptable values are 'tons/year' and 'kg/year'.
 	EmissionUnits string
 
-	// Path to desired output shapefile location. Can include environment variables.
+	// OutputFile is the path to the desired output shapefile location. It can
+	// include environment variables.
 	OutputFile string
+
+	// LogFile is the path to the desired logfile location. It can include
+	// environment variables. If LogFile is left blank, the logfile will be saved in
+	// the same location as the OutputFile.
+	LogFile string
 
 	// If OutputAllLayers is true, output data for all model layers. If false, only output
 	// the lowest layer.
 	OutputAllLayers bool
 
 	// OutputVariables specifies which model variables should be included in the
-	// output file.
-	// Can include environment variables.
+	// output file. It can include environment variables.
 	OutputVariables map[string]string
 
 	// NumIterations is the number of iterations to calculate. If < 1, convergence
@@ -125,6 +130,7 @@ func ReadConfigFile(filename string) (config *ConfigData, err error) {
 	config.InMAPData = os.ExpandEnv(config.InMAPData)
 	config.VariableGridData = os.ExpandEnv(config.VariableGridData)
 	config.OutputFile = os.ExpandEnv(config.OutputFile)
+	config.LogFile = os.ExpandEnv(config.LogFile)
 	config.VarGrid.CensusFile = os.ExpandEnv(config.VarGrid.CensusFile)
 	config.VarGrid.MortalityRateFile = os.ExpandEnv(config.VarGrid.MortalityRateFile)
 	config.SROutputFile = os.ExpandEnv(config.SROutputFile)
@@ -139,6 +145,10 @@ func ReadConfigFile(filename string) (config *ConfigData, err error) {
 		return nil, fmt.Errorf("you need to specify an output file in the " +
 			"configuration file(for example: " +
 			"\"OutputFile\":\"output.shp\"")
+	}
+
+	if config.LogFile == "" {
+		config.LogFile = strings.TrimSuffix(config.OutputFile, filepath.Ext(config.OutputFile)) + ".log"
 	}
 
 	if config.VarGrid.GridProj == "" {
