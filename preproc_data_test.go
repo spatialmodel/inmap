@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License
 along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package main
+package inmap
 
 import "bitbucket.org/ctessum/sparse"
 

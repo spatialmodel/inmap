@@ -1,14 +1,16 @@
-## inmap version
+## inmap preproc
 
-Print the version number
+Preprocess CTM output
 
 ### Synopsis
 
 
-version prints the version number of this version of InMAP.
+preproc preprocesses chemical transport model
+  output as specified by information in the configuration
+  file and saves the result for use in future InMAP simulations.
 
 ```
-inmap version
+inmap preproc
 ```
 
 ### Options inherited from parent commands

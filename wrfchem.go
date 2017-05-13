@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License
 along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package main
+package inmap
 
 import (
 	"fmt"
@@ -44,14 +44,18 @@ type WRFChem struct {
 
 	start, end time.Time
 
-	cfg *ConfigInfo
+	wrfOut string
 
 	recordDelta, fileDelta time.Duration
 }
 
 // NewWRFChem initializes a WRF-Chem preprocessor from the given
 // configuration information.
-func NewWRFChem(cfg *ConfigInfo) (*WRFChem, error) {
+// WRFOut is the location of WRF-Chem output files.
+// [DATE] should be used as a wild card for the simulation date.
+// startDate and endDate are the dates of the beginning and end of the
+// simulation, respectively, in the format "YYYYMMDD".
+func NewWRFChem(WRFOut, startDate, endDate string) (*WRFChem, error) {
 	w := WRFChem{
 		// These maps contain the WRF-Chem variables that make
 		// up the chemical species groups, as well as the
@@ -105,15 +109,15 @@ func NewWRFChem(cfg *ConfigInfo) (*WRFChem, error) {
 		// totalPM25 is total mass of PM2.5  [μg/m3].
 		totalPM25: map[string]float64{"PM2_5_DRY": 1.},
 
-		cfg: cfg,
+		wrfOut: WRFOut,
 	}
 
 	var err error
-	w.start, err = time.Parse(inDateFormat, w.cfg.StartDate)
+	w.start, err = time.Parse(inDateFormat, startDate)
 	if err != nil {
 		return nil, fmt.Errorf("inmap: WRF-Chem preprocessor start time: %v", err)
 	}
-	w.end, err = time.Parse(inDateFormat, w.cfg.EndDate)
+	w.end, err = time.Parse(inDateFormat, endDate)
 	if err != nil {
 		return nil, fmt.Errorf("inmap: WRF-Chem preprocessor end time: %v", err)
 	}
@@ -137,21 +141,21 @@ func ppmvToUgKg(mw float64) float64 {
 }
 
 func (w *WRFChem) read(varName string) NextData {
-	return nextDataNCF(w.cfg.WRFChem.WRFOut, wrfFormat, varName, w.start, w.end, w.recordDelta, w.fileDelta, readNCF)
+	return nextDataNCF(w.wrfOut, wrfFormat, varName, w.start, w.end, w.recordDelta, w.fileDelta, readNCF)
 }
 
 func (w *WRFChem) readGroupAlt(varGroup map[string]float64) NextData {
-	return nextDataGroupAltNCF(w.cfg.WRFChem.WRFOut, wrfFormat, varGroup, w.ALT(), w.start, w.end, w.recordDelta, w.fileDelta, readNCF)
+	return nextDataGroupAltNCF(w.wrfOut, wrfFormat, varGroup, w.ALT(), w.start, w.end, w.recordDelta, w.fileDelta, readNCF)
 }
 
 func (w *WRFChem) readGroup(varGroup map[string]float64) NextData {
-	return nextDataGroupNCF(w.cfg.WRFChem.WRFOut, wrfFormat, varGroup, w.start, w.end, w.recordDelta, w.fileDelta, readNCF)
+	return nextDataGroupNCF(w.wrfOut, wrfFormat, varGroup, w.start, w.end, w.recordDelta, w.fileDelta, readNCF)
 }
 
 // Nx helps fulfill the Preprocessor interface by returning
 // the number of grid cells in the West-East direction.
 func (w *WRFChem) Nx() (int, error) {
-	f, ff, err := ncfFromTemplate(w.cfg.WRFChem.WRFOut, wrfFormat, w.start)
+	f, ff, err := ncfFromTemplate(w.wrfOut, wrfFormat, w.start)
 	if err != nil {
 		return -1, fmt.Errorf("nx: %v", err)
 	}
@@ -162,7 +166,7 @@ func (w *WRFChem) Nx() (int, error) {
 // Ny helps fulfill the Preprocessor interface by returning
 // the number of grid cells in the South-North direction.
 func (w *WRFChem) Ny() (int, error) {
-	f, ff, err := ncfFromTemplate(w.cfg.WRFChem.WRFOut, wrfFormat, w.start)
+	f, ff, err := ncfFromTemplate(w.wrfOut, wrfFormat, w.start)
 	if err != nil {
 		return -1, fmt.Errorf("ny: %v", err)
 	}
@@ -173,7 +177,7 @@ func (w *WRFChem) Ny() (int, error) {
 // Nz helps fulfill the Preprocessor interface by returning
 // the number of grid cells in the below-above direction.
 func (w *WRFChem) Nz() (int, error) {
-	f, ff, err := ncfFromTemplate(w.cfg.WRFChem.WRFOut, wrfFormat, w.start)
+	f, ff, err := ncfFromTemplate(w.wrfOut, wrfFormat, w.start)
 	if err != nil {
 		return -1, fmt.Errorf("nz: %v", err)
 	}
@@ -317,15 +321,6 @@ func thetaPerturbToTemperature(thetaPerturb, p float64) float64 {
 	θ := thetaPerturb + 300.
 	// Ambient temperature, K
 	return θ * pressureCorrection
-}
-
-func temperatureToTheta(T, p float64) float64 {
-	const (
-		po    = 101300. // Pa, reference pressure
-		kappa = 0.2854  // related to von karman's constant
-	)
-	pressureCorrection := math.Pow(p/po, kappa)
-	return T / pressureCorrection
 }
 
 // P helps fulfill the Preprocessor interface

@@ -33,7 +33,6 @@ import (
 
 // ConfigData holds information about an InMAP configuration.
 type ConfigData struct {
-
 	// VarGrid provides information for specifying the variable resolution grid.
 	VarGrid inmap.VarGridConfig
 
@@ -93,6 +92,69 @@ type ConfigData struct {
 	// SROutputFile is the path where the output file is or should be created
 	// when creating a source-receptor matrix. It can contain environment variables.
 	SROutputFile string
+
+	// Preproc holds configuration information for the preprocessor.
+	Preproc struct {
+		// CTMType specifies what type of chemical transport
+		// model we are going to be reading data from. Valid
+		// options are "GEOS-Chem" and "WRF-Chem".
+		CTMType string
+
+		WRFChem struct {
+			// WRFOut is the location of WRF-Chem output files.
+			// [DATE] should be used as a wild card for the simulation date.
+			WRFOut string
+		}
+
+		GEOSChem struct {
+			// GEOSA1 is the location of the GEOS 1-hour time average files.
+			// [DATE] should be used as a wild card for the simulation date.
+			GEOSA1 string
+
+			// GEOSA3Cld is the location of the GEOS 3-hour average cloud
+			// parameter files. [DATE] should be used as a wild card for
+			// the simulation date.
+			GEOSA3Cld string
+
+			// GEOSA3Cld is the location of the GEOS 3-hour average dynamical
+			// parameter files. [DATE] should be used as a wild card for
+			// the simulation date.
+			GEOSA3Dyn string
+
+			// GEOSI3 is the location of the GEOS 3-hour instantaneous parameter
+			// files. [DATE] should be used as a wild card for
+			// the simulation date.
+			GEOSI3 string
+
+			// GEOSA3MstE is the location of the GEOS 3-hour average moist parameters
+			// on level edges files. [DATE] should be used as a wild card for
+			// the simulation date.
+			GEOSA3MstE string
+
+			// GEOSChem is the location of GEOS-Chem output files.
+			// [DATE] should be used as a wild card for the simulation date.
+			GEOSChem string
+
+			// VegTypeGlobal is the location of the GEOS-Chem vegtype.global file,
+			// which is described here:
+			// http://wiki.seas.harvard.edu/geos-chem/index.php/Olson_land_map#Structure_of_the_vegtype.global_file
+			VegTypeGlobal string
+		}
+
+		// StartDate is the date of the beginning of the simulation.
+		// Format = "YYYYMMDD".
+		StartDate string
+
+		// EndDate is the date of the end of the simulation.
+		// Format = "YYYYMMDD".
+		EndDate string
+
+		CtmGridXo float64 // lower left of Chemical Transport Model (CTM) grid, x
+		CtmGridYo float64 // lower left of grid, y
+
+		CtmGridDx float64 // m
+		CtmGridDy float64 // m
+	}
 
 	sr *proj.SR
 }

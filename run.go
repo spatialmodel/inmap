@@ -33,28 +33,6 @@ import (
 	"github.com/Knetic/govaluate"
 )
 
-// Molar masses [grams per mole]
-const (
-	mwNOx = 46.0055
-	mwN   = 14.0067
-	mwNO3 = 62.00501
-	mwNH3 = 17.03056
-	mwNH4 = 18.03851
-	mwS   = 32.0655
-	mwSO2 = 64.0644
-	mwSO4 = 96.0632
-)
-
-// Chemical mass conversions [ratios]
-const (
-	NOxToN = mwN / mwNOx
-	NtoNO3 = mwNO3 / mwN
-	SOxToS = mwSO2 / mwS
-	StoSO4 = mwS / mwSO4
-	NH3ToN = mwN / mwNH3
-	NtoNH4 = mwNH4 / mwN
-)
-
 const daysPerSecond = 1. / 3600. / 24.
 
 // EmisNames are the names of pollutants accepted as emissions [μg/s]
