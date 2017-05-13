@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License
 along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package main
+package inmap
 
 import (
 	"fmt"
@@ -30,7 +30,6 @@ import (
 	"github.com/ctessum/atmos/emep"
 	"github.com/ctessum/atmos/seinfeld"
 	"github.com/ctessum/atmos/wesely1989"
-	"github.com/spatialmodel/inmap"
 
 	"bitbucket.org/ctessum/cdf"
 	"bitbucket.org/ctessum/sparse"
@@ -38,17 +37,36 @@ import (
 
 // physical constants
 const (
-	MWa      = 28.97   // g/mol, molar mass of air
-	mwN      = 14.0067 // g/mol, molar mass of nitrogen
-	mwS      = 32.0655 // g/mol, molar mass of sulfur
-	mwNH4    = 18.03851
-	mwSO4    = 96.0632
-	mwNO3    = 62.00501
 	g        = 9.80665 // m/s2
 	κ        = 0.41    // Von Kármán constant
 	atmPerPa = 9.86923267e-6
 	rr       = 287.058    // (J /kg K), specific gas constant for dry air
 	avNum    = 6.02214e23 // molecules per mole
+
+	// Molar masses [grams per mole]
+	mwNOx = 46.0055
+	mwN   = 14.0067 // g/mol, molar mass of nitrogen
+	mwNO3 = 62.00501
+	mwNH3 = 17.03056
+	mwNH4 = 18.03851
+	mwS   = 32.0655 // g/mol, molar mass of sulfur
+	mwSO2 = 64.0644
+	mwSO4 = 96.0632
+	MWa   = 28.97 // g/mol, molar mass of air
+
+	// Chemical mass conversions [ratios]
+	NOxToN = mwN / mwNOx
+	NtoNO3 = mwNO3 / mwN
+	SOxToS = mwSO2 / mwS
+	StoSO4 = mwS / mwSO4
+	NH3ToN = mwN / mwNH3
+	NtoNH4 = mwNH4 / mwN
+)
+
+const (
+	// inDateFormat specifies the format to use
+	// when inputting dates.
+	inDateFormat = "20060102"
 )
 
 // NextData is a type of function that returns data for the next time step.
@@ -141,7 +159,7 @@ type Preprocessor interface {
 // Preprocess returns preprocessed InMAP input data
 // based on the information available from the given
 // preprocessor.
-func Preprocess(p Preprocessor, config *ConfigInfo) error {
+func Preprocess(p Preprocessor) (*CTMData, error) {
 	var pblh, layerHeights, windSpeed, windSpeedInverse, windSpeedMinusThird, windSpeedMinusOnePointFour, uAvg, vAvg, wAvg *sparse.DenseArray
 
 	errChan := make(chan error)
@@ -167,7 +185,7 @@ func Preprocess(p Preprocessor, config *ConfigInfo) error {
 	for i := 0; i < 3; i++ {
 		err := <-errChan
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -259,11 +277,11 @@ func Preprocess(p Preprocessor, config *ConfigInfo) error {
 	for i := 0; i < 12; i++ {
 		err := <-errChan
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	data := new(inmap.CTMData)
+	data := new(CTMData)
 	data.AddVariable("UAvg", []string{"z", "y", "xStagger"},
 		"Annual average x velocity", "m/s", uAvg)
 	data.AddVariable("VAvg", []string{"z", "yStagger", "x"},
@@ -341,7 +359,7 @@ func Preprocess(p Preprocessor, config *ConfigInfo) error {
 		"Wet deposition rate constant for SO2 gas", "s-1", SO2WetDep)
 	data.AddVariable("OtherGasWetDep", []string{"z", "y", "x"},
 		"Wet deposition rate constant for other gases", "s-1", otherGasWetDep)
-	data.AddVariable("Kzz", []string{"zStagger", "y", "x"},
+	data.AddVariable("Kzz", []string{"z", "y", "x"},
 		"Vertical turbulent diffusivity", "m2 s-1", Kzz)
 	data.AddVariable("M2u", []string{"z", "y", "x"},
 		"ACM2 nonlocal upward mixing {Pleim 2007}", "s-1", M2u)
@@ -368,13 +386,7 @@ func Preprocess(p Preprocessor, config *ConfigInfo) error {
 	data.AddVariable("TotalPM25", []string{"z", "y", "x"},
 		"Total PM2.5 concentration", "ug m-3", totalpm25)
 
-	ff, err := os.Create(config.OutputFile)
-	if err != nil {
-		return fmt.Errorf("inmap: preprocessor writing output file: %v", err)
-	}
-	data.Write(ff, config.CtmGridXo, config.CtmGridYo, config.CtmGridDx, config.CtmGridDy)
-	ff.Close()
-	return nil
+	return data, nil
 }
 
 // marginalPartitioning calculates marginal partitioning over a period
@@ -938,6 +950,15 @@ func stabilityMixingChemistry(LayerHeights *sparse.DenseArray, pblhFunc, ustarFu
 		}
 		n++
 	}
+}
+
+func temperatureToTheta(T, p float64) float64 {
+	const (
+		po    = 101300. // Pa, reference pressure
+		kappa = 0.2854  // related to von karman's constant
+	)
+	pressureCorrection := math.Pow(p/po, kappa)
+	return T / pressureCorrection
 }
 
 // f2i converts a float to an int (rounding).

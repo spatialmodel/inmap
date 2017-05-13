@@ -679,36 +679,8 @@ func TestReadWriteCTMData(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	compareCTMData(ctmdata, ctmdata2, t)
+	const tolerance = 1.0e-10
+	compareCTMData(ctmdata, ctmdata2, tolerance, t)
 	f.Close()
 	os.Remove(TestCTMDataFile)
-}
-
-func compareCTMData(ctmdata, ctmdata2 *CTMData, t *testing.T) {
-	if len(ctmdata.Data) != len(ctmdata2.Data) {
-		t.Fatalf("new and old ctmdata have different number of variables (%d vs. %d)",
-			len(ctmdata2.Data), len(ctmdata.Data))
-	}
-	for name, dd1 := range ctmdata.Data {
-		if _, ok := ctmdata2.Data[name]; !ok {
-			t.Errorf("ctmdata2 doesn't have variable %s", name)
-			continue
-		}
-		dd2 := ctmdata2.Data[name]
-		if !reflect.DeepEqual(dd1.Dims, dd2.Dims) {
-			t.Errorf("%s dims problem: %v != %v", name, dd1.Dims, dd2.Dims)
-		}
-		if dd1.Description != dd2.Description {
-			t.Errorf("%s description problem: %s != %s", name, dd1.Description, dd2.Description)
-		}
-		if dd1.Units != dd2.Units {
-			t.Errorf("%s units problem: %s != %s", name, dd1.Units, dd2.Units)
-		}
-		if !reflect.DeepEqual(dd1.Data.Shape, dd2.Data.Shape) {
-			t.Errorf("%s data shape problem: %v != %v", name, dd1.Data.Shape, dd2.Data.Shape)
-		}
-		if !reflect.DeepEqual(dd1.Data.Elements, dd2.Data.Elements) {
-			t.Errorf("%s data problem: %v != %v", name, dd1.Data.Elements, dd2.Data.Elements)
-		}
-	}
 }

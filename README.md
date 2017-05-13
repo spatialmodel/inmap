@@ -51,7 +51,6 @@ You can also compile InMAP from its source code. It should work on most types of
 
 	The above command runs the model in the most typical mode. For alternative run modes and other command options refer [here](inmap/cmd/doc/inmap.md).
 
-
 3. View the program output. The output files are in [shapefile](http://en.wikipedia.org/wiki/Shapefile) format which can be viewed in most GIS programs. One free GIS program is [QGIS](http://www.qgis.org/). By default, the InMAP only outputs results from layer zero, but this can be changed using the configuration file.
   Output variables are specified as `OutputVariables` in the configuration file. Each output variable is defined in the configuration file by its name and an expression that can be used to calculate it (in the form VariableName = "Expression"). Output variable names can be chosen by the user, but their corresponding expressions must consist of variables that are understood by InMAP. Note that output variable names should have a length of 10 characters or less because there is a limit on the allowed length of shapefile field names.
 
@@ -76,6 +75,10 @@ You can also compile InMAP from its source code. It should work on most types of
       * people identifying as black (`Black`), asian  (`Asian`), latino (`Latino`), native american or american indian (`Native`), non-latino white (`WhiteNoLat`) and everyone else (`Other`).
     * Numbers of deaths attributable to PM<sub>2.5</sub> in each of the populations are obtained by defining an expression in the configuration file based on the variables `TotalPM25`, `MortalityRate`, and the population variable of interest. For example, deaths among the total population could be calculated with the following entry in the configuration file: `TotalPopD = "coxHazard(loglogRR(TotalPM25), TotalPop, MortalityRate)"`. Numbers of deaths are measured in units of deaths/year.
     * Baseline mortality rate in units of deaths per year per 100,000 people (`MortalityRate`), which can be used for performing alternative health impact calculations.
+
+### Running the preprocessor
+
+InMAP includes a preprocessor to convert chemical transport model (CTM) output into InMAP meteorology and baseline chemistry input data. Unlike the main InMAP model, the preprocessor only needs to be run once for each spatiotemporal domain. Users that would like to use a different spatial or temporal domain than what is included with the InMAP download can obtain CTM output for that domain and run the preprocessor themselves. The WRF-Chem and GEOS-Chem CTMs are currently supported. Information on how to run the preprocessor is [here](inmap/cmd/doc/inmap.md), and information regarding preprocessor configuration is [here](https://godoc.org/github.com/spatialmodel/inmap/inmap/cmd#ConfigData).
 
 ## API
 

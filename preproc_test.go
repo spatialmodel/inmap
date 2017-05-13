@@ -16,11 +16,10 @@ You should have received a copy of the GNU General Public License
 along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package main
+package inmap
 
 import (
 	"bytes"
-	"flag"
 	"fmt"
 	"io"
 	"math"
@@ -28,31 +27,23 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/spatialmodel/inmap"
-
 	"bitbucket.org/ctessum/sparse"
 )
 
 func TestWRFChemToInMAP(t *testing.T) {
-	const tolerance = 1.0e-8
+	const tolerance = 1.0e-6
 
-	err := flag.Set("config", "configExampleWRFChem.json")
+	wrf, err := NewWRFChem("inmap/testdata/preproc/wrfout_d01_[DATE]", "20050101", "20050103")
 	if err != nil {
 		t.Fatal(err)
 	}
-	main()
-
-	cfg := inmap.VarGridConfig{}
-
-	f1, err := os.Open("testdata/inmapData_WRFChem.ncf")
+	newData, err := Preprocess(wrf)
 	if err != nil {
-		t.Fatalf("opening new file: %v", err)
+		t.Fatal(err)
 	}
-	newData, err := cfg.LoadCTMData(f1)
-	if err != nil {
-		t.Fatalf("reading new file: %v", err)
-	}
-	f2, err := os.Open("testdata/inmapData_WRFChem_golden.ncf")
+
+	cfg := VarGridConfig{}
+	f2, err := os.Open("inmap/testdata/preproc/inmapData_WRFChem_golden.ncf")
 	if err != nil {
 		t.Fatalf("opening golden file: %v", err)
 	}
@@ -64,33 +55,40 @@ func TestWRFChemToInMAP(t *testing.T) {
 }
 
 func BenchmarkWRFChemToInMAP(b *testing.B) {
-	err := flag.Set("config", "configExampleWRFChem.json")
+	wrf, err := NewWRFChem("inmap/testdata/preproc/wrfout_d01_[DATE]", "20050101", "20050103")
 	if err != nil {
 		b.Fatal(err)
 	}
-	main()
+	_, err = Preprocess(wrf)
+	if err != nil {
+		b.Fatal(err)
+	}
 }
 
 func TestGEOSChemToInMAP(t *testing.T) {
-	const tolerance = 1.0e-8
+	const tolerance = 1.0e-6
 
-	err := flag.Set("config", "configExampleGEOSChem.json")
+	gc, err := NewGEOSChem(
+		"inmap/testdata/preproc/GEOSFP.[DATE].A1.2x25.nc",
+		"inmap/testdata/preproc/GEOSFP.[DATE].A3cld.2x25.nc",
+		"inmap/testdata/preproc/GEOSFP.[DATE].A3dyn.2x25.nc",
+		"inmap/testdata/preproc/GEOSFP.[DATE].I3.2x25.nc",
+		"inmap/testdata/preproc/GEOSFP.[DATE].A3mstE.2x25.nc",
+		"inmap/testdata/preproc/gc_output.[DATE].nc",
+		"inmap/testdata/preproc/vegtype.global.txt",
+		"20130102",
+		"20130104",
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	main()
-
-	cfg := inmap.VarGridConfig{}
-
-	f1, err := os.Open("testdata/inmapData_GEOSChem.ncf")
+	newData, err := Preprocess(gc)
 	if err != nil {
-		t.Fatalf("opening new file: %v", err)
+		t.Fatal(err)
 	}
-	newData, err := cfg.LoadCTMData(f1)
-	if err != nil {
-		t.Fatalf("reading new file: %v", err)
-	}
-	f2, err := os.Open("testdata/inmapData_GEOSChem_golden.ncf")
+
+	cfg := VarGridConfig{}
+	f2, err := os.Open("inmap/testdata/preproc/inmapData_GEOSChem_golden.ncf")
 	if err != nil {
 		t.Fatalf("opening golden file: %v", err)
 	}
@@ -102,14 +100,27 @@ func TestGEOSChemToInMAP(t *testing.T) {
 }
 
 func BenchmarkGEOSChemToInMAP(b *testing.B) {
-	err := flag.Set("config", "configExample_GEOSChem.json")
+	gc, err := NewGEOSChem(
+		"inmap/testdata/preproc/GEOSFP.[DATE].A1.2x25.nc",
+		"inmap/testdata/preproc/GEOSFP.[DATE].A3cld.2x25.nc",
+		"inmap/testdata/preproc/GEOSFP.[DATE].A3dyn.2x25.nc",
+		"inmap/testdata/preproc/GEOSFP.[DATE].I3.2x25.nc",
+		"inmap/testdata/preproc/GEOSFP.[DATE].A3mstE.2x25.nc",
+		"inmap/testdata/preproc/gc_output.[DATE].nc",
+		"inmap/testdata/preproc/vegtype.global.txt",
+		"20130102",
+		"20130104",
+	)
 	if err != nil {
 		b.Fatal(err)
 	}
-	main()
+	_, err = Preprocess(gc)
+	if err != nil {
+		b.Fatal(err)
+	}
 }
 
-func compareCTMData(goldenData, newData *inmap.CTMData, tolerance float64, t *testing.T) {
+func compareCTMData(goldenData, newData *CTMData, tolerance float64, t *testing.T) {
 	if len(goldenData.Data) != len(newData.Data) {
 		t.Errorf("new and old ctmdata have different number of variables (%d vs. %d)",
 			len(newData.Data), len(goldenData.Data))
@@ -196,7 +207,7 @@ func TestCalcLayerHeights(t *testing.T) {
 	arrayCompare(dz, dzWant, tolerance, "dz", t)
 }
 
-func TestWetDeposition(t *testing.T) {
+func TestPreprocWetDeposition(t *testing.T) {
 	const tolerance = 1.0e-8
 	layerHeights := geopotentialToHeight(PH[0], PHB[0])
 	dz := layerThickness(layerHeights)

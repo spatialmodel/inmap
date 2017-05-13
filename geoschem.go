@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License
 along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package main
+package inmap
 
 import (
 	"bufio"
@@ -49,19 +49,54 @@ type GEOSChem struct {
 
 	start, end time.Time
 
-	cfg *ConfigInfo
-
 	recordDelta1h, recordDelta3h time.Duration
 	fileDelta24h, fileDelta3h    time.Duration
 
 	landUse *sparse.DenseArray
 
 	nx, ny, nz int
+
+	geosA1        string
+	geosA3Cld     string
+	geosA3Dyn     string
+	geosI3        string
+	geosA3MstE    string
+	geosChem      string
+	vegTypeGlobal string
 }
 
 // NewGEOSChem initializes a WRF-Chem preprocessor from the given
 // configuration information.
-func NewGEOSChem(cfg *ConfigInfo) (*GEOSChem, error) {
+//
+// GEOSA1 is the location of the GEOS 1-hour time average files.
+// [DATE] should be used as a wild card for the simulation date.
+//
+// GEOSA3Cld is the location of the GEOS 3-hour average cloud
+// parameter files. [DATE] should be used as a wild card for
+// the simulation date.
+//
+// GEOSA3Cld is the location of the GEOS 3-hour average dynamical
+// parameter files. [DATE] should be used as a wild card for
+// the simulation date.
+//
+// GEOSI3 is the location of the GEOS 3-hour instantaneous parameter
+// files. [DATE] should be used as a wild card for
+// the simulation date.
+//
+// GEOSA3MstE is the location of the GEOS 3-hour average moist parameters
+// on level edges files. [DATE] should be used as a wild card for
+// the simulation date.
+//
+// GEOSChemOut is the location of GEOS-Chem output files.
+// [DATE] should be used as a wild card for the simulation date.
+//
+// VegTypeGlobal is the location of the GEOS-Chem vegtype.global file,
+// which is described here:
+// http://wiki.seas.harvard.edu/geos-chem/index.php/Olson_land_map#Structure_of_the_vegtype.global_file
+//
+// startDate and endDate are the dates of the beginning and end of the
+// simulation, respectively, in the format "YYYYMMDD".
+func NewGEOSChem(GEOSA1, GEOSA3Cld, GEOSA3Dyn, GEOSI3, GEOSA3MstE, GEOSChemOut, VegTypeGlobal, startDate, endDate string) (*GEOSChem, error) {
 	gc := GEOSChem{
 		// These maps contain the GEOS-Chem variables that make
 		// up the chemical species groups, as well as the
@@ -154,15 +189,21 @@ func NewGEOSChem(cfg *ConfigInfo) (*GEOSChem, error) {
 			"IJ-AVG-S__SALA": ppbvToUgKg(150) * 1.86,
 		},
 
-		cfg: cfg,
+		geosA1:        GEOSA1,
+		geosA3Cld:     GEOSA3Cld,
+		geosA3Dyn:     GEOSA3Dyn,
+		geosI3:        GEOSI3,
+		geosA3MstE:    GEOSA3MstE,
+		geosChem:      GEOSChemOut,
+		vegTypeGlobal: VegTypeGlobal,
 	}
 
 	var err error
-	gc.start, err = time.Parse(inDateFormat, gc.cfg.StartDate)
+	gc.start, err = time.Parse(inDateFormat, startDate)
 	if err != nil {
 		return nil, fmt.Errorf("inmap: GEOS-Chem preprocessor start time: %v", err)
 	}
-	gc.end, err = time.Parse(inDateFormat, gc.cfg.EndDate)
+	gc.end, err = time.Parse(inDateFormat, endDate)
 	if err != nil {
 		return nil, fmt.Errorf("inmap: GEOS-Chem preprocessor end time: %v", err)
 	}
@@ -184,7 +225,7 @@ func NewGEOSChem(cfg *ConfigInfo) (*GEOSChem, error) {
 		return nil, fmt.Errorf("inmap: GEOS-Chem preprocessor fileDelta: %v", err)
 	}
 
-	file, err := os.Open(cfg.GEOSChem.VegTypeGlobal)
+	file, err := os.Open(VegTypeGlobal)
 	if err != nil {
 		return nil, err
 	}
@@ -228,35 +269,35 @@ func ppbvToUgKg(mw float64) float64 {
 
 func (gc *GEOSChem) readA3Dyn(varName string) NextData {
 	conv := geosLayerConvert(gc.nz)
-	return conv(nextDataNCF(gc.cfg.GEOSChem.GEOSA3Dyn, geosFormat, varName, gc.start, gc.end, gc.recordDelta3h, gc.fileDelta24h, readNCF))
+	return conv(nextDataNCF(gc.geosA3Dyn, geosFormat, varName, gc.start, gc.end, gc.recordDelta3h, gc.fileDelta24h, readNCF))
 }
 
 func (gc *GEOSChem) readA3MstE(varName string) NextData {
 	conv := geosLayerConvert(gc.nz)
-	return conv(nextDataNCF(gc.cfg.GEOSChem.GEOSA3MstE, geosFormat, varName, gc.start, gc.end, gc.recordDelta3h, gc.fileDelta24h, readNCF))
+	return conv(nextDataNCF(gc.geosA3MstE, geosFormat, varName, gc.start, gc.end, gc.recordDelta3h, gc.fileDelta24h, readNCF))
 }
 
 func (gc *GEOSChem) readA3Cld(varName string) NextData {
 	conv := geosLayerConvert(gc.nz)
-	return conv(nextDataNCF(gc.cfg.GEOSChem.GEOSA3Cld, geosFormat, varName, gc.start, gc.end, gc.recordDelta3h, gc.fileDelta24h, readNCF))
+	return conv(nextDataNCF(gc.geosA3Cld, geosFormat, varName, gc.start, gc.end, gc.recordDelta3h, gc.fileDelta24h, readNCF))
 }
 
 func (gc *GEOSChem) readA1(varName string) NextData {
 	// All variables in A1 are 2-d, so we don't need to perform a layer conversion.
-	return nextDataNCF(gc.cfg.GEOSChem.GEOSA1, geosFormat, varName, gc.start, gc.end, gc.recordDelta1h, gc.fileDelta24h, readNCF)
+	return nextDataNCF(gc.geosA1, geosFormat, varName, gc.start, gc.end, gc.recordDelta1h, gc.fileDelta24h, readNCF)
 }
 
 func (gc *GEOSChem) readI3(varName string) NextData {
 	conv := geosLayerConvert(gc.nz)
-	return conv(nextDataNCF(gc.cfg.GEOSChem.GEOSI3, geosFormat, varName, gc.start, gc.end, gc.recordDelta3h, gc.fileDelta24h, readNCF))
+	return conv(nextDataNCF(gc.geosI3, geosFormat, varName, gc.start, gc.end, gc.recordDelta3h, gc.fileDelta24h, readNCF))
 }
 
 func (gc *GEOSChem) readChem(varName string) NextData {
-	return nextDataNCF(gc.cfg.GEOSChem.GEOSChem, geosChemFormat, varName, gc.start, gc.end, gc.recordDelta3h, gc.fileDelta3h, readNCFNoHour)
+	return nextDataNCF(gc.geosChem, geosChemFormat, varName, gc.start, gc.end, gc.recordDelta3h, gc.fileDelta3h, readNCFNoHour)
 }
 
 func (gc *GEOSChem) readChemGroupAlt(varGroup map[string]float64) NextData {
-	return nextDataGroupAltNCF(gc.cfg.GEOSChem.GEOSChem, geosChemFormat, gc.aVOC, gc.ALT(), gc.start, gc.end, gc.recordDelta3h, gc.fileDelta3h, readNCFNoHour)
+	return nextDataGroupAltNCF(gc.geosChem, geosChemFormat, gc.aVOC, gc.ALT(), gc.start, gc.end, gc.recordDelta3h, gc.fileDelta3h, readNCFNoHour)
 }
 
 var geosLayerConvert = func(nz int) func(NextData) NextData {
@@ -366,7 +407,7 @@ func geosLayerConvertStaggered(in *sparse.DenseArray, staggeredLayerMap map[int]
 // Nx helps fulfill the Preprocessor interface by returning
 // the number of grid cells in the West-East direction.
 func (gc *GEOSChem) Nx() (int, error) {
-	f, ff, err := ncfFromTemplate(gc.cfg.GEOSChem.GEOSChem, geosChemFormat, gc.start)
+	f, ff, err := ncfFromTemplate(gc.geosChem, geosChemFormat, gc.start)
 	if err != nil {
 		return -1, err
 	}
@@ -377,7 +418,7 @@ func (gc *GEOSChem) Nx() (int, error) {
 // Ny helps fulfill the Preprocessor interface by returning
 // the number of grid cells in the South-North direction.
 func (gc *GEOSChem) Ny() (int, error) {
-	f, ff, err := ncfFromTemplate(gc.cfg.GEOSChem.GEOSChem, geosChemFormat, gc.start)
+	f, ff, err := ncfFromTemplate(gc.geosChem, geosChemFormat, gc.start)
 	if err != nil {
 		return -1, err
 	}
@@ -388,7 +429,7 @@ func (gc *GEOSChem) Ny() (int, error) {
 // Nz helps fulfill the Preprocessor interface by returning
 // the number of grid cells in the below-above direction.
 func (gc *GEOSChem) Nz() (int, error) {
-	f, ff, err := ncfFromTemplate(gc.cfg.GEOSChem.GEOSChem, geosChemFormat, gc.start)
+	f, ff, err := ncfFromTemplate(gc.geosChem, geosChemFormat, gc.start)
 	if err != nil {
 		return -1, err
 	}
