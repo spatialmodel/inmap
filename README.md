@@ -70,7 +70,7 @@ You can also compile InMAP from its source code. It should work on most types of
 		* Particulate nitrate (`pNO3`)
 		* Particulate ammonium (`pNH4`)
 		* Secondary organic aerosol (`SOA`)
-	* Populations of different demographic subgroups in units of people per square meter. The included populations may vary but in the default dataset as of this writing the groups included are:
+	* Populations of different demographic subgroups are in units of people per grid cell. The included populations may vary but in the default dataset as of this writing the groups included are:
       * total population (`TotalPop`)
       * people identifying as black (`Black`), asian  (`Asian`), latino (`Latino`), native american or american indian (`Native`), non-latino white (`WhiteNoLat`) and everyone else (`Other`).
     * Numbers of deaths attributable to PM<sub>2.5</sub> in each of the populations are obtained by defining an expression in the configuration file based on the variables `TotalPM25`, `MortalityRate`, and the population variable of interest. For example, deaths among the total population could be calculated with the following entry in the configuration file: `TotalPopD = "coxHazard(loglogRR(TotalPM25), TotalPop, MortalityRate)"`. Numbers of deaths are measured in units of deaths/year.
