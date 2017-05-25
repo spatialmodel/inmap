@@ -85,13 +85,17 @@ type ConfigData struct {
 	// If HTTPport is "", then the web server doesn't run.
 	HTTPAddress string
 
-	// SRLogDir is the directory that log files should be stored in when creating
-	// a source-receptor matrix. It can contain environment variables.
-	SRLogDir string
+	// SR holds information related to source-receptor matrix
+	// creation.
+	SR struct {
+		// LogDir is the directory that log files should be stored in when creating
+		// a source-receptor matrix. It can contain environment variables.
+		LogDir string
 
-	// SROutputFile is the path where the output file is or should be created
-	// when creating a source-receptor matrix. It can contain environment variables.
-	SROutputFile string
+		// OutputFile is the path where the output file is or should be created
+		// when creating a source-receptor matrix. It can contain environment variables.
+		OutputFile string
+	}
 
 	// Preproc holds configuration information for the preprocessor.
 	Preproc struct {
@@ -197,8 +201,8 @@ func ReadConfigFile(filename string) (config *ConfigData, err error) {
 	config.LogFile = os.ExpandEnv(config.LogFile)
 	config.VarGrid.CensusFile = os.ExpandEnv(config.VarGrid.CensusFile)
 	config.VarGrid.MortalityRateFile = os.ExpandEnv(config.VarGrid.MortalityRateFile)
-	config.SROutputFile = os.ExpandEnv(config.SROutputFile)
-	config.SRLogDir = os.ExpandEnv(config.SRLogDir)
+	config.SR.OutputFile = os.ExpandEnv(config.SR.OutputFile)
+	config.SR.LogDir = os.ExpandEnv(config.SR.LogDir)
 
 	for i := 0; i < len(config.EmissionsShapefiles); i++ {
 		config.EmissionsShapefiles[i] =

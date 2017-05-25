@@ -27,14 +27,14 @@ func TestSR(t *testing.T) {
 	if err := Startup("../configExample.toml"); err != nil {
 		t.Fatal(err)
 	}
-	Config.SROutputFile = "../testdata/tempSR.ncf"
+	Config.SR.OutputFile = "../testdata/tempSR.ncf"
 	begin := 8
 	end := 9
 	layers := []int{0}
 	if err := RunSR(begin, end, layers); err != nil {
 		t.Fatal(err)
 	}
-	os.Remove(Config.SROutputFile)
+	os.Remove(Config.SR.OutputFile)
 }
 
 func TestWorkerInit(t *testing.T) {

@@ -94,9 +94,8 @@ func Run(dynamic, createGrid bool, scienceFuncs []inmap.CellManipulator, addInit
 	o, err := inmap.NewOutputter(Config.OutputFile, Config.OutputAllLayers, Config.OutputVariables, nil)
 	if err != nil {
 		return err
-	} else {
-		log.Println("Parsing output variable expressions...")
 	}
+	log.Println("Parsing output variable expressions...")
 
 	emis, err := inmap.ReadEmissionShapefiles(Config.sr, Config.EmissionUnits,
 		msgLog, Config.EmissionsShapefiles...)

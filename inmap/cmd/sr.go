@@ -78,12 +78,12 @@ func RunSR(begin, end int, layers []int) error {
 	command = fmt.Sprintf("%s  worker --config=%s --rpcport=%s", command, configFile, sr.RPCPort)
 
 	sr, err := sr.NewSR(Config.VariableGridData, Config.InMAPData, command,
-		Config.SRLogDir, &Config.VarGrid, nodes)
+		Config.SR.LogDir, &Config.VarGrid, nodes)
 	if err != nil {
 		return err
 	}
 
-	if err = sr.Run(Config.SROutputFile, layers, begin, end); err != nil {
+	if err = sr.Run(Config.SR.OutputFile, layers, begin, end); err != nil {
 		return err
 	}
 
