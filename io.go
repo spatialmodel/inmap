@@ -94,11 +94,10 @@ func (e *Emissions) Add(er *EmisRecord) {
 
 // ReadEmissionShapefiles returns the emissions data in the specified shapefiles,
 // and converts them to the spatial reference gridSR. Input units are specified
-// by units; options are tons/year and kg/year. Output units = μg/s.
+// by units; options are tons/year, kg/year, ug/s, and μg/s. Output units = μg/s.
 // c is a channel over which status updates will be sent. If c is nil,
 // no updates will be sent.
 func ReadEmissionShapefiles(gridSR *proj.SR, units string, c chan string, shapefiles ...string) (*Emissions, error) {
-
 	var emisConv float64
 	switch units {
 	case "tons/year":
@@ -111,6 +110,11 @@ func ReadEmissionShapefiles(gridSR *proj.SR, units string, c chan string, shapef
 		const massConv = 1.e9          // μg per kg
 		const timeConv = 3600. * 8760. // seconds per year
 		emisConv = massConv / timeConv // convert kg/year to μg/s
+	case "ug/s", "μg/s":
+		// Input units = μg/s; output units = μg/s
+		emisConv = 1
+	default:
+		return nil, fmt.Errorf("inmap: invalid emissions units '%s'", units)
 	}
 
 	// Add in emissions shapefiles

@@ -56,7 +56,7 @@ type ConfigData struct {
 	EmissionsShapefiles []string
 
 	// EmissionUnits gives the units that the input emissions are in.
-	// Acceptable values are 'tons/year' and 'kg/year'.
+	// Acceptable values are 'tons/year', 'kg/year', 'ug/s', and 'μg/s'.
 	EmissionUnits string
 
 	// OutputFile is the path to the desired output shapefile location. It can
