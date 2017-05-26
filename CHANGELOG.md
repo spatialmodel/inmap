@@ -7,6 +7,7 @@
 * Allowed output variable expressions to now be evaluated at the grid level in addition to the grid cell level
 * Incorporated the preprocessor into the main program
 * Added ug/s option for emissions units
+* Added a command for using an SR matrix to make concentration predictions
 
 # Release 1.2.1 (2016-11-15)
 * Changed the time step calculation algorithm to work with larger grid cell sizes

@@ -55,6 +55,7 @@ var runCmd = &cobra.Command{
 	Short: "Run the model.",
 	Long: "run runs an InMAP simulation. Use the subcommands specified below to " +
 		" choose a run mode. (Currently 'steady' is the only available run mode.)",
+	DisableAutoGenTag: true,
 }
 
 // steadyCmd is a command that runs a steady-state simulation.
@@ -66,6 +67,7 @@ var steadyCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return labelErr(Run(!static, createGrid, DefaultScienceFuncs, nil, nil, nil))
 	},
+	DisableAutoGenTag: true,
 }
 
 func labelErr(err error) error {

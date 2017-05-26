@@ -41,6 +41,7 @@ var gridCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return labelErr(Grid())
 	},
+	DisableAutoGenTag: true,
 }
 
 // Grid creates and saves a new variable resolution grid.

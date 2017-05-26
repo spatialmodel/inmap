@@ -40,6 +40,7 @@ var preprocCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return labelErr(Preproc(Config))
 	},
+	DisableAutoGenTag: true,
 }
 
 // Preproc preprocesses chemical transport model

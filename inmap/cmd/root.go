@@ -48,6 +48,7 @@ var RootCmd = &cobra.Command{
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
 		completedMessage()
 	},
+	DisableAutoGenTag: true,
 }
 
 // Startup reads the configuration file and prints a welcome message.
@@ -95,4 +96,5 @@ var versionCmd = &cobra.Command{
 	},
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
 	},
+	DisableAutoGenTag: true,
 }

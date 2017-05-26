@@ -66,6 +66,7 @@ func NewReader(r cdf.ReaderWriterAt) (*Reader, error) {
 			geom.Point{X: g[2][i], Y: g[1][i]}, // E, S
 			geom.Point{X: g[2][i], Y: g[0][i]}, // E, N
 			geom.Point{X: g[3][i], Y: g[0][i]}, // W, N
+			geom.Point{X: g[3][i], Y: g[1][i]}, // W, S
 		}}
 	}
 
@@ -228,7 +229,6 @@ func (sr *Reader) Concentrations(emis ...*inmap.EmisRecord) (*Concentrations, er
 
 	for _, e := range emis {
 		cells, fractions := sr.d.CellIntersections(e.Geom)
-
 		for i, c := range cells {
 			// Figure out if this cell is the right layer.
 			var plumeHeight float64
@@ -298,7 +298,6 @@ var polNames = []string{"pNH4", "pNO3", "pSO4", "SOA", "PrimaryPM25"}
 // SR matrix and returns a list of layers that should be used to represent
 // the emissions in c and the weighting fraction of each layer.
 func (sr *Reader) layerFracs(c *inmap.Cell, plumeHeight float64) ([]int, []float64, error) {
-
 	layerHeights, _, err := sr.d.VerticalProfile("WindSpeed", c.Centroid())
 	if err != nil {
 		return nil, nil, err

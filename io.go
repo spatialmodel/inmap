@@ -57,7 +57,8 @@ func AddEmissionsFlux() CellManipulator {
 
 // Emissions is a holder for input emissions data.
 type Emissions struct {
-	data *rtree.Rtree
+	data      *rtree.Rtree
+	dataSlice []*EmisRecord
 }
 
 // EmisRecord is a holder for an emissions record.
@@ -90,7 +91,12 @@ func NewEmissions() *Emissions {
 // Add adds an emissions record to e.
 func (e *Emissions) Add(er *EmisRecord) {
 	e.data.Insert(er)
+	e.dataSlice = append(e.dataSlice, er)
 }
+
+// EmisRecords returns all EmisRecords stored in the
+// receiver.
+func (e *Emissions) EmisRecords() []*EmisRecord { return e.dataSlice }
 
 // ReadEmissionShapefiles returns the emissions data in the specified shapefiles,
 // and converts them to the spatial reference gridSR. Input units are specified

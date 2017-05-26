@@ -49,3 +49,16 @@ func TestWorkerInit(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestSRPredict(t *testing.T) {
+	if err := Startup("../configExample.toml"); err != nil {
+		t.Fatal(err)
+	}
+	Config.SR.OutputFile = "../testdata/testSR.ncf"
+	Config.OutputFile = "../testdata/output_SRPredict.shp"
+	Config.EmissionsShapefiles = []string{"../testdata/testEmisSR.shp"}
+
+	if err := SRPredict(Config); err != nil {
+		t.Fatal(err)
+	}
+}

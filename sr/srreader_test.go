@@ -100,46 +100,77 @@ func TestGeometry(t *testing.T) {
 	g := sr.Geometry()
 
 	want := []geom.Polygonal{geom.Polygon{
-		[]geom.Point{geom.Point{X: -4000, Y: -4000},
+		[]geom.Point{
+			geom.Point{X: -4000, Y: -4000},
 			geom.Point{X: -3000, Y: -4000},
 			geom.Point{X: -3000, Y: -3000},
-			geom.Point{X: -4000, Y: -3000}}},
-		geom.Polygon{[]geom.Point{geom.Point{X: -4000, Y: -3000},
+			geom.Point{X: -4000, Y: -3000},
+			geom.Point{X: -4000, Y: -4000},
+		}},
+		geom.Polygon{[]geom.Point{
+			geom.Point{X: -4000, Y: -3000},
 			geom.Point{X: -3000, Y: -3000},
 			geom.Point{X: -3000, Y: -2000},
-			geom.Point{X: -4000, Y: -2000}}},
-		geom.Polygon{[]geom.Point{geom.Point{X: -4000, Y: -2000},
+			geom.Point{X: -4000, Y: -2000},
+			geom.Point{X: -4000, Y: -3000},
+		}},
+		geom.Polygon{[]geom.Point{
+			geom.Point{X: -4000, Y: -2000},
 			geom.Point{X: -2000, Y: -2000},
 			geom.Point{X: -2000, Y: 0},
-			geom.Point{X: -4000, Y: 0}}},
-		geom.Polygon{[]geom.Point{geom.Point{X: -3000, Y: -4000},
+			geom.Point{X: -4000, Y: 0},
+			geom.Point{X: -4000, Y: -2000},
+		}},
+		geom.Polygon{[]geom.Point{
+			geom.Point{X: -3000, Y: -4000},
 			geom.Point{X: -2000, Y: -4000},
 			geom.Point{X: -2000, Y: -3000},
-			geom.Point{X: -3000, Y: -3000}}},
-		geom.Polygon{[]geom.Point{geom.Point{X: -3000, Y: -3000},
+			geom.Point{X: -3000, Y: -3000},
+			geom.Point{X: -3000, Y: -4000},
+		}},
+		geom.Polygon{[]geom.Point{
+			geom.Point{X: -3000, Y: -3000},
 			geom.Point{X: -2000, Y: -3000},
 			geom.Point{X: -2000, Y: -2000},
-			geom.Point{X: -3000, Y: -2000}}},
-		geom.Polygon{[]geom.Point{geom.Point{X: -4000, Y: 0},
+			geom.Point{X: -3000, Y: -2000},
+			geom.Point{X: -3000, Y: -3000},
+		}},
+		geom.Polygon{[]geom.Point{
+			geom.Point{X: -4000, Y: 0},
 			geom.Point{X: 0, Y: 0},
 			geom.Point{X: 0, Y: 4000},
-			geom.Point{X: -4000, Y: 4000}}},
-		geom.Polygon{[]geom.Point{geom.Point{X: -2000, Y: -4000},
+			geom.Point{X: -4000, Y: 4000},
+			geom.Point{X: -4000, Y: 0},
+		}},
+		geom.Polygon{[]geom.Point{
+			geom.Point{X: -2000, Y: -4000},
 			geom.Point{X: 0, Y: -4000},
 			geom.Point{X: 0, Y: -2000},
-			geom.Point{X: -2000, Y: -2000}}},
-		geom.Polygon{[]geom.Point{geom.Point{X: -2000, Y: -2000},
+			geom.Point{X: -2000, Y: -2000},
+			geom.Point{X: -2000, Y: -4000},
+		}},
+		geom.Polygon{[]geom.Point{
+			geom.Point{X: -2000, Y: -2000},
 			geom.Point{X: 0, Y: -2000},
 			geom.Point{X: 0, Y: 0},
-			geom.Point{X: -2000, Y: 0}}},
-		geom.Polygon{[]geom.Point{geom.Point{X: 0, Y: -4000},
+			geom.Point{X: -2000, Y: 0},
+			geom.Point{X: -2000, Y: -2000},
+		}},
+		geom.Polygon{[]geom.Point{
+			geom.Point{X: 0, Y: -4000},
 			geom.Point{X: 4000, Y: -4000},
 			geom.Point{X: 4000, Y: 0},
-			geom.Point{X: 0, Y: 0}}},
-		geom.Polygon{[]geom.Point{geom.Point{X: 0, Y: 0},
+			geom.Point{X: 0, Y: 0},
+			geom.Point{X: 0, Y: -4000},
+		}},
+		geom.Polygon{[]geom.Point{
+			geom.Point{X: 0, Y: 0},
 			geom.Point{X: 4000, Y: 0},
 			geom.Point{X: 4000, Y: 4000},
-			geom.Point{X: 0, Y: 4000}}}}
+			geom.Point{X: 0, Y: 4000},
+			geom.Point{X: 0, Y: 0},
+		}},
+	}
 
 	if !reflect.DeepEqual(want, g) {
 		t.Errorf("geometry doesn't match")

@@ -22,7 +22,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
+	"github.com/ctessum/geom"
+	"github.com/ctessum/geom/encoding/shp"
 	"github.com/kardianos/osext"
 	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/sr"
@@ -43,6 +46,8 @@ func init() {
 	srCmd.Flags().IntVar(&begin, "begin", 0, "Beginning row index.")
 	srCmd.Flags().IntVar(&end, "end", -1, "End row index. Default is -1 (the last row).")
 
+	srCmd.AddCommand(srPredictCmd)
+
 	RootCmd.AddCommand(workerCmd)
 
 	srCmd.Flags().StringVar(&sr.RPCPort, "rpcport", "6060",
@@ -62,6 +67,7 @@ var srCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return labelErr(RunSR(begin, end, layers))
 	},
+	DisableAutoGenTag: true,
 }
 
 // RunSR runs the SR matrix creator.
@@ -102,6 +108,7 @@ var workerCmd = &cobra.Command{
 		}
 		return labelErr(sr.WorkerListen(worker, sr.RPCPort))
 	},
+	DisableAutoGenTag: true,
 }
 
 // NewWorker starts a new worker.
@@ -121,4 +128,107 @@ func NewWorker() (*sr.Worker, error) {
 
 	worker := sr.NewWorker(&Config.VarGrid, Config.InMAPData, d.GetGeometry(0, false))
 	return worker, nil
+}
+
+// srPredictCmd is a command that makes predictions using the SR matrix.
+var srPredictCmd = &cobra.Command{
+	Use:   "predict",
+	Short: "Predict concentrations",
+	Long: `Use the SR matrix specified in the configuration file
+	 field SR.OutputFile to predict concentrations resulting
+	 from the emissions specified in the EmissionsShapefiles field in the configuration
+	 file, outputting the results in the shapefile specified in OutputFile field.
+	 of the configuration file. The EmissionUnits field in the configuration
+	 file specifies the units of the emissions. Output units are μg particulate
+	 matter per m³ air.
+
+	 Output variables:
+	 PNH4: Particulate ammonium
+	 PNO3: Particulate nitrate
+	 PSO4: Particulate sulfate
+	 SOA: Secondary organic aerosol
+	 PrimaryPM25: Primarily emitted PM2.5
+	 TotalPM25: The sum of the above components`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return labelErr(SRPredict(Config))
+	},
+	DisableAutoGenTag: true,
+}
+
+// SRPredict uses the SR matrix specified in cfg.OutputFile
+// to predict concentrations resulting
+// from the emissions in cfg.EmissionsShapefiles, outputting the
+// results in cfg.OutputFile. cfg.EmissionUnits specifies the units
+// of the emissions.
+func SRPredict(cfg *ConfigData) error {
+	msgLog := make(chan string)
+	go func() {
+		for {
+			log.Println(<-msgLog)
+		}
+	}()
+
+	emis, err := inmap.ReadEmissionShapefiles(Config.sr, Config.EmissionUnits,
+		msgLog, Config.EmissionsShapefiles...)
+	if err != nil {
+		return err
+	}
+	f, err := os.Open(cfg.SR.OutputFile)
+	if err != nil {
+		return err
+	}
+
+	r, err := sr.NewReader(f)
+	if err != nil {
+		return err
+	}
+
+	conc, err := r.Concentrations(emis.EmisRecords()...)
+	if err != nil {
+		return err
+	}
+
+	type rec struct {
+		geom.Polygon
+		PNH4, PNO3, PSO4, SOA, PrimaryPM25, TotalPM25 float64
+	}
+
+	o, err := shp.NewEncoder(cfg.OutputFile, rec{})
+	if err != nil {
+		return err
+	}
+
+	g := r.Geometry()
+
+	for i, tpm := range conc.TotalPM25() {
+		r := rec{
+			Polygon:     g[i].(geom.Polygon),
+			PNH4:        conc.PNH4[i],
+			PNO3:        conc.PNO3[i],
+			PSO4:        conc.PSO4[i],
+			PrimaryPM25: conc.PrimaryPM25[i],
+			SOA:         conc.SOA[i],
+			TotalPM25:   tpm,
+		}
+		err := o.Encode(r)
+		if err != nil {
+			return err
+		}
+	}
+	o.Close()
+
+	// Projection definition. This may need to be changed for a different
+	// spatial domain.
+	// TODO: Make this settable by the user, or at least check to make sure it
+	// matches the InMAPProj configuration variable.
+	const proj4 = `PROJCS["Lambert_Conformal_Conic",GEOGCS["GCS_unnamed ellipse",DATUM["D_unknown",SPHEROID["Unknown",6370997,0]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],PROJECTION["Lambert_Conformal_Conic"],PARAMETER["standard_parallel_1",33],PARAMETER["standard_parallel_2",45],PARAMETER["latitude_of_origin",40],PARAMETER["central_meridian",-97],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]`
+	// Create .prj file
+	f, err = os.Create(cfg.OutputFile[0:len(cfg.OutputFile)-len(filepath.Ext(cfg.OutputFile))] + ".prj")
+	if err != nil {
+		return fmt.Errorf("error creating output prj file: %v", err)
+	}
+	fmt.Fprint(f, proj4)
+	f.Close()
+
+	return nil
 }

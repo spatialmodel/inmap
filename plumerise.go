@@ -18,7 +18,9 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 
 package inmap
 
-import "github.com/ctessum/atmos/plumerise"
+import (
+	"github.com/ctessum/atmos/plumerise"
+)
 
 // IsPlumeIn calculates whether the plume rise from an emission is at the height
 // of c when given stack information
@@ -66,6 +68,7 @@ func (c *Cell) IsPlumeIn(stackHeight, stackDiam, stackTemp, stackVel float64) (b
 		stackTemp, stackVel, layerHeights, temperature, windSpeed,
 		sClass, s1, windSpeedMinusOnePointFour, windSpeedMinusThird,
 		windSpeedInverse)
+
 	if err != nil {
 		if err == plumerise.ErrAboveModelTop {
 			// If the plume is above the top of our stack, return true if c is
