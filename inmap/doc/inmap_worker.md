@@ -5,8 +5,8 @@ Start an InMAP worker.
 ### Synopsis
 
 
-Start an InMAP worker that listens over RPC for simulation requests,
-		does the simulations, and returns results.
+worker starts an InMAP worker that listens over RPC for simulation requests,
+does the simulations, and returns results.
 
 ```
 inmap worker

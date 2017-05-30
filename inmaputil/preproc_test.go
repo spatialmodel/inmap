@@ -16,12 +16,12 @@ You should have received a copy of the GNU General Public License
 along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package cmd
+package inmaputil
 
 import "testing"
 
 func TestPreprocWRFChem(t *testing.T) {
-	cfg, err := ReadConfigFile("../configExampleWRFChem.toml")
+	cfg, err := ReadConfigFile("../inmap/configExampleWRFChem.toml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +33,7 @@ func TestPreprocWRFChem(t *testing.T) {
 }
 
 func TestPreprocGEOSChem(t *testing.T) {
-	cfg, err := ReadConfigFile("../configExampleGEOSChem.toml")
+	cfg, err := ReadConfigFile("../inmap/configExampleGEOSChem.toml")
 	if err != nil {
 		t.Fatal(err)
 	}

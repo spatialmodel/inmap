@@ -5,7 +5,8 @@ Run InMAP in steady-state mode.
 ### Synopsis
 
 
-steady runs InMAP in steady-state mode to calculate annual average concentrations with no temporal variability.
+steady runs InMAP in steady-state mode to calculate annual average
+concentrations with no temporal variability.
 
 ```
 inmap run steady

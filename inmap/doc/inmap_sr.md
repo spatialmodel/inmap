@@ -5,10 +5,10 @@ Create an SR matrix.
 ### Synopsis
 
 
-Create a source-receptor matrix from InMAP simulations.
-    Simulations will be run on the cluster defined by $PBS_NODEFILE.
-    If $PBS_NODEFILE doesn't exist, the simulations will run on the
-    local machine.
+sr creates a source-receptor matrix from InMAP simulations.
+Simulations will be run on the cluster defined by $PBS_NODEFILE.
+If $PBS_NODEFILE doesn't exist, the simulations will run on the
+local machine.
 
 ```
 inmap sr

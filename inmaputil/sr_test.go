@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License
 along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package cmd
+package inmaputil
 
 import (
 	"os"
@@ -24,24 +24,27 @@ import (
 )
 
 func TestSR(t *testing.T) {
-	if err := Startup("../configExample.toml"); err != nil {
+	configFile := "../inmap/configExample.toml"
+	cfg, err := ReadConfigFile(configFile)
+	if err != nil {
 		t.Fatal(err)
 	}
-	Config.SR.OutputFile = "../testdata/tempSR.ncf"
+	cfg.SR.OutputFile = "../inmap/testdata/tempSR.ncf"
 	begin := 8
 	end := 9
 	layers := []int{0}
-	if err := RunSR(begin, end, layers); err != nil {
+	if err := RunSR(cfg, configFile, begin, end, layers); err != nil {
 		t.Fatal(err)
 	}
-	os.Remove(Config.SR.OutputFile)
+	os.Remove(cfg.SR.OutputFile)
 }
 
 func TestWorkerInit(t *testing.T) {
-	if err := Startup("../configExample.toml"); err != nil {
+	cfg, err := ReadConfigFile("../inmap/configExample.toml")
+	if err != nil {
 		t.Fatal(err)
 	}
-	w, err := NewWorker()
+	w, err := NewWorker(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,14 +54,15 @@ func TestWorkerInit(t *testing.T) {
 }
 
 func TestSRPredict(t *testing.T) {
-	if err := Startup("../configExample.toml"); err != nil {
+	cfg, err := ReadConfigFile("../inmap/configExample.toml")
+	if err != nil {
 		t.Fatal(err)
 	}
-	Config.SR.OutputFile = "../testdata/testSR.ncf"
-	Config.OutputFile = "../testdata/output_SRPredict.shp"
-	Config.EmissionsShapefiles = []string{"../testdata/testEmisSR.shp"}
+	cfg.SR.OutputFile = "../inmap/testdata/testSR.ncf"
+	cfg.OutputFile = "../inmap/testdata/output_SRPredict.shp"
+	cfg.EmissionsShapefiles = []string{"../inmap/testdata/testEmisSR.shp"}
 
-	if err := SRPredict(Config); err != nil {
+	if err := SRPredict(cfg); err != nil {
 		t.Fatal(err)
 	}
 }

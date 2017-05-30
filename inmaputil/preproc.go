@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License
 along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package cmd
+package inmaputil
 
 import (
 	"fmt"
@@ -24,24 +24,7 @@ import (
 	"reflect"
 
 	"github.com/spatialmodel/inmap"
-	"github.com/spf13/cobra"
 )
-
-func init() {
-	RootCmd.AddCommand(preprocCmd)
-}
-
-var preprocCmd = &cobra.Command{
-	Use:   "preproc",
-	Short: "Preprocess CTM output",
-	Long: `preproc preprocesses chemical transport model
-  output as specified by information in the configuration
-  file and saves the result for use in future InMAP simulations.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return labelErr(Preproc(Config))
-	},
-	DisableAutoGenTag: true,
-}
 
 // Preproc preprocesses chemical transport model
 // output as specified by information in cfg

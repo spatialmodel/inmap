@@ -19,7 +19,7 @@ import (
 	vgdraw "github.com/gonum/plot/vg/draw"
 	"github.com/gonum/plot/vg/vgimg"
 	"github.com/spatialmodel/inmap"
-	"github.com/spatialmodel/inmap/inmap/cmd"
+	"github.com/spatialmodel/inmap/inmaputil"
 )
 
 // TestAnimation_logo creates a series of images that show the progression of a simulation
@@ -159,16 +159,17 @@ func TestAnimation_logo(t *testing.T) {
 	dynamic := true
 	createGrid := false // this isn't used for the dynamic grid
 	os.Setenv("InMAPRunType", "dynamic")
-	if err := cmd.Startup("nei2005Config.toml"); err != nil {
+	cfg, err := inmaputil.ReadConfigFile("nei2005Config.toml")
+	if err != nil {
 		t.Fatal(err)
 	}
-	cmd.Config.EmissionsShapefiles = []string{"animation_logo/logo.shp"}
-	cmd.Config.VarGrid.CensusFile = "animation_logo/logo.shp"
-	cmd.Config.VarGrid.CensusPopColumns = []string{"Pop"}
-	cmd.Config.VarGrid.PopGridColumn = "Pop"
-	cmd.Config.VarGrid.MortalityRateFile = "animation_logo/logo.shp"
-	cmd.Config.VarGrid.MortalityRateColumn = "MR"
-	cmd.Config.OutputFile = "animation_logo/logoOut.shp"
+	cfg.EmissionsShapefiles = []string{"animation_logo/logo.shp"}
+	cfg.VarGrid.CensusFile = "animation_logo/logo.shp"
+	cfg.VarGrid.CensusPopColumns = []string{"Pop"}
+	cfg.VarGrid.PopGridColumn = "Pop"
+	cfg.VarGrid.MortalityRateFile = "animation_logo/logo.shp"
+	cfg.VarGrid.MortalityRateColumn = "MR"
+	cfg.OutputFile = "animation_logo/logoOut.shp"
 
 	dataChan := make(chan []geomConc)
 	errChan := make(chan error)
@@ -180,7 +181,7 @@ func TestAnimation_logo(t *testing.T) {
 	// framePeriod is the interval in seconds between snapshots
 	const framePeriod = 3600.0 * 3
 
-	if err := cmd.Run(dynamic, createGrid, cmd.DefaultScienceFuncs, nil,
+	if err := inmaputil.Run(cfg, dynamic, createGrid, inmaputil.DefaultScienceFuncs, nil,
 		[]inmap.DomainManipulator{inmap.RunPeriodically(framePeriod, saveConc(dataChan))}, nil); err != nil {
 		t.Fatal(err)
 	}
@@ -213,10 +214,11 @@ func TestAnimation_nei(t *testing.T) {
 	dynamic := true
 	createGrid := false // this isn't used for the dynamic grid
 	os.Setenv("InMAPRunType", "dynamic")
-	if err := cmd.Startup("nei2005Config.toml"); err != nil {
+	cfg, err := inmaputil.ReadConfigFile("nei2005Config.toml")
+	if err != nil {
 		t.Fatal(err)
 	}
-	cmd.Config.OutputFile = "animation_nei/results.shp"
+	cfg.OutputFile = "animation_nei/results.shp"
 
 	dataChan := make(chan []geomConc)
 	errChan := make(chan error)
@@ -228,7 +230,7 @@ func TestAnimation_nei(t *testing.T) {
 	// framePeriod is the interval in seconds between snapshots
 	const framePeriod = 3600.0
 
-	if err := cmd.Run(dynamic, createGrid, cmd.DefaultScienceFuncs, nil,
+	if err := inmaputil.Run(cfg, dynamic, createGrid, inmaputil.DefaultScienceFuncs, nil,
 		[]inmap.DomainManipulator{inmap.RunPeriodically(framePeriod, saveConc(dataChan))}, nil); err != nil {
 		t.Fatal(err)
 	}

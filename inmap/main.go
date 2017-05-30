@@ -1,5 +1,5 @@
 /*
-Copyright © 2013 the InMAP authors.
+Copyright © 2017 the InMAP authors.
 This file is part of InMAP.
 
 InMAP is free software: you can redistribute it and/or modify
@@ -23,11 +23,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spatialmodel/inmap/inmap/cmd"
+	"github.com/spatialmodel/inmap/internal/cmd"
 )
 
 func main() {
-	if err := cmd.RootCmd.Execute(); err != nil {
+	if err := cmd.Root.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(-1)
 	}

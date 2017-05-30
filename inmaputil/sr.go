@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License
 along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package cmd
+package inmaputil
 
 import (
 	"fmt"
@@ -29,49 +29,10 @@ import (
 	"github.com/kardianos/osext"
 	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/sr"
-	"github.com/spf13/cobra"
 )
-
-var (
-	layers []int
-	begin  int
-	end    int
-)
-
-func init() {
-	RootCmd.AddCommand(srCmd)
-
-	srCmd.Flags().IntSliceVar(&layers, "layers", []int{0, 2, 4, 6},
-		"List of layer numbers to create matrices for.")
-	srCmd.Flags().IntVar(&begin, "begin", 0, "Beginning row index.")
-	srCmd.Flags().IntVar(&end, "end", -1, "End row index. Default is -1 (the last row).")
-
-	srCmd.AddCommand(srPredictCmd)
-
-	RootCmd.AddCommand(workerCmd)
-
-	srCmd.Flags().StringVar(&sr.RPCPort, "rpcport", "6060",
-		"Set the port to be used for RPC communication.")
-	workerCmd.Flags().StringVar(&sr.RPCPort, "rpcport", "6060",
-		"Set the port to be used for RPC communication.")
-}
-
-// srCmd is a command that creates an SR matrix.
-var srCmd = &cobra.Command{
-	Use:   "sr",
-	Short: "Create an SR matrix.",
-	Long: `Create a source-receptor matrix from InMAP simulations.
-    Simulations will be run on the cluster defined by $PBS_NODEFILE.
-    If $PBS_NODEFILE doesn't exist, the simulations will run on the
-    local machine.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return labelErr(RunSR(begin, end, layers))
-	},
-	DisableAutoGenTag: true,
-}
 
 // RunSR runs the SR matrix creator.
-func RunSR(begin, end int, layers []int) error {
+func RunSR(cfg *ConfigData, configFile string, begin, end int, layers []int) error {
 	nodes, err := sr.PBSNodes()
 	if err != nil {
 		log.Printf("Problem reading $PBS_NODEFILE: %v. Continuing on local machine.", err)
@@ -83,76 +44,36 @@ func RunSR(begin, end int, layers []int) error {
 	}
 	command = fmt.Sprintf("%s  worker --config=%s --rpcport=%s", command, configFile, sr.RPCPort)
 
-	sr, err := sr.NewSR(Config.VariableGridData, Config.InMAPData, command,
-		Config.SR.LogDir, &Config.VarGrid, nodes)
+	sr, err := sr.NewSR(cfg.VariableGridData, cfg.InMAPData, command,
+		cfg.SR.LogDir, &cfg.VarGrid, nodes)
 	if err != nil {
 		return err
 	}
 
-	if err = sr.Run(Config.SR.OutputFile, layers, begin, end); err != nil {
+	if err = sr.Run(cfg.SR.OutputFile, layers, begin, end); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-var workerCmd = &cobra.Command{
-	Use:   "worker",
-	Short: "Start an InMAP worker.",
-	Long: `Start an InMAP worker that listens over RPC for simulation requests,
-		does the simulations, and returns results.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		worker, err := NewWorker()
-		if err != nil {
-			return labelErr(err)
-		}
-		return labelErr(sr.WorkerListen(worker, sr.RPCPort))
-	},
-	DisableAutoGenTag: true,
-}
-
 // NewWorker starts a new worker.
-func NewWorker() (*sr.Worker, error) {
-	r, err := os.Open(Config.VariableGridData)
+func NewWorker(cfg *ConfigData) (*sr.Worker, error) {
+	r, err := os.Open(cfg.VariableGridData)
 	if err != nil {
 		return nil, fmt.Errorf("problem opening file to load VariableGridData: %v", err)
 	}
 	d := &inmap.InMAP{
 		InitFuncs: []inmap.DomainManipulator{
-			inmap.Load(r, &Config.VarGrid, nil),
+			inmap.Load(r, &cfg.VarGrid, nil),
 		},
 	}
 	if err = d.Init(); err != nil {
 		return nil, err
 	}
 
-	worker := sr.NewWorker(&Config.VarGrid, Config.InMAPData, d.GetGeometry(0, false))
+	worker := sr.NewWorker(&cfg.VarGrid, cfg.InMAPData, d.GetGeometry(0, false))
 	return worker, nil
-}
-
-// srPredictCmd is a command that makes predictions using the SR matrix.
-var srPredictCmd = &cobra.Command{
-	Use:   "predict",
-	Short: "Predict concentrations",
-	Long: `Use the SR matrix specified in the configuration file
-	 field SR.OutputFile to predict concentrations resulting
-	 from the emissions specified in the EmissionsShapefiles field in the configuration
-	 file, outputting the results in the shapefile specified in OutputFile field.
-	 of the configuration file. The EmissionUnits field in the configuration
-	 file specifies the units of the emissions. Output units are μg particulate
-	 matter per m³ air.
-
-	 Output variables:
-	 PNH4: Particulate ammonium
-	 PNO3: Particulate nitrate
-	 PSO4: Particulate sulfate
-	 SOA: Secondary organic aerosol
-	 PrimaryPM25: Primarily emitted PM2.5
-	 TotalPM25: The sum of the above components`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return labelErr(SRPredict(Config))
-	},
-	DisableAutoGenTag: true,
 }
 
 // SRPredict uses the SR matrix specified in cfg.OutputFile
@@ -168,8 +89,7 @@ func SRPredict(cfg *ConfigData) error {
 		}
 	}()
 
-	emis, err := inmap.ReadEmissionShapefiles(Config.sr, Config.EmissionUnits,
-		msgLog, Config.EmissionsShapefiles...)
+	emis, err := inmap.ReadEmissionShapefiles(cfg.sr, cfg.EmissionUnits, msgLog, cfg.EmissionsShapefiles...)
 	if err != nil {
 		return err
 	}
@@ -210,7 +130,7 @@ func SRPredict(cfg *ConfigData) error {
 			SOA:         conc.SOA[i],
 			TotalPM25:   tpm,
 		}
-		err := o.Encode(r)
+		err = o.Encode(r)
 		if err != nil {
 			return err
 		}

@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/spatialmodel/inmap/inmap/cmd"
+	"github.com/spatialmodel/inmap/inmaputil"
 )
 
 const evalDataEnv = "evaldata"
@@ -36,14 +36,14 @@ func TestNEI2005Dynamic(t *testing.T) {
 	dynamic := true
 	createGrid := false // this isn't used for the dynamic grid
 	os.Setenv("InMAPRunType", "dynamic")
-	if err := cmd.Startup("nei2005Config.toml"); err != nil {
+	cfg, err := inmaputil.ReadConfigFile("nei2005Config.toml")
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := cmd.Run(dynamic, createGrid, cmd.DefaultScienceFuncs, nil, nil, nil); err != nil {
+	if err := inmaputil.Run(cfg, dynamic, createGrid, inmaputil.DefaultScienceFuncs, nil, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 
-	cfg := cmd.Config
 	if err := obsCompare(cfg.OutputFile, cfg.InMAPData, filepath.Join(evalData, "annual_all_2005.csv"),
 		filepath.Join(evalData, "states.shp"), filepath.Dir(cfg.OutputFile), "dynamic"); err != nil {
 		t.Error(err)
@@ -66,14 +66,14 @@ func TestNEI2005Static(t *testing.T) {
 	dynamic := false
 	createGrid := false
 	os.Setenv("InMAPRunType", "static")
-	if err := cmd.Startup("nei2005Config.toml"); err != nil {
+	cfg, err := inmaputil.ReadConfigFile("nei2005Config.toml")
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := cmd.Run(dynamic, createGrid, cmd.DefaultScienceFuncs, nil, nil, nil); err != nil {
+	if err := inmaputil.Run(cfg, dynamic, createGrid, inmaputil.DefaultScienceFuncs, nil, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 
-	cfg := cmd.Config
 	if err := obsCompare(cfg.OutputFile, cfg.InMAPData, filepath.Join(evalData, "annual_all_2005.csv"),
 		filepath.Join(evalData, "states.shp"), filepath.Dir(cfg.OutputFile), "static"); err != nil {
 		t.Error(err)

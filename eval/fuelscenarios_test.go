@@ -23,7 +23,7 @@ import (
 	"github.com/gonum/plot/vg"
 	"github.com/gonum/plot/vg/draw"
 	"github.com/gonum/plot/vg/vgimg"
-	"github.com/spatialmodel/inmap/inmap/cmd"
+	"github.com/spatialmodel/inmap/inmaputil"
 )
 
 func TestFuelScenarios(t *testing.T) {
@@ -61,21 +61,22 @@ func TestFuelScenarios(t *testing.T) {
 	for i, scenario := range scenarios {
 		dynamic := true
 		createGrid := false // this isn't used for the dynamic grid
-		if err := cmd.Startup("nei2005Config.toml"); err != nil {
+		cfg, err := inmaputil.ReadConfigFile("nei2005Config.toml")
+		if err != nil {
 			t.Fatal(err)
 		}
 		emisName := emissionsNames[i]
-		cmd.Config.EmissionsShapefiles = []string{
+		cfg.EmissionsShapefiles = []string{
 			filepath.Join(evalData, "FuelScenarios", "emissions", fmt.Sprintf("%s.elevated.shp", emisName)),
 			filepath.Join(evalData, "FuelScenarios", "emissions", fmt.Sprintf("%s.groundlevel.shp", emisName)),
 		}
-		cmd.Config.OutputFile = filepath.Join("FuelScenarios", fmt.Sprintf("%s_12km.shp", scenario))
-		cmd.Config.VarGrid.Xnests = []int{444}
-		cmd.Config.VarGrid.Ynests = []int{336}
-		cmd.Config.VarGrid.VariableGridDx = 12000
-		cmd.Config.VarGrid.VariableGridDy = 12000
+		cfg.OutputFile = filepath.Join("FuelScenarios", fmt.Sprintf("%s_12km.shp", scenario))
+		cfg.VarGrid.Xnests = []int{444}
+		cfg.VarGrid.Ynests = []int{336}
+		cfg.VarGrid.VariableGridDx = 12000
+		cfg.VarGrid.VariableGridDy = 12000
 
-		if err := cmd.Run(dynamic, createGrid, cmd.DefaultScienceFuncs, nil, nil, nil); err != nil {
+		if err := inmaputil.Run(cfg, dynamic, createGrid, inmaputil.DefaultScienceFuncs, nil, nil, nil); err != nil {
 			t.Fatal(err)
 		}
 	}

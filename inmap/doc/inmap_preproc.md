@@ -6,8 +6,8 @@ Preprocess CTM output
 
 
 preproc preprocesses chemical transport model
-  output as specified by information in the configuration
-  file and saves the result for use in future InMAP simulations.
+output as specified by information in the configuration
+file and saves the result for use in future InMAP simulations.
 
 ```
 inmap preproc

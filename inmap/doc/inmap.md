@@ -6,8 +6,8 @@ A reduced-form air quality model.
 
 
 InMAP is a reduced-form air quality model for fine particulate matter (PM2.5).
-			Use the subcommands specified below to access the model functionality.
-      Additional information is available at http://inmap.spatialmodel.com.
+Use the subcommands specified below to access the model functionality.
+Additional information is available at http://inmap.spatialmodel.com.
 
 ### Options
 

@@ -29,14 +29,14 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/spatialmodel/inmap"
-	"github.com/spatialmodel/inmap/inmap/cmd"
+	"github.com/spatialmodel/inmap/internal/cmd"
 	"github.com/spf13/cobra/doc"
 )
 
 func main() {
 
 	// Generate documentation for the available commands.
-	doc.GenMarkdownTree(cmd.RootCmd, "./inmap/cmd/doc/")
+	doc.GenMarkdownTree(cmd.Root, "./inmap/doc/")
 
 	writeOutputOptions()
 }
@@ -96,7 +96,7 @@ func writeOutputOptions() {
 	}
 	names, descriptions, units := d.OutputOptions()
 
-	f, err := os.Create("OutputOptions.md")
+	f, err := os.Create("doc/OutputOptions.md")
 	if err != nil {
 		log.Fatal(err)
 	}
