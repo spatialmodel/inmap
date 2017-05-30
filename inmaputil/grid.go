@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License
 along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package cmd
+package inmaputil
 
 import (
 	"fmt"
@@ -24,29 +24,10 @@ import (
 	"os"
 
 	"github.com/spatialmodel/inmap"
-	"github.com/spf13/cobra"
 )
 
-func init() {
-	RootCmd.AddCommand(gridCmd)
-}
-
-// gridCmd is a command that creates and saves a new variable resolution grid.
-var gridCmd = &cobra.Command{
-	Use:   "grid",
-	Short: "Create a variable resolution grid",
-	Long: `grid creates and saves a variable resolution grid as specified by the
-	information in the configuration file. The saved data can then be loaded
-	for future InMAP simulations.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return labelErr(Grid())
-	},
-	DisableAutoGenTag: true,
-}
-
 // Grid creates and saves a new variable resolution grid.
-func Grid() error {
-
+func Grid(cfg *ConfigData) error {
 	// Start a function to receive and print log messages.
 	msgLog := make(chan string)
 	go func() {
@@ -55,39 +36,39 @@ func Grid() error {
 		}
 	}()
 
-	ctmData, err := getCTMData()
+	ctmData, err := getCTMData(cfg)
 	if err != nil {
 		return err
 	}
 
-	log.Println("Loading population and mortality rate data")
+	msgLog <- "Loading population and mortality rate data"
 
-	pop, popIndices, mr, err := Config.VarGrid.LoadPopMort()
+	pop, popIndices, mr, err := cfg.VarGrid.LoadPopMort()
 	if err != nil {
 		return err
 	}
 
-	w, err := os.Create(Config.VariableGridData)
+	w, err := os.Create(cfg.VariableGridData)
 	if err != nil {
 		return fmt.Errorf("problem creating file to store variable grid data in: %v", err)
 	}
 
-	log.Println("Creating grid")
+	msgLog <- "Creating grid"
 
-	mutator, err := inmap.PopulationMutator(&Config.VarGrid, popIndices)
+	mutator, err := inmap.PopulationMutator(&cfg.VarGrid, popIndices)
 	if err != nil {
 		return err
 	}
 	d := &inmap.InMAP{
 		InitFuncs: []inmap.DomainManipulator{
-			Config.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, nil),
-			Config.VarGrid.MutateGrid(mutator, ctmData, pop, mr, nil, msgLog),
+			cfg.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, nil),
+			cfg.VarGrid.MutateGrid(mutator, ctmData, pop, mr, nil, msgLog),
 			inmap.Save(w),
 		},
 	}
 	if err := d.Init(); err != nil {
 		return err
 	}
-	log.Printf("Grid successfully created at %s", Config.VariableGridData)
+	msgLog <- fmt.Sprintf("Grid successfully created at %s", cfg.VariableGridData)
 	return nil
 }

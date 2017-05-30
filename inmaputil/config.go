@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License
 along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package cmd
+package inmaputil
 
 import (
 	"bufio"
@@ -172,9 +172,7 @@ func ReadConfigFile(filename string) (config *ConfigData, err error) {
 	)
 	file, err = os.Open(filename)
 	if err != nil {
-		return nil, fmt.Errorf("the configuration file you have specified, %v, does not "+
-			"appear to exist. Please check the file name and location and "+
-			"try again.\n", filename)
+		return nil, fmt.Errorf("the configuration file you have specified, %v, does not appear to exist. Please check the file name and location and try again.\n", filename)
 	}
 	reader := bufio.NewReader(file)
 	bytes, err = ioutil.ReadAll(reader)
@@ -185,8 +183,7 @@ func ReadConfigFile(filename string) (config *ConfigData, err error) {
 	config = new(ConfigData)
 	_, err = toml.Decode(string(bytes), config)
 	if err != nil {
-		return nil, fmt.Errorf(
-			"there has been an error parsing the configuration file: %v\n", err)
+		return nil, fmt.Errorf("there has been an error parsing the configuration file: %v\n", err)
 	}
 
 	for k, v := range config.OutputVariables {

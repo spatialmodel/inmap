@@ -1,5 +1,5 @@
 /*
-Copyright © 2017 the InMAP authors.
+Copyright © 2013 the InMAP authors.
 This file is part of InMAP.
 
 InMAP is free software: you can redistribute it and/or modify
@@ -16,19 +16,6 @@ You should have received a copy of the GNU General Public License
 along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-// Command inmap is a command-line interface for the InMAP air pollution model.
-package main
-
-import (
-	"fmt"
-	"os"
-
-	"github.com/spatialmodel/inmap/internal/cmd"
-)
-
-func main() {
-	if err := cmd.Root.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(-1)
-	}
-}
+// Package inmaputil contains configuration and utility functions for commonly-used
+// operations with the InMAP model.
+package inmaputil

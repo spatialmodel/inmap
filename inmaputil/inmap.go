@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License
 along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package cmd
+package inmaputil
 
 import (
 	"fmt"
@@ -31,14 +31,14 @@ import (
 	"github.com/spatialmodel/inmap"
 )
 
-func getCTMData() (*inmap.CTMData, error) {
+func getCTMData(cfg *ConfigData) (*inmap.CTMData, error) {
 	log.Println("Reading input data...")
 
-	f, err := os.Open(Config.InMAPData)
+	f, err := os.Open(cfg.InMAPData)
 	if err != nil {
 		return nil, fmt.Errorf("Problem loading input data: %v\n", err)
 	}
-	ctmData, err := Config.VarGrid.LoadCTMData(f)
+	ctmData, err := cfg.VarGrid.LoadCTMData(f)
 	if err != nil {
 		return nil, fmt.Errorf("Problem loading input data: %v\n", err)
 	}
@@ -63,12 +63,12 @@ var DefaultScienceFuncs = []inmap.CellManipulator{
 // to perform in each cell at each time step. addInit, addRun, and addCleanup
 // specifies functions beyond the default functions to run at initialization,
 // runtime, and cleanup, respectively.
-func Run(dynamic, createGrid bool, scienceFuncs []inmap.CellManipulator, addInit, addRun, addCleanup []inmap.DomainManipulator) error {
+func Run(cfg *ConfigData, dynamic, createGrid bool, scienceFuncs []inmap.CellManipulator, addInit, addRun, addCleanup []inmap.DomainManipulator) error {
 
 	startTime := time.Now()
 
 	// Start a function to receive and print log messages.
-	logfile, err := os.Create(Config.LogFile)
+	logfile, err := os.Create(cfg.LogFile)
 	if err != nil {
 		return fmt.Errorf("inmap: problem creating log file: %v", err)
 	}
@@ -91,14 +91,14 @@ func Run(dynamic, createGrid bool, scienceFuncs []inmap.CellManipulator, addInit
 		}
 	}()
 
-	o, err := inmap.NewOutputter(Config.OutputFile, Config.OutputAllLayers, Config.OutputVariables, nil)
+	o, err := inmap.NewOutputter(cfg.OutputFile, cfg.OutputAllLayers, cfg.OutputVariables, nil)
 	if err != nil {
 		return err
 	}
 	log.Println("Parsing output variable expressions...")
 
-	emis, err := inmap.ReadEmissionShapefiles(Config.sr, Config.EmissionUnits,
-		msgLog, Config.EmissionsShapefiles...)
+	emis, err := inmap.ReadEmissionShapefiles(cfg.sr, cfg.EmissionUnits,
+		msgLog, cfg.EmissionsShapefiles...)
 	if err != nil {
 		return err
 	}
@@ -110,12 +110,12 @@ func Run(dynamic, createGrid bool, scienceFuncs []inmap.CellManipulator, addInit
 	var ctmData *inmap.CTMData
 	if dynamic || createGrid {
 		log.Println("Loading CTM data...")
-		ctmData, err = getCTMData()
+		ctmData, err = getCTMData(cfg)
 		if err != nil {
 			return err
 		}
 		log.Println("Loading population and mortality rate data...")
-		pop, popIndices, mr, err = Config.VarGrid.LoadPopMort()
+		pop, popIndices, mr, err = cfg.VarGrid.LoadPopMort()
 		if err != nil {
 			return err
 		}
@@ -127,24 +127,23 @@ func Run(dynamic, createGrid bool, scienceFuncs []inmap.CellManipulator, addInit
 	if !dynamic {
 		if createGrid {
 			var mutator inmap.GridMutator
-			mutator, err = inmap.PopulationMutator(&Config.VarGrid, popIndices)
+			mutator, err = inmap.PopulationMutator(&cfg.VarGrid, popIndices)
 			if err != nil {
 				return err
 			}
 			initFuncs = []inmap.DomainManipulator{
-				//inmap.HTMLUI(Config.HTTPAddress),
-				Config.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, emis),
-				Config.VarGrid.MutateGrid(mutator, ctmData, pop, mr, emis, msgLog),
+				cfg.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, emis),
+				cfg.VarGrid.MutateGrid(mutator, ctmData, pop, mr, emis, msgLog),
 				inmap.SetTimestepCFL(),
 			}
 		} else { // pre-created static grid
 			var r io.Reader
-			r, err = os.Open(Config.VariableGridData)
+			r, err = os.Open(cfg.VariableGridData)
 			if err != nil {
 				return fmt.Errorf("problem opening file to load VariableGridData: %v", err)
 			}
 			initFuncs = []inmap.DomainManipulator{
-				inmap.Load(r, &Config.VarGrid, emis),
+				inmap.Load(r, &cfg.VarGrid, emis),
 				inmap.SetTimestepCFL(),
 				o.CheckOutputVars(),
 			}
@@ -153,27 +152,27 @@ func Run(dynamic, createGrid bool, scienceFuncs []inmap.CellManipulator, addInit
 			inmap.Log(cLog),
 			inmap.Calculations(inmap.AddEmissionsFlux()),
 			scienceCalcs,
-			inmap.SteadyStateConvergenceCheck(Config.NumIterations,
-				Config.VarGrid.PopGridColumn, cConverge),
+			inmap.SteadyStateConvergenceCheck(cfg.NumIterations,
+				cfg.VarGrid.PopGridColumn, cConverge),
 		}
 	} else { // dynamic grid
 		initFuncs = []inmap.DomainManipulator{
-			Config.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, emis),
+			cfg.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, emis),
 			inmap.SetTimestepCFL(),
 			o.CheckOutputVars(),
 		}
-		popConcMutator := inmap.NewPopConcMutator(&Config.VarGrid, popIndices)
+		popConcMutator := inmap.NewPopConcMutator(&cfg.VarGrid, popIndices)
 		const gridMutateInterval = 3 * 60 * 60 // every 3 hours in seconds
 		runFuncs = []inmap.DomainManipulator{
 			inmap.Log(cLog),
 			inmap.Calculations(inmap.AddEmissionsFlux()),
 			scienceCalcs,
 			inmap.RunPeriodically(gridMutateInterval,
-				Config.VarGrid.MutateGrid(popConcMutator.Mutate(),
+				cfg.VarGrid.MutateGrid(popConcMutator.Mutate(),
 					ctmData, pop, mr, emis, msgLog)),
 			inmap.RunPeriodically(gridMutateInterval, inmap.SetTimestepCFL()),
-			inmap.SteadyStateConvergenceCheck(Config.NumIterations,
-				Config.VarGrid.PopGridColumn, cConverge),
+			inmap.SteadyStateConvergenceCheck(cfg.NumIterations,
+				cfg.VarGrid.PopGridColumn, cConverge),
 		}
 	}
 

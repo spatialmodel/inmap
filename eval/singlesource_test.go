@@ -20,6 +20,7 @@ import (
 	"github.com/gonum/plot/vg"
 	"github.com/gonum/plot/vg/draw"
 	"github.com/gonum/plot/vg/vgsvg"
+	"github.com/spatialmodel/inmap/inmaputil"
 )
 
 func TestSingleSource(t *testing.T) {
@@ -36,17 +37,18 @@ func TestSingleSource(t *testing.T) {
 
 	os.MkdirAll("singleSource", os.ModePerm)
 
-	/*for _, filename := range []string{"configSingleSource_9km.toml", "configSingleSource_nested.toml"} {
+	for _, filename := range []string{"configSingleSource_9km.toml", "configSingleSource_nested.toml"} {
 		dynamic := true
 		createGrid := false // this isn't used for the dynamic grid
-		if err := cmd.Startup(filename); err != nil {
+		cfg, err := inmaputil.ReadConfigFile(filename)
+		if err != nil {
 			t.Fatal(err)
 		}
 
-		if err := cmd.Run(dynamic, createGrid, cmd.DefaultScienceFuncs, nil, nil, nil); err != nil {
+		if err := inmaputil.Run(cfg, dynamic, createGrid, inmaputil.DefaultScienceFuncs, nil, nil, nil); err != nil {
 			t.Fatal(err)
 		}
-	}*/
+	}
 
 	const (
 		figWidth  = 5.75 * vg.Inch

@@ -5,7 +5,8 @@ Run the model.
 ### Synopsis
 
 
-run runs an InMAP simulation. Use the subcommands specified below to  choose a run mode. (Currently 'steady' is the only available run mode.)
+run runs an InMAP simulation. Use the subcommands specified below to
+choose a run mode. (Currently 'steady' is the only available run mode.)
 
 ### Options inherited from parent commands
 

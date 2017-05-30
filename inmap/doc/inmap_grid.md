@@ -6,8 +6,8 @@ Create a variable resolution grid
 
 
 grid creates and saves a variable resolution grid as specified by the
-	information in the configuration file. The saved data can then be loaded
-	for future InMAP simulations.
+information in the configuration file. The saved data can then be loaded
+for future InMAP simulations.
 
 ```
 inmap grid
