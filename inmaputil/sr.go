@@ -105,7 +105,11 @@ func SRPredict(cfg *ConfigData) error {
 
 	conc, err := r.Concentrations(emis.EmisRecords()...)
 	if err != nil {
-		return err
+		if _, ok := err.(sr.AboveTopErr); ok {
+			log.Printf("%v; calculating concentrations for emissions in SR matrix top layer.", err)
+		} else {
+			return err
+		}
 	}
 
 	type rec struct {

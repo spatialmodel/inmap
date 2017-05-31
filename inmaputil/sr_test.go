@@ -66,3 +66,17 @@ func TestSRPredict(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestSRPredictAboveTop(t *testing.T) {
+	cfg, err := ReadConfigFile("../inmap/configExample.toml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.SR.OutputFile = "../inmap/testdata/testSR.ncf"
+	cfg.OutputFile = "../inmap/testdata/output_SRPredict.shp"
+	cfg.EmissionsShapefiles = []string{"../inmap/testdata/testEmis.shp"}
+
+	if err := SRPredict(cfg); err != nil {
+		t.Fatal(err)
+	}
+}
