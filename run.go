@@ -350,7 +350,7 @@ func (d *InMAP) Results(o *Outputter) (map[string][]float64, error) {
 				}
 				// Replace segments surrounded by braces with corresponding result
 				// calculated above.
-				o.outputVariables[k] = strings.Replace(v, m, strconv.FormatFloat(result.(float64), 'f', -1, 64), 1)
+				o.outputVariables[k] = strings.Replace(o.outputVariables[k], m, strconv.FormatFloat(result.(float64), 'f', -1, 64), 1)
 			}
 		}
 	}

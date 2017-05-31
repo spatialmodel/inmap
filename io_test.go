@@ -324,7 +324,8 @@ func BenchmarkOutput(b *testing.B) {
 			"TotalPop":   "TotalPop",
 			"WhiteNoLat": "WhiteNoLat",
 			"NPctWNoLat": "{sum(WhiteNoLat) / sum(TotalPop)}",
-			"NPctOther":  "1 - NPctWNoLat",
+			"NPctOther":  "{(sum(TotalPop) - sum(WhiteNoLat)) / sum(TotalPop)}",
+			"NPctRatio":  "NPctWNoLat / NPctOther",
 			"TotalPopD":  "coxHazard(loglogRR(TotalPM25), TotalPop, MortalityRate)",
 			"TotalPM25":  "TotalPM25",
 			"PM25Emiss":  "PM25Emissions",
@@ -371,7 +372,8 @@ func TestOutput(t *testing.T) {
 		"TotalPop":   "TotalPop",
 		"WhiteNoLat": "WhiteNoLat",
 		"NPctWNoLat": "{sum(WhiteNoLat) / sum(TotalPop)}",
-		"NPctOther":  "1 - NPctWNoLat",
+		"NPctOther":  "{(sum(TotalPop) - sum(WhiteNoLat)) / sum(TotalPop)}",
+		"NPctRatio":  "NPctWNoLat / NPctOther",
 		"TotalPopD":  "coxHazard(loglogRR(TotalPM25), TotalPop, MortalityRate)",
 		"TotalPM25":  "TotalPM25",
 		"PM25Emiss":  "PM25Emissions",
@@ -405,6 +407,7 @@ func TestOutput(t *testing.T) {
 		WhiteNoLat        float64
 		NPctWNoLat        float64
 		NPctOther         float64
+		NPctRatio         float64
 		Deaths            float64 `shp:"TotalPopD"`
 		WindSpeed         float64
 	}
@@ -432,6 +435,7 @@ func TestOutput(t *testing.T) {
 			WhiteNoLat:        50000.,
 			NPctWNoLat:        0.5,
 			NPctOther:         0.5,
+			NPctRatio:         1,
 			WindSpeed:         2.16334701,
 		},
 		{
@@ -439,18 +443,21 @@ func TestOutput(t *testing.T) {
 			WindSpeed:         1.88434911,
 			NPctWNoLat:        0.5,
 			NPctOther:         0.5,
+			NPctRatio:         1,
 		},
 		{
 			BaselineTotalPM25: 4.2574172,
 			WindSpeed:         2.7272017,
 			NPctWNoLat:        0.5,
 			NPctOther:         0.5,
+			NPctRatio:         1,
 		},
 		{
 			BaselineTotalPM25: 5.36232233,
 			WindSpeed:         2.56135321,
 			NPctWNoLat:        0.5,
 			NPctOther:         0.5,
+			NPctRatio:         1,
 		},
 	}
 
