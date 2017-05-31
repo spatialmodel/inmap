@@ -25,7 +25,8 @@ import (
 
 func TestSR(t *testing.T) {
 	configFile := "../inmap/configExample.toml"
-	cfg, err := ReadConfigFile(configFile)
+	Cfg.SetConfigFile(configFile)
+	cfg, err := LoadConfigFile()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,7 +41,8 @@ func TestSR(t *testing.T) {
 }
 
 func TestWorkerInit(t *testing.T) {
-	cfg, err := ReadConfigFile("../inmap/configExample.toml")
+	Cfg.SetConfigFile("../inmap/configExample.toml")
+	cfg, err := LoadConfigFile()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +56,8 @@ func TestWorkerInit(t *testing.T) {
 }
 
 func TestSRPredict(t *testing.T) {
-	cfg, err := ReadConfigFile("../inmap/configExample.toml")
+	Cfg.SetConfigFile("../inmap/configExample.toml")
+	cfg, err := LoadConfigFile()
 	if err != nil {
 		t.Fatal(err)
 	}

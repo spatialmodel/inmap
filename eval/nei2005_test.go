@@ -36,7 +36,8 @@ func TestNEI2005Dynamic(t *testing.T) {
 	dynamic := true
 	createGrid := false // this isn't used for the dynamic grid
 	os.Setenv("InMAPRunType", "dynamic")
-	cfg, err := inmaputil.ReadConfigFile("nei2005Config.toml")
+	inmaputil.Cfg.SetConfigFile("nei2005Config.toml")
+	cfg, err := inmaputil.LoadConfigFile()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +67,8 @@ func TestNEI2005Static(t *testing.T) {
 	dynamic := false
 	createGrid := false
 	os.Setenv("InMAPRunType", "static")
-	cfg, err := inmaputil.ReadConfigFile("nei2005Config.toml")
+	inmaputil.Cfg.SetConfigFile("nei2005Config.toml")
+	cfg, err := inmaputil.LoadConfigFile()
 	if err != nil {
 		t.Fatal(err)
 	}

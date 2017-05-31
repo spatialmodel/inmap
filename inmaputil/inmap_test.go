@@ -24,9 +24,9 @@ import (
 )
 
 func TestCreateGrid(t *testing.T) {
-	cfg, err := ReadConfigFile("../inmap/configExample.toml")
+	Cfg.SetConfigFile("../inmap/configExample.toml")
+	cfg, err := LoadConfigFile()
 	if err != nil {
-
 		t.Fatal(err)
 	}
 	if err := Grid(cfg); err != nil {
@@ -38,7 +38,8 @@ func TestInMAPStaticCreateGrid(t *testing.T) {
 	dynamic := false
 	createGrid := true
 	os.Setenv("InMAPRunType", "static")
-	cfg, err := ReadConfigFile("../inmap/configExample.toml")
+	Cfg.SetConfigFile("../inmap/configExample.toml")
+	cfg, err := LoadConfigFile()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +52,8 @@ func TestInMAPStaticLoadGrid(t *testing.T) {
 	dynamic := false
 	createGrid := false
 	os.Setenv("InMAPRunType", "staticLoadGrid")
-	cfg, err := ReadConfigFile("../inmap/configExample.toml")
+	Cfg.SetConfigFile("../inmap/configExample.toml")
+	cfg, err := LoadConfigFile()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +66,8 @@ func TestInMAPDynamic(t *testing.T) {
 	dynamic := true
 	createGrid := false // this isn't used for the dynamic grid
 	os.Setenv("InMAPRunType", "dynamic")
-	cfg, err := ReadConfigFile("../inmap/configExample.toml")
+	Cfg.SetConfigFile("../inmap/configExample.toml")
+	cfg, err := LoadConfigFile()
 	if err != nil {
 		t.Fatal(err)
 	}

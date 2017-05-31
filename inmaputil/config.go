@@ -19,14 +19,11 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package inmaputil
 
 import (
-	"bufio"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/BurntSushi/toml"
 	"github.com/ctessum/geom/proj"
 	"github.com/spatialmodel/inmap"
 )
@@ -163,29 +160,20 @@ type ConfigData struct {
 	sr *proj.SR
 }
 
-// ReadConfigFile reads and parses a TOML configuration file.
-func ReadConfigFile(filename string) (config *ConfigData, err error) {
-	// Open the configuration file
-	var (
-		file  *os.File
-		bytes []byte
-	)
-	file, err = os.Open(filename)
-	if err != nil {
-		return nil, fmt.Errorf("the configuration file you have specified, %v, does not appear to exist. Please check the file name and location and try again.\n", filename)
+// LoadConfig reads and parses an InMAP configuration information.
+func LoadConfigFile() (*ConfigData, error) {
+	var err error
+	// Find and read in the configuration file, if there is one.
+	if err = Cfg.ReadInConfig(); err != nil {
+		return nil, fmt.Errorf("inmap: problem reading configuration file: %v", err)
 	}
-	reader := bufio.NewReader(file)
-	bytes, err = ioutil.ReadAll(reader)
-	if err != nil {
-		return nil, fmt.Errorf("problem reading configuration file: %v", err)
+	var config ConfigData
+	// Load configuration info into our struct.
+	if err = Cfg.Unmarshal(&config); err != nil {
+		return nil, fmt.Errorf("inmap: problem reading configuration file: %v", err)
 	}
 
-	config = new(ConfigData)
-	_, err = toml.Decode(string(bytes), config)
-	if err != nil {
-		return nil, fmt.Errorf("there has been an error parsing the configuration file: %v\n", err)
-	}
-
+	// Clean and check configuration.
 	for k, v := range config.OutputVariables {
 		v = strings.Replace(v, "\r\n", " ", -1)
 		v = strings.Replace(v, "\n", " ", -1)
@@ -228,7 +216,7 @@ func ReadConfigFile(filename string) (config *ConfigData, err error) {
 
 	if len(config.OutputVariables) == 0 {
 		return nil, fmt.Errorf("there are no variables specified for output. Please fill in " +
-			"the OutputVariables section of the configuration file and try again.")
+			"the OutputVariables configuration and try again.")
 	}
 
 	if _, ok := map[string]struct{}{
@@ -246,5 +234,5 @@ func ReadConfigFile(filename string) (config *ConfigData, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("problem creating output directory: %v", err)
 	}
-	return
+	return &config, nil
 }

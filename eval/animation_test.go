@@ -161,7 +161,8 @@ func TestAnimation_logo(t *testing.T) {
 	dynamic := true
 	createGrid := false // this isn't used for the dynamic grid
 	os.Setenv("InMAPRunType", "dynamic")
-	cfg, err := inmaputil.ReadConfigFile("nei2005Config.toml")
+	inmaputil.Cfg.SetConfigFile("nei2005Config.toml")
+	cfg, err := inmaputil.LoadConfigFile()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -217,7 +218,8 @@ func TestAnimation_nei(t *testing.T) {
 	dynamic := true
 	createGrid := false // this isn't used for the dynamic grid
 	os.Setenv("InMAPRunType", "dynamic")
-	cfg, err := inmaputil.ReadConfigFile("nei2005Config.toml")
+	inmaputil.Cfg.SetConfigFile("nei2005Config.toml")
+	cfg, err := inmaputil.LoadConfigFile()
 	if err != nil {
 		t.Fatal(err)
 	}

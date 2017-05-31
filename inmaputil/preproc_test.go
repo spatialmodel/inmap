@@ -18,10 +18,13 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 
 package inmaputil
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestPreprocWRFChem(t *testing.T) {
-	cfg, err := ReadConfigFile("../inmap/configExampleWRFChem.toml")
+	Cfg.SetConfigFile("../inmap/configExampleWRFChem.toml")
+	cfg, err := LoadConfigFile()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +36,8 @@ func TestPreprocWRFChem(t *testing.T) {
 }
 
 func TestPreprocGEOSChem(t *testing.T) {
-	cfg, err := ReadConfigFile("../inmap/configExampleGEOSChem.toml")
+	Cfg.SetConfigFile("../inmap/configExampleGEOSChem.toml")
+	cfg, err := LoadConfigFile()
 	if err != nil {
 		t.Fatal(err)
 	}

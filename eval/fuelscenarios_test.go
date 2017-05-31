@@ -65,7 +65,8 @@ func TestFuelScenarios(t *testing.T) {
 	for i, scenario := range scenarios {
 		dynamic := true
 		createGrid := false // this isn't used for the dynamic grid
-		cfg, err := inmaputil.ReadConfigFile("nei2005Config.toml")
+		inmaputil.Cfg.SetConfigFile("nei2005Config.toml")
+		cfg, err := inmaputil.LoadConfigFile()
 		if err != nil {
 			t.Fatal(err)
 		}

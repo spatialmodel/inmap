@@ -16,46 +16,153 @@ You should have received a copy of the GNU General Public License
 along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package cmd
+package inmaputil
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/spatialmodel/inmap"
-	"github.com/spatialmodel/inmap/inmaputil"
 	"github.com/spatialmodel/inmap/sr"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 )
 
 const year = "2017"
 
-// These variables specify confuration flags.
-var (
-	// configFile specifies the location of the configuration file.
-	configFile string
+var Cfg *viper.Viper
 
-	// static specifies whether the simulation should be run with a static
-	// (vs. dynamic) resolution grid.
-	static bool
+type option struct {
+	name, usage, shorthand string
+	defaultVal             interface{}
+	commands               []*cobra.Command
+	flagsets               []*pflag.FlagSet
+}
 
-	// createGrid specifies whether the variable-resolution grid should be
-	// created on-the-fly for static runs rather than reading it from a file.
-	// For dynamic gridding, the grid is always created on-the-fly.
-	createGrid bool
-
-	// layers specifies a list of vertical layer numbers to be included
-	// in an SR matrix.
-	layers []int
-
-	// begin specifies the starting grid index for SR matrix creation.
-	begin int
-
-	// end specifies the ending grid index for SR matrix creation.
-	end int
-)
+// Options are the configuration options available to InMAP.
+var Options []option
 
 func init() {
-	// Link the commands together.
+	Options = []option{
+		{
+			name:       "config",
+			usage:      "config specifies the configuration file location.",
+			defaultVal: "",
+			commands:   []*cobra.Command{Root},
+			flagsets:   []*pflag.FlagSet{Root.PersistentFlags()},
+		},
+		{
+			name: "static",
+			usage: `static specifies whether to run with a static grid that
+is determined before the simulation starts. If false, the
+simulation runs with a dynamic grid that changes resolution
+depending on spatial gradients in population density and
+concentration.`,
+			shorthand:  "s",
+			defaultVal: false,
+			commands:   []*cobra.Command{steadyCmd},
+			flagsets:   []*pflag.FlagSet{steadyCmd.PersistentFlags()},
+		},
+		{
+			name: "creategrid",
+			usage: `creategrid specifies whether to create the
+variable-resolution grid as specified in the configuration file before starting
+the simulation instead of reading it from a file. If --static is false, then
+this flag will also be automatically set to false.`,
+			defaultVal: false,
+			commands:   []*cobra.Command{steadyCmd},
+			flagsets:   []*pflag.FlagSet{steadyCmd.PersistentFlags()},
+		},
+		{
+			name: "layers",
+			usage: `layers specifies a ist of vertical layer numbers to
+be included in the SR matrix.`,
+			defaultVal: []int{0, 2, 4, 6},
+			commands:   []*cobra.Command{srCmd},
+			flagsets:   []*pflag.FlagSet{srCmd.Flags()},
+		},
+		{
+			name: "begin",
+			usage: `begin specifies the beginning grid index (inclusive) for SR
+matrix generation.`,
+			defaultVal: 0,
+			commands:   []*cobra.Command{srCmd},
+			flagsets:   []*pflag.FlagSet{srCmd.Flags()},
+		},
+		{
+			name: "end",
+			usage: `end specifies the ending grid index (exclusive) for SR matrix
+generation. The default is -1 which represents the last row.`,
+			defaultVal: -1,
+			commands:   []*cobra.Command{srCmd},
+			flagsets:   []*pflag.FlagSet{srCmd.Flags()},
+		},
+		{
+			name: "rpcport",
+			usage: `rpcport specifies the port to be used for RPC communication
+when using distributed computing.`,
+			defaultVal: "6060",
+			commands:   []*cobra.Command{srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{srCmd.Flags(), workerCmd.Flags()},
+		},
+	}
+
+	Cfg = viper.New()
+
+	// Set up the configuration environment.
+	Cfg.SetConfigName("inmap") // Set the default configuration file name.
+	// Set a directory to search for the configuration file in.
+	Cfg.AddConfigPath(".")
+	// Set the prefix for configuration environment variables.
+	Cfg.SetEnvPrefix("INMAP")
+
+	for _, option := range Options {
+		if Cfg.IsSet(option.name) {
+			// Don't set the option if it is already set somewhere else,
+			// such as in a test.
+			continue
+		}
+		for _, set := range option.flagsets {
+			switch option.defaultVal.(type) {
+			case string:
+				if option.shorthand == "" {
+					set.String(option.name, option.defaultVal.(string), option.usage)
+				} else {
+					set.StringP(option.name, option.shorthand, option.defaultVal.(string), option.usage)
+				}
+			case bool:
+				if option.shorthand == "" {
+					set.Bool(option.name, option.defaultVal.(bool), option.usage)
+				} else {
+					set.BoolP(option.name, option.shorthand, option.defaultVal.(bool), option.usage)
+				}
+			case int:
+				if option.shorthand == "" {
+					set.Int(option.name, option.defaultVal.(int), option.usage)
+				} else {
+					set.IntP(option.name, option.shorthand, option.defaultVal.(int), option.usage)
+				}
+			case []int:
+				if option.shorthand == "" {
+					set.IntSlice(option.name, option.defaultVal.([]int), option.usage)
+				} else {
+					set.IntSliceP(option.name, option.shorthand, option.defaultVal.([]int), option.usage)
+				}
+			default:
+				panic("invalid argument type")
+			}
+			Cfg.BindPFlag(option.name, set.Lookup(option.name))
+		}
+	}
+	// If the user has set a config file path, use that one.
+	if cfgpath := Cfg.GetString("config"); cfgpath != "" {
+		Cfg.SetConfigFile(cfgpath)
+	}
+}
+
+// Link the commands together.
+func init() {
 	Root.AddCommand(versionCmd)
 	Root.AddCommand(runCmd)
 	runCmd.AddCommand(steadyCmd)
@@ -64,28 +171,6 @@ func init() {
 	Root.AddCommand(srCmd)
 	srCmd.AddCommand(srPredictCmd)
 	Root.AddCommand(workerCmd)
-
-	// Create the configuration flags.
-	Root.PersistentFlags().StringVar(&configFile, "config", "./inmap.toml", "configuration file location")
-
-	steadyCmd.PersistentFlags().BoolVarP(&static, "static", "s", false,
-		"Run with a static grid that is determined before the simulation starts. "+
-			"If false, run with a dynamic grid that changes resolution depending on spatial "+
-			"gradients in population density and concentration.")
-	steadyCmd.PersistentFlags().BoolVar(&createGrid, "creategrid", false,
-		"Create the variable-resolution grid as specified in the configuration file"+
-			" before starting the simulation instead of reading it from a file. "+
-			"If --static is false, then this flag will also be automatically set to false.")
-
-	srCmd.Flags().IntSliceVar(&layers, "layers", []int{0, 2, 4, 6},
-		"List of layer numbers to create matrices for.")
-	srCmd.Flags().IntVar(&begin, "begin", 0, "Beginning row index.")
-	srCmd.Flags().IntVar(&end, "end", -1, "End row index. Default is -1 (the last row).")
-
-	srCmd.Flags().StringVar(&sr.RPCPort, "rpcport", "6060",
-		"Set the port to be used for RPC communication.")
-	workerCmd.Flags().StringVar(&sr.RPCPort, "rpcport", "6060",
-		"Set the port to be used for RPC communication.")
 }
 
 // Root is the main command.
@@ -139,11 +224,11 @@ var steadyCmd = &cobra.Command{
 	Long: `steady runs InMAP in steady-state mode to calculate annual average
 concentrations with no temporal variability.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := inmaputil.ReadConfigFile(configFile)
+		cfg, err := LoadConfigFile()
 		if err != nil {
 			return err
 		}
-		return inmaputil.Run(cfg, !static, createGrid, inmaputil.DefaultScienceFuncs, nil, nil, nil)
+		return Run(cfg, !Cfg.GetBool("static"), Cfg.GetBool("createGrid"), DefaultScienceFuncs, nil, nil, nil)
 	},
 	DisableAutoGenTag: true,
 }
@@ -156,11 +241,11 @@ var gridCmd = &cobra.Command{
 information in the configuration file. The saved data can then be loaded
 for future InMAP simulations.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := inmaputil.ReadConfigFile(configFile)
+		cfg, err := LoadConfigFile()
 		if err != nil {
 			return err
 		}
-		return inmaputil.Grid(cfg)
+		return Grid(cfg)
 	},
 	DisableAutoGenTag: true,
 }
@@ -172,11 +257,11 @@ var preprocCmd = &cobra.Command{
 output as specified by information in the configuration
 file and saves the result for use in future InMAP simulations.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := inmaputil.ReadConfigFile(configFile)
+		cfg, err := LoadConfigFile()
 		if err != nil {
 			return err
 		}
-		return inmaputil.Preproc(cfg)
+		return Preproc(cfg)
 	},
 	DisableAutoGenTag: true,
 }
@@ -190,11 +275,20 @@ Simulations will be run on the cluster defined by $PBS_NODEFILE.
 If $PBS_NODEFILE doesn't exist, the simulations will run on the
 local machine.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := inmaputil.ReadConfigFile(configFile)
+		cfg, err := LoadConfigFile()
 		if err != nil {
 			return err
 		}
-		return inmaputil.RunSR(cfg, configFile, begin, end, layers)
+		layersStr := Cfg.GetStringSlice("layers")
+		layers := make([]int, len(layersStr))
+		for i, l := range layersStr {
+			li, err := strconv.ParseInt(l, 10, 64)
+			if err != nil {
+				return err
+			}
+			layers[i] = int(li)
+		}
+		return RunSR(cfg, Cfg.GetString("configFile"), Cfg.GetInt("begin"), Cfg.GetInt("end"), layers)
 	},
 	DisableAutoGenTag: true,
 }
@@ -206,11 +300,11 @@ var workerCmd = &cobra.Command{
 	Long: `worker starts an InMAP worker that listens over RPC for simulation requests,
 does the simulations, and returns results.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := inmaputil.ReadConfigFile(configFile)
+		cfg, err := LoadConfigFile()
 		if err != nil {
 			return err
 		}
-		worker, err := inmaputil.NewWorker(cfg)
+		worker, err := NewWorker(cfg)
 		if err != nil {
 			return err
 		}
@@ -239,11 +333,11 @@ matter per m³ air.
 	 PrimaryPM25: Primarily emitted PM2.5
 	 TotalPM25: The sum of the above components`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := inmaputil.ReadConfigFile(configFile)
+		cfg, err := LoadConfigFile()
 		if err != nil {
 			return err
 		}
-		return inmaputil.SRPredict(cfg)
+		return SRPredict(cfg)
 	},
 	DisableAutoGenTag: true,
 }
