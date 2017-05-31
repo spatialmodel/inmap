@@ -12,7 +12,8 @@ Additional information is available at http://inmap.spatialmodel.com.
 ### Options
 
 ```
-      --config string   configuration file location (default "./inmap.toml")
+      --config string   
+              config specifies the configuration file location.
 ```
 
 ### SEE ALSO

@@ -46,19 +46,21 @@ var Options []option
 func init() {
 	Options = []option{
 		{
-			name:       "config",
-			usage:      "config specifies the configuration file location.",
+			name: "config",
+			usage: `
+              config specifies the configuration file location.`,
 			defaultVal: "",
 			commands:   []*cobra.Command{Root},
 			flagsets:   []*pflag.FlagSet{Root.PersistentFlags()},
 		},
 		{
 			name: "static",
-			usage: `static specifies whether to run with a static grid that
-is determined before the simulation starts. If false, the
-simulation runs with a dynamic grid that changes resolution
-depending on spatial gradients in population density and
-concentration.`,
+			usage: `
+              static specifies whether to run with a static grid that
+              is determined before the simulation starts. If false, the
+              simulation runs with a dynamic grid that changes resolution
+              depending on spatial gradients in population density and
+              concentration.`,
 			shorthand:  "s",
 			defaultVal: false,
 			commands:   []*cobra.Command{steadyCmd},
@@ -66,45 +68,90 @@ concentration.`,
 		},
 		{
 			name: "creategrid",
-			usage: `creategrid specifies whether to create the
-variable-resolution grid as specified in the configuration file before starting
-the simulation instead of reading it from a file. If --static is false, then
-this flag will also be automatically set to false.`,
+			usage: `
+              creategrid specifies whether to create the
+              variable-resolution grid as specified in the configuration file before starting
+              the simulation instead of reading it from a file. If --static is false, then
+              this flag will also be automatically set to false.`,
 			defaultVal: false,
 			commands:   []*cobra.Command{steadyCmd},
 			flagsets:   []*pflag.FlagSet{steadyCmd.PersistentFlags()},
 		},
 		{
 			name: "layers",
-			usage: `layers specifies a ist of vertical layer numbers to
-be included in the SR matrix.`,
+			usage: `
+              layers specifies a ist of vertical layer numbers to
+              be included in the SR matrix.`,
 			defaultVal: []int{0, 2, 4, 6},
 			commands:   []*cobra.Command{srCmd},
 			flagsets:   []*pflag.FlagSet{srCmd.Flags()},
 		},
 		{
 			name: "begin",
-			usage: `begin specifies the beginning grid index (inclusive) for SR
-matrix generation.`,
+			usage: `
+              begin specifies the beginning grid index (inclusive) for SR
+              matrix generation.`,
 			defaultVal: 0,
 			commands:   []*cobra.Command{srCmd},
 			flagsets:   []*pflag.FlagSet{srCmd.Flags()},
 		},
 		{
 			name: "end",
-			usage: `end specifies the ending grid index (exclusive) for SR matrix
-generation. The default is -1 which represents the last row.`,
+			usage: `
+              end specifies the ending grid index (exclusive) for SR matrix
+              generation. The default is -1 which represents the last row.`,
 			defaultVal: -1,
 			commands:   []*cobra.Command{srCmd},
 			flagsets:   []*pflag.FlagSet{srCmd.Flags()},
 		},
 		{
 			name: "rpcport",
-			usage: `rpcport specifies the port to be used for RPC communication
-when using distributed computing.`,
+			usage: `
+              rpcport specifies the port to be used for RPC communication
+              when using distributed computing.`,
 			defaultVal: "6060",
 			commands:   []*cobra.Command{srCmd, workerCmd},
 			flagsets:   []*pflag.FlagSet{srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "Vargrid.VariableGridXo",
+			usage: `
+              Vargrid.VariableGridXo specifies the X coordinate of the
+              lower-left corner of the InMAP grid.`,
+			defaultVal: -2736000.0,
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "Vargrid.VariableGridYo",
+			usage: `
+              Vargrid.VariableGridYo specifies the Y coordinate of the
+              lower-left corner of the InMAP grid.`,
+			defaultVal: -2088000.0,
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "Vargrid.VariableGridDx",
+			usage: `
+              Vargrid.VariableGridDx specifies the X edge lengths of grid
+              cells in the outermost nest, in the units of the grid model
+              spatial projection--typically meters or degrees latitude
+              and longitude.`,
+			defaultVal: 48000.0,
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "Vargrid.VariableGridDy",
+			usage: `
+              Vargrid.VariableGridDy specifies the Y edge lengths of grid
+              cells in the outermost nest, in the units of the grid model
+              spatial projection--typically meters or degrees latitude
+              and longitude.`,
+			defaultVal: 48000.0,
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
 		},
 	}
 
@@ -148,6 +195,12 @@ when using distributed computing.`,
 					set.IntSlice(option.name, option.defaultVal.([]int), option.usage)
 				} else {
 					set.IntSliceP(option.name, option.shorthand, option.defaultVal.([]int), option.usage)
+				}
+			case float64:
+				if option.shorthand == "" {
+					set.Float64(option.name, option.defaultVal.(float64), option.usage)
+				} else {
+					set.Float64P(option.name, option.shorthand, option.defaultVal.(float64), option.usage)
 				}
 			default:
 				panic("invalid argument type")
