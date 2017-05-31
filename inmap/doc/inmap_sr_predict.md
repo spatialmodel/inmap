@@ -28,7 +28,8 @@ inmap sr predict
 ### Options inherited from parent commands
 
 ```
-      --config string   configuration file location (default "./inmap.toml")
+      --config string   
+              config specifies the configuration file location.
 ```
 
 ### SEE ALSO
