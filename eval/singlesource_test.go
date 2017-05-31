@@ -40,7 +40,8 @@ func TestSingleSource(t *testing.T) {
 	for _, filename := range []string{"configSingleSource_9km.toml", "configSingleSource_nested.toml"} {
 		dynamic := true
 		createGrid := false // this isn't used for the dynamic grid
-		cfg, err := inmaputil.ReadConfigFile(filename)
+		inmaputil.Cfg.SetConfigFile(filename)
+		cfg, err := inmaputil.LoadConfigFile()
 		if err != nil {
 			t.Fatal(err)
 		}

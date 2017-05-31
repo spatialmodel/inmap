@@ -23,11 +23,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spatialmodel/inmap/internal/cmd"
+	"github.com/spatialmodel/inmap/inmaputil"
 )
 
 func main() {
-	if err := cmd.Root.Execute(); err != nil {
+	if err := inmaputil.Root.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(-1)
 	}
