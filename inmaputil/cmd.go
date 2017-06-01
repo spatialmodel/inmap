@@ -80,7 +80,7 @@ func init() {
 		{
 			name: "layers",
 			usage: `
-              layers specifies a ist of vertical layer numbers to
+              layers specifies a list of vertical layer numbers to
               be included in the SR matrix.`,
 			defaultVal: []int{0, 2, 4, 6},
 			commands:   []*cobra.Command{srCmd},
@@ -150,6 +150,72 @@ func init() {
               spatial projection--typically meters or degrees latitude
               and longitude.`,
 			defaultVal: 48000.0,
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "Vargrid.Xnests",
+			usage: `
+							Xnests specifies nesting multiples in the X direction.`,
+			defaultVal: []int{111, 2, 2, 3, 2, 2},
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "Vargrid.Ynests",
+			usage: `
+							Ynests specifies nesting multiples in the Y direction.`,
+			defaultVal: []int{84, 2, 2, 3, 2, 2},
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "Vargrid.HiResLayers",
+			usage: `
+							HiResLayers is the number of layers, starting at ground level, to do
+							nesting in. Layers above this will have all grid cells in the lowest
+							spatial resolution.`,
+			defaultVal: 8,
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "Vargrid.GridProj",
+			usage: `
+							GridProj gives projection info for the CTM grid in Proj4 or WKT format.`,
+			defaultVal: "+proj=lcc +lat_1=33.000000 +lat_2=45.000000 +lat_0=40.000000 +lon_0=-97.000000 +x_0=0 +y_0=0 +a=6370997.000000 +b=6370997.000000 +to_meter=1",
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "Vargrid.PopDensityThreshold",
+			usage: `
+							PopDensityThreshold is a limit for people per unit area in a grid cell
+							(units will typically be either people / m^2 or people / degree^2,
+							depending on the spatial projection of the model grid). If
+							the population density in a grid cell is above this level, the cell in question
+							is a candidate for splitting into smaller cells.`,
+			defaultVal: 0.0055,
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "Vargrid.PopThreshold",
+			usage: `
+							PopThreshold is a limit for the total number of people in a grid cell.
+							If the total population in a grid cell is above this level, the cell in question
+							is a candidate for splitting into smaller cells.`,
+			defaultVal: 40000.0,
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "Vargrid.PopConcThreshold",
+			usage: `
+							PopConcThreshold is the limit for
+							Σ(|ΔConcentration|)*combinedVolume*|ΔPopulation| / {Σ(|totalMass|)*totalPopulation}.
+							See the documentation for PopConcMutator for more information.`,
+			defaultVal: 0.000000001,
 			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
 			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
 		},
