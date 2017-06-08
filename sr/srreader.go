@@ -19,11 +19,15 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package sr
 
 import (
+	"context"
 	"fmt"
 	"reflect"
+	"runtime"
+	"sync"
 
 	"bitbucket.org/ctessum/cdf"
 	"github.com/ctessum/geom"
+	"github.com/ctessum/requestcache"
 	"github.com/gonum/floats"
 	"github.com/spatialmodel/inmap"
 )
@@ -36,6 +40,20 @@ type Reader struct {
 	layers            []int // layers are the vertical layers that are represented in the SR matrix.
 	extraData         map[string][]float64
 	nCellsGroundLevel int // number of cells in the lowest model layer
+
+	// CacheSize specifies the number of records to be held in the memory cache.
+	// Larger numbers lead to faster operation but greater memory use.
+	// If the SR matrix is created from a version of InMAP with 50,000 grid cells
+	// in each vertical layer, then a CacheSize of 50,000 would be the equivalent
+	// of storing an entire vertical layer in the cache. The default is 100.
+	// CacheSize can only be changed before the Reader has been used to read
+	// concentrations for the first time.
+	CacheSize int
+
+	// sourceCache is a cache for SR records.
+	sourceCache *requestcache.Cache
+	// sourceInit is used to initialize sourceCache.
+	sourceInit sync.Once
 }
 
 // NewReader creates a new SR reader from the netcdf database specified by r.
@@ -45,7 +63,8 @@ func NewReader(r cdf.ReaderWriterAt) (*Reader, error) {
 		return nil, err
 	}
 	sr := &Reader{
-		File: *cf,
+		File:      *cf,
+		CacheSize: 100,
 	}
 	nCells := sr.Header.Lengths("N")[0] // number of InMAP cells.
 	cells := make([]*inmap.Cell, nCells)
@@ -336,8 +355,37 @@ func (e AboveTopErr) Error() string {
 
 // Source returns concentrations in μg m-3 for emissions in μg s-1 of
 // pollutant pol in SR layer index 'layer' and horizontal grid cell index
-// 'index'. If the layer and index are not known, use Concentrations instead.
+// 'index'. This function uses a cache with the size specified by
+// the CacheSize attribute of the receiver to speed up repeated requests
+// and is concurrency-safe. Users desiring to make changes to the returned
+// values should make a copy first to avoid inadvertantly editing the cached results
+// which could cause subsequent results from this function to be incorrect.
+// If the layer and index are not known, use the Concentrations method instead.
 func (sr *Reader) Source(pol string, layer, index int) ([]float64, error) {
+	sr.sourceInit.Do(func() {
+		sr.sourceCache = requestcache.NewCache(func(ctx context.Context, request interface{}) (interface{}, error) {
+			r := request.(sourceRequest)
+			return sr.source(r.pol, r.layer, r.index)
+		}, runtime.GOMAXPROCS(-1),
+			requestcache.Deduplicate(), requestcache.Memory(sr.CacheSize))
+	})
+	req := sr.sourceCache.NewRequest(context.TODO(),
+		sourceRequest{pol: pol, layer: layer, index: index},
+		fmt.Sprintf("%s_%d_%d", pol, layer, index),
+	)
+	result, err := req.Result()
+	return result.([]float64), err
+}
+
+type sourceRequest struct {
+	pol          string
+	layer, index int
+}
+
+// source returns concentrations in μg m-3 for emissions in μg s-1 of
+// pollutant pol in SR layer index 'layer' and horizontal grid cell index
+// 'index'.
+func (sr *Reader) source(pol string, layer, index int) ([]float64, error) {
 	if layer >= len(sr.layers) {
 		return nil, fmt.Errorf("sr: requested layer %d >= number of layers (%d)", layer, len(sr.layers))
 	}
