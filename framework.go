@@ -21,8 +21,6 @@ package inmap
 import (
 	"fmt"
 	"math"
-	"reflect"
-	"strings"
 	"sync"
 
 	"github.com/ctessum/geom"
@@ -378,97 +376,6 @@ func harmonicMean(a, b float64) float64 {
 	return 2. * a * b / (a + b)
 }
 
-// toArray converts cell data for variable varName into a regular array.
-// If layer is less than zero, data for all layers is returned.
-func (d *InMAP) toArray(varName string, layer int) []float64 {
-	o := make([]float64, 0, d.cells.len())
-	cells := d.cells.array()
-	for _, c := range cells {
-		c.mutex.RLock()
-		if layer >= 0 && c.Layer > layer {
-			// The cells should be sorted with the lower layers first, so we
-			// should be done here.
-			c.mutex.RUnlock()
-			return o
-		}
-		if layer < 0 || c.Layer == layer {
-			o = append(o, c.getValue(varName, d.popIndices, d.mortIndices))
-		}
-		c.mutex.RUnlock()
-	}
-	return o
-}
-
-// Get the value in the current cell of the specified variable, where popIndices
-// are array indices of each population type.
-func (c *Cell) getValue(varName string, popIndices map[string]int, mortIndices map[string]int) float64 {
-	if index, ok := emisLabels[varName]; ok { // Emissions
-		if c.EmisFlux != nil {
-			return c.EmisFlux[index]
-		}
-		return 0
-	} else if polConv, ok := PolLabels[varName]; ok { // Concentrations
-		var o float64
-		for i, ii := range polConv.index {
-			o += c.Cf[ii] * polConv.conversion[i]
-		}
-		return o
-
-	} else if polConv, ok := baselinePolLabels[varName]; ok { // Baseline concentrations
-		var o float64
-		for i, ii := range polConv.index {
-			o += c.CBaseline[ii] * polConv.conversion[i]
-		}
-		return o
-
-	} else if i, ok := popIndices[varName]; ok { // Population
-		return c.PopData[i]
-
-	} else if i, ok := mortIndices[varName]; ok { // Mortality rate
-		return c.MortData[i]
-
-	} // Everything else
-
-	v := reflect.ValueOf(c).Elem()
-	if _, ok := v.Type().FieldByName(varName); !ok {
-		panic(fmt.Errorf("inmap: missing variable %v", varName))
-	}
-	val := v.FieldByName(varName)
-	switch val.Type().Kind() {
-	case reflect.Float64:
-		return val.Float()
-	case reflect.Int:
-		return float64(val.Int()) // convert integer fields to floats here for consistency.
-	default:
-		panic(fmt.Errorf("unsupported field type %v", val.Type().Kind()))
-	}
-}
-
-// getUnits returns the units of a model variable.
-func (d *InMAP) getUnits(varName string) string {
-	if _, ok := emisLabels[varName]; ok { // Emissions
-		return "μg/m³/s"
-	} else if _, ok := PolLabels[varName]; ok { // Concentrations
-		return "μg/m³"
-	} else if _, ok := baselinePolLabels[varName]; ok { // Concentrations
-		return "μg/m³"
-	} else if _, ok := d.popIndices[varName]; ok { // Population
-		return "people/grid cell"
-	} else if _, ok := d.mortIndices[varName]; ok { // Mortality Rate
-		return "deaths/100,000"
-	} else if _, ok := d.popIndices[strings.Replace(varName, " deaths", "", 1)]; ok {
-		// Mortalities
-		return "deaths/grid cell"
-	}
-	// Everything else
-	t := reflect.TypeOf(*(*d.cells)[0].Cell)
-	ftype, ok := t.FieldByName(varName)
-	if ok {
-		return ftype.Tag.Get("units")
-	}
-	panic(fmt.Sprintf("Unknown variable %v.", varName))
-}
-
 // GetGeometry returns the cell geometry for the given layer.
 // if WebMap is true, it returns the geometry in web mercator projection,
 // otherwise it returns the native grid projection.
@@ -542,4 +449,37 @@ func (d *InMAP) CellIntersections(g geom.Geom) (cells []*Cell, fractions []float
 		}
 	}
 	return cells, fractions
+}
+
+// VerticalProfile retrieves the vertical profile for a given
+// variable at the given location p in the native grid projection.
+func (d *InMAP) VerticalProfile(variable string, p geom.Point, m Mechanism) (height, vals []float64, err error) {
+	if err := d.checkModelVars(m, variable); err != nil {
+		return nil, nil, err
+	}
+
+	height = make([]float64, d.nlayers)
+	vals = make([]float64, d.nlayers)
+	cells := d.index.SearchIntersect(p.Bounds())
+	if len(cells) == 0 {
+		return nil, nil, fmt.Errorf("inmap.VerticalProfile: location %+v not in grid", p)
+	}
+	var c *Cell
+	for _, cI := range cells {
+		c = cI.(*Cell)
+		if c.Layer == 0 {
+			break
+		}
+	}
+	if c.Layer != 0 {
+		panic("couldn't find a ground level cell.")
+	}
+	i := 0
+	for !c.boundary {
+		vals[i] = c.getValue(variable, d.popIndices, d.mortIndices, m)
+		height[i] = c.LayerHeight + c.Dz/2.
+		c = (*c.above)[0].Cell
+		i++
+	}
+	return
 }

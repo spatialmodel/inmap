@@ -564,8 +564,8 @@ func CreateTestCTMData() (VarGridConfig, *CTMData) {
 	}
 }
 
-// VarGridData returns some test data for variable grid generation.
-func VarGridData() (*VarGridConfig, *CTMData, *Population, PopIndices, *MortalityRates, MortIndices) {
+// VarGridTestData returns some test data for variable grid generation.
+func VarGridTestData() (*VarGridConfig, *CTMData, *Population, PopIndices, *MortalityRates, MortIndices) {
 
 	WriteTestPopShapefile()
 	WriteTestMortalityShapefile()

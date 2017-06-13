@@ -1,5 +1,5 @@
 /*
-Copyright © 2013 the InMAP authors.
+Copyright © 2017 the InMAP authors.
 This file is part of InMAP.
 
 InMAP is free software: you can redistribute it and/or modify
@@ -16,49 +16,17 @@ You should have received a copy of the GNU General Public License
 along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package inmap_test
+package simpledrydep_test
 
 import (
-	"bytes"
-	"os"
 	"testing"
 
 	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/science/chem/simplechem"
+	"github.com/spatialmodel/inmap/science/drydep/simpledrydep"
 )
 
-// TestSaveSRGrid checks the ability to save a grid file
-// for SR matrix generation tests.
-func TestSaveSRGrid(t *testing.T) {
-	cfg, ctmdata, pop, popIndices, mr, mortIndices := inmap.VarGridTestData()
-	cfg.HiResLayers = 6
-	f, err := os.Create("inmap/testdata/inmapVarGrid_SR.gob")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	emis := inmap.NewEmissions()
-
-	var m simplechem.Mechanism
-	mutator, err := inmap.PopulationMutator(cfg, popIndices)
-	if err != nil {
-		t.Error(err)
-	}
-	d := &inmap.InMAP{
-		InitFuncs: []inmap.DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis, m),
-			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, m, nil),
-			inmap.Save(f),
-		},
-	}
-	if err := d.Init(); err != nil {
-		t.Error(err)
-	}
-}
-
-func TestSaveLoad(t *testing.T) {
-	buf := bytes.NewBuffer([]byte{})
-
+func TestDryDeposition(t *testing.T) {
 	cfg, ctmdata, pop, popIndices, mr, mortIndices := inmap.VarGridTestData()
 	emis := inmap.NewEmissions()
 
@@ -71,22 +39,35 @@ func TestSaveLoad(t *testing.T) {
 		InitFuncs: []inmap.DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis, m),
 			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, m, nil),
-			inmap.Save(buf),
+			inmap.SetTimestepCFL(),
+		},
+		RunFuncs: []inmap.DomainManipulator{
+			inmap.Calculations(inmap.AddEmissionsFlux()),
+			inmap.Calculations(simpledrydep.DryDeposition(simplechem.SimpleDryDepIndices)),
+			inmap.SteadyStateConvergenceCheck(1, cfg.PopGridColumn, nil),
 		},
 	}
 	if err := d.Init(); err != nil {
 		t.Error(err)
 	}
-
-	d2 := &inmap.InMAP{
-		InitFuncs: []inmap.DomainManipulator{
-			inmap.Load(buf, cfg, nil, m),
-		},
+	for _, c := range d.Cells() {
+		for i := range c.Ci {
+			c.Cf[i] = 1 // set concentrations to 1
+		}
 	}
-	if err := d2.Init(); err != nil {
+	if err := d.Run(); err != nil {
 		t.Error(err)
 	}
 
-	d2.TestCellAlignment1(t)
-	d2.TestCellAlignment2(t)
+	for _, c := range d.Cells() {
+		for ii, cc := range c.Cf {
+			if c.Layer == 0 {
+				if cc >= 1 || cc <= 0.98 {
+					t.Errorf("ground-level cell %v pollutant %d should equal be between 0.98 and 1 but is %g", c, ii, cc)
+				}
+			} else if cc != 1 {
+				t.Errorf("above-ground cell %v pollutant %d should equal 1 but equals %g", c, ii, cc)
+			}
+		}
+	}
 }

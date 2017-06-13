@@ -28,6 +28,9 @@ import (
 
 	"github.com/ctessum/geom"
 	"github.com/spatialmodel/inmap"
+	"github.com/spatialmodel/inmap/science/chem/simplechem"
+	"github.com/spatialmodel/inmap/science/drydep/simpledrydep"
+	"github.com/spatialmodel/inmap/science/wetdep/emepwetdep"
 )
 
 // Empty is used for passing content-less messages.
@@ -74,13 +77,14 @@ func (s *Worker) Calculate(input *IOData, output *IOData) error {
 
 	log.Printf("Slave calculating row=%v, layer=%v\n", input.Row, input.Layer)
 
+	var m simplechem.Mechanism
 	scienceFuncs := inmap.Calculations(
 		inmap.UpwindAdvection(),
 		inmap.Mixing(),
 		inmap.MeanderMixing(),
-		inmap.DryDeposition(),
-		inmap.WetDeposition(),
-		inmap.Chemistry(),
+		simpledrydep.DryDeposition(simplechem.SimpleDryDepIndices),
+		emepwetdep.WetDeposition(simplechem.EMEPWetDepIndices),
+		m.Chemistry(),
 	)
 
 	emis := inmap.NewEmissions()
@@ -89,7 +93,7 @@ func (s *Worker) Calculate(input *IOData, output *IOData) error {
 	}
 
 	initFuncs := []inmap.DomainManipulator{
-		s.Config.RegularGrid(s.CTMData, s.Pop, s.PopIndices, s.MR, s.MortIndices, emis),
+		s.Config.RegularGrid(s.CTMData, s.Pop, s.PopIndices, s.MR, s.MortIndices, emis, m),
 		inmap.SetTimestepCFL(),
 	}
 	popConcMutator := inmap.NewPopConcMutator(s.Config, s.PopIndices)
@@ -99,7 +103,7 @@ func (s *Worker) Calculate(input *IOData, output *IOData) error {
 		scienceFuncs,
 		inmap.RunPeriodically(gridMutateInterval,
 			s.Config.MutateGrid(popConcMutator.Mutate(),
-				s.CTMData, s.Pop, s.MR, emis, nil)),
+				s.CTMData, s.Pop, s.MR, emis, m, nil)),
 		inmap.RunPeriodically(gridMutateInterval, inmap.SetTimestepCFL()),
 		inmap.SteadyStateConvergenceCheck(-1, s.Config.PopGridColumn, nil),
 	}
@@ -121,7 +125,7 @@ func (s *Worker) Calculate(input *IOData, output *IOData) error {
 	output.Row = input.Row
 	output.Layer = input.Layer
 
-	o, err := inmap.NewOutputter("", false, outputVars, nil)
+	o, err := inmap.NewOutputter("", false, outputVars, nil, m)
 	if err != nil {
 		return err
 	}

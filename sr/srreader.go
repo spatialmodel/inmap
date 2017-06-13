@@ -30,6 +30,7 @@ import (
 	"github.com/ctessum/requestcache"
 	"github.com/gonum/floats"
 	"github.com/spatialmodel/inmap"
+	"github.com/spatialmodel/inmap/science/chem/simplechem"
 )
 
 // Reader allows the interaction with a NetCDF-formatted source-receptor (SR) database.
@@ -186,13 +187,14 @@ func (sr *Reader) Geometry() []geom.Polygonal {
 // changes to the returned data may also alter the underlying data.
 func (sr *Reader) Variables(names ...string) (map[string][]float64, error) {
 	r := make(map[string][]float64)
+	var m simplechem.Mechanism
 	for _, name := range names {
 		n := make(map[string]string)
 		n[name] = name
 		if d, ok := sr.extraData[name]; ok {
 			r[name] = d[0:sr.nCellsGroundLevel] // only return ground-level data.
 		} else {
-			o, err := inmap.NewOutputter("", false, n, nil)
+			o, err := inmap.NewOutputter("", false, n, nil, m)
 			if err != nil {
 				return nil, err
 			}
@@ -317,7 +319,8 @@ var polNames = []string{"pNH4", "pNO3", "pSO4", "SOA", "PrimaryPM25"}
 // SR matrix and returns a list of layers that should be used to represent
 // the emissions in c and the weighting fraction of each layer.
 func (sr *Reader) layerFracs(c *inmap.Cell, plumeHeight float64) ([]int, []float64, error) {
-	layerHeights, _, err := sr.d.VerticalProfile("WindSpeed", c.Centroid())
+	var m simplechem.Mechanism
+	layerHeights, _, err := sr.d.VerticalProfile("WindSpeed", c.Centroid(), m)
 	if err != nil {
 		return nil, nil, err
 	}

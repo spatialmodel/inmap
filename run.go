@@ -22,28 +22,11 @@ import (
 	"bytes"
 	"fmt"
 	"math"
-	"regexp"
 	"runtime"
-	"strconv"
-	"strings"
 	"sync"
 	"text/tabwriter"
 	"time"
-
-	"github.com/Knetic/govaluate"
 )
-
-const daysPerSecond = 1. / 3600. / 24.
-
-// EmisNames are the names of pollutants accepted as emissions [μg/s]
-var EmisNames = []string{"VOC", "NOx", "NH3", "SOx", "PM2_5"}
-
-var emisLabels = map[string]int{"VOCEmissions": igOrg,
-	"NOxEmissions":  igNO,
-	"NH3Emissions":  igNH,
-	"SOxEmissions":  igS,
-	"PM25Emissions": iPM2_5,
-}
 
 // PolNames are the names of pollutants within the model
 var PolNames = []string{"gOrg", "pOrg", // gaseous and particulate organic matter
@@ -58,34 +41,13 @@ const (
 	igOrg, ipOrg, iPM2_5, igNH, ipNH, igS, ipS, igNO, ipNO = 0, 1, 2, 3, 4, 5, 6, 7, 8
 )
 
-// map relating emissions to the associated PM2.5 concentrations
-var gasParticleMap = map[int]int{igOrg: ipOrg,
-	igNO: ipNO, igNH: ipNH, igS: ipS, iPM2_5: iPM2_5}
-
-type polConv struct {
-	index      []int     // index in concentration array
-	conversion []float64 // conversion from N to NH4, S to SO4, etc...
-}
-
-// PolLabels are labels and conversions for InMAP pollutants.
-var PolLabels = map[string]polConv{
-	"TotalPM25": {[]int{iPM2_5, ipOrg, ipNH, ipS, ipNO},
-		[]float64{1, 1, NtoNH4, StoSO4, NtoNO3}},
-	"VOC":         {[]int{igOrg}, []float64{1.}},
-	"SOA":         {[]int{ipOrg}, []float64{1.}},
-	"PrimaryPM25": {[]int{iPM2_5}, []float64{1.}},
-	"NH3":         {[]int{igNH}, []float64{1. / NH3ToN}},
-	"pNH4":        {[]int{ipNH}, []float64{NtoNH4}},
-	"SOx":         {[]int{igS}, []float64{1. / SOxToS}},
-	"pSO4":        {[]int{ipS}, []float64{StoSO4}},
-	"NOx":         {[]int{igNO}, []float64{1. / NOxToN}},
-	"pNO3":        {[]int{ipNO}, []float64{NtoNO3}},
-}
-
 // baselinePolLabels specifies labels for the baseline (i.e., background
 // concentrations) pollutant species. It is different than polLabels in that
 // TotalPM2_5 is its own category and there is no PrimaryPM2_5.
-var baselinePolLabels = map[string]polConv{
+var baselinePolLabels = map[string]struct {
+	index      []int     // index in concentration array
+	conversion []float64 // conversion from N to NH4, S to SO4, etc...
+}{
 	"BaselineTotalPM25": {[]int{iPM2_5}, []float64{1}},
 	"BaselineVOC":       {[]int{igOrg}, []float64{1.}},
 	"BaselineSOA":       {[]int{ipOrg}, []float64{1.}},
@@ -116,7 +78,6 @@ func ResetCells() DomainManipulator {
 // Calculations returns a function that concurrently runs a series of calculations
 // on all of the model grid cells.
 func Calculations(calculators ...CellManipulator) DomainManipulator {
-
 	nprocs := runtime.GOMAXPROCS(0) // number of processors
 	var wg sync.WaitGroup
 
@@ -293,6 +254,8 @@ func Log(c chan *SimulationStatus) DomainManipulator {
 	iteration := 0
 	nDaysRun := 0.
 
+	const daysPerSecond = 1. / 3600. / 24.
+
 	return func(d *InMAP) error {
 		iteration++
 		nDaysRun += d.Dt * daysPerSecond
@@ -307,68 +270,4 @@ func Log(c chan *SimulationStatus) DomainManipulator {
 		timeStepTime = time.Now()
 		return nil
 	}
-}
-
-// Results returns the simulation results.
-// Output is in the form of map[variable][row]concentration.
-func (d *InMAP) Results(o *Outputter) (map[string][]float64, error) {
-
-	// Prepare output data.
-	modelVals := make(map[string]interface{})
-	valByRow := make(map[string]interface{})
-	output := make(map[string][]float64)
-	var nCells int
-
-	// Get the model variables that are to be used in the output.
-	for _, name := range o.modelVariables {
-		if o.allLayers {
-			data := d.toArray(name, -1)
-			modelVals[name] = data
-			nCells = len(data)
-		} else {
-			data := d.toArray(name, 0)
-			modelVals[name] = data
-			nCells = len(data)
-		}
-	}
-
-	// Identify segments of output variable expressions that are surrounded by braces.
-	for k, v := range o.outputVariables {
-		regx, _ := regexp.Compile("\\{(.*?)\\}")
-		matches := regx.FindAllString(v, -1)
-		if len(matches) > 0 {
-			// For each segment of an expression that is surrounded by braces, evaluate
-			// across all grid cells.
-			for _, m := range matches {
-				expression, err := govaluate.NewEvaluableExpressionWithFunctions(m[1:len(m)-1], o.outputFunctions)
-				if err != nil {
-					return nil, err
-				}
-				result, err := expression.Evaluate(modelVals)
-				if err != nil {
-					return nil, err
-				}
-				// Replace segments surrounded by braces with corresponding result
-				// calculated above.
-				o.outputVariables[k] = strings.Replace(o.outputVariables[k], m, strconv.FormatFloat(result.(float64), 'f', -1, 64), 1)
-			}
-		}
-	}
-	for k, v := range o.outputVariables {
-		expression, err := govaluate.NewEvaluableExpressionWithFunctions(v, o.outputFunctions)
-		if err != nil {
-			return nil, err
-		}
-		for i := 0; i < nCells; i++ {
-			for name := range modelVals {
-				valByRow[name] = modelVals[name].([]float64)[i]
-			}
-			result, err := expression.Evaluate(valByRow)
-			if err != nil {
-				return nil, err
-			}
-			output[k] = append(output[k], result.(float64))
-		}
-	}
-	return output, nil
 }

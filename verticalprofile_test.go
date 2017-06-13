@@ -16,35 +16,37 @@ You should have received a copy of the GNU General Public License
 along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package inmap
+package inmap_test
 
 import (
 	"reflect"
 	"testing"
 
 	"github.com/ctessum/geom"
+	"github.com/spatialmodel/inmap"
+	"github.com/spatialmodel/inmap/science/chem/simplechem"
 )
 
 func TestVerticalProfile(t *testing.T) {
+	cfg, ctmdata, pop, popIndices, mr, mortIndices := inmap.VarGridTestData()
+	emis := inmap.NewEmissions()
+	var m simplechem.Mechanism
 
-	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
-	emis := NewEmissions()
-
-	mutator, err := PopulationMutator(cfg, popIndices)
+	mutator, err := inmap.PopulationMutator(cfg, popIndices)
 	if err != nil {
 		t.Error(err)
 	}
-	d := &InMAP{
-		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis),
-			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
+	d := &inmap.InMAP{
+		InitFuncs: []inmap.DomainManipulator{
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis, m),
+			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, m, nil),
 		},
 	}
 	if err = d.Init(); err != nil {
 		t.Error(err)
 	}
 
-	height, wind, err := d.VerticalProfile("WindSpeed", geom.Point{X: -500, Y: -500})
+	height, wind, err := d.VerticalProfile("WindSpeed", geom.Point{X: -500, Y: -500}, m)
 	if err != nil {
 		t.Fatal(err)
 	}

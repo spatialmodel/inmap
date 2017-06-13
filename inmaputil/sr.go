@@ -28,6 +28,7 @@ import (
 	"github.com/ctessum/geom/encoding/shp"
 	"github.com/kardianos/osext"
 	"github.com/spatialmodel/inmap"
+	"github.com/spatialmodel/inmap/science/chem/simplechem"
 	"github.com/spatialmodel/inmap/sr"
 )
 
@@ -91,9 +92,10 @@ func NewWorker(VariableGridData, InMAPData string, VarGrid *inmap.VarGridConfig)
 	if err != nil {
 		return nil, fmt.Errorf("problem opening file to load VariableGridData: %v", err)
 	}
+	var m simplechem.Mechanism
 	d := &inmap.InMAP{
 		InitFuncs: []inmap.DomainManipulator{
-			inmap.Load(r, VarGrid, nil),
+			inmap.Load(r, VarGrid, nil, m),
 		},
 	}
 	if err = d.Init(); err != nil {

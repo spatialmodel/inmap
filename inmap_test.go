@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License
 along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package inmap
+package inmap_test
 
 import (
 	"math"
@@ -24,497 +24,14 @@ import (
 	"time"
 
 	"github.com/ctessum/geom"
-	"github.com/ctessum/geom/index/rtree"
 	"github.com/gonum/floats"
+	"github.com/spatialmodel/inmap"
+	"github.com/spatialmodel/inmap/science/chem/simplechem"
+	"github.com/spatialmodel/inmap/science/drydep/simpledrydep"
+	"github.com/spatialmodel/inmap/science/wetdep/emepwetdep"
 )
 
 const E = 1000000. // emissions
-
-// Tests whether the cells correctly reference each other
-func TestCellAlignment(t *testing.T) {
-
-	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
-	emis := &Emissions{
-		data: rtree.NewTree(25, 50),
-	}
-	mutator, err := PopulationMutator(cfg, popIndices)
-	if err != nil {
-		t.Error(err)
-	}
-
-	d := &InMAP{
-		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis),
-			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
-		},
-	}
-	if err := d.Init(); err != nil {
-		t.Error(err)
-	}
-	d.testCellAlignment2(t)
-}
-
-func (d *InMAP) testCellAlignment2(t *testing.T) {
-	const testTolerance = 1.e-8
-	for _, cell := range *d.cells {
-		var westCoverage, eastCoverage, northCoverage, southCoverage float64
-		var aboveCoverage, belowCoverage, groundLevelCoverage float64
-		for _, w := range *cell.west {
-			westCoverage += w.info.coverFrac
-			if !w.boundary {
-				pass := false
-				for _, e := range *w.east {
-					if e.Cell == cell.Cell {
-						pass = true
-						if different(w.info.diff, e.info.diff, testTolerance) {
-							t.Errorf("Kxx doesn't match")
-						}
-						if different(w.info.centerDistance, e.info.centerDistance, testTolerance) {
-							t.Errorf("Dx doesn't match")
-							break
-						}
-					}
-				}
-				if !pass {
-					t.Errorf("Failed for Cell %v West", cell)
-				}
-			}
-		}
-		for _, e := range *cell.east {
-			eastCoverage += e.info.coverFrac
-			if !e.boundary {
-				pass := false
-				for _, w := range *e.west {
-					if w.Cell == cell.Cell {
-						pass = true
-						if different(e.info.diff, w.info.diff, testTolerance) {
-							t.Errorf("Kxx doesn't match")
-						}
-						if different(e.info.centerDistance, w.info.centerDistance, testTolerance) {
-							t.Errorf("Dx doesn't match")
-						}
-						break
-					}
-				}
-				if !pass {
-					t.Errorf("Failed for Cell %v East", cell)
-				}
-			}
-		}
-		for _, n := range *cell.north {
-			northCoverage += n.info.coverFrac
-			if !n.boundary {
-				pass := false
-				for _, s := range *n.south {
-					if s.Cell == cell.Cell {
-						pass = true
-						if different(n.info.diff, s.info.diff, testTolerance) {
-							t.Errorf("Kyy doesn't match")
-						}
-						if different(n.info.centerDistance, s.info.centerDistance, testTolerance) {
-							t.Errorf("Dy doesn't match")
-						}
-						break
-					}
-				}
-				if !pass {
-					t.Errorf("Failed for Cell %v  North", cell)
-				}
-			}
-		}
-		for _, s := range *cell.south {
-			southCoverage += s.info.coverFrac
-			if !s.boundary {
-				pass := false
-				for _, n := range *s.north {
-					if n.Cell == cell.Cell {
-						pass = true
-						if different(s.info.diff, n.info.diff, testTolerance) {
-							t.Errorf("Kyy doesn't match")
-						}
-						if different(s.info.centerDistance, n.info.centerDistance, testTolerance) {
-							t.Errorf("Dy doesn't match")
-						}
-						break
-					}
-				}
-				if !pass {
-					t.Errorf("Failed for Cell %v South", cell)
-				}
-			}
-		}
-		for _, a := range *cell.above {
-			aboveCoverage += a.info.coverFrac
-			if !a.boundary {
-				pass := false
-				for _, b := range *a.below {
-					if b.Cell == cell.Cell {
-						pass = true
-						if different(a.info.diff, b.info.diff, testTolerance) {
-							t.Errorf("Kzz doesn't match above (layer=%v, "+
-								"KzzAbove=%v, KzzBelow=%v)", cell.Layer,
-								b.info.diff, a.info.diff)
-						}
-						if different(a.info.centerDistance, b.info.centerDistance, testTolerance) {
-							t.Errorf("Dz doesn't match")
-						}
-						break
-					}
-				}
-				if !pass {
-					t.Errorf("Failed for Cell %v Above", cell)
-				}
-			}
-		}
-		for _, b := range *cell.below {
-			belowCoverage += b.info.coverFrac
-			pass := false
-			if cell.Layer == 0 && b.Cell == cell.Cell {
-				pass = true
-			} else {
-				for _, a := range *b.above {
-					if a.Cell == cell.Cell {
-						pass = true
-						if different(b.info.diff, a.info.diff, testTolerance) {
-							t.Errorf("Kzz doesn't match below")
-						}
-						if different(b.info.centerDistance, a.info.centerDistance, testTolerance) {
-							t.Errorf("Dz doesn't match")
-						}
-						break
-					}
-				}
-			}
-			if !pass {
-				t.Errorf("Failed for Cell %v  Below", cell)
-			}
-		}
-		// Assume upper cells are never higher resolution than lower cells
-		for _, g := range *cell.groundLevel {
-			groundLevelCoverage += g.info.coverFrac
-			g2 := g
-			pass := false
-			for {
-				if g2.above.len() == 0 {
-					pass = false
-					break
-				}
-				if g2.Cell == (*g2.above)[0].Cell {
-					pass = false
-					break
-				}
-				if g2.Cell == cell.Cell {
-					pass = true
-					break
-				}
-				g2 = (*g2.above)[0]
-			}
-			if !pass {
-				t.Errorf("Failed for Cell %v GroundLevel", cell)
-			}
-		}
-		const tolerance = 1.0e-10
-		if different(westCoverage, 1, tolerance) {
-			t.Errorf("cell %v, west coverage %g!=1", cell, westCoverage)
-		}
-		if different(eastCoverage, 1, tolerance) {
-			t.Errorf("cell %v, east coverage %g!=1", cell, eastCoverage)
-		}
-		if different(southCoverage, 1, tolerance) {
-			t.Errorf("cell %v, south coverage %g!=1", cell, southCoverage)
-		}
-		if different(northCoverage, 1, tolerance) {
-			t.Errorf("cell %v, north coverage %g!=1", cell, northCoverage)
-		}
-		if different(belowCoverage, 1, tolerance) {
-			t.Errorf("cell %v, below coverage %g!=1", cell, belowCoverage)
-		}
-		if different(aboveCoverage, 1, tolerance) {
-			t.Errorf("cell %v, above coverage %g!=1", cell, aboveCoverage)
-		}
-		if different(groundLevelCoverage, 1, tolerance) {
-			t.Errorf("cell %v, groundLevel coverage %g!=1", cell, groundLevelCoverage)
-		}
-	}
-}
-
-// Test whether convective mixing coefficients are balanced in
-// a way that conserves mass
-func TestConvectiveMixing(t *testing.T) {
-	const testTolerance = 1.e-8
-
-	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
-	emis := NewEmissions()
-
-	mutator, err := PopulationMutator(cfg, popIndices)
-	if err != nil {
-		t.Error(err)
-	}
-	d := &InMAP{
-		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis),
-			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
-		},
-	}
-	if err := d.Init(); err != nil {
-		t.Error(err)
-	}
-
-	for _, c := range *d.cells {
-		val := c.M2u - c.M2d + (*c.above)[0].M2d*(*c.above)[0].Dz/c.Dz
-		if absDifferent(val, 0, testTolerance) {
-			t.Error(c.Layer, val, c.M2u, c.M2d, (*c.above)[0].M2d)
-		}
-	}
-}
-
-// Test whether the mixing mechanisms are properly conserving mass
-func TestMixing(t *testing.T) {
-	const (
-		testTolerance = 1.e-8
-		numTimesteps  = 5
-	)
-
-	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
-	emis := &Emissions{
-		data: rtree.NewTree(25, 50),
-	}
-	emis.Add(&EmisRecord{
-		PM25: E,
-		Geom: geom.LineString{
-			geom.Point{X: -3999, Y: -3999.},
-			geom.Point{X: -3500, Y: -3500.},
-		},
-	}) // ground level emissions
-
-	mutator, err := PopulationMutator(cfg, popIndices)
-	if err != nil {
-		t.Error(err)
-	}
-	d := &InMAP{
-		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis),
-			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
-			SetTimestepCFL(),
-		},
-		RunFuncs: []DomainManipulator{
-			Calculations(AddEmissionsFlux()),
-			Calculations(Mixing()),
-			SteadyStateConvergenceCheck(numTimesteps, cfg.PopGridColumn, nil),
-		},
-	}
-	if err := d.Init(); err != nil {
-		t.Error(err)
-	}
-	if err := d.Run(); err != nil {
-		t.Error(err)
-	}
-
-	sum := 0.
-	maxval := 0.
-	for _, group := range []*cellList{d.cells, d.westBoundary, d.eastBoundary,
-		d.northBoundary, d.southBoundary, d.topBoundary} {
-		for _, cell := range *group {
-			sum += cell.Cf[iPM2_5] * cell.Volume
-			maxval = max(maxval, cell.Cf[iPM2_5])
-		}
-	}
-	cells := d.cells.array()
-	expectedMass := cells[0].EmisFlux[iPM2_5] * cells[0].Volume * d.Dt * numTimesteps
-	if different(sum, expectedMass, testTolerance) {
-		t.Errorf("sum=%g (it should equal %g)\n", sum, expectedMass)
-	}
-	if !different(sum, maxval, testTolerance) {
-		t.Error("All of the mass is in one cell--it didn't mix")
-	}
-}
-
-// Test whether mass is conserved during chemical reactions.
-func TestChemistry(t *testing.T) {
-	const (
-		testTolerance = 1.e-8
-	)
-	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
-	emis := &Emissions{
-		data: rtree.NewTree(25, 50),
-	}
-	emis.data.Insert(&EmisRecord{
-		SOx:  E,
-		NOx:  E,
-		PM25: E,
-		VOC:  E,
-		NH3:  E,
-		Geom: geom.Point{X: -3999, Y: -3999.},
-	}) // ground level emissions
-
-	mutator, err := PopulationMutator(cfg, popIndices)
-	if err != nil {
-		t.Error(err)
-	}
-	d := &InMAP{
-		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis),
-			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
-			SetTimestepCFL(),
-		},
-		RunFuncs: []DomainManipulator{
-			Calculations(AddEmissionsFlux()),
-			Calculations(Chemistry()),
-			SteadyStateConvergenceCheck(1, cfg.PopGridColumn, nil),
-		},
-	}
-	if err := d.Init(); err != nil {
-		t.Error(err)
-	}
-	if err := d.Run(); err != nil {
-		t.Error(err)
-	}
-
-	c := d.cells.array()[0]
-	sum := 0.
-	sum += c.Cf[igOrg] + c.Cf[ipOrg]
-	sum += (c.Cf[igNO] + c.Cf[ipNO]) / NOxToN
-	sum += (c.Cf[igNH] + c.Cf[ipNH]) / NH3ToN
-	sum += (c.Cf[igS] + c.Cf[ipS]) / SOxToS
-	sum += c.Cf[iPM2_5]
-	sum *= c.Volume
-
-	if c.Cf[ipOrg] == 0 || c.Cf[ipS] == 0 || c.Cf[ipNH] == 0 || c.Cf[ipNO] == 0 {
-		t.Error("chemistry appears not to have occurred")
-	}
-	if different(sum, 5*E*d.Dt, testTolerance) {
-		t.Error("different")
-	}
-}
-
-// Test whether mass is conserved during advection.
-func TestAdvection(t *testing.T) {
-	const tolerance = 1.e-8
-
-	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
-	emis := &Emissions{
-		data: rtree.NewTree(25, 50),
-	}
-
-	mutator, err := PopulationMutator(cfg, popIndices)
-	if err != nil {
-		t.Error(err)
-	}
-	d := &InMAP{
-		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis),
-			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
-			SetTimestepCFL(),
-		},
-		RunFuncs: []DomainManipulator{
-			Calculations(AddEmissionsFlux()),
-			Calculations(UpwindAdvection()),
-			SteadyStateConvergenceCheck(1, cfg.PopGridColumn, nil),
-		},
-	}
-	if err := d.Init(); err != nil {
-		t.Error(err)
-	}
-
-	var cellGroups = []*cellList{d.cells, d.westBoundary, d.eastBoundary,
-		d.northBoundary, d.southBoundary, d.topBoundary}
-
-	for _, testCell := range *d.cells {
-		ResetCells()(d)
-
-		// Add emissions
-		testCell.Ci[0] += E / testCell.Dz / testCell.Dy / testCell.Dx
-		testCell.Cf[0] += E / testCell.Dz / testCell.Dy / testCell.Dx
-		// Calculate advection
-
-		if err := d.Run(); err != nil {
-			t.Error(err)
-		}
-
-		sum := 0.
-		layerSum := make(map[int]float64)
-		for _, cellGroup := range cellGroups {
-			for _, c := range *cellGroup {
-				val := c.Cf[0] * c.Dy * c.Dx * c.Dz
-				if val < 0 {
-					t.Fatalf("cell %v emis: negative concentration", testCell)
-				}
-				sum += val
-				layerSum[c.Layer] += val
-			}
-		}
-		if different(sum, E, tolerance) {
-			t.Errorf("cell %v emis: sum=%.12g (it should equal %v)\n", testCell, sum, E)
-		}
-	}
-}
-
-// Test whether mass is conserved during meander mixing.
-func TestMeanderMixing(t *testing.T) {
-	const tolerance = 1.e-8
-	nsteps := 10
-
-	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
-	emis := &Emissions{
-		data: rtree.NewTree(25, 50),
-	}
-
-	mutator, err := PopulationMutator(cfg, popIndices)
-	if err != nil {
-		t.Error(err)
-	}
-	d := &InMAP{
-		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis),
-			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
-			SetTimestepCFL(),
-		},
-		RunFuncs: []DomainManipulator{
-			Calculations(AddEmissionsFlux()),
-			Calculations(MeanderMixing()),
-			SteadyStateConvergenceCheck(nsteps, cfg.PopGridColumn, nil),
-		},
-	}
-	if err := d.Init(); err != nil {
-		t.Error(err)
-	}
-
-	var cellGroups = []*cellList{d.cells, d.westBoundary, d.eastBoundary,
-		d.northBoundary, d.southBoundary, d.topBoundary}
-	for _, testCell := range *d.cells {
-		for _, group := range cellGroups {
-			for _, c := range *group {
-				c.Ci[0] = 0
-				c.Cf[0] = 0
-			}
-		}
-		ResetCells()(d)
-		for tt := 0; tt < nsteps; tt++ {
-
-			testCell.Ci[0] += E / testCell.Dz / testCell.Dy / testCell.Dx // ground level emissions
-			testCell.Cf[0] += E / testCell.Dz / testCell.Dy / testCell.Dx // ground level emissions
-
-			if err := d.Run(); err != nil {
-				t.Error(err)
-			}
-		}
-		sum := 0.
-		layerSum := make(map[int]float64)
-		for _, group := range cellGroups {
-			for _, c := range *group {
-				val := c.Cf[0] * c.Dy * c.Dx * c.Dz
-				if val < 0 {
-					t.Fatalf("cell %v emis: negative concentration", testCell)
-				}
-				sum += val
-				layerSum[c.Layer] += val
-			}
-		}
-		if different(sum, E*float64(nsteps), tolerance) {
-			t.Errorf("cell %v emis: sum=%.12g (it should equal %v)\n", testCell, sum, E*float64(nsteps))
-		}
-	}
-}
 
 func TestConverge(t *testing.T) {
 	const (
@@ -522,11 +39,9 @@ func TestConverge(t *testing.T) {
 		timeout       = 10 * time.Second
 	)
 
-	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
-	emis := &Emissions{
-		data: rtree.NewTree(25, 50),
-	}
-	emis.data.Insert(&EmisRecord{
+	cfg, ctmdata, pop, popIndices, mr, mortIndices := inmap.VarGridTestData()
+	emis := inmap.NewEmissions()
+	emis.Add(&inmap.EmisRecord{
 		SOx:  E,
 		NOx:  E,
 		PM25: E,
@@ -535,28 +50,29 @@ func TestConverge(t *testing.T) {
 		Geom: geom.Point{X: -3999, Y: -3999.},
 	}) // ground level emissions
 
-	convergences := []DomainManipulator{SteadyStateConvergenceCheck(2, cfg.PopGridColumn, nil),
-		SteadyStateConvergenceCheck(-1, cfg.PopGridColumn, nil)}
+	convergences := []inmap.DomainManipulator{inmap.SteadyStateConvergenceCheck(2, cfg.PopGridColumn, nil),
+		inmap.SteadyStateConvergenceCheck(-1, cfg.PopGridColumn, nil)}
 	convergenceNames := []string{"fixed", "criterion"}
 	expectedConcentration := []float64{0.348963630316385, 83.8101077058609}
 
 	for i, conv := range convergences {
 
 		iterations := 0
+		var m simplechem.Mechanism
 
-		d := &InMAP{
-			InitFuncs: []DomainManipulator{
-				cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis),
-				SetTimestepCFL(),
+		d := &inmap.InMAP{
+			InitFuncs: []inmap.DomainManipulator{
+				cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis, m),
+				inmap.SetTimestepCFL(),
 			},
-			RunFuncs: []DomainManipulator{
-				Calculations(AddEmissionsFlux()),
-				Calculations(
-					DryDeposition(),
-					WetDeposition(),
+			RunFuncs: []inmap.DomainManipulator{
+				inmap.Calculations(inmap.AddEmissionsFlux()),
+				inmap.Calculations(
+					simpledrydep.DryDeposition(simplechem.SimpleDryDepIndices),
+					emepwetdep.WetDeposition(simplechem.EMEPWetDepIndices),
 				),
 				conv,
-				func(_ *InMAP) error {
+				func(_ *inmap.InMAP) error {
 					iterations++
 					return nil
 				},
@@ -580,7 +96,7 @@ func TestConverge(t *testing.T) {
 			t.Logf("%s completed after %d iterations.", convergenceNames[i], iterations)
 		}
 
-		o, err := NewOutputter("", false, map[string]string{"PrimPM25": "PrimaryPM25"}, nil)
+		o, err := inmap.NewOutputter("", false, map[string]string{"PrimPM25": "PrimaryPM25"}, nil, m)
 		if err != nil {
 			t.Error(err)
 		}
@@ -600,11 +116,9 @@ func TestConverge(t *testing.T) {
 func BenchmarkRun(b *testing.B) {
 	const testTolerance = 1.e-8
 
-	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
-	emis := &Emissions{
-		data: rtree.NewTree(25, 50),
-	}
-	emis.Add(&EmisRecord{
+	cfg, ctmdata, pop, popIndices, mr, mortIndices := inmap.VarGridTestData()
+	emis := inmap.NewEmissions()
+	emis.Add(&inmap.EmisRecord{
 		SOx:  E,
 		NOx:  E,
 		PM25: E,
@@ -613,27 +127,28 @@ func BenchmarkRun(b *testing.B) {
 		Geom: geom.Point{X: -3999, Y: -3999.},
 	}) // ground level emissions
 
-	mutator, err := PopulationMutator(cfg, popIndices)
+	mutator, err := inmap.PopulationMutator(cfg, popIndices)
 	if err != nil {
 		b.Error(err)
 	}
-	d := &InMAP{
-		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis),
-			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
-			SetTimestepCFL(),
+	var m simplechem.Mechanism
+	d := &inmap.InMAP{
+		InitFuncs: []inmap.DomainManipulator{
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis, m),
+			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, m, nil),
+			inmap.SetTimestepCFL(),
 		},
-		RunFuncs: []DomainManipulator{
-			Calculations(AddEmissionsFlux()),
-			Calculations(
-				UpwindAdvection(),
-				Mixing(),
-				MeanderMixing(),
-				DryDeposition(),
-				WetDeposition(),
-				Chemistry(),
+		RunFuncs: []inmap.DomainManipulator{
+			inmap.Calculations(inmap.AddEmissionsFlux()),
+			inmap.Calculations(
+				inmap.UpwindAdvection(),
+				inmap.Mixing(),
+				inmap.MeanderMixing(),
+				simpledrydep.DryDeposition(simplechem.SimpleDryDepIndices),
+				emepwetdep.WetDeposition(simplechem.EMEPWetDepIndices),
+				m.Chemistry(),
 			),
-			SteadyStateConvergenceCheck(1000, cfg.PopGridColumn, nil),
+			inmap.SteadyStateConvergenceCheck(1000, cfg.PopGridColumn, nil),
 		},
 	}
 	if err = d.Init(); err != nil {
@@ -643,7 +158,7 @@ func BenchmarkRun(b *testing.B) {
 		b.Error(err)
 	}
 
-	o, err := NewOutputter("", false, map[string]string{"TotalPopDeaths": "coxHazard(loglogRR(TotalPM25), TotalPop, MortalityRate)"}, nil)
+	o, err := inmap.NewOutputter("", false, map[string]string{"TotalPopDeaths": "coxHazard(loglogRR(TotalPM25), TotalPop, MortalityRate)"}, nil, m)
 	if err != nil {
 		b.Error(err)
 	}
@@ -661,105 +176,15 @@ func BenchmarkRun(b *testing.B) {
 	}
 }
 
-func TestDryDeposition(t *testing.T) {
-	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
-	emis := &Emissions{
-		data: rtree.NewTree(25, 50),
-	}
-
-	mutator, err := PopulationMutator(cfg, popIndices)
-	if err != nil {
-		t.Error(err)
-	}
-	d := &InMAP{
-		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis),
-			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
-			SetTimestepCFL(),
-		},
-		RunFuncs: []DomainManipulator{
-			Calculations(AddEmissionsFlux()),
-			Calculations(DryDeposition()),
-			SteadyStateConvergenceCheck(1, cfg.PopGridColumn, nil),
-		},
-	}
-	if err := d.Init(); err != nil {
-		t.Error(err)
-	}
-	for _, c := range *d.cells {
-		for i := range c.Ci {
-			c.Cf[i] = 1 // set concentrations to 1
-		}
-	}
-	if err := d.Run(); err != nil {
-		t.Error(err)
-	}
-
-	for _, c := range *d.cells {
-		for ii, cc := range c.Cf {
-			if c.Layer == 0 {
-				if cc >= 1 || cc <= 0.98 {
-					t.Errorf("ground-level cell %v pollutant %d should equal be between 0.98 and 1 but is %g", c, ii, cc)
-				}
-			} else if cc != 1 {
-				t.Errorf("above-ground cell %v pollutant %d should equal 1 but equals %g", c, ii, cc)
-			}
-		}
-	}
-}
-
-func TestWetDeposition(t *testing.T) {
-	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
-	emis := &Emissions{
-		data: rtree.NewTree(25, 50),
-	}
-
-	mutator, err := PopulationMutator(cfg, popIndices)
-	if err != nil {
-		t.Error(err)
-	}
-	d := &InMAP{
-		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis),
-			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
-			SetTimestepCFL(),
-		},
-		RunFuncs: []DomainManipulator{
-			Calculations(AddEmissionsFlux()),
-			Calculations(WetDeposition()),
-			SteadyStateConvergenceCheck(1, cfg.PopGridColumn, nil),
-		},
-	}
-	if err := d.Init(); err != nil {
-		t.Error(err)
-	}
-	for _, c := range *d.cells {
-		for i := range c.Ci {
-			c.Cf[i] = 1 // set concentrations to 1
-		}
-	}
-	if err := d.Run(); err != nil {
-		t.Error(err)
-	}
-
-	for _, c := range *d.cells {
-		for ii, cc := range c.Cf {
-			if cc > 1 || cc <= 0.99 {
-				t.Errorf("ground-level cell %v pollutant %d should equal be between 0.99 and 1 but is %g", c, ii, cc)
-			}
-		}
-	}
-}
-
 // TestBigM2d checks whether the model can run stably with a high rate of
 // convective mixing.
 func TestBigM2d(t *testing.T) {
-	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
+	cfg, ctmdata, pop, popIndices, mr, mortIndices := inmap.VarGridTestData()
 	ctmdata.Data["M2d"].Data.Scale(100)
 	ctmdata.Data["M2u"].Data.Scale(100)
 
-	emis := NewEmissions()
-	emis.Add(&EmisRecord{
+	emis := inmap.NewEmissions()
+	emis.Add(&inmap.EmisRecord{
 		SOx:  E,
 		NOx:  E,
 		PM25: E,
@@ -767,23 +192,24 @@ func TestBigM2d(t *testing.T) {
 		NH3:  E,
 		Geom: geom.Point{X: -3999, Y: -3999.},
 	}) // ground level emissions
+	var m simplechem.Mechanism
 
-	d := &InMAP{
-		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis),
-			SetTimestepCFL(),
+	d := &inmap.InMAP{
+		InitFuncs: []inmap.DomainManipulator{
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis, m),
+			inmap.SetTimestepCFL(),
 		},
-		RunFuncs: []DomainManipulator{
-			Calculations(AddEmissionsFlux()),
-			Calculations(
-				UpwindAdvection(),
-				Mixing(),
-				MeanderMixing(),
-				DryDeposition(),
-				WetDeposition(),
-				Chemistry(),
+		RunFuncs: []inmap.DomainManipulator{
+			inmap.Calculations(inmap.AddEmissionsFlux()),
+			inmap.Calculations(
+				inmap.UpwindAdvection(),
+				inmap.Mixing(),
+				inmap.MeanderMixing(),
+				simpledrydep.DryDeposition(simplechem.SimpleDryDepIndices),
+				emepwetdep.WetDeposition(simplechem.EMEPWetDepIndices),
+				m.Chemistry(),
 			),
-			SteadyStateConvergenceCheck(-1, cfg.PopGridColumn, nil),
+			inmap.SteadyStateConvergenceCheck(-1, cfg.PopGridColumn, nil),
 		},
 	}
 	if err := d.Init(); err != nil {
@@ -793,7 +219,7 @@ func TestBigM2d(t *testing.T) {
 		t.Error(err)
 	}
 
-	o, err := NewOutputter("", false, map[string]string{"TotalPM25": "TotalPM25"}, nil)
+	o, err := inmap.NewOutputter("", false, map[string]string{"TotalPM25": "TotalPM25"}, nil, m)
 	if err != nil {
 		t.Error(err)
 	}
@@ -809,16 +235,24 @@ func TestBigM2d(t *testing.T) {
 	}
 }
 
-func different(a, b, tolerance float64) bool {
-	if 2*math.Abs(a-b)/math.Abs(a+b) > tolerance || math.IsNaN(a) || math.IsNaN(b) {
-		return true
+// Tests whether the cells correctly reference each other
+func TestCellAlignment(t *testing.T) {
+	cfg, ctmdata, pop, popIndices, mr, mortIndices := inmap.VarGridTestData()
+	emis := inmap.NewEmissions()
+	mutator, err := inmap.PopulationMutator(cfg, popIndices)
+	if err != nil {
+		t.Error(err)
 	}
-	return false
-}
+	var m simplechem.Mechanism
 
-func absDifferent(a, b, tolerance float64) bool {
-	if math.Abs(a-b) > tolerance {
-		return true
+	d := &inmap.InMAP{
+		InitFuncs: []inmap.DomainManipulator{
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis, m),
+			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, m, nil),
+		},
 	}
-	return false
+	if err := d.Init(); err != nil {
+		t.Error(err)
+	}
+	d.TestCellAlignment2(t)
 }

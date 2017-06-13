@@ -24,9 +24,11 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"bitbucket.org/ctessum/cdf"
 	"github.com/spatialmodel/inmap"
+	"github.com/spatialmodel/inmap/science/chem/simplechem"
 	"golang.org/x/net/context"
 )
 
@@ -36,6 +38,7 @@ type SR struct {
 	c           *Cluster
 	numNodes    int     // The number of nodes for performing calculations.
 	localWorker *Worker // Worker for local processing where there are 0 nodes.
+	m           inmap.Mechanism
 }
 
 // NewSR initializes an SR object.
@@ -51,14 +54,16 @@ func NewSR(varGridFile, inmapDataFile, command, logDir string, config *inmap.Var
 		return nil, fmt.Errorf("problem opening file to load VariableGridData: %v", err)
 	}
 
+	var m simplechem.Mechanism
 	sr := &SR{
 		d: &inmap.InMAP{
 			InitFuncs: []inmap.DomainManipulator{
-				inmap.Load(r, config, nil),
+				inmap.Load(r, config, nil, m),
 			},
 		},
 		c:        NewCluster(command, logDir, "Worker.Exit", RPCPort),
 		numNodes: len(nodes),
+		m:        m,
 	}
 	if err = sr.d.Init(); err != nil {
 		return nil, fmt.Errorf("problem initializing variable grid data: %v\n", err)
@@ -203,12 +208,19 @@ func (sr *SR) writeResults(outfile string, layers []int, requestChan chan result
 		log.Println("creating output file")
 
 		// Get model variable names for inclusion in the SR matrix.
-		vars, descriptions, units := sr.d.OutputOptions()
+		vars, descriptions, units := sr.d.OutputOptions(sr.m)
 		inmapVars := make(map[string]string)
 		inmapDescriptions := make(map[string]string)
 		inmapUnits := make(map[string]string)
+		pols := make(map[string]struct{})
+		for _, v := range sr.m.Species() {
+			if !strings.Contains(v, "Emissions") {
+				pols[v] = struct{}{}
+			}
+		}
+
 		for i, v := range vars {
-			if _, ok := inmap.PolLabels[v]; ok {
+			if _, ok := pols[v]; ok {
 				continue // ignore modeled pollutants
 			}
 			inmapVars[v] = v
@@ -266,7 +278,7 @@ func (sr *SR) writeResults(outfile string, layers []int, requestChan chan result
 		}
 
 		// Add InMAP data
-		o, err := inmap.NewOutputter("", true, inmapVars, nil)
+		o, err := inmap.NewOutputter("", true, inmapVars, nil, sr.m)
 		if err != nil {
 			errChan <- fmt.Errorf("inmap: preparing output variables: %v", err)
 			return

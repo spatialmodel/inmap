@@ -71,14 +71,16 @@ func Save(w io.Writer) DomainManipulator {
 
 // Load returns a function that loads the data from a previously Saved file
 // into an InMAP object.
-func Load(r io.Reader, config *VarGridConfig, emis *Emissions) DomainManipulator {
+func Load(r io.Reader, config *VarGridConfig, emis *Emissions, m Mechanism) DomainManipulator {
 	return func(d *InMAP) error {
 		dec := gob.NewDecoder(r)
 		var data versionCells
 		if err := dec.Decode(&data); err != nil {
 			return fmt.Errorf("inmap.InMAP.Load: %v", err)
 		}
-		d.initFromCells(data.Cells, emis, config)
+		if err := d.initFromCells(data.Cells, emis, config, m); err != nil {
+			return err
+		}
 		if data.DataVersion != VarGridDataVersion {
 			return fmt.Errorf("InMAP variable grid data version %s is not compatible with "+
 				"the required version %s", data.DataVersion, VarGridDataVersion)
@@ -87,7 +89,7 @@ func Load(r io.Reader, config *VarGridConfig, emis *Emissions) DomainManipulator
 	}
 }
 
-func (d *InMAP) initFromCells(cells []*Cell, emis *Emissions, config *VarGridConfig) {
+func (d *InMAP) initFromCells(cells []*Cell, emis *Emissions, config *VarGridConfig, m Mechanism) error {
 	d.init()
 	// Create a list of array indices for each population type.
 	d.popIndices = make(map[string]int)
@@ -111,14 +113,25 @@ func (d *InMAP) initFromCells(cells []*Cell, emis *Emissions, config *VarGridCon
 
 	// Add emissions to new cells.
 	if emis != nil {
+		errChan := make(chan error)
 		nprocs := runtime.GOMAXPROCS(-1)
 		for p := 0; p < nprocs; p++ {
 			go func(p int) {
 				for i := p; i < d.cells.len(); i += nprocs {
 					c := (*d.cells)[i]
-					c.setEmissionsFlux(emis) // This needs to be called after setNeighbors.
+					if err := c.setEmissionsFlux(emis, m); err != nil { // This needs to be called after setNeighbors.
+						errChan <- err
+						return
+					}
 				}
+				errChan <- nil
 			}(p)
 		}
+		for p := 0; p < nprocs; p++ {
+			if err := <-errChan; err != nil {
+				return err
+			}
+		}
 	}
+	return nil
 }
