@@ -117,7 +117,7 @@ type ConfigData struct {
 			// the simulation date.
 			GEOSA3Cld string
 
-			// GEOSA3Cld is the location of the GEOS 3-hour average dynamical
+			// GEOSA3Dyn is the location of the GEOS 3-hour average dynamical
 			// parameter files. [DATE] should be used as a wild card for
 			// the simulation date.
 			GEOSA3Dyn string
