@@ -219,6 +219,261 @@ func init() {
 			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
 			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
 		},
+		{
+			name: "InMAPData",
+			usage: `
+			        InMAPData is the path to location of baseline meteorology and pollutant data.
+			        The path can include environment variables.`,
+			defaultVal:"${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testInMAPInputData.ncf",
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "VariableGridData",
+			usage: `
+			        VariableGridData is the path to the location of the variable-resolution gridded
+			        InMAP data, or the location where it should be created if it doesn't already
+			        exist. The path can include environment variables.`,
+			defaultVal:"${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/inmapVarGrid.gob",
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "EmissionsShapefiles",
+			usage: `
+							EmissionsShapefiles are the paths to any emissions shapefiles.
+						  Can be elevated or ground level; elevated files need to have columns
+							labeled "height", "diam", "temp", and "velocity" containing stack
+							information in units of m, m, K, and m/s, respectively.
+							Emissions will be allocated from the geometries in the shape file
+							to the InMAP computational grid, but the mapping projection of the
+							shapefile must be the same as the projection InMAP uses.
+							Can include environment variables.`,
+			defaultVal:"${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testEmis.shp",
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "EmissionUnits",
+			usage: `
+			        EmissionUnits gives the units that the input emissions are in.
+							Acceptable values are 'tons/year', 'kg/year', 'ug/s', and 'μg/s'.`,
+			defaultVal:"tons/year",
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "OutputFile",
+			usage: `
+			        OutputFile is the path to the desired output shapefile location. It can
+							include environment variables.`,
+			defaultVal:"${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/output_${InMAPRunType}.shp",
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "LogFile",
+			usage: `
+			        LogFile is the path to the desired logfile location. It can include
+							environment variables. If LogFile is left blank, the logfile will be saved in
+							the same location as the OutputFile.`,
+			defaultVal:"",
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "OutputAllLayers",
+			usage: `
+			        If OutputAllLayers is true, output data for all model layers. If false, only output
+							the lowest layer.`,
+			defaultVal:false,
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "OutputVariables",
+			usage: `
+			        OutputVariables specifies which model variables should be included in the
+							output file. It can include environment variables.`,
+			defaultVal:"",
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "NumIterations",
+			usage: `
+			        NumIterations is the number of iterations to calculate. If < 1, convergence
+							is automatically calculated.`,
+			defaultVal:0,
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "HTTPAddress",
+			usage: `
+			        Port for hosting web page. If HTTPport is `8080`, then the GUI
+			 			  would be viewed by visiting "localhost:8080" in a web browser.
+						  If HTTPport is "", then the web server doesn't run.`,
+			defaultVal:":8080",
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "SR.LogDir",
+			usage: `
+			        LogDir is the directory that log files should be stored in when creating
+							a source-receptor matrix. It can contain environment variables.`,
+			defaultVal:"log",
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "SR.OutputFile",
+			usage: `
+			        SR.OutputFile is the path where the output file is or should be created
+		 					when creating a source-receptor matrix. It can contain environment variables.`,
+			defaultVal:"${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/output_${InMAPRunType}.shp",
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "Preproc.CTMType",
+			usage: `
+			        Preproc.CTMType specifies what type of chemical transport
+							model we are going to be reading data from. Valid
+							options are "GEOS-Chem" and "WRF-Chem".`,
+			defaultVal:"WRF-Chem",
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "Preproc.WRFChem.WRFOut",
+			usage: `
+			        Preproc.WRFChem.WRFOut is the location of WRF-Chem output files.
+							[DATE] should be used as a wild card for the simulation date.`,
+			defaultVal:"${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/preproc/wrfout_d01_[DATE]",
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "Preproc.GEOSChem.GEOSA1",
+			usage: `
+			        Preproc.GEOSChem.GEOSA1 is the location of the GEOS 1-hour time average files.
+							[DATE] should be used as a wild card for the simulation date.`,
+			defaultVal:"${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/preproc/GEOSFP.[DATE].A1.2x25.nc",
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "Preproc.GEOSChem.GEOSA3Cld",
+			usage: `
+			        Preproc.GEOSChem.GEOSA3Cld is the location of the GEOS 3-hour average cloud
+							parameter files. [DATE] should be used as a wild card for
+							the simulation date.`,
+			defaultVal:"${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/preproc/GEOSFP.[DATE].A3cld.2x25.nc",
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "Preproc.GEOSChem.GEOSA3Dyn",
+			usage: `
+							Preproc.GEOSChem.GEOSA3Dyn is the location of the GEOS 3-hour average dynamical
+							parameter files. [DATE] should be used as a wild card for
+							the simulation date.`,
+			defaultVal:"${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/preproc/GEOSFP.[DATE].A3dyn.2x25.nc",
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "Preproc.GEOSChem.GEOSI3",
+			usage: `
+							Preproc.GEOSChem.GEOSI3 is the location of the GEOS 3-hour instantaneous parameter
+							files. [DATE] should be used as a wild card for
+							the simulation date.`,
+			defaultVal:"${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/preproc/GEOSFP.[DATE].I3.2x25.nc",
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "Preproc.GEOSChem.GEOSA3MstE",
+			usage: `
+							Preproc.GEOSChem.GEOSA3MstE is the location of the GEOS 3-hour average moist parameters
+							on level edges files. [DATE] should be used as a wild card for
+							the simulation date.`,
+			defaultVal:"${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/preproc/GEOSFP.[DATE].A3mstE.2x25.nc",
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "Preproc.GEOSChem.GEOSChem",
+			usage: `
+							Preproc.GEOSChem.GEOSChem is the location of GEOS-Chem output files.
+							[DATE] should be used as a wild card for the simulation date.`,
+			defaultVal:"${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/preproc/gc_output.[DATE].nc",
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "Preproc.GEOSChem.VegTypeGlobal",
+			usage: `
+							Preproc.GEOSChem.VegTypeGlobal is the location of the GEOS-Chem vegtype.global file,
+							which is described here:
+							http://wiki.seas.harvard.edu/geos-chem/index.php/Olson_land_map#Structure_of_the_vegtype.global_file`,
+			defaultVal:"${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/preproc/vegtype.global.txt",
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "Preproc.StartDate",
+			usage: `
+							Preproc.StartDate is the date of the beginning of the simulation.
+							Format = "YYYYMMDD".`,
+			defaultVal:"",
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "Preproc.EndDate",
+			usage: `
+							Preproc.EndDate is the date of the end of the simulation.
+							Format = "YYYYMMDD".`,
+			defaultVal:"",
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "Preproc.CtmGridXo",
+			usage: `
+							Preproc.CtmGridXo is the lower left of Chemical Transport Model (CTM) grid, x`,
+			defaultVal:math.NaN(),
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "Preproc.CtmGridYo",
+			usage: `
+							Preproc.CtmGridYo is the lower left of grid, y`,
+			defaultVal:math.NaN(),
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "Preproc.CtmGridDx",
+			usage: `
+							Preproc.CtmGridDx is the grid cell length in x direction [m]`,
+			defaultVal:math.NaN(),
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+		{
+			name: "Preproc.CtmGridDy",
+			usage: `
+							Preproc.CtmGridDy is the grid cell length in y direction [m]`,
+			defaultVal:math.NaN(),
+			commands:   []*cobra.Command{runCmd, gridCmd, srCmd, workerCmd},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+		},
+
 	}
 
 	Cfg = viper.New()
