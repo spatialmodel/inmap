@@ -23,7 +23,6 @@ import (
 	"testing"
 
 	"github.com/ctessum/geom"
-	"github.com/gonum/floats"
 )
 
 func TestDynamicGrid(t *testing.T) {
@@ -32,7 +31,7 @@ func TestDynamicGrid(t *testing.T) {
 		gridMutateInterval = 3600. // interval between grid mutations in seconds.
 	)
 
-	cfg, ctmdata, pop, popIndices, mr := VarGridData()
+	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
 	emis := NewEmissions()
 	emis.Add(&EmisRecord{
 		SOx:  E,
@@ -47,7 +46,7 @@ func TestDynamicGrid(t *testing.T) {
 
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis),
 			SetTimestepCFL(),
 		},
 		RunFuncs: []DomainManipulator{
@@ -85,7 +84,7 @@ func TestDynamicGrid(t *testing.T) {
 		t.Errorf("dynamic grid should have %v cells but instead has %v", wantCells, cells)
 	}
 
-	o, err := NewOutputter("", false, map[string]string{"TotalPopD": "coxHazard(loglogRR(TotalPM25), TotalPop, MortalityRate)"}, nil)
+	o, err := NewOutputter("", false, map[string]string{"TotalPopD": "coxHazard(loglogRR(TotalPM25), TotalPop, AllMort)", "Latino": "Latino", "LatinoMort": "LatinoMort"}, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -94,10 +93,22 @@ func TestDynamicGrid(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	results := r["TotalPopD"]
-	totald := floats.Sum(results)
-	const expectedDeaths = 17.061717399701948
-	if different(totald, expectedDeaths, testTolerance) {
-		t.Errorf("Deaths (%v) doesn't equal %v", totald, expectedDeaths)
+	deaths := r["TotalPopD"]
+	latino := r["Latino"]
+	latinoMort := r["LatinoMort"]
+	expectedDeaths := []float64{17.061717399701948, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	expectedLatinoPops := []float64{25000.00000157229, 4999.999998427711, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	expectedLatinoMorts := []float64{480.00000002012524, 800, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+
+	for i := 0; i < wantCells[0]; i++ {
+		if different(deaths[i], expectedDeaths[i], testTolerance) {
+			t.Errorf("Deaths (%v) doesn't equal %v", deaths[i], expectedDeaths[i])
+		}
+		if different(latino[i], expectedLatinoPops[i], testTolerance) {
+			t.Errorf("Latino population (%v) doesn't equal %v", latino[i], expectedLatinoPops[i])
+		}
+		if different(latinoMort[i], expectedLatinoMorts[i], testTolerance) {
+			t.Errorf("Latino mortality rate (%v) doesn't equal %v", latinoMort[i], expectedLatinoMorts[i])
+		}
 	}
 }

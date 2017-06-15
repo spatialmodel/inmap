@@ -63,7 +63,6 @@ func loadConfig(file string) (*config, error) {
 }
 
 func TestSR(t *testing.T) {
-
 	cfg, err := loadConfig("../inmap/configExample.toml")
 	if err != nil {
 		t.Fatal(err)

@@ -60,7 +60,7 @@ func (d *InMAP) OutputOptions() (names []string, descriptions []string, units []
 		descriptions = append(descriptions, n+"Concentration")
 	}
 
-	// Population and deaths
+	// Population
 	var tempPop []string
 	for pop := range d.popIndices {
 		tempPop = append(tempPop, pop)
@@ -69,6 +69,17 @@ func (d *InMAP) OutputOptions() (names []string, descriptions []string, units []
 	names = append(names, tempPop...)
 	for _, n := range tempPop {
 		descriptions = append(descriptions, n+"Population")
+	}
+
+	// Mortality Rates
+	var tempMort []string
+	for mort := range d.mortIndices {
+		tempMort = append(tempMort, mort)
+	}
+	sort.Strings(tempMort)
+	names = append(names, tempMort...)
+	for _, n := range tempMort {
+		descriptions = append(descriptions, strings.Replace(n, "Mort", "", 1)+"MortalityRate")
 	}
 
 	// Emissions.
@@ -299,7 +310,7 @@ func (d *InMAP) VerticalProfile(variable string, p geom.Point) (height, vals []f
 	}
 	i := 0
 	for !c.boundary {
-		vals[i] = c.getValue(variable, d.popIndices)
+		vals[i] = c.getValue(variable, d.popIndices, d.mortIndices)
 		height[i] = c.LayerHeight + c.Dz/2.
 		c = (*c.above)[0].Cell
 		i++

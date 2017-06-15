@@ -107,6 +107,7 @@ func Run(cfg *ConfigData, dynamic, createGrid bool, scienceFuncs []inmap.CellMan
 	var pop *inmap.Population
 	var mr *inmap.MortalityRates
 	var popIndices inmap.PopIndices
+	var mortIndices inmap.MortIndices
 	var ctmData *inmap.CTMData
 	if dynamic || createGrid {
 		log.Println("Loading CTM data...")
@@ -115,7 +116,7 @@ func Run(cfg *ConfigData, dynamic, createGrid bool, scienceFuncs []inmap.CellMan
 			return err
 		}
 		log.Println("Loading population and mortality rate data...")
-		pop, popIndices, mr, err = cfg.VarGrid.LoadPopMort()
+		pop, popIndices, mr, mortIndices, err = cfg.VarGrid.LoadPopMort()
 		if err != nil {
 			return err
 		}
@@ -132,7 +133,7 @@ func Run(cfg *ConfigData, dynamic, createGrid bool, scienceFuncs []inmap.CellMan
 				return err
 			}
 			initFuncs = []inmap.DomainManipulator{
-				cfg.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, emis),
+				cfg.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, mortIndices, emis),
 				cfg.VarGrid.MutateGrid(mutator, ctmData, pop, mr, emis, msgLog),
 				inmap.SetTimestepCFL(),
 			}
@@ -157,7 +158,7 @@ func Run(cfg *ConfigData, dynamic, createGrid bool, scienceFuncs []inmap.CellMan
 		}
 	} else { // dynamic grid
 		initFuncs = []inmap.DomainManipulator{
-			cfg.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, emis),
+			cfg.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, mortIndices, emis),
 			inmap.SetTimestepCFL(),
 			o.CheckOutputVars(),
 		}

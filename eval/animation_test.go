@@ -168,7 +168,7 @@ func TestAnimation_logo(t *testing.T) {
 	cfg.VarGrid.CensusPopColumns = []string{"Pop"}
 	cfg.VarGrid.PopGridColumn = "Pop"
 	cfg.VarGrid.MortalityRateFile = "animation_logo/logo.shp"
-	cfg.VarGrid.MortalityRateColumn = "MR"
+	cfg.VarGrid.MortalityRateColumns = map[string]string{"Pop": "MR"}
 	cfg.OutputFile = "animation_logo/logoOut.shp"
 
 	dataChan := make(chan []geomConc)

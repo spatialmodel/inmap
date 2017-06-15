@@ -29,7 +29,7 @@ import (
 
 func TestVarGridCreate(t *testing.T) {
 
-	cfg, ctmdata, pop, popIndices, mr := VarGridData()
+	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
 	emis := &Emissions{
 		data: rtree.NewTree(25, 50),
 	}
@@ -40,7 +40,7 @@ func TestVarGridCreate(t *testing.T) {
 	}
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis),
 			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
 		},
 	}
@@ -526,7 +526,7 @@ func (d *InMAP) testCellAlignment1(t *testing.T) {
 }
 
 func TestGetGeometry(t *testing.T) {
-	cfg, ctmdata, pop, popIndices, mr := VarGridData()
+	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
 	emis := &Emissions{
 		data: rtree.NewTree(25, 50),
 	}
@@ -537,7 +537,7 @@ func TestGetGeometry(t *testing.T) {
 	}
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis),
 			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
 		},
 	}

@@ -20,14 +20,20 @@ package inmap
 
 import (
 	"bytes"
+	"os"
 	"testing"
 )
 
-func TestSaveLoad(t *testing.T) {
+// TestSaveSRGrid checks the ability to save a grid file
+// for SR matrix generation tests.
+func TestSaveSRGrid(t *testing.T) {
+	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
+	cfg.HiResLayers = 6
+	f, err := os.Create("inmap/testdata/inmapVarGrid_SR.gob")
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	buf := bytes.NewBuffer([]byte{})
-
-	cfg, ctmdata, pop, popIndices, mr := VarGridData()
 	emis := NewEmissions()
 
 	mutator, err := PopulationMutator(cfg, popIndices)
@@ -36,7 +42,29 @@ func TestSaveLoad(t *testing.T) {
 	}
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis),
+			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
+			Save(f),
+		},
+	}
+	if err := d.Init(); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestSaveLoad(t *testing.T) {
+	buf := bytes.NewBuffer([]byte{})
+
+	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
+	emis := NewEmissions()
+
+	mutator, err := PopulationMutator(cfg, popIndices)
+	if err != nil {
+		t.Error(err)
+	}
+	d := &InMAP{
+		InitFuncs: []DomainManipulator{
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis),
 			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
 			Save(buf),
 		},

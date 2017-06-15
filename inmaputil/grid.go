@@ -43,7 +43,7 @@ func Grid(cfg *ConfigData) error {
 
 	msgLog <- "Loading population and mortality rate data"
 
-	pop, popIndices, mr, err := cfg.VarGrid.LoadPopMort()
+	pop, popIndices, mr, mortIndices, err := cfg.VarGrid.LoadPopMort()
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ func Grid(cfg *ConfigData) error {
 	}
 	d := &inmap.InMAP{
 		InitFuncs: []inmap.DomainManipulator{
-			cfg.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, nil),
+			cfg.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, mortIndices, nil),
 			cfg.VarGrid.MutateGrid(mutator, ctmData, pop, mr, nil, msgLog),
 			inmap.Save(w),
 		},

@@ -59,8 +59,24 @@ var WriteTestPopShapefile = func() {
 			TotalPop:   100000., // enough to split grid cell the smallest level
 			WhiteNoLat: 50000.,
 			Black:      20000.,
-			Native:     2000,
-			Latino:     30000,
+			Asian:      8000.,
+			Native:     2000.,
+			Latino:     20000.,
+		},
+		{
+			Polygon: []geom.Path{{
+				geom.Point{X: -3499, Y: -3001},
+				geom.Point{X: -3501, Y: -3001},
+				geom.Point{X: -3501, Y: -2999},
+				geom.Point{X: -3499, Y: -2999},
+				geom.Point{X: -3499, Y: -3001},
+			}},
+			TotalPop:   0., // set to zero to ensure grid cell does not split
+			WhiteNoLat: 0.,
+			Black:      0.,
+			Asian:      0.,
+			Native:     0.,
+			Latino:     10000.,
 		},
 	}
 	e, err := shp.NewEncoder(TestPopulationShapefile, pop{})
@@ -86,13 +102,13 @@ var WriteTestPopShapefile = func() {
 // WriteTestMortalityShapefile writes out a mortality rate shapefile for testing.
 func WriteTestMortalityShapefile() {
 	// holder for test mortality data.
-	type mort struct {
+	type mortRates struct {
 		geom.Polygon
-		AllCause float64
+		AllMort, WhNoLMort, BlackMort, AsianMort, NativeMort, LatinoMort float64
 	}
 
 	// write out test mortality rate data.
-	mortData := []mort{
+	mortData := []mortRates{
 		{
 			Polygon: []geom.Path{{
 				geom.Point{X: -3999, Y: -3999},
@@ -101,10 +117,30 @@ func WriteTestMortalityShapefile() {
 				geom.Point{X: -3999, Y: -3998},
 				geom.Point{X: -3999, Y: -3999},
 			}},
-			AllCause: 800.,
+			AllMort:    800.,
+			WhNoLMort:  700.,
+			BlackMort:  600.,
+			AsianMort:  500.,
+			NativeMort: 300.,
+			LatinoMort: 400.,
+		},
+		{
+			Polygon: []geom.Path{{
+				geom.Point{X: -3499, Y: -3001},
+				geom.Point{X: -3501, Y: -3001},
+				geom.Point{X: -3501, Y: -2999},
+				geom.Point{X: -3499, Y: -2999},
+				geom.Point{X: -3499, Y: -3001},
+			}},
+			AllMort:    0.,
+			WhNoLMort:  0.,
+			BlackMort:  0.,
+			AsianMort:  0.,
+			NativeMort: 0.,
+			LatinoMort: 800.,
 		},
 	}
-	e, err := shp.NewEncoder(TestMortalityShapefile, mort{})
+	e, err := shp.NewEncoder(TestMortalityShapefile, mortRates{})
 	if err != nil {
 		panic(err)
 	}
@@ -149,7 +185,13 @@ func CreateTestCTMData() (VarGridConfig, *CTMData) {
 		CensusPopColumns:    []string{"TotalPop", "WhiteNoLat", "Black", "Native", "Asian", "Latino"},
 		PopGridColumn:       "TotalPop",
 		MortalityRateFile:   TestMortalityShapefile,
-		MortalityRateColumn: "AllCause",
+		MortalityRateColumns: map[string]string{
+			"TotalPop":   "AllMort",
+			"WhiteNoLat": "WhNoLMort",
+			"Black":      "BlackMort",
+			"Native":     "NativeMort",
+			"Asian":      "AsianMort",
+			"Latino":     "LatinoMort"},
 	}
 
 	ctmdata := map[string]struct {
@@ -492,14 +534,14 @@ func CreateTestCTMData() (VarGridConfig, *CTMData) {
 }
 
 // VarGridData returns some test data for variable grid generation.
-func VarGridData() (*VarGridConfig, *CTMData, *Population, PopIndices, *MortalityRates) {
+func VarGridData() (*VarGridConfig, *CTMData, *Population, PopIndices, *MortalityRates, MortIndices) {
 
 	WriteTestPopShapefile()
 	WriteTestMortalityShapefile()
 
 	cfg, data := CreateTestCTMData()
 
-	population, popIndices, mortalityRates, err := cfg.LoadPopMort()
+	population, popIndices, mortalityRates, mortIndices, err := cfg.LoadPopMort()
 	if err != nil {
 		panic(err)
 	}
@@ -508,7 +550,7 @@ func VarGridData() (*VarGridConfig, *CTMData, *Population, PopIndices, *Mortalit
 		DeleteShapefile(fname)
 	}
 
-	return &cfg, data, population, popIndices, mortalityRates
+	return &cfg, data, population, popIndices, mortalityRates, mortIndices
 }
 
 // DeleteShapefile deletes the named shapefile.

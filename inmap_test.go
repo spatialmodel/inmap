@@ -33,7 +33,7 @@ const E = 1000000. // emissions
 // Tests whether the cells correctly reference each other
 func TestCellAlignment(t *testing.T) {
 
-	cfg, ctmdata, pop, popIndices, mr := VarGridData()
+	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
 	emis := &Emissions{
 		data: rtree.NewTree(25, 50),
 	}
@@ -44,7 +44,7 @@ func TestCellAlignment(t *testing.T) {
 
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis),
 			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
 		},
 	}
@@ -243,7 +243,7 @@ func (d *InMAP) testCellAlignment2(t *testing.T) {
 func TestConvectiveMixing(t *testing.T) {
 	const testTolerance = 1.e-8
 
-	cfg, ctmdata, pop, popIndices, mr := VarGridData()
+	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
 	emis := NewEmissions()
 
 	mutator, err := PopulationMutator(cfg, popIndices)
@@ -252,7 +252,7 @@ func TestConvectiveMixing(t *testing.T) {
 	}
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis),
 			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
 		},
 	}
@@ -275,7 +275,7 @@ func TestMixing(t *testing.T) {
 		numTimesteps  = 5
 	)
 
-	cfg, ctmdata, pop, popIndices, mr := VarGridData()
+	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
 	emis := &Emissions{
 		data: rtree.NewTree(25, 50),
 	}
@@ -293,7 +293,7 @@ func TestMixing(t *testing.T) {
 	}
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis),
 			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
 			SetTimestepCFL(),
 		},
@@ -334,7 +334,7 @@ func TestChemistry(t *testing.T) {
 	const (
 		testTolerance = 1.e-8
 	)
-	cfg, ctmdata, pop, popIndices, mr := VarGridData()
+	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
 	emis := &Emissions{
 		data: rtree.NewTree(25, 50),
 	}
@@ -353,7 +353,7 @@ func TestChemistry(t *testing.T) {
 	}
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis),
 			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
 			SetTimestepCFL(),
 		},
@@ -391,7 +391,7 @@ func TestChemistry(t *testing.T) {
 func TestAdvection(t *testing.T) {
 	const tolerance = 1.e-8
 
-	cfg, ctmdata, pop, popIndices, mr := VarGridData()
+	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
 	emis := &Emissions{
 		data: rtree.NewTree(25, 50),
 	}
@@ -402,7 +402,7 @@ func TestAdvection(t *testing.T) {
 	}
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis),
 			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
 			SetTimestepCFL(),
 		},
@@ -454,7 +454,7 @@ func TestMeanderMixing(t *testing.T) {
 	const tolerance = 1.e-8
 	nsteps := 10
 
-	cfg, ctmdata, pop, popIndices, mr := VarGridData()
+	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
 	emis := &Emissions{
 		data: rtree.NewTree(25, 50),
 	}
@@ -465,7 +465,7 @@ func TestMeanderMixing(t *testing.T) {
 	}
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis),
 			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
 			SetTimestepCFL(),
 		},
@@ -522,7 +522,7 @@ func TestConverge(t *testing.T) {
 		timeout       = 10 * time.Second
 	)
 
-	cfg, ctmdata, pop, popIndices, mr := VarGridData()
+	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
 	emis := &Emissions{
 		data: rtree.NewTree(25, 50),
 	}
@@ -546,7 +546,7 @@ func TestConverge(t *testing.T) {
 
 		d := &InMAP{
 			InitFuncs: []DomainManipulator{
-				cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
+				cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis),
 				SetTimestepCFL(),
 			},
 			RunFuncs: []DomainManipulator{
@@ -600,7 +600,7 @@ func TestConverge(t *testing.T) {
 func BenchmarkRun(b *testing.B) {
 	const testTolerance = 1.e-8
 
-	cfg, ctmdata, pop, popIndices, mr := VarGridData()
+	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
 	emis := &Emissions{
 		data: rtree.NewTree(25, 50),
 	}
@@ -619,7 +619,7 @@ func BenchmarkRun(b *testing.B) {
 	}
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis),
 			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
 			SetTimestepCFL(),
 		},
@@ -662,7 +662,7 @@ func BenchmarkRun(b *testing.B) {
 }
 
 func TestDryDeposition(t *testing.T) {
-	cfg, ctmdata, pop, popIndices, mr := VarGridData()
+	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
 	emis := &Emissions{
 		data: rtree.NewTree(25, 50),
 	}
@@ -673,7 +673,7 @@ func TestDryDeposition(t *testing.T) {
 	}
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis),
 			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
 			SetTimestepCFL(),
 		},
@@ -709,7 +709,7 @@ func TestDryDeposition(t *testing.T) {
 }
 
 func TestWetDeposition(t *testing.T) {
-	cfg, ctmdata, pop, popIndices, mr := VarGridData()
+	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
 	emis := &Emissions{
 		data: rtree.NewTree(25, 50),
 	}
@@ -720,7 +720,7 @@ func TestWetDeposition(t *testing.T) {
 	}
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis),
 			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
 			SetTimestepCFL(),
 		},
@@ -754,7 +754,7 @@ func TestWetDeposition(t *testing.T) {
 // TestBigM2d checks whether the model can run stably with a high rate of
 // convective mixing.
 func TestBigM2d(t *testing.T) {
-	cfg, ctmdata, pop, popIndices, mr := VarGridData()
+	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
 	ctmdata.Data["M2d"].Data.Scale(100)
 	ctmdata.Data["M2u"].Data.Scale(100)
 
@@ -770,7 +770,7 @@ func TestBigM2d(t *testing.T) {
 
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis),
 			SetTimestepCFL(),
 		},
 		RunFuncs: []DomainManipulator{

@@ -97,12 +97,10 @@ func SRPredict(cfg *ConfigData) error {
 	if err != nil {
 		return err
 	}
-
 	r, err := sr.NewReader(f)
 	if err != nil {
 		return err
 	}
-
 	conc, err := r.Concentrations(emis.EmisRecords()...)
 	if err != nil {
 		if _, ok := err.(sr.AboveTopErr); ok {
@@ -111,7 +109,6 @@ func SRPredict(cfg *ConfigData) error {
 			return err
 		}
 	}
-
 	type rec struct {
 		geom.Polygon
 		PNH4, PNO3, PSO4, SOA, PrimaryPM25, TotalPM25 float64
@@ -140,7 +137,6 @@ func SRPredict(cfg *ConfigData) error {
 		}
 	}
 	o.Close()
-
 	// Projection definition. This may need to be changed for a different
 	// spatial domain.
 	// TODO: Make this settable by the user, or at least check to make sure it

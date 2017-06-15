@@ -8,6 +8,7 @@
 * Incorporated the preprocessor into the main program
 * Added ug/s option for emissions units
 * Added a command for using an SR matrix to make concentration predictions
+* Allowed the use of population-specific mortality rates
 
 # Release 1.2.1 (2016-11-15)
 * Changed the time step calculation algorithm to work with larger grid cell sizes

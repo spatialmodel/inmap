@@ -45,6 +45,7 @@ type Worker struct {
 	Pop           *inmap.Population
 	PopIndices    inmap.PopIndices
 	MR            *inmap.MortalityRates
+	MortIndices   inmap.MortIndices
 	GridGeom      []geom.Polygonal // Geometry of the output grid.
 	InMAPDataFile string           // inmapDataFile is the path to the input data file in .gob format.
 }
@@ -88,7 +89,7 @@ func (s *Worker) Calculate(input *IOData, output *IOData) error {
 	}
 
 	initFuncs := []inmap.DomainManipulator{
-		s.Config.RegularGrid(s.CTMData, s.Pop, s.PopIndices, s.MR, emis),
+		s.Config.RegularGrid(s.CTMData, s.Pop, s.PopIndices, s.MR, s.MortIndices, emis),
 		inmap.SetTimestepCFL(),
 	}
 	popConcMutator := inmap.NewPopConcMutator(s.Config, s.PopIndices)
@@ -172,7 +173,7 @@ func (s *Worker) Init(_, _ *Empty) error {
 	}
 
 	log.Println("Loading population and mortality rate data")
-	s.Pop, s.PopIndices, s.MR, err = s.Config.LoadPopMort()
+	s.Pop, s.PopIndices, s.MR, s.MortIndices, err = s.Config.LoadPopMort()
 	if err != nil {
 		return fmt.Errorf("problem loading population or mortality data: %v", err)
 	}

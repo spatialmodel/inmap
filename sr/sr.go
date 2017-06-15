@@ -63,7 +63,6 @@ func NewSR(varGridFile, inmapDataFile, command, logDir string, config *inmap.Var
 	if err = sr.d.Init(); err != nil {
 		return nil, fmt.Errorf("problem initializing variable grid data: %v\n", err)
 	}
-
 	// Start up workers
 	errChan := make(chan error)
 	for _, n := range nodes {

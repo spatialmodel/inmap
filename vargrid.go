@@ -61,11 +61,14 @@ type VarGridConfig struct {
 	// See the documentation for PopConcMutator for more information.
 	PopConcThreshold float64
 
-	CensusFile          string   // Path to census shapefile
-	CensusPopColumns    []string // Shapefile fields containing populations for multiple demographics
-	PopGridColumn       string   // Name of field in shapefile to be used for determining variable grid resolution
-	MortalityRateFile   string   // Path to the mortality rate shapefile
-	MortalityRateColumn string   // Name of field in mortality rate shapefile containing the mortality rate.
+	CensusFile        string   // Path to census shapefile
+	CensusPopColumns  []string // Shapefile fields containing populations for multiple demographics
+	PopGridColumn     string   // Name of field in shapefile to be used for determining variable grid resolution
+	MortalityRateFile string   // Path to the mortality rate shapefile
+
+	// MortalityRateColumns maps population groups to fields in the mortality rate
+	// shapefile containing their respective the mortality rates.
+	MortalityRateColumns map[string]string
 
 	GridProj string // projection info for CTM grid; Proj4 format
 }
@@ -270,27 +273,31 @@ type MortalityRates struct {
 	tree *rtree.Rtree
 }
 
-// PopIndices give the array indices of each
+// PopIndices gives the array indices of each
 // population type.
 type PopIndices map[string]int
 
+// MortIndices gives the array indices of each
+// mortality rate.
+type MortIndices map[string]int
+
 // LoadPopMort loads the population and mortality rate data from the shapefiles
 // specified in config.
-func (config *VarGridConfig) LoadPopMort() (*Population, PopIndices, *MortalityRates, error) {
+func (config *VarGridConfig) LoadPopMort() (*Population, PopIndices, *MortalityRates, MortIndices, error) {
 	gridSR, err := proj.Parse(config.GridProj)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("inmap: while parsing GridProj: %v", err)
+		return nil, nil, nil, nil, fmt.Errorf("inmap: while parsing GridProj: %v", err)
 	}
 
 	pop, popIndex, err := config.loadPopulation(gridSR)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("inmap: while loading population: %v", err)
+		return nil, nil, nil, nil, fmt.Errorf("inmap: while loading population: %v", err)
 	}
-	mort, err := config.loadMortality(gridSR)
+	mort, mortIndex, err := config.loadMortality(gridSR)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("inmap: while loading mortality rate: %v", err)
+		return nil, nil, nil, nil, fmt.Errorf("inmap: while loading mortality rate: %v", err)
 	}
-	return &Population{tree: pop}, PopIndices(popIndex), &MortalityRates{tree: mort}, nil
+	return &Population{tree: pop}, PopIndices(popIndex), &MortalityRates{tree: mort}, MortIndices(mortIndex), nil
 }
 
 // getCells returns all the grid cells in cellTree that are within box
@@ -331,7 +338,7 @@ func (config *VarGridConfig) webMapTrans() (proj.Transformer, error) {
 // RegularGrid returns a function that creates a new regular
 // (i.e., not variable resolution) grid
 // as specified by the information in c.
-func (config *VarGridConfig) RegularGrid(data *CTMData, pop *Population, popIndex PopIndices, mort *MortalityRates, emis *Emissions) DomainManipulator {
+func (config *VarGridConfig) RegularGrid(data *CTMData, pop *Population, popIndex PopIndices, mortRates *MortalityRates, mortIndex MortIndices, emis *Emissions) DomainManipulator {
 	return func(d *InMAP) error {
 
 		webMapTrans, err := config.webMapTrans()
@@ -340,6 +347,7 @@ func (config *VarGridConfig) RegularGrid(data *CTMData, pop *Population, popInde
 		}
 
 		d.popIndices = (map[string]int)(popIndex)
+		d.mortIndices = (map[string]int)(mortIndex)
 
 		nz := data.Data["UAvg"].Data.Shape[0]
 		d.nlayers = nz
@@ -362,7 +370,7 @@ func (config *VarGridConfig) RegularGrid(data *CTMData, pop *Population, popInde
 				}
 			}
 		}
-		err = d.addCells(config, indices, layers, nil, data, pop, mort, emis, webMapTrans)
+		err = d.addCells(config, indices, layers, nil, data, pop, mortRates, emis, webMapTrans)
 		if err != nil {
 			return err
 		}
@@ -392,7 +400,7 @@ func (d *InMAP) totalMassPopulation(popGridColumn string) (totalMass, totalPopul
 // true are divided to the next nest level (up to the maximum nest level), and
 // cells where divideRule is false are combined (down to the baseline nest level).
 // Log messages are written to logChan if it is not nil.
-func (config *VarGridConfig) MutateGrid(divideRule GridMutator, data *CTMData, pop *Population, mort *MortalityRates, emis *Emissions, logChan chan string) DomainManipulator {
+func (config *VarGridConfig) MutateGrid(divideRule GridMutator, data *CTMData, pop *Population, mortRates *MortalityRates, emis *Emissions, logChan chan string) DomainManipulator {
 	return func(d *InMAP) error {
 
 		if logChan != nil {
@@ -453,7 +461,7 @@ func (config *VarGridConfig) MutateGrid(divideRule GridMutator, data *CTMData, p
 
 			// Add new cells.
 			err = d.addCells(config, newCellIndices, newCellLayers, newCellConc,
-				data, pop, mort, emis, webMapTrans)
+				data, pop, mortRates, emis, webMapTrans)
 			if err != nil {
 				return err
 			}
@@ -471,7 +479,7 @@ func (config *VarGridConfig) MutateGrid(divideRule GridMutator, data *CTMData, p
 
 func (d *InMAP) addCells(config *VarGridConfig, newCellIndices [][][2]int,
 	newCellLayers []int, conc [][]float64, data *CTMData, pop *Population,
-	mort *MortalityRates, emis *Emissions, webMapTrans proj.Transformer) error {
+	mortRates *MortalityRates, emis *Emissions, webMapTrans proj.Transformer) error {
 	type cellErr struct {
 		cell *Cell
 		err  error
@@ -488,7 +496,7 @@ func (d *InMAP) addCells(config *VarGridConfig, newCellIndices [][][2]int,
 				if conc != nil {
 					conci = conc[i]
 				}
-				cell, err2 := config.createCell(data, pop, d.popIndices, mort, ii,
+				cell, err2 := config.createCell(data, pop, d.popIndices, mortRates, d.mortIndices, ii,
 					newCellLayers[i], conci, webMapTrans)
 				cellErrChan <- cellErr{cell: cell, err: err2}
 			}
@@ -650,16 +658,18 @@ func (config *VarGridConfig) cellGeometry(index [][2]int) geom.Polygonal {
 // then the grid cell is also set to being above the density threshold.
 // If conc != nil, the concentration data for the new cell will be set to conc.
 func (config *VarGridConfig) createCell(data *CTMData, pop *Population, popIndices PopIndices,
-	mort *MortalityRates, index [][2]int, layer int, conc []float64, webMapTrans proj.Transformer) (*Cell, error) {
+	mortRates *MortalityRates, mortIndices MortIndices, index [][2]int, layer int, conc []float64, webMapTrans proj.Transformer) (*Cell, error) {
 
 	cell := new(Cell)
 	cell.PopData = make([]float64, len(popIndices))
+	cell.MortData = make([]float64, len(mortIndices))
+
 	cell.Index = index
 	// Polygon must go counter-clockwise
 	cell.Polygonal = config.cellGeometry(index)
 	if layer == 0 {
 		// only ground level grid cells have people
-		cell.loadPopMortalityRate(config, mort, pop, popIndices)
+		cell.loadPopMortalityRate(config, mortRates, mortIndices, pop, popIndices)
 	}
 	bounds := cell.Polygonal.Bounds()
 	cell.Dx = bounds.Max.X - bounds.Min.X
@@ -686,8 +696,8 @@ func (config *VarGridConfig) createCell(data *CTMData, pop *Population, popIndic
 }
 
 // loadPopMortalityRate calculates the population and baseline mortality rate for this cell.
-func (c *Cell) loadPopMortalityRate(config *VarGridConfig, mort *MortalityRates, pop *Population, popIndices PopIndices) {
-	for _, mInterface := range mort.tree.SearchIntersect(c.Bounds()) {
+func (c *Cell) loadPopMortalityRate(config *VarGridConfig, mortRates *MortalityRates, mortIndices MortIndices, pop *Population, popIndices PopIndices) {
+	for _, mInterface := range mortRates.tree.SearchIntersect(c.Bounds()) {
 		m := mInterface.(*mortality)
 		mIntersection := c.Intersection(m)
 		mAreaIntersect := mIntersection.Area()
@@ -709,7 +719,9 @@ func (c *Cell) loadPopMortalityRate(config *VarGridConfig, mort *MortalityRates,
 			for popType, pop := range p.PopData {
 				c.PopData[popType] += pop * pAreaFrac
 			}
-			c.MortalityRate += p.PopData[popIndices[config.PopGridColumn]] * m.AllCause
+			for popType, mortType := range config.MortalityRateColumns {
+				c.MortData[mortIndices[mortType]] += p.PopData[popIndices[popType]] * pAreaFrac * m.MortData[mortIndices[mortType]]
+			}
 
 			// Check if this census shape is above the density threshold
 			pDensity := p.PopData[popIndices[config.PopGridColumn]] / pArea
@@ -718,8 +730,10 @@ func (c *Cell) loadPopMortalityRate(config *VarGridConfig, mort *MortalityRates,
 			}
 		}
 	}
-	if c.PopData[popIndices[config.PopGridColumn]] > 0 {
-		c.MortalityRate = c.MortalityRate / c.PopData[popIndices[config.PopGridColumn]]
+	for popType, mortType := range config.MortalityRateColumns {
+		if c.PopData[popIndices[popType]] > 0 {
+			c.MortData[mortIndices[mortType]] = c.MortData[mortIndices[mortType]] / c.PopData[popIndices[popType]]
+		}
 	}
 }
 
@@ -732,7 +746,9 @@ type population struct {
 
 type mortality struct {
 	geom.Polygonal
-	AllCause float64 // Deaths per 100,000 people per year
+
+	// MortData holds the mortality rate for each population category
+	MortData []float64 // Deaths per 100,000 people per year
 }
 
 // loadPopulation loads population information from a shapefile, converting it
@@ -773,7 +789,7 @@ func (config *VarGridConfig) loadPopulation(sr *proj.SR) (*rtree.Rtree, map[stri
 				return nil, nil, err
 			}
 			if math.IsNaN(p.PopData[i]) {
-				panic("NaN!")
+				panic("NaN population!")
 			}
 		}
 		gg, err := g.Transform(trans)
@@ -796,52 +812,69 @@ func (config *VarGridConfig) loadPopulation(sr *proj.SR) (*rtree.Rtree, map[stri
 	return pop, popIndices, nil
 }
 
-func (config *VarGridConfig) loadMortality(sr *proj.SR) (*rtree.Rtree, error) {
+func (config *VarGridConfig) loadMortality(sr *proj.SR) (*rtree.Rtree, map[string]int, error) {
 	mortshp, err := shp.NewDecoder(config.MortalityRateFile)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	mortshpSR, err := mortshp.SR()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	trans, err := mortshpSR.NewTransform(sr)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	mortalityrate := rtree.NewTree(25, 50)
+	// Create a list of array indices for each mortality rate.
+	mortIndices := make(map[string]int)
+
+	// Extract mortality rate column names from map of population to mortality rates
+	mortRateColumns := make([]string, len(config.MortalityRateColumns))
+	i := 0
+	for _, m := range config.MortalityRateColumns {
+		mortRateColumns[i] = m
+		i++
+	}
+	sort.Strings(mortRateColumns)
+	for i, m := range mortRateColumns {
+		mortIndices[m] = i
+	}
+	mortRates := rtree.NewTree(25, 50)
 	for {
-		g, fields, more := mortshp.DecodeRowFields(config.MortalityRateColumn)
+		g, fields, more := mortshp.DecodeRowFields(mortRateColumns...)
 		if !more {
 			break
 		}
 		m := new(mortality)
-		m.AllCause, err = s2f(fields[config.MortalityRateColumn])
-		if err != nil {
-			return nil, err
-		}
-		if math.IsNaN(m.AllCause) {
-			return nil, fmt.Errorf("NaN mortality rate")
+		m.MortData = make([]float64, len(mortRateColumns))
+		for i, mort := range mortRateColumns {
+			m.MortData[i], err = s2f(fields[mort])
+			if err != nil {
+				return nil, nil, err
+			}
+			if math.IsNaN(m.MortData[i]) {
+				panic("NaN mortality rate!")
+			}
 		}
 		gg, err := g.Transform(trans)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		switch gg.(type) {
 		case geom.Polygonal:
 			m.Polygonal = gg.(geom.Polygonal)
 		default:
-			return nil, fmt.Errorf("inmap: loadMortality: mortality rate shapes need to be polygons")
+			return nil, nil, fmt.Errorf("inmap: loadMortality: mortality rate shapes need to be polygons")
 		}
-		mortalityrate.Insert(m)
+		mortRates.Insert(m)
 	}
 	if err := mortshp.Error(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	mortshp.Close()
-	return mortalityrate, nil
+	return mortRates, mortIndices, nil
 }
 
 // loadData allocates cell information from the CTM data to the Cell. If the

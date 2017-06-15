@@ -31,11 +31,11 @@ import (
 
 const (
 	// Version gives the version number.
-	Version = "1.2.1"
+	Version = "1.3.0"
 
 	// VarGridDataVersion gives the version of the variable grid data reuquired by
 	// this version of the software.
-	VarGridDataVersion = "1.2.0"
+	VarGridDataVersion = "1.3.0"
 
 	// InMAPDataVersion is the version of the InMAP data required by this version
 	// of the software.
@@ -78,9 +78,13 @@ type InMAP struct {
 	// boundary cells; assume bottom boundary is the same as lowest layer
 	topBoundary *cellList
 
-	// popIndices give the array index of each population type in the PopData
+	// popIndices gives the array index of each population type in the PopData
 	// field in each Cell.
 	popIndices map[string]int
+
+	// mortIndices gives the array index of each mortality rate in the mortData
+	// field in each Cell.
+	mortIndices map[string]int
 
 	// index is a spatial index of Cells.
 	index *rtree.Rtree
@@ -165,8 +169,8 @@ type Cell struct {
 	M2u float64 `desc:"ACM2 upward mixing (Pleim 2007)" units:"1/s"`
 	M2d float64 `desc:"ACM2 downward mixing (Pleim 2007)" units:"1/s"`
 
-	PopData       []float64 // Population for multiple demographics [people/grid cell]
-	MortalityRate float64   `desc:"Baseline mortality rate" units:"Deaths per 100,000 people per year"`
+	PopData  []float64 // Population for multiple demographics [people/grid cell]
+	MortData []float64 // Baseline mortality rates for multiple demographics [Deaths per 100,000 people per year/grid cell]
 
 	Dx     float64 `desc:"Cell x length" units:"m"`
 	Dy     float64 `desc:"Cell y length" units:"m"`
@@ -264,6 +268,7 @@ func (c *Cell) boundaryCopy() *Cell {
 	c2.make()
 	c2.Volume = c2.Dx * c2.Dy * c2.Dz
 	c2.PopData = c.PopData
+	c2.MortData = c.MortData
 	return c2
 }
 
@@ -387,7 +392,7 @@ func (d *InMAP) toArray(varName string, layer int) []float64 {
 			return o
 		}
 		if layer < 0 || c.Layer == layer {
-			o = append(o, c.getValue(varName, d.popIndices))
+			o = append(o, c.getValue(varName, d.popIndices, d.mortIndices))
 		}
 		c.mutex.RUnlock()
 	}
@@ -396,7 +401,7 @@ func (d *InMAP) toArray(varName string, layer int) []float64 {
 
 // Get the value in the current cell of the specified variable, where popIndices
 // are array indices of each population type.
-func (c *Cell) getValue(varName string, popIndices map[string]int) float64 {
+func (c *Cell) getValue(varName string, popIndices map[string]int, mortIndices map[string]int) float64 {
 	if index, ok := emisLabels[varName]; ok { // Emissions
 		if c.EmisFlux != nil {
 			return c.EmisFlux[index]
@@ -418,6 +423,9 @@ func (c *Cell) getValue(varName string, popIndices map[string]int) float64 {
 
 	} else if i, ok := popIndices[varName]; ok { // Population
 		return c.PopData[i]
+
+	} else if i, ok := mortIndices[varName]; ok { // Mortality rate
+		return c.MortData[i]
 
 	} // Everything else
 	val := reflect.ValueOf(c).Elem().FieldByName(varName)
@@ -441,6 +449,8 @@ func (d *InMAP) getUnits(varName string) string {
 		return "μg/m³"
 	} else if _, ok := d.popIndices[varName]; ok { // Population
 		return "people/grid cell"
+	} else if _, ok := d.mortIndices[varName]; ok { // Mortality Rate
+		return "deaths/100,000"
 	} else if _, ok := d.popIndices[strings.Replace(varName, " deaths", "", 1)]; ok {
 		// Mortalities
 		return "deaths/grid cell"

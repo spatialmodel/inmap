@@ -60,7 +60,7 @@ You can also compile InMAP from its source code. It should work on most types of
 
 	There is a complete list of built-in variables [here](OutputOptions.md). Some examples include:
 	* Pollutant concentrations in units of μg m<sup>-3</sup>:
-		* VOC (`VOC`)
+	  * VOC (`VOC`)
 		* NO<sub>x</sub> (`NOx`)
 		* NH<sub>3</sub> (`NH3`)
 		* SO<sub>x</sub> (`SOx`)
@@ -70,11 +70,13 @@ You can also compile InMAP from its source code. It should work on most types of
 		* Particulate nitrate (`pNO3`)
 		* Particulate ammonium (`pNH4`)
 		* Secondary organic aerosol (`SOA`)
-	* Populations of different demographic subgroups are in units of people per grid cell. The included populations may vary but in the default dataset as of this writing the groups included are:
-      * total population (`TotalPop`)
-      * people identifying as black (`Black`), asian  (`Asian`), latino (`Latino`), native american or american indian (`Native`), non-latino white (`WhiteNoLat`) and everyone else (`Other`).
-    * Numbers of deaths attributable to PM<sub>2.5</sub> in each of the populations are obtained by defining an expression in the configuration file based on the variables `TotalPM25`, `MortalityRate`, and the population variable of interest. For example, deaths among the total population could be calculated with the following entry in the configuration file: `TotalPopD = "coxHazard(loglogRR(TotalPM25), TotalPop, MortalityRate)"`. Numbers of deaths are measured in units of deaths/year.
-    * Baseline mortality rate in units of deaths per year per 100,000 people (`MortalityRate`), which can be used for performing alternative health impact calculations.
+	* Populations of different demographic subgroups are in units of people per grid cell. The included populations may vary depending on input data, but in the default dataset as of this writing the groups included are:
+	  * total population (`TotalPop`)
+	  * people identifying as asian (`Asian`), black (`Black`), latino (`Latino`), native american or american indian (`Native`), and non-latino white (`WhiteNoLat`).
+	* Mortality rates for the total population and/or different demographic subgroups, which can be used to perform health impact calculations, are in units of deaths per year per 100,000 people. Each mortality rate is mapped to a corresponding population group in the configuration file, e.g. `TotalPop = "AllMort"`. The included mortality rates may vary depending on input data, but in the default dataset as of this writing baseline mortality rates are included for the following groups:
+		* total poplation (`AllMort`)
+		* people identifying as asian (`AsianMort`), black (`BlackMort`), latino (`LatinoMort`), native american or american indian (`NativeMort`), and non-latino white (`WhNoLMort`).
+	* Numbers of deaths attributable to PM<sub>2.5</sub> in each of the populations are obtained by defining an expression in the configuration file based on the variables `TotalPM25`, the population variable of interest, and the overall or population-specific mortality rate. For example, deaths among the total population could be calculated with the following entry in the configuration file: `TotalPopD = "coxHazard(loglogRR(TotalPM25), TotalPop, AllMort)"`. Numbers of deaths are measured in units of deaths/year.
 
 ### Running the preprocessor
 

@@ -150,11 +150,11 @@ func TestEmissions(t *testing.T) {
 		t.Error(err)
 		t.FailNow()
 	}
-	cfg, ctmdata, pop, popIndices, mr := VarGridData()
+	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
 
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis),
 		},
 	}
 	if err := d.Init(); err != nil {
@@ -211,7 +211,7 @@ func TestEmissions(t *testing.T) {
 }
 
 func TestOutputEquation(t *testing.T) {
-	cfg, ctmdata, pop, popIndices, mr := VarGridData()
+	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
 
 	emis := NewEmissions()
 	emis.Add(&EmisRecord{
@@ -231,7 +231,7 @@ func TestOutputEquation(t *testing.T) {
 
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis),
 		},
 		CleanupFuncs: []DomainManipulator{
 			o.Output(),
@@ -309,7 +309,7 @@ func TestOutputEquation(t *testing.T) {
 }
 
 func BenchmarkOutput(b *testing.B) {
-	cfg, ctmdata, pop, popIndices, mr := VarGridData()
+	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
 
 	emis := NewEmissions()
 	emis.Add(&EmisRecord{
@@ -340,7 +340,7 @@ func BenchmarkOutput(b *testing.B) {
 
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis),
 			o.CheckOutputVars(),
 		},
 		CleanupFuncs: []DomainManipulator{
@@ -360,7 +360,7 @@ func BenchmarkOutput(b *testing.B) {
 }
 
 func TestOutput(t *testing.T) {
-	cfg, ctmdata, pop, popIndices, mr := VarGridData()
+	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
 
 	emis := NewEmissions()
 	emis.Add(&EmisRecord{
@@ -374,7 +374,7 @@ func TestOutput(t *testing.T) {
 		"NPctWNoLat": "{sum(WhiteNoLat) / sum(TotalPop)}",
 		"NPctOther":  "{(sum(TotalPop) - sum(WhiteNoLat)) / sum(TotalPop)}",
 		"NPctRatio":  "NPctWNoLat / NPctOther",
-		"TotalPopD":  "coxHazard(loglogRR(TotalPM25), TotalPop, MortalityRate)",
+		"TotalPopD":  "coxHazard(loglogRR(TotalPM25), TotalPop, AllMort)",
 		"TotalPM25":  "TotalPM25",
 		"PM25Emiss":  "PM25Emissions",
 		"BasePM25":   "BaselineTotalPM25",
@@ -386,7 +386,7 @@ func TestOutput(t *testing.T) {
 
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis),
 			o.CheckOutputVars(),
 		},
 		CleanupFuncs: []DomainManipulator{
@@ -524,7 +524,7 @@ func TestRegrid(t *testing.T) {
 }
 
 func TestCellIntersections(t *testing.T) {
-	cfg, ctmdata, pop, popIndices, mr := VarGridData()
+	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
 
 	emis := NewEmissions()
 
@@ -534,7 +534,7 @@ func TestCellIntersections(t *testing.T) {
 	}
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, emis),
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis),
 			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, nil),
 		},
 	}
@@ -737,11 +737,11 @@ func (c *cellsFracSorter) Swap(i, j int) {
 }
 
 func TestFromAEP(t *testing.T) {
-	cfg, ctmdata, pop, popIndices, mr := VarGridData()
+	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
 
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, nil),
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, nil),
 		},
 	}
 	if err := d.Init(); err != nil {
@@ -951,11 +951,11 @@ func TestFromAEP(t *testing.T) {
 }
 
 func BenchmarkFromAEP(b *testing.B) {
-	cfg, ctmdata, pop, popIndices, mr := VarGridData()
+	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridData()
 
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, nil),
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, nil),
 		},
 	}
 	if err := d.Init(); err != nil {
