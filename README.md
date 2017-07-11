@@ -58,7 +58,7 @@ You can also compile InMAP from its source code. It should work on most types of
 
 	Output variable expressions are, by default, evaluated within each grid cell. By surrounding an expression with braces ({...}), InMAP can instead perform summary calculations (evaluating the expression across all grid cells). InMAP has a built-in function `sum()` that can be used for such grid level calculations. For example, an expression for a variable `NPctWNoLat`, representing the percentage of the total US population that is white, would be `NPctWNoLat = "{sum(WhiteNoLat) / sum(TotalPop)}"`. Only the part of the expression inside of the braces is evaluated at the grid level. `NPctWNoLat` could then be used as a variable in expressions evaluated at the grid cell level, e.g, `WhNoLatDiff = "PctWhNoLat - NPctWNoLat"`, representing the difference between the percentage of the population of each grid cell that is white and the percentage of the total US population that is white.
 
-	There is a complete list of built-in variables [here](OutputOptions.md). Some examples include:
+	There is a complete list of built-in variables [here](doc/OutputOptions.md). Some examples include:
 	* Pollutant concentrations in units of μg m<sup>-3</sup>:
 	  * VOC (`VOC`)
 		* NO<sub>x</sub> (`NOx`)

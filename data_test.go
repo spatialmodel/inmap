@@ -51,9 +51,9 @@ var WriteTestPopShapefile = func() {
 		{
 			Polygon: []geom.Path{{
 				geom.Point{X: -3999, Y: -3999},
-				geom.Point{X: -3998, Y: -3999},
-				geom.Point{X: -3998, Y: -3998},
-				geom.Point{X: -3999, Y: -3998},
+				geom.Point{X: -3899, Y: -3999},
+				geom.Point{X: -3899, Y: -3899},
+				geom.Point{X: -3999, Y: -3899},
 				geom.Point{X: -3999, Y: -3999},
 			}},
 			TotalPop:   100000., // enough to split grid cell the smallest level
@@ -123,6 +123,36 @@ func WriteTestMortalityShapefile() {
 			AsianMort:  500.,
 			NativeMort: 300.,
 			LatinoMort: 400.,
+		},
+		{
+			Polygon: []geom.Path{{
+				geom.Point{X: -3999, Y: -3900},
+				geom.Point{X: -3998, Y: -3900},
+				geom.Point{X: -3998, Y: -3899},
+				geom.Point{X: -3999, Y: -3899},
+				geom.Point{X: -3999, Y: -3900},
+			}},
+			AllMort:    800.,
+			WhNoLMort:  700.,
+			BlackMort:  600.,
+			AsianMort:  500.,
+			NativeMort: 300.,
+			LatinoMort: 400.,
+		},
+		{
+			Polygon: []geom.Path{{
+				geom.Point{X: -3999, Y: -3899},
+				geom.Point{X: -3998, Y: -3899},
+				geom.Point{X: -3998, Y: -3898},
+				geom.Point{X: -3999, Y: -3898},
+				geom.Point{X: -3999, Y: -3899},
+			}},
+			AllMort:    1000.,
+			WhNoLMort:  1000.,
+			BlackMort:  1000.,
+			AsianMort:  1000.,
+			NativeMort: 1000.,
+			LatinoMort: 1000.,
 		},
 		{
 			Polygon: []geom.Path{{

@@ -696,37 +696,56 @@ func (config *VarGridConfig) createCell(data *CTMData, pop *Population, popIndic
 }
 
 // loadPopMortalityRate calculates the population and baseline mortality rate for this cell.
+// The population in each cell is calculated as an area-weighted average.
+// The mortality rate in each cell is calculated as a population-weighted average. If
+// multiple mortality rate polygons overlap or lie within a single population
+// polygon, the mortality rate in each cell is equal to the population-weighted
+// average of: the area-weighted average of mortality rates within each population polygon.
 func (c *Cell) loadPopMortalityRate(config *VarGridConfig, mortRates *MortalityRates, mortIndices MortIndices, pop *Population, popIndices PopIndices) {
-	for _, mInterface := range mortRates.tree.SearchIntersect(c.Bounds()) {
-		m := mInterface.(*mortality)
-		mIntersection := c.Intersection(m)
-		mAreaIntersect := mIntersection.Area()
-		if mAreaIntersect == 0 {
+	// First, intersect each grid cell with population polygons
+	for _, pInterface := range pop.tree.SearchIntersect(c.Bounds()) {
+		p := pInterface.(*population)
+		pIntersection := c.Intersection(p)
+		pAreaIntersect := pIntersection.Area()
+		if pAreaIntersect == 0 {
 			continue
 		}
-		for _, pInterface := range pop.tree.SearchIntersect(mIntersection.Bounds()) {
-			p := pInterface.(*population)
-			pIntersection := c.Intersection(p)
-			pAreaIntersect := pIntersection.Area()
-			if pAreaIntersect == 0 {
+		pArea := p.Area() // we want to conserve the total population
+		if pArea == 0. {
+			panic("divide by zero")
+		}
+		pAreaFrac := pAreaIntersect / pArea
+		for popType, pop := range p.PopData {
+			c.PopData[popType] += pop * pAreaFrac
+		}
+		// Check if this census shape is above the density threshold.
+		pDensity := p.PopData[popIndices[config.PopGridColumn]] / pArea
+		if pDensity > config.PopDensityThreshold {
+			c.AboveDensityThreshold = true
+		}
+		var mAreaTotal float64
+		// Second, intersect each intersection from first step with
+		// mortality rate polygons.
+		for _, mInterface := range mortRates.tree.SearchIntersect(pIntersection.Bounds()) {
+			m := mInterface.(*mortality)
+			mIntersection := pIntersection.Intersection(m)
+			mAreaIntersect := mIntersection.Area()
+			if mAreaIntersect == 0 {
 				continue
 			}
-			pArea := p.Area() // we want to conserve the total population
-			if pArea == 0. {
-				panic("divide by zero")
+			// Sum areas of intersecting mortality rate polygons for use in area-weighting.
+			mAreaTotal += mAreaIntersect
+		}
+		for _, mInterface := range mortRates.tree.SearchIntersect(pIntersection.Bounds()) {
+			m := mInterface.(*mortality)
+			mIntersection := pIntersection.Intersection(m)
+			mAreaIntersect := mIntersection.Area()
+			if mAreaIntersect == 0 {
+				continue
 			}
-			pAreaFrac := pAreaIntersect / pArea
-			for popType, pop := range p.PopData {
-				c.PopData[popType] += pop * pAreaFrac
-			}
+			// Perform population-weighted average of area-weighted average mortality rates.
 			for popType, mortType := range config.MortalityRateColumns {
-				c.MortData[mortIndices[mortType]] += p.PopData[popIndices[popType]] * pAreaFrac * m.MortData[mortIndices[mortType]]
-			}
-
-			// Check if this census shape is above the density threshold
-			pDensity := p.PopData[popIndices[config.PopGridColumn]] / pArea
-			if pDensity > config.PopDensityThreshold {
-				c.AboveDensityThreshold = true
+				c.MortData[mortIndices[mortType]] += p.PopData[popIndices[popType]] * pAreaFrac * m.MortData[mortIndices[mortType]] * (mAreaIntersect / mAreaTotal)
 			}
 		}
 	}
