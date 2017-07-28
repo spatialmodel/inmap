@@ -116,4 +116,4 @@ MortalityRateFile= "${evaldata}/2014_mortality/MortalityRate.shp"
 # mortality rate, in units of deaths per year per 100,000 people. Only mortality
 # rates used in output variable expressions need to be included here.
 [VarGrid.MortalityRateColumns]
-TotalPop = "AllCause"
+AllCause = "TotalPop"

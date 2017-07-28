@@ -104,7 +104,7 @@ func WriteTestMortalityShapefile() {
 	// holder for test mortality data.
 	type mortRates struct {
 		geom.Polygon
-		AllMort, WhNoLMort, BlackMort, AsianMort, NativeMort, LatinoMort float64
+		AllCause, WhNoLMort, BlackMort, AsianMort, NativeMort, LatinoMort float64
 	}
 
 	// write out test mortality rate data.
@@ -117,7 +117,7 @@ func WriteTestMortalityShapefile() {
 				geom.Point{X: -3999, Y: -3998},
 				geom.Point{X: -3999, Y: -3999},
 			}},
-			AllMort:    800.,
+			AllCause:   800.,
 			WhNoLMort:  700.,
 			BlackMort:  600.,
 			AsianMort:  500.,
@@ -132,7 +132,7 @@ func WriteTestMortalityShapefile() {
 				geom.Point{X: -3999, Y: -3899},
 				geom.Point{X: -3999, Y: -3900},
 			}},
-			AllMort:    800.,
+			AllCause:   800.,
 			WhNoLMort:  700.,
 			BlackMort:  600.,
 			AsianMort:  500.,
@@ -147,7 +147,7 @@ func WriteTestMortalityShapefile() {
 				geom.Point{X: -3999, Y: -3898},
 				geom.Point{X: -3999, Y: -3899},
 			}},
-			AllMort:    1000.,
+			AllCause:   1000.,
 			WhNoLMort:  1000.,
 			BlackMort:  1000.,
 			AsianMort:  1000.,
@@ -162,7 +162,7 @@ func WriteTestMortalityShapefile() {
 				geom.Point{X: -3499, Y: -2999},
 				geom.Point{X: -3499, Y: -3001},
 			}},
-			AllMort:    0.,
+			AllCause:   0.,
 			WhNoLMort:  0.,
 			BlackMort:  0.,
 			AsianMort:  0.,
@@ -216,12 +216,12 @@ func CreateTestCTMData() (VarGridConfig, *CTMData) {
 		PopGridColumn:       "TotalPop",
 		MortalityRateFile:   TestMortalityShapefile,
 		MortalityRateColumns: map[string]string{
-			"TotalPop":   "AllMort",
-			"WhiteNoLat": "WhNoLMort",
-			"Black":      "BlackMort",
-			"Native":     "NativeMort",
-			"Asian":      "AsianMort",
-			"Latino":     "LatinoMort"},
+			"AllCause":   "TotalPop",
+			"WhNoLMort":  "WhiteNoLat",
+			"BlackMort":  "Black",
+			"NativeMort": "Native",
+			"AsianMort":  "Asian",
+			"LatinoMort": "Latino"},
 	}
 
 	ctmdata := map[string]struct {

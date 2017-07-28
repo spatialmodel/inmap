@@ -54,12 +54,12 @@ LogFile = ""
 #		and the baseline number of deaths.
 # Note: Environment variables can be used in both variable names and expressions.
 [OutputVariables]
-TotalPopD = "coxHazard(loglogRR(TotalPM25), TotalPop, AllMort)"
-WhitNoLatD = "coxHazard(loglogRR(TotalPM25), WhiteNoLat, AllMort)"
-BlackD = "coxHazard(loglogRR(TotalPM25), Black, AllMort)"
-NativeD = "coxHazard(loglogRR(TotalPM25), Native, AllMort)"
-AsianD = "coxHazard(loglogRR(TotalPM25), Asian, AllMort)"
-LatinoD = "coxHazard(loglogRR(TotalPM25), Latino, AllMort)"
+TotalPopD = "coxHazard(loglogRR(TotalPM25), TotalPop, AllCause)"
+WhitNoLatD = "coxHazard(loglogRR(TotalPM25), WhiteNoLat, AllCause)"
+BlackD = "coxHazard(loglogRR(TotalPM25), Black, AllCause)"
+NativeD = "coxHazard(loglogRR(TotalPM25), Native, AllCause)"
+AsianD = "coxHazard(loglogRR(TotalPM25), Asian, AllCause)"
+LatinoD = "coxHazard(loglogRR(TotalPM25), Latino, AllCause)"
 TotalPop = "TotalPop"
 TotalPM25 = "TotalPM25"
 PM25Emiss = "PM25Emissions"
@@ -148,9 +148,9 @@ MortalityRateFile= "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/t
 # mortality rate, in units of deaths per year per 100,000 people. Only mortality
 # rates used in output variable expressions need to be included here.
 [VarGrid.MortalityRateColumns]
-TotalPop = "AllMort"
-WhNoLMort = "WhNoLMort"
-BlackMort = "BlackMort"
-AsianMort = "AsianMort"
-NativeMort = "NativeMort"
-LatinoMort = "LatinoMort"
+AllCause = "TotalPop"
+WhNoLMort = "WhiteNoLat"
+BlackMort = "Black"
+AsianMort = "Native"
+NativeMort = "Asian"
+LatinoMort = "Latino"

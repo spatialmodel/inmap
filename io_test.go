@@ -374,7 +374,7 @@ func TestOutput(t *testing.T) {
 		"NPctWNoLat": "{sum(WhiteNoLat) / sum(TotalPop)}",
 		"NPctOther":  "{(sum(TotalPop) - sum(WhiteNoLat)) / sum(TotalPop)}",
 		"NPctRatio":  "NPctWNoLat / NPctOther",
-		"TotalPopD":  "coxHazard(loglogRR(TotalPM25), TotalPop, AllMort)",
+		"TotalPopD":  "coxHazard(loglogRR(TotalPM25), TotalPop, AllCause)",
 		"TotalPM25":  "TotalPM25",
 		"PM25Emiss":  "PM25Emissions",
 		"BasePM25":   "BaselineTotalPM25",

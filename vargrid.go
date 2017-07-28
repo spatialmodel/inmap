@@ -744,12 +744,12 @@ func (c *Cell) loadPopMortalityRate(config *VarGridConfig, mortRates *MortalityR
 				continue
 			}
 			// Perform population-weighted average of area-weighted average mortality rates.
-			for popType, mortType := range config.MortalityRateColumns {
+			for mortType, popType := range config.MortalityRateColumns {
 				c.MortData[mortIndices[mortType]] += p.PopData[popIndices[popType]] * pAreaFrac * m.MortData[mortIndices[mortType]] * (mAreaIntersect / mAreaTotal)
 			}
 		}
 	}
-	for popType, mortType := range config.MortalityRateColumns {
+	for mortType, popType := range config.MortalityRateColumns {
 		if c.PopData[popIndices[popType]] > 0 {
 			c.MortData[mortIndices[mortType]] = c.MortData[mortIndices[mortType]] / c.PopData[popIndices[popType]]
 		}
@@ -856,7 +856,7 @@ func (config *VarGridConfig) loadMortality(sr *proj.SR) (*rtree.Rtree, map[strin
 	// Extract mortality rate column names from map of population to mortality rates
 	mortRateColumns := make([]string, len(config.MortalityRateColumns))
 	i := 0
-	for _, m := range config.MortalityRateColumns {
+	for m, _ := range config.MortalityRateColumns {
 		mortRateColumns[i] = m
 		i++
 	}
