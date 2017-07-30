@@ -19,7 +19,7 @@ import (
 	"github.com/gonum/floats"
 	"github.com/gonum/plot/vg"
 	"github.com/gonum/plot/vg/draw"
-	"github.com/gonum/plot/vg/vgsvg"
+	"github.com/gonum/plot/vg/vgimg"
 	"github.com/spatialmodel/inmap/inmaputil"
 )
 
@@ -59,7 +59,7 @@ func TestSingleSource(t *testing.T) {
 	states := getShp("/home/chris/data/shapefiles/states")
 	pop := getPop()
 
-	c := vgsvg.New(figWidth, figHeight)
+	c := vgimg.New(figWidth, figHeight)
 	dc := draw.New(c)
 	statsc := draw.Crop(dc, figWidth-statsW, 0, legendH, 0)
 	mainc := draw.Crop(dc, 0, -statsW, legendH, 0)
@@ -289,9 +289,10 @@ func TestSingleSource(t *testing.T) {
 		}
 	}
 
-	f, err := os.Create("singleSource/comparison.svg")
+	f, err := os.Create("singleSource/comparison.png")
 	handle(err)
-	_, err = c.WriteTo(f)
+	png := vgimg.PngCanvas{Canvas: c}
+	_, err = png.WriteTo(f)
 	handle(err)
 }
 

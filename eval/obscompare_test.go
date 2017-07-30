@@ -47,11 +47,11 @@ var varnames = []string{
 var inmapVars = []string{
 	"TotalPM25",
 	"SOx",
-	"pSO4",
+	"PSO4",
 	"NOx",
-	"pNO3",
+	"PNO3",
 	"NH3",
-	"pNH4",
+	"PNH4",
 }
 
 var figNames = []string{
@@ -74,7 +74,7 @@ var wrfVars = []string{
 	"pNH",
 	"alt"}
 
-var states []geom.Geom // State shapes
+var states []geom.Polygon // State shapes
 
 // Chemical mass conversions
 const (
@@ -163,7 +163,7 @@ func obsCompare(inmapDataLoc, wrfDataLoc, obsFile, statesLoc, outDir, fileprefix
 	for iPol, polName := range inmapVars {
 		captionChans[iPol] = make(chan *matchObsResult)
 
-		canvases[iPol] = draw.New(vgimg.NewWith(vgimg.UseWH(figWidth, figHeight), vgimg.UseDPI(300)))
+		canvases[iPol] = draw.New(vgimg.NewWith(vgimg.UseWH(figWidth, figHeight), vgimg.UseDPI(96)))
 		//canvases[iPol] = draw.New(vgimg.New(figWidth, figHeight)) //, vgimg.DPI(300)))
 		//canvases[iPol] = draw.New(vgpdf.New(figWidth, figHeight))
 		//canvases[iPol] = draw.New(vgsvg.New(figWidth, figHeight))
@@ -749,7 +749,7 @@ type gg struct {
 	geom.Geom
 }
 
-func getStates(filename string, simplifyThreshold float64) []geom.Geom {
+func getStates(filename string, simplifyThreshold float64) []geom.Polygon {
 	s, err := shp.NewDecoder(filename)
 	if err != nil {
 		panic(err)
@@ -769,7 +769,7 @@ func getStates(filename string, simplifyThreshold float64) []geom.Geom {
 		panic(err)
 	}
 
-	g := make([]geom.Geom, 0, 100)
+	g := make([]geom.Polygon, 0, 100)
 	for {
 		var o gg
 		if !s.DecodeRow(&o) {
@@ -783,7 +783,7 @@ func getStates(filename string, simplifyThreshold float64) []geom.Geom {
 		if err != nil {
 			panic(err)
 		}
-		g = append(g, gg)
+		g = append(g, gg.(geom.Polygon))
 	}
 	if s.Error() != nil {
 		panic(s.Error())
@@ -798,15 +798,15 @@ func getInmapVal(polName string, d *iData) float64 {
 		val = d.TotalPM25
 	case "SOx":
 		val = d.SOx
-	case "pSO4":
+	case "PSO4":
 		val = d.PSO4
 	case "NOx":
 		val = d.NOx
-	case "pNO3":
+	case "PNO3":
 		val = d.PNO3
 	case "NH3":
 		val = d.NH3
-	case "pNH4":
+	case "PNH4":
 		val = d.PNH4
 	default:
 		panic(polName)

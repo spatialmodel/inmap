@@ -5,7 +5,7 @@ InMAPData = "${evaldata}/InMAPData_v1.2.0.ncf"
 # VariableGridData is the path to the location of the variable-resolution gridded
 # InMAP data, or the location where it should be created if it doesn't already
 # exist. The path can include environment variables.
-VariableGridData = "${evaldata}/InMAPData_v1.2.0.gob"
+VariableGridData = "${evaldata}/InMAPData_v1.3.0.gob"
 
 # EmissionsShapefiles are the paths to any emissions shapefiles.
 # Can be elevated or ground level; elevated files need to have columns
@@ -55,14 +55,22 @@ LogFile = "nei2005/logfile_${InMAPRunType}.log"
 #		and the baseline number of deaths.
 # Note: Environment variables can be used in both variable names and expressions.
 [OutputVariables]
-TotalPopD = "coxHazard(loglogRR(TotalPM25), TotalPop, AllMort)"
-WhitNoLatD = "coxHazard(loglogRR(TotalPM25), WhiteNoLat, AllMort)"
-BlackD = "coxHazard(loglogRR(TotalPM25), Black, AllMort)"
-NativeD = "coxHazard(loglogRR(TotalPM25), Native, AllMort)"
-AsianD = "coxHazard(loglogRR(TotalPM25), Asian, AllMort)"
-LatinoD = "coxHazard(loglogRR(TotalPM25), Latino, AllMort)"
+TotalPopD = "coxHazard(loglogRR(TotalPM25), TotalPop, AllCause)"
+WhitNoLatD = "coxHazard(loglogRR(TotalPM25), WhiteNoLat, AllCause)"
+BlackD = "coxHazard(loglogRR(TotalPM25), Black, AllCause)"
+NativeD = "coxHazard(loglogRR(TotalPM25), Native, AllCause)"
+AsianD = "coxHazard(loglogRR(TotalPM25), Asian, AllCause)"
+LatinoD = "coxHazard(loglogRR(TotalPM25), Latino, AllCause)"
 TotalPop = "TotalPop"
 TotalPM25 = "TotalPM25"
+PrimPM25 = "PrimaryPM25"
+PSO4 = "pSO4"
+PNO3 = "pNO3"
+PNH4 = "pNH4"
+SOA = "SOA"
+SOx = "SOx"
+NH3 = "NH3"
+NOx = "NOx"
 PM25Emiss = "PM25Emissions"
 BasePM25 = "BaselineTotalPM25"
 WindSpeed = "WindSpeed"
@@ -77,8 +85,8 @@ VariableGridYo= -2088000.0
 
 # VariableGridDx and VariableGridDy are the X and Y edge lengths of grid
 # cells in the outermost nest, in meters.
-VariableGridDx= 48000.0
-VariableGridDy= 48000.0
+VariableGridDx= 288000.0
+VariableGridDy= 288000.0
 
 # Xnests and Ynests specify nesting multiples in the X and Y directions.
 # For instance, if Xnests and Ynests are both [100, 2, 2, 2] and
@@ -87,8 +95,8 @@ VariableGridDy= 48000.0
 # and there would be three levels of inner nesting, each at double the
 # resolution of the previous nest, with the innermost nest having a grid
 # cell length of 5 km.
-Xnests= [111, 2, 2, 3, 2, 2]
-Ynests= [84, 2, 2, 3, 2, 2]
+Xnests= [18, 3, 2, 2, 2, 3, 2, 2]
+Ynests= [14, 3, 2, 2, 2, 3, 2, 2]
 
 # HiResLayers is the number of layers, starting at ground level, to do
 # nesting in. Layers above this will have all grid cells in the lowest
@@ -116,7 +124,7 @@ PopThreshold= 40000.0
 PopConcThreshold= 0.000000001
 
 # CensusFile is the path to the shapefile holding population information.
-CensusFile= "${evaldata}/2014_population/censusblckgrp.shp"
+CensusFile= "${evaldata}/2014_population/census2014blckgrp.shp"
 
 # CensusPopColumns is a list of the data fields in CensusFile that should
 # be included as population estimates in the model. They can be population
@@ -138,4 +146,4 @@ MortalityRateFile= "${evaldata}/2014_mortality/MortalityRate.shp"
 # mortality rate, in units of deaths per year per 100,000 people. Only mortality
 # rates used in output variable expressions need to be included here.
 [VarGrid.MortalityRateColumns]
-TotalPop = "AllMort"
+TotalPop = "AllCause"

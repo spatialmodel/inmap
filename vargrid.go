@@ -803,12 +803,16 @@ func (config *VarGridConfig) loadPopulation(sr *proj.SR) (*rtree.Rtree, map[stri
 		p := new(population)
 		p.PopData = make([]float64, len(config.CensusPopColumns))
 		for i, pop := range config.CensusPopColumns {
-			p.PopData[i], err = s2f(fields[pop])
+			s, ok := fields[pop]
+			if !ok {
+				return nil, nil, fmt.Errorf("inmap: loading population shapefile: missing attribute column %s", pop)
+			}
+			p.PopData[i], err = s2f(s)
 			if err != nil {
 				return nil, nil, err
 			}
 			if math.IsNaN(p.PopData[i]) {
-				panic("NaN population!")
+				return nil, nil, fmt.Errorf("inmap: loadPopulation: NaN population value")
 			}
 		}
 		gg, err := g.Transform(trans)
@@ -869,7 +873,11 @@ func (config *VarGridConfig) loadMortality(sr *proj.SR) (*rtree.Rtree, map[strin
 		m := new(mortality)
 		m.MortData = make([]float64, len(mortRateColumns))
 		for i, mort := range mortRateColumns {
-			m.MortData[i], err = s2f(fields[mort])
+			s, ok := fields[mort]
+			if !ok {
+				return nil, nil, fmt.Errorf("inmap: loading mortality rate shapefile: missing attribute column %s", mort)
+			}
+			m.MortData[i], err = s2f(s)
 			if err != nil {
 				return nil, nil, err
 			}

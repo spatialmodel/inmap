@@ -23,6 +23,7 @@ import (
 	"github.com/gonum/plot/vg"
 	"github.com/gonum/plot/vg/draw"
 	"github.com/gonum/plot/vg/vgimg"
+	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/inmaputil"
 )
 
@@ -70,18 +71,14 @@ func TestFuelScenarios(t *testing.T) {
 			filepath.Join(evalData, "FuelScenarios", "emissions", fmt.Sprintf("%s.elevated.shp", emisName)),
 			filepath.Join(evalData, "FuelScenarios", "emissions", fmt.Sprintf("%s.groundlevel.shp", emisName)),
 		}
-		cfg.OutputFile = filepath.Join("FuelScenarios", fmt.Sprintf("%s_12km.shp", scenario))
-		cfg.VarGrid.Xnests = []int{444}
-		cfg.VarGrid.Ynests = []int{336}
-		cfg.VarGrid.VariableGridDx = 12000
-		cfg.VarGrid.VariableGridDy = 12000
+		cfg.OutputFile = filepath.Join("FuelScenarios", fmt.Sprintf("%s_vargrid.shp", scenario))
 
 		if err := inmaputil.Run(cfg, dynamic, createGrid, inmaputil.DefaultScienceFuncs, nil, nil, nil); err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	var inmap12kmGeom, states []geom.Geom
+	var inmapGeom, states []geom.Polygon
 	var alt, griddedPop []float64
 	var err error
 
@@ -91,19 +88,15 @@ func TestFuelScenarios(t *testing.T) {
 	fmt.Println("Getting alt...")
 	alt = getAlt()
 
-	fmt.Println("Getting 12km geometry")
-	inmap12km := getInMAPFuelScenarios(scenarios[0], "12km")
-	inmap12kmGeom, err = inmap12km.GetGeometry()
-	if err != nil {
-		t.Fatal(err)
-	}
+	fmt.Println("Getting geometry")
+	inmapGeom = wrfGeom()
 
 	pop := getPopulation()
-	griddedPop = gridPop(pop, inmap12kmGeom)
+	griddedPop = gridPop(pop, inmapGeom)
 
 	dataChans := make(map[string]chan map[string]*gridStats)
 	for _, scenario := range scenarios {
-		dataChans[scenario] = process(scenario, states, inmap12kmGeom, alt, griddedPop, t)
+		dataChans[scenario] = process(scenario, states, inmapGeom, alt, griddedPop, t)
 	}
 	outData := make(map[string]map[string]*gridStats)
 	for _, scenario := range scenarios {
@@ -122,7 +115,7 @@ func TestFuelScenarios(t *testing.T) {
 	f.Close()
 }
 
-func process(scenario string, states, inmap12kmGeom []geom.Geom, alt, griddedPop []float64, t *testing.T) (outChan chan map[string]*gridStats) {
+func process(scenario string, states, inmapGeom []geom.Polygon, alt, griddedPop []float64, t *testing.T) (outChan chan map[string]*gridStats) {
 	outChan = make(chan map[string]*gridStats)
 
 	var polNames = []string{"Total PM2.5", "Primary PM2.5",
@@ -131,8 +124,8 @@ func process(scenario string, states, inmap12kmGeom []geom.Geom, alt, griddedPop
 
 	var abbrevs = []string{"totalpm", "primarypm", "pNO",
 		"pNH", "pS", "SOA"}
-	var inmapVars = []string{"Total PM2.5", "Primary PM2", "pNO3",
-		"pNH4", "pSO4", "SOA"}
+	var inmapVars = []string{"TotalPM25", "PrimPM25", "PNO3",
+		"PNH4", "PSO4", "SOA"}
 	var WRFvars = [][]string{{"PM2_5_DRY_Avg"},
 		{"p25i_Avg", "p25j_Avg", "eci_Avg", "ecj_Avg",
 			"orgpai_Avg", "orgpaj_Avg"},
@@ -176,7 +169,7 @@ func process(scenario string, states, inmap12kmGeom []geom.Geom, alt, griddedPop
 		leftPad   = 10
 		rightPad  = 2
 	)
-	c := vgimg.NewWith(vgimg.UseWH(figWidth, figHeight), vgimg.UseDPI(300))
+	c := vgimg.NewWith(vgimg.UseWH(figWidth, figHeight), vgimg.UseDPI(96))
 	dc := draw.New(c)
 	mainc := draw.Crop(dc, 0, 0, legendH+2*statsH, 0)
 	legendc := draw.Crop(dc, 0, 0, 0, legendH-figHeight)
@@ -233,7 +226,7 @@ func process(scenario string, states, inmap12kmGeom []geom.Geom, alt, griddedPop
 
 	go func() {
 		outData := make(map[string]*gridStats)
-		inmap12km := getInMAPFuelScenarios(scenario, "12km")
+		inmap := getInMAPFuelScenarios(scenario, "vargrid")
 		cmap := carto.NewColorMap(carto.LinCutoff)
 		cmap2 := carto.NewColorMap(carto.LinCutoff)
 		cmap.NumDivisions = 4
@@ -241,7 +234,7 @@ func process(scenario string, states, inmap12kmGeom []geom.Geom, alt, griddedPop
 		for i, pol := range abbrevs {
 			gs := new(gridStats)
 			fmt.Println(scenario, pol)
-			gs.inmap, err = inmap12km.GetProperty(inmapVars[i])
+			gs.inmap, err = inmap.GetProperty(inmapVars[i], inmapGeom)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -285,20 +278,20 @@ func process(scenario string, states, inmap12kmGeom []geom.Geom, alt, griddedPop
 				continue
 			}
 			wrfmap := carto.NewCanvas(N, S, E, W, tiles.At(mainc, i, 0))
-			inmap12kmmap := carto.NewCanvas(N, S, E, W, tiles.At(mainc, i, 1))
+			inmapmap := carto.NewCanvas(N, S, E, W, tiles.At(mainc, i, 1))
 			diffmap := carto.NewCanvas(N, S, E, W, tiles.At(mainc, i, 2))
 			for j := 0; j < len(gs.inmap); j++ {
 				bc := cmap.GetColor(gs.wrf[j])
 				ls := draw.LineStyle{Color: bc, Width: 0.1}
-				wrfmap.DrawVector(inmap12kmGeom[j], bc, ls, draw.GlyphStyle{})
+				wrfmap.DrawVector(inmapGeom[j], bc, ls, draw.GlyphStyle{})
 				bc = cmap.GetColor(gs.inmap[j])
 				ls = draw.LineStyle{Color: bc, Width: 0.1}
-				inmap12kmmap.DrawVector(inmap12kmGeom[j], bc, ls, draw.GlyphStyle{})
+				inmapmap.DrawVector(inmapGeom[j], bc, ls, draw.GlyphStyle{})
 				bc = cmap2.GetColor(gs.diff[j])
 				ls = draw.LineStyle{Color: bc, Width: 0.1}
-				diffmap.DrawVector(inmap12kmGeom[j], bc, ls, draw.GlyphStyle{})
+				diffmap.DrawVector(inmapGeom[j], bc, ls, draw.GlyphStyle{})
 			}
-			for _, m := range []*carto.Canvas{wrfmap, inmap12kmmap, diffmap} {
+			for _, m := range []*carto.Canvas{wrfmap, inmapmap, diffmap} {
 				for _, g := range states {
 					var fill = color.NRGBA{0, 0, 0, 0}
 					ls := draw.LineStyle{Color: color.Black, Width: 0.1}
@@ -378,14 +371,20 @@ func (gs *gridStats) calcStats(griddedPop []float64) {
 	}
 	gs.SWeighted, _, gs.R2Weighted, _, _, _ = stats.LinearRegression(wrfWeighted,
 		inmapWeighted)
+	if math.IsNaN(gs.R2Weighted) {
+		gs.R2Weighted = 0
+	}
+	if math.IsNaN(gs.R2) {
+		gs.R2 = 0
+	}
 }
 
 func getWRFFuelScenarios(scenario string, alt []float64,
 	varNames []string) []float64 {
-	f := openNCF(filepath.Join(os.Getenv(evalDataEnv), "FuelScenarios", fmt.Sprintf("%v.na12.ncf", scenario)))
+	f := openNCFFuelScenarios(filepath.Join(os.Getenv(evalDataEnv), "FuelScenarios", "concentrations", fmt.Sprintf("%v.ncf", scenario)))
 	var out []float64
 	for i, name := range varNames {
-		temp := f.readVar(name)
+		temp := f.readVar(name, 444, 336)
 		if i == 0 {
 			out = make([]float64, len(temp))
 		}
@@ -469,8 +468,16 @@ func (id inmapDataFuelScenarios) GetGeometry() ([]geom.Geom, error) {
 	return g, nil
 }
 
-func (id inmapDataFuelScenarios) GetProperty(name string) ([]float64, error) {
+func (id inmapDataFuelScenarios) GetProperty(name string, inmapGeom []geom.Polygon) ([]float64, error) {
 	var data []float64
+	g, err := id.GetGeometry()
+	if err != nil {
+		return nil, err
+	}
+	g2 := make([]geom.Polygonal, len(g))
+	for i, gg := range g {
+		g2[i] = gg.(geom.Polygonal)
+	}
 
 	d, err := shp.NewDecoder(string(id))
 	if err != nil {
@@ -489,7 +496,11 @@ func (id inmapDataFuelScenarios) GetProperty(name string) ([]float64, error) {
 	if err := d.Error(); err != nil {
 		return nil, err
 	}
-	return data, nil
+	ig2 := make([]geom.Polygonal, len(inmapGeom))
+	for i, gg := range inmapGeom {
+		ig2[i] = gg
+	}
+	return inmap.Regrid(g2, ig2, data)
 }
 
 type popHolder struct {
@@ -501,7 +512,7 @@ func getPopulation() *rtree.Rtree {
 
 	p := rtree.NewTree(25, 50)
 
-	filename := filepath.Join(os.Getenv(evalDataEnv), "census2012blckgrp")
+	filename := filepath.Join(os.Getenv(evalDataEnv), "2014_population", "census2014blckgrp")
 	f1, err := shp.NewDecoder(filename + ".shp")
 	if err != nil {
 		panic(err)
@@ -522,7 +533,7 @@ func getPopulation() *rtree.Rtree {
 	return p
 }
 
-func gridPop(pop *rtree.Rtree, g []geom.Geom) []float64 {
+func gridPop(pop *rtree.Rtree, g []geom.Polygon) []float64 {
 	var wg sync.WaitGroup
 	popOut := make([]float64, len(g))
 	nprocs := runtime.GOMAXPROCS(-1)
@@ -552,6 +563,27 @@ func gridPop(pop *rtree.Rtree, g []geom.Geom) []float64 {
 
 func getAlt() []float64 {
 	filename := filepath.Join(os.Getenv(evalDataEnv), "InMAPData_v1.2.0.ncf")
-	f := openNCF(filename)
-	return f.readVar("alt")
+	f := openNCFFuelScenarios(filename)
+	return f.readVar("alt", 444, 336)
+}
+
+func wrfGeom() []geom.Polygon {
+	const (
+		W  = -2736000.00
+		S  = -2088000.00
+		E  = 2592000.00
+		N  = 1944000.00
+		dx = 12000.
+		dy = 12000.
+		nx = 444
+		ny = 336
+	)
+	g := make([]geom.Polygon, nx*ny)
+	for i := 0; i < nx*ny; i++ {
+		x := W + float64(i/ny)*dx
+		y := S + float64(i%ny)*dy
+		g[i] = geom.Polygon([]geom.Path{{{X: x, Y: y}, {X: x + dx, Y: y},
+			{X: x + dx, Y: y + dy}, {X: x, Y: y + dy}, {X: x, Y: y}}})
+	}
+	return g
 }

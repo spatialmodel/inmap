@@ -170,6 +170,7 @@ func TestAnimation_logo(t *testing.T) {
 	cfg.VarGrid.MortalityRateFile = "animation_logo/logo.shp"
 	cfg.VarGrid.MortalityRateColumns = map[string]string{"Pop": "MR"}
 	cfg.OutputFile = "animation_logo/logoOut.shp"
+	cfg.OutputVariables = map[string]string{"TotalPM25": "TotalPM25"}
 
 	dataChan := make(chan []geomConc)
 	errChan := make(chan error)
@@ -241,7 +242,7 @@ func TestAnimation_nei(t *testing.T) {
 	}
 }
 
-func createImages(basename string, dataChan chan []geomConc, errChan chan error, states []geom.Geom, insets bool) {
+func createImages(basename string, dataChan chan []geomConc, errChan chan error, states []geom.Polygon, insets bool) {
 
 	cmap := carto.NewColorMap(carto.LinCutoff)
 	var data [][]geomConc
@@ -305,7 +306,7 @@ func saveConc(outChan chan []geomConc) inmap.DomainManipulator {
 	}
 }
 
-func createImage(data []geomConc, cmap *carto.ColorMap, states []geom.Geom, filename string) error {
+func createImage(data []geomConc, cmap *carto.ColorMap, states []geom.Polygon, filename string) error {
 
 	const (
 		W = -2400000.0
@@ -354,7 +355,7 @@ func createImage(data []geomConc, cmap *carto.ColorMap, states []geom.Geom, file
 	return nil
 }
 
-func createImageWithInsets(data []geomConc, cmap *carto.ColorMap, states []geom.Geom, filename string) error {
+func createImageWithInsets(data []geomConc, cmap *carto.ColorMap, states []geom.Polygon, filename string) error {
 	const (
 		// Wmain is the western edge of the main map
 		Wmain = -2736000.00

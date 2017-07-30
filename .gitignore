@@ -1,4 +1,11 @@
 *ncf
+*.dbf
+*.prj
+*.shp
+*.shx
+*.log
+*.json
+*.png
 vendor/bitbucket.org
 vendor/github.com
 vendor/golang.org
