@@ -32,7 +32,7 @@ You can also compile InMAP from its source code. It should work on most types of
 5. Optional: run the tests and evaluations (this may take a while):
 
 		cd $GOPATH/src/github.com/spatialmodel/inmap
-		go test ./...
+		go test ./... -timeout="200h"
 
 	To only run the tests and not the evaluations, run `go test ./...  -short`. If you do run the evaluations, make sure you first download the evaluation data from the [InMAP release page](https://github.com/spatialmodel/inmap/releases) and set the `evaldata` environment variable to the location of the unzipped directory.
 
