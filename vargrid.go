@@ -499,7 +499,7 @@ func (d *InMAP) addCells(config *VarGridConfig, newCellIndices [][][2]int,
 					conci = conc[i]
 				}
 				cell, err2 := config.createCell(data, pop, d.popIndices, mortRates, d.mortIndices, ii,
-					newCellLayers[i], conci, webMapTrans)
+					newCellLayers[i], conci, webMapTrans, m)
 				cellErrChan <- cellErr{cell: cell, err: err2}
 			}
 		}(p)
@@ -510,7 +510,7 @@ func (d *InMAP) addCells(config *VarGridConfig, newCellIndices [][][2]int,
 		if cellerr.err != nil {
 			return cellerr.err
 		}
-		d.InsertCell(cellerr.cell)
+		d.InsertCell(cellerr.cell, m)
 	}
 	// Add emissions to new cells.
 	if emis != nil {
@@ -541,7 +541,7 @@ func (d *InMAP) addCells(config *VarGridConfig, newCellIndices [][][2]int,
 // InsertCell adds a new cell to the grid. The function will take the necessary
 // steps to fit the new cell in with existing cells, but it is the caller's
 // reponsibility that the new cell doesn't overlap any existing cells.
-func (d *InMAP) InsertCell(c *Cell) {
+func (d *InMAP) InsertCell(c *Cell, m Mechanism) {
 	if d.index == nil {
 		d.init()
 	}
@@ -550,7 +550,7 @@ func (d *InMAP) InsertCell(c *Cell) {
 	}
 	d.cells.add(c)
 	d.index.Insert(c)
-	d.setNeighbors(c)
+	d.setNeighbors(c, m)
 }
 
 // A GridMutator is a function whether a Cell should be mutated (i.e., either
@@ -665,7 +665,7 @@ func (config *VarGridConfig) cellGeometry(index [][2]int) geom.Polygonal {
 // then the grid cell is also set to being above the density threshold.
 // If conc != nil, the concentration data for the new cell will be set to conc.
 func (config *VarGridConfig) createCell(data *CTMData, pop *Population, popIndices PopIndices,
-	mortRates *MortalityRates, mortIndices MortIndices, index [][2]int, layer int, conc []float64, webMapTrans proj.Transformer) (*Cell, error) {
+	mortRates *MortalityRates, mortIndices MortIndices, index [][2]int, layer int, conc []float64, webMapTrans proj.Transformer, m Mechanism) (*Cell, error) {
 
 	cell := new(Cell)
 	cell.PopData = make([]float64, len(popIndices))
@@ -682,7 +682,7 @@ func (config *VarGridConfig) createCell(data *CTMData, pop *Population, popIndic
 	cell.Dx = bounds.Max.X - bounds.Min.X
 	cell.Dy = bounds.Max.Y - bounds.Min.Y
 
-	cell.make()
+	cell.make(m)
 	if err := cell.loadData(data, layer); err != nil {
 		return nil, err
 	}

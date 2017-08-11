@@ -108,7 +108,7 @@ func (d *InMAP) initFromCells(cells []*Cell, emis *Emissions, config *VarGridCon
 		d.mortIndices[m] = i
 	}
 	for _, c := range cells {
-		d.InsertCell(c)
+		d.InsertCell(c, m)
 	}
 
 	// Add emissions to new cells.

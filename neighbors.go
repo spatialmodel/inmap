@@ -24,26 +24,26 @@ import (
 	"github.com/ctessum/geom"
 )
 
-func (d *InMAP) setNeighbors(c *Cell) {
+func (d *InMAP) setNeighbors(c *Cell, m Mechanism) {
 	d.neighbors(c)
-	d.setBoundaryNeighbors(c)
+	d.setBoundaryNeighbors(c, m)
 }
 
-func (d *InMAP) setBoundaryNeighbors(c *Cell) {
+func (d *InMAP) setBoundaryNeighbors(c *Cell, m Mechanism) {
 	if c.west.len() == 0 {
-		d.addWestBoundary(c)
+		d.addWestBoundary(c, m)
 	}
 	if c.east.len() == 0 {
-		d.addEastBoundary(c)
+		d.addEastBoundary(c, m)
 	}
 	if c.north.len() == 0 {
-		d.addNorthBoundary(c)
+		d.addNorthBoundary(c, m)
 	}
 	if c.south.len() == 0 {
-		d.addSouthBoundary(c)
+		d.addSouthBoundary(c, m)
 	}
 	if c.above.len() == 0 {
-		d.addTopBoundary(c)
+		d.addTopBoundary(c, m)
 	}
 }
 

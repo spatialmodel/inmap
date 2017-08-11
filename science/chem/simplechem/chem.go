@@ -28,7 +28,7 @@ import (
 	"github.com/spatialmodel/inmap/science/wetdep/emepwetdep"
 )
 
-// Mechanism fulfils the github.com/spatialmodel/inmap/science/chem/mechanism
+// Mechanism fulfils the github.com/spatialmodel/inmap.Mechanism
 // interface.
 type Mechanism struct{}
 
@@ -102,8 +102,8 @@ func (m Mechanism) AddEmisFlux(c *inmap.Cell, name string, val float64) error {
 	return nil
 }
 
-// SimpleDryDepIndices provides array indices for use with package simpledrydep.
-func SimpleDryDepIndices() (simpledrydep.SOx, simpledrydep.NH3, simpledrydep.NOx, simpledrydep.VOC, simpledrydep.PM25) {
+// simpleDryDepIndices provides array indices for use with package simpledrydep.
+func simpleDryDepIndices() (simpledrydep.SOx, simpledrydep.NH3, simpledrydep.NOx, simpledrydep.VOC, simpledrydep.PM25) {
 	return simpledrydep.SOx{igS}, simpledrydep.NH3{igNH}, simpledrydep.NOx{igNO}, simpledrydep.VOC{igOrg}, simpledrydep.PM25{ipOrg, iPM2_5, ipNH, ipS, ipNO}
 }
 
@@ -112,7 +112,7 @@ func SimpleDryDepIndices() (simpledrydep.SOx, simpledrydep.NH3, simpledrydep.NOx
 // Currently, the only valid option is "simple".
 func (m Mechanism) DryDep(name string) (inmap.CellManipulator, error) {
 	options := map[string]inmap.CellManipulator{
-		"simple": simpledrydep.DryDeposition(SimpleDryDepIndices),
+		"simple": simpledrydep.DryDeposition(simpleDryDepIndices),
 	}
 	f, ok := options[name]
 	if !ok {
@@ -121,8 +121,8 @@ func (m Mechanism) DryDep(name string) (inmap.CellManipulator, error) {
 	return f, nil
 }
 
-// EMEPWetDepIndices provides array indices for use with package emepwetdep.
-func EMEPWetDepIndices() (emepwetdep.SO2, emepwetdep.OtherGas, emepwetdep.PM25) {
+// emepWetDepIndices provides array indices for use with package emepwetdep.
+func emepWetDepIndices() (emepwetdep.SO2, emepwetdep.OtherGas, emepwetdep.PM25) {
 	return emepwetdep.SO2{igS}, emepwetdep.OtherGas{igNH, igNO, igOrg}, emepwetdep.PM25{ipOrg, iPM2_5, ipNH, ipS, ipNO}
 }
 
@@ -131,7 +131,7 @@ func EMEPWetDepIndices() (emepwetdep.SO2, emepwetdep.OtherGas, emepwetdep.PM25) 
 // Currently, the only valid option is "emep".
 func (m Mechanism) WetDep(name string) (inmap.CellManipulator, error) {
 	options := map[string]inmap.CellManipulator{
-		"emep": emepwetdep.WetDeposition(EMEPWetDepIndices),
+		"emep": emepwetdep.WetDeposition(emepWetDepIndices),
 	}
 	f, ok := options[name]
 	if !ok {
@@ -144,12 +144,12 @@ func (m Mechanism) WetDep(name string) (inmap.CellManipulator, error) {
 // species that are used by this chemical mechanism.
 func (m Mechanism) Species() []string {
 	return []string{
-		"VOCEmissions",
+		/*"VOCEmissions",
 		"NOxEmissions",
 		"NH3Emissions",
 		"SOxEmissions",
-		"PM25Emissions",
-		"TotalPM25",
+		"PM25Emissions",*/
+		//"TotalPM25",
 		"VOC",
 		"SOA",
 		"PrimaryPM25",

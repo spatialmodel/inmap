@@ -27,8 +27,6 @@ import (
 	"github.com/gonum/floats"
 	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/science/chem/simplechem"
-	"github.com/spatialmodel/inmap/science/drydep/simpledrydep"
-	"github.com/spatialmodel/inmap/science/wetdep/emepwetdep"
 )
 
 const E = 1000000. // emissions
@@ -50,16 +48,23 @@ func TestConverge(t *testing.T) {
 		Geom: geom.Point{X: -3999, Y: -3999.},
 	}) // ground level emissions
 
-	convergences := []inmap.DomainManipulator{inmap.SteadyStateConvergenceCheck(2, cfg.PopGridColumn, nil),
-		inmap.SteadyStateConvergenceCheck(-1, cfg.PopGridColumn, nil)}
+	var m simplechem.Mechanism
+	convergences := []inmap.DomainManipulator{inmap.SteadyStateConvergenceCheck(2, cfg.PopGridColumn, m, nil),
+		inmap.SteadyStateConvergenceCheck(-1, cfg.PopGridColumn, m, nil)}
 	convergenceNames := []string{"fixed", "criterion"}
 	expectedConcentration := []float64{0.348963630316385, 83.8101077058609}
 
 	for i, conv := range convergences {
 
 		iterations := 0
-		var m simplechem.Mechanism
-
+		drydep, err := m.DryDep("simple")
+		if err != nil {
+			t.Fatal(err)
+		}
+		wetdep, err := m.WetDep("emep")
+		if err != nil {
+			t.Fatal(err)
+		}
 		d := &inmap.InMAP{
 			InitFuncs: []inmap.DomainManipulator{
 				cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis, m),
@@ -68,8 +73,8 @@ func TestConverge(t *testing.T) {
 			RunFuncs: []inmap.DomainManipulator{
 				inmap.Calculations(inmap.AddEmissionsFlux()),
 				inmap.Calculations(
-					simpledrydep.DryDeposition(simplechem.SimpleDryDepIndices),
-					emepwetdep.WetDeposition(simplechem.EMEPWetDepIndices),
+					drydep,
+					wetdep,
 				),
 				conv,
 				func(_ *inmap.InMAP) error {
@@ -78,13 +83,13 @@ func TestConverge(t *testing.T) {
 				},
 			},
 		}
-		if err := d.Init(); err != nil {
+		if err = d.Init(); err != nil {
 			t.Error(err)
 		}
 		timeoutChan := time.After(timeout)
 		doneChan := make(chan int)
 		go func() {
-			if err := d.Run(); err != nil {
+			if err = d.Run(); err != nil {
 				t.Error(err)
 			}
 			doneChan <- 0
@@ -127,11 +132,20 @@ func BenchmarkRun(b *testing.B) {
 		Geom: geom.Point{X: -3999, Y: -3999.},
 	}) // ground level emissions
 
+	var m simplechem.Mechanism
+	drydep, err := m.DryDep("simple")
+	if err != nil {
+		b.Fatal(err)
+	}
+	wetdep, err := m.WetDep("emep")
+	if err != nil {
+		b.Fatal(err)
+	}
+
 	mutator, err := inmap.PopulationMutator(cfg, popIndices)
 	if err != nil {
 		b.Error(err)
 	}
-	var m simplechem.Mechanism
 	d := &inmap.InMAP{
 		InitFuncs: []inmap.DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis, m),
@@ -144,11 +158,11 @@ func BenchmarkRun(b *testing.B) {
 				inmap.UpwindAdvection(),
 				inmap.Mixing(),
 				inmap.MeanderMixing(),
-				simpledrydep.DryDeposition(simplechem.SimpleDryDepIndices),
-				emepwetdep.WetDeposition(simplechem.EMEPWetDepIndices),
+				drydep,
+				wetdep,
 				m.Chemistry(),
 			),
-			inmap.SteadyStateConvergenceCheck(1000, cfg.PopGridColumn, nil),
+			inmap.SteadyStateConvergenceCheck(1000, cfg.PopGridColumn, m, nil),
 		},
 	}
 	if err = d.Init(); err != nil {
@@ -193,6 +207,14 @@ func TestBigM2d(t *testing.T) {
 		Geom: geom.Point{X: -3999, Y: -3999.},
 	}) // ground level emissions
 	var m simplechem.Mechanism
+	drydep, err := m.DryDep("simple")
+	if err != nil {
+		t.Fatal(err)
+	}
+	wetdep, err := m.WetDep("emep")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	d := &inmap.InMAP{
 		InitFuncs: []inmap.DomainManipulator{
@@ -205,17 +227,17 @@ func TestBigM2d(t *testing.T) {
 				inmap.UpwindAdvection(),
 				inmap.Mixing(),
 				inmap.MeanderMixing(),
-				simpledrydep.DryDeposition(simplechem.SimpleDryDepIndices),
-				emepwetdep.WetDeposition(simplechem.EMEPWetDepIndices),
+				drydep,
+				wetdep,
 				m.Chemistry(),
 			),
-			inmap.SteadyStateConvergenceCheck(-1, cfg.PopGridColumn, nil),
+			inmap.SteadyStateConvergenceCheck(-1, cfg.PopGridColumn, m, nil),
 		},
 	}
-	if err := d.Init(); err != nil {
+	if err = d.Init(); err != nil {
 		t.Error(err)
 	}
-	if err := d.Run(); err != nil {
+	if err = d.Run(); err != nil {
 		t.Error(err)
 	}
 

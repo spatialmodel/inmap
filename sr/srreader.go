@@ -131,8 +131,9 @@ func NewReader(r cdf.ReaderWriterAt) (*Reader, error) {
 			}
 		}
 	}
+	var m simplechem.Mechanism
 	for _, cell := range cells {
-		sr.d.InsertCell(cell)
+		sr.d.InsertCell(cell, m)
 	}
 
 	// Read in extra data that wasn't able to be saved into the cells.

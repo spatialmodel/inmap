@@ -87,7 +87,7 @@ func TestMixing(t *testing.T) {
 		RunFuncs: []DomainManipulator{
 			Calculations(AddEmissionsFlux()),
 			Calculations(Mixing()),
-			SteadyStateConvergenceCheck(numTimesteps, cfg.PopGridColumn, nil),
+			SteadyStateConvergenceCheck(numTimesteps, cfg.PopGridColumn, m, nil),
 		},
 	}
 	if err := d.Init(); err != nil {
@@ -137,7 +137,7 @@ func TestAdvection(t *testing.T) {
 		RunFuncs: []DomainManipulator{
 			Calculations(AddEmissionsFlux()),
 			Calculations(UpwindAdvection()),
-			SteadyStateConvergenceCheck(1, cfg.PopGridColumn, nil),
+			SteadyStateConvergenceCheck(1, cfg.PopGridColumn, m, nil),
 		},
 	}
 	if err := d.Init(); err != nil {
@@ -199,7 +199,7 @@ func TestMeanderMixing(t *testing.T) {
 		RunFuncs: []DomainManipulator{
 			Calculations(AddEmissionsFlux()),
 			Calculations(MeanderMixing()),
-			SteadyStateConvergenceCheck(nsteps, cfg.PopGridColumn, nil),
+			SteadyStateConvergenceCheck(nsteps, cfg.PopGridColumn, m, nil),
 		},
 	}
 	if err := d.Init(); err != nil {

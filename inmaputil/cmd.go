@@ -26,6 +26,7 @@ import (
 	"os"
 
 	"github.com/spatialmodel/inmap"
+	"github.com/spatialmodel/inmap/science/chem/simplechem"
 	"github.com/spatialmodel/inmap/sr"
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
@@ -328,8 +329,8 @@ func init() {
               OutputVariables specifies which model variables should be included in the
               output file. It can include environment variables.`,
 			defaultVal: map[string]string{
+				"TotalPM25": "PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA",
 				"TotalPopD": "coxHazard(loglogRR(TotalPM25), TotalPop, allcause)",
-				"TotalPM25": "TotalPM25",
 			},
 			flagsets: []*pflag.FlagSet{runCmd.PersistentFlags(), workerCmd.Flags()},
 		},
@@ -650,7 +651,8 @@ concentrations with no temporal variability.`,
 			os.ExpandEnv(Cfg.GetString("InMAPData")),
 			os.ExpandEnv(Cfg.GetString("VariableGridData")),
 			Cfg.GetInt("NumIterations"),
-			!Cfg.GetBool("static"), Cfg.GetBool("createGrid"), DefaultScienceFuncs, nil, nil, nil)
+			!Cfg.GetBool("static"), Cfg.GetBool("createGrid"), DefaultScienceFuncs, nil, nil, nil,
+			simplechem.Mechanism{})
 	},
 	DisableAutoGenTag: true,
 }

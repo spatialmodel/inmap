@@ -27,8 +27,6 @@ import (
 
 	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/science/chem/simplechem"
-	"github.com/spatialmodel/inmap/science/drydep/simpledrydep"
-	"github.com/spatialmodel/inmap/science/wetdep/emepwetdep"
 )
 
 func getCTMData(inmapData string, VarGrid *inmap.VarGridConfig) (*inmap.CTMData, error) {
@@ -47,14 +45,21 @@ func getCTMData(inmapData string, VarGrid *inmap.VarGridConfig) (*inmap.CTMData,
 
 var m simplechem.Mechanism
 
+func scienceMust(c inmap.CellManipulator, err error) inmap.CellManipulator {
+	if err != nil {
+		panic(err)
+	}
+	return c
+}
+
 // DefaultScienceFuncs are the science functions that are run in
 // typical simulations.
 var DefaultScienceFuncs = []inmap.CellManipulator{
 	inmap.UpwindAdvection(),
 	inmap.Mixing(),
 	inmap.MeanderMixing(),
-	simpledrydep.DryDeposition(simplechem.SimpleDryDepIndices),
-	emepwetdep.WetDeposition(simplechem.EMEPWetDepIndices),
+	scienceMust(m.DryDep("simple")),
+	scienceMust(m.WetDep("emep")),
 	m.Chemistry(),
 }
 
@@ -105,7 +110,7 @@ var DefaultScienceFuncs = []inmap.CellManipulator{
 func Run(LogFile string, OutputFile string, OutputAllLayers bool, OutputVariables map[string]string,
 	EmissionUnits string, EmissionsShapefiles []string, VarGrid *inmap.VarGridConfig, InMAPData, VariableGridData string,
 	NumIterations int,
-	dynamic, createGrid bool, scienceFuncs []inmap.CellManipulator, addInit, addRun, addCleanup []inmap.DomainManipulator) error {
+	dynamic, createGrid bool, scienceFuncs []inmap.CellManipulator, addInit, addRun, addCleanup []inmap.DomainManipulator, m inmap.Mechanism) error {
 
 	startTime := time.Now()
 
@@ -133,7 +138,6 @@ func Run(LogFile string, OutputFile string, OutputAllLayers bool, OutputVariable
 		}
 	}()
 
-	var m simplechem.Mechanism
 	o, err := inmap.NewOutputter(OutputFile, OutputAllLayers, OutputVariables, nil, m)
 	if err != nil {
 		return err
@@ -200,7 +204,7 @@ func Run(LogFile string, OutputFile string, OutputAllLayers bool, OutputVariable
 			inmap.Calculations(inmap.AddEmissionsFlux()),
 			scienceCalcs,
 			inmap.SteadyStateConvergenceCheck(NumIterations,
-				VarGrid.PopGridColumn, cConverge),
+				VarGrid.PopGridColumn, m, cConverge),
 		}
 	} else { // dynamic grid
 		initFuncs = []inmap.DomainManipulator{
@@ -217,7 +221,7 @@ func Run(LogFile string, OutputFile string, OutputAllLayers bool, OutputVariable
 			inmap.RunPeriodically(gridMutateInterval,
 				VarGrid.MutateGrid(popConcMutator.Mutate(), ctmData, pop, mr, emis, m, msgLog)),
 			inmap.RunPeriodically(gridMutateInterval, inmap.SetTimestepCFL()),
-			inmap.SteadyStateConvergenceCheck(NumIterations, VarGrid.PopGridColumn, cConverge),
+			inmap.SteadyStateConvergenceCheck(NumIterations, VarGrid.PopGridColumn, m, cConverge),
 		}
 	}
 

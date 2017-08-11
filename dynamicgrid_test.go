@@ -26,8 +26,6 @@ import (
 	"github.com/ctessum/geom"
 	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/science/chem/simplechem"
-	"github.com/spatialmodel/inmap/science/drydep/simpledrydep"
-	"github.com/spatialmodel/inmap/science/wetdep/emepwetdep"
 )
 
 func TestDynamicGrid(t *testing.T) {
@@ -49,6 +47,14 @@ func TestDynamicGrid(t *testing.T) {
 
 	popConcMutator := inmap.NewPopConcMutator(cfg, popIndices)
 	var m simplechem.Mechanism
+	drydep, err := m.DryDep("simple")
+	if err != nil {
+		t.Fatal(err)
+	}
+	wetdep, err := m.WetDep("emep")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	d := &inmap.InMAP{
 		InitFuncs: []inmap.DomainManipulator{
@@ -61,21 +67,21 @@ func TestDynamicGrid(t *testing.T) {
 				inmap.UpwindAdvection(),
 				inmap.Mixing(),
 				inmap.MeanderMixing(),
-				simpledrydep.DryDeposition(simplechem.SimpleDryDepIndices),
-				emepwetdep.WetDeposition(simplechem.EMEPWetDepIndices),
+				drydep,
+				wetdep,
 				m.Chemistry(),
 			),
 			inmap.RunPeriodically(gridMutateInterval,
 				cfg.MutateGrid(popConcMutator.Mutate(), ctmdata, pop, mr, emis, m, nil)),
 			inmap.RunPeriodically(gridMutateInterval, inmap.SetTimestepCFL()),
-			inmap.SteadyStateConvergenceCheck(-1, cfg.PopGridColumn, nil),
+			inmap.SteadyStateConvergenceCheck(-1, cfg.PopGridColumn, m, nil),
 		},
 	}
 
-	if err := d.Init(); err != nil {
+	if err = d.Init(); err != nil {
 		t.Error(err)
 	}
-	if err := d.Run(); err != nil {
+	if err = d.Run(); err != nil {
 		t.Error(err)
 	}
 

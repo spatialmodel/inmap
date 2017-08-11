@@ -26,6 +26,24 @@ import (
 	"github.com/spatialmodel/inmap/science/wetdep/emepwetdep"
 )
 
+// Indicies of individual pollutants in arrays.
+const (
+	igOrg int = iota
+	ipOrg
+	iPM2_5
+	igNH
+	ipNH
+	igS
+	ipS
+	igNO
+	ipNO
+)
+
+// emepWetDepIndices provides array indices for use with package emepwetdep.
+func emepWetDepIndices() (emepwetdep.SO2, emepwetdep.OtherGas, emepwetdep.PM25) {
+	return emepwetdep.SO2{igS}, emepwetdep.OtherGas{igNH, igNO, igOrg}, emepwetdep.PM25{ipOrg, iPM2_5, ipNH, ipS, ipNO}
+}
+
 func TestWetDeposition(t *testing.T) {
 	cfg, ctmdata, pop, popIndices, mr, mortIndices := inmap.VarGridTestData()
 	emis := inmap.NewEmissions()
@@ -43,8 +61,8 @@ func TestWetDeposition(t *testing.T) {
 		},
 		RunFuncs: []inmap.DomainManipulator{
 			inmap.Calculations(inmap.AddEmissionsFlux()),
-			inmap.Calculations(emepwetdep.WetDeposition(simplechem.EMEPWetDepIndices)),
-			inmap.SteadyStateConvergenceCheck(1, cfg.PopGridColumn, nil),
+			inmap.Calculations(emepwetdep.WetDeposition(emepWetDepIndices)),
+			inmap.SteadyStateConvergenceCheck(1, cfg.PopGridColumn, m, nil),
 		},
 	}
 	if err := d.Init(); err != nil {

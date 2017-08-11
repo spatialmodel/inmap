@@ -29,8 +29,6 @@ import (
 	"github.com/ctessum/geom"
 	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/science/chem/simplechem"
-	"github.com/spatialmodel/inmap/science/drydep/simpledrydep"
-	"github.com/spatialmodel/inmap/science/wetdep/emepwetdep"
 )
 
 // Empty is used for passing content-less messages.
@@ -77,13 +75,20 @@ func (s *Worker) Calculate(input *IOData, output *IOData) error {
 
 	log.Printf("Slave calculating row=%v, layer=%v\n", input.Row, input.Layer)
 
+	scienceMust := func(c inmap.CellManipulator, err error) inmap.CellManipulator {
+		if err != nil {
+			panic(err)
+		}
+		return c
+	}
+
 	var m simplechem.Mechanism
 	scienceFuncs := inmap.Calculations(
 		inmap.UpwindAdvection(),
 		inmap.Mixing(),
 		inmap.MeanderMixing(),
-		simpledrydep.DryDeposition(simplechem.SimpleDryDepIndices),
-		emepwetdep.WetDeposition(simplechem.EMEPWetDepIndices),
+		scienceMust(m.DryDep("simple")),
+		scienceMust(m.WetDep("emep")),
 		m.Chemistry(),
 	)
 
@@ -105,7 +110,7 @@ func (s *Worker) Calculate(input *IOData, output *IOData) error {
 			s.Config.MutateGrid(popConcMutator.Mutate(),
 				s.CTMData, s.Pop, s.MR, emis, m, nil)),
 		inmap.RunPeriodically(gridMutateInterval, inmap.SetTimestepCFL()),
-		inmap.SteadyStateConvergenceCheck(-1, s.Config.PopGridColumn, nil),
+		inmap.SteadyStateConvergenceCheck(-1, s.Config.PopGridColumn, m, nil),
 	}
 
 	d := &inmap.InMAP{

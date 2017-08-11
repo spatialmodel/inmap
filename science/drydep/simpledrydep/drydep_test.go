@@ -26,6 +26,24 @@ import (
 	"github.com/spatialmodel/inmap/science/drydep/simpledrydep"
 )
 
+// Indicies of individual pollutants in arrays.
+const (
+	igOrg int = iota
+	ipOrg
+	iPM2_5
+	igNH
+	ipNH
+	igS
+	ipS
+	igNO
+	ipNO
+)
+
+// simpleDryDepIndices provides array indices for use with package simpledrydep.
+func simpleDryDepIndices() (simpledrydep.SOx, simpledrydep.NH3, simpledrydep.NOx, simpledrydep.VOC, simpledrydep.PM25) {
+	return simpledrydep.SOx{igS}, simpledrydep.NH3{igNH}, simpledrydep.NOx{igNO}, simpledrydep.VOC{igOrg}, simpledrydep.PM25{ipOrg, iPM2_5, ipNH, ipS, ipNO}
+}
+
 func TestDryDeposition(t *testing.T) {
 	cfg, ctmdata, pop, popIndices, mr, mortIndices := inmap.VarGridTestData()
 	emis := inmap.NewEmissions()
@@ -43,8 +61,8 @@ func TestDryDeposition(t *testing.T) {
 		},
 		RunFuncs: []inmap.DomainManipulator{
 			inmap.Calculations(inmap.AddEmissionsFlux()),
-			inmap.Calculations(simpledrydep.DryDeposition(simplechem.SimpleDryDepIndices)),
-			inmap.SteadyStateConvergenceCheck(1, cfg.PopGridColumn, nil),
+			inmap.Calculations(simpledrydep.DryDeposition(simpleDryDepIndices)),
+			inmap.SteadyStateConvergenceCheck(1, cfg.PopGridColumn, m, nil),
 		},
 	}
 	if err := d.Init(); err != nil {

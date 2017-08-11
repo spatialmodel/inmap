@@ -237,12 +237,12 @@ func (d *InMAP) Cells() []*Cell {
 type DomainManipulator func(d *InMAP) error
 
 // CellManipulator is a class of functions that operate on a single grid cell,
-// using the given timestep Dt.
+// using the given timestep Dt [seconds].
 type CellManipulator func(c *Cell, Dt float64)
 
-func (c *Cell) make() {
-	c.Ci = make([]float64, len(PolNames))
-	c.Cf = make([]float64, len(PolNames))
+func (c *Cell) make(m Mechanism) {
+	c.Ci = make([]float64, m.Len())
+	c.Cf = make([]float64, m.Len())
 	c.CBaseline = make([]float64, len(PolNames))
 	c.west = new(cellList)
 	c.east = new(cellList)
@@ -253,7 +253,7 @@ func (c *Cell) make() {
 	c.groundLevel = new(cellList)
 }
 
-func (c *Cell) boundaryCopy() *Cell {
+func (c *Cell) boundaryCopy(m Mechanism) *Cell {
 	c2 := new(Cell)
 	c2.Polygonal = c.Polygonal
 	c2.Dx, c2.Dy, c2.Dz = c.Dx, c.Dy, c.Dz
@@ -263,7 +263,7 @@ func (c *Cell) boundaryCopy() *Cell {
 	c2.M2u, c2.M2d = c.M2u, c.M2d
 	c2.Layer, c2.LayerHeight = c.Layer, c.LayerHeight
 	c2.boundary = true
-	c2.make()
+	c2.make(m)
 	c2.Volume = c2.Dx * c2.Dy * c2.Dz
 	c2.PopData = c.PopData
 	c2.MortData = c.MortData
@@ -271,40 +271,40 @@ func (c *Cell) boundaryCopy() *Cell {
 }
 
 // addWestBoundary adds a cell to the western boundary of the domain.
-func (d *InMAP) addWestBoundary(cell *Cell) {
-	c := cell.boundaryCopy()
+func (d *InMAP) addWestBoundary(cell *Cell, m Mechanism) {
+	c := cell.boundaryCopy(m)
 	ref := cell.west.add(c)
 	d.westBoundary.add(c)
 	neighborInfoBoundaryEastWest(ref)
 }
 
 // addEastBoundary adds a cell to the eastern boundary of the domain.
-func (d *InMAP) addEastBoundary(cell *Cell) {
-	c := cell.boundaryCopy()
+func (d *InMAP) addEastBoundary(cell *Cell, m Mechanism) {
+	c := cell.boundaryCopy(m)
 	ref := cell.east.add(c)
 	d.eastBoundary.add(c)
 	neighborInfoBoundaryEastWest(ref)
 }
 
 // addSouthBoundary adds a cell to the southern boundary of the domain.
-func (d *InMAP) addSouthBoundary(cell *Cell) {
-	c := cell.boundaryCopy()
+func (d *InMAP) addSouthBoundary(cell *Cell, m Mechanism) {
+	c := cell.boundaryCopy(m)
 	ref := cell.south.add(c)
 	d.southBoundary.add(c)
 	neighborInfoBoundarySouthNorth(ref)
 }
 
 // addNorthBoundary adds a cell to the northern boundary of the domain.
-func (d *InMAP) addNorthBoundary(cell *Cell) {
-	c := cell.boundaryCopy()
+func (d *InMAP) addNorthBoundary(cell *Cell, m Mechanism) {
+	c := cell.boundaryCopy(m)
 	ref := cell.north.add(c)
 	d.northBoundary.add(c)
 	neighborInfoBoundarySouthNorth(ref)
 }
 
 // addTopBoundary adds a cell to the top boundary of the domain.
-func (d *InMAP) addTopBoundary(cell *Cell) {
-	c := cell.boundaryCopy()
+func (d *InMAP) addTopBoundary(cell *Cell, m Mechanism) {
+	c := cell.boundaryCopy(m)
 	ref := cell.above.add(c)
 	d.topBoundary.add(c)
 	neighborInfoBoundaryTopBottom(ref)

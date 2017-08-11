@@ -54,15 +54,14 @@ LogFile = ""
 #		and the baseline number of deaths.
 # Note: Environment variables can be used in both variable names and expressions.
 [OutputVariables]
-TotalPopD = "coxHazard(loglogRR(TotalPM25), TotalPop, allcause)"
-WhitNoLatD = "coxHazard(loglogRR(TotalPM25), WhiteNoLat, allcause)"
-BlackD = "coxHazard(loglogRR(TotalPM25), Black, allcause)"
-NativeD = "coxHazard(loglogRR(TotalPM25), Native, allcause)"
-AsianD = "coxHazard(loglogRR(TotalPM25), Asian, allcause)"
-LatinoD = "coxHazard(loglogRR(TotalPM25), Latino, allcause)"
+TotalPopD = "coxHazard(loglogRR(totalpm25), TotalPop, allcause)"
+WhitNoLatD = "coxHazard(loglogRR(totalpm25), WhiteNoLat, allcause)"
+BlackD = "coxHazard(loglogRR(totalpm25), Black, allcause)"
+NativeD = "coxHazard(loglogRR(totalpm25), Native, allcause)"
+AsianD = "coxHazard(loglogRR(totalpm25), Asian, allcause)"
+LatinoD = "coxHazard(loglogRR(totalpm25), Latino, allcause)"
 TotalPop = "TotalPop"
-TotalPM25 = "TotalPM25"
-PM25Emiss = "PM25Emissions"
+TotalPM25 = "PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA"
 BasePM25 = "BaselineTotalPM25"
 WindSpeed = "WindSpeed"
 

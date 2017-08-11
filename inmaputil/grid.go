@@ -24,6 +24,7 @@ import (
 	"os"
 
 	"github.com/spatialmodel/inmap"
+	"github.com/spatialmodel/inmap/science/chem/simplechem"
 )
 
 // Grid creates and saves a new variable resolution grid.
@@ -67,10 +68,11 @@ func Grid(InMAPData, VariableGridData string, VarGrid *inmap.VarGridConfig) erro
 	if err != nil {
 		return err
 	}
+	var m simplechem.Mechanism
 	d := &inmap.InMAP{
 		InitFuncs: []inmap.DomainManipulator{
-			VarGrid.RegularGrid(ctmData, pop, popIndices, mr, mortIndices, nil, nil),
-			VarGrid.MutateGrid(mutator, ctmData, pop, mr, nil, msgLog),
+			VarGrid.RegularGrid(ctmData, pop, popIndices, mr, mortIndices, nil, m),
+			VarGrid.MutateGrid(mutator, ctmData, pop, mr, nil, m, msgLog),
 			inmap.Save(w),
 		},
 	}

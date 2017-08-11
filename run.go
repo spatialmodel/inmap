@@ -122,14 +122,17 @@ func RunPeriodically(period float64, f DomainManipulator) DomainManipulator {
 
 // ConvergenceStatus holds the percent difference for each pollutant between
 // the last convergence check and this one.
-type ConvergenceStatus []float64
+type ConvergenceStatus struct {
+	data []float64
+	m    Mechanism
+}
 
 func (c ConvergenceStatus) String() string {
 	b := bytes.NewBufferString("Percent change since last convergence check:")
 	w := tabwriter.NewWriter(b, 0, 8, 1, '\t', 0)
-	for i, n := range PolNames {
-		fmt.Fprintf(w, "\n%s:\t%.2g%%", n, c[i*2]*100)
-		fmt.Fprintf(w, "\n%s pop-wtd:\t%.2g%%", n, c[i*2+1]*100)
+	for i, n := range c.m.Species() {
+		fmt.Fprintf(w, "\n%s:\t%.2g%%", n, c.data[i*2]*100)
+		fmt.Fprintf(w, "\n%s pop-wtd:\t%.2g%%", n, c.data[i*2+1]*100)
 	}
 	w.Flush()
 	return b.String()
@@ -147,13 +150,13 @@ func (c ConvergenceStatus) String() string {
 // cell sizes as in VarGridConfig.PopGridColumn.
 // c is a channel over which the percent change between checks is
 // sent. If c is nil, no status updates will be sent.
-func SteadyStateConvergenceCheck(numIterations int, popGridColumn string, c chan ConvergenceStatus) DomainManipulator {
+func SteadyStateConvergenceCheck(numIterations int, popGridColumn string, m Mechanism, c chan ConvergenceStatus) DomainManipulator {
 	const tolerance = 0.001         // tolerance for convergence
 	const checkPeriod = 60 * 60 * 3 // seconds, how often to check for convergence
 
 	// oldSum is the sum of mass or population-weighted concentration
 	// in the domain at the last check.
-	oldSum := make([]float64, len(PolNames)*2)
+	oldSum := make([]float64, m.Len()*2)
 
 	timeSinceLastCheck := 0.
 	iteration := 0
@@ -178,8 +181,12 @@ func SteadyStateConvergenceCheck(numIterations int, popGridColumn string, c chan
 		} else if timeSinceLastCheck >= checkPeriod {
 			timeToQuit := true
 			timeSinceLastCheck = 0.
-			status := make(ConvergenceStatus, len(PolNames)*2)
-			for ii := range PolNames {
+
+			status := ConvergenceStatus{
+				data: make([]float64, m.Len()*2),
+				m:    m,
+			}
+			for ii := 0; ii < m.Len(); ii++ {
 				var sum, bias float64
 				var converged bool
 				// calculate total mass.
@@ -189,7 +196,7 @@ func SteadyStateConvergenceCheck(numIterations int, popGridColumn string, c chan
 				if bias, converged = checkConvergence(sum, oldSum[ii*2], tolerance); !converged {
 					timeToQuit = false
 				}
-				status[ii*2] = bias
+				status.data[ii*2] = bias
 				oldSum[ii*2] = sum
 				sum = 0
 				// Calculate population-weighted concentration.
@@ -199,7 +206,7 @@ func SteadyStateConvergenceCheck(numIterations int, popGridColumn string, c chan
 				if bias, converged = checkConvergence(sum, oldSum[ii*2+1], tolerance); !converged {
 					timeToQuit = false
 				}
-				status[ii*2+1] = bias
+				status.data[ii*2+1] = bias
 				oldSum[ii*2+1] = sum
 			}
 			if c != nil {
