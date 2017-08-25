@@ -94,7 +94,7 @@ PopThreshold= 25000.0
 PopConcThreshold= 0.00000001
 
 # CensusFile is the path to the shapefile holding population information.
-CensusFile= "${evaldata}/2014_population/census2014blckgrp.shp"
+CensusFile= "${evaldata}/census2015blckgrp.shp"
 
 # CensusPopColumns is a list of the data fields in CensusFile that should
 # be included as population estimates in the model. They can be population
@@ -109,7 +109,7 @@ PopGridColumn= "TotalPop"
 
 # MortalityRateFile is the path to the shapefile containing baseline
 # mortality rate data.
-MortalityRateFile= "${evaldata}/2014_mortality/MortalityRate.shp"
+MortalityRateFile= "${evaldata}/mortalityRates2013.shp"
 
 # MortalityRateColumns maps the names of each input population group to the name
 # of the field in MortalityRateFile that contains its respective baseline

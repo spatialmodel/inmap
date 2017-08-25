@@ -83,20 +83,20 @@ func TestFuelScenarios(t *testing.T) {
 	var err error
 
 	fmt.Println("Getting states...")
-	states = getStates(filepath.Join(os.Getenv(evalDataEnv), "states.shp"), 10000)
+	states = getStates(filepath.Join(evalData, "states.shp"), 10000)
 
 	fmt.Println("Getting alt...")
-	alt = getAlt()
+	alt = getAlt(evalData)
 
 	fmt.Println("Getting geometry")
 	inmapGeom = wrfGeom()
 
-	pop := getPopulation()
+	pop := getPopulation(evalData)
 	griddedPop = gridPop(pop, inmapGeom)
 
 	dataChans := make(map[string]chan map[string]*gridStats)
 	for _, scenario := range scenarios {
-		dataChans[scenario] = process(scenario, states, inmapGeom, alt, griddedPop, t)
+		dataChans[scenario] = process(scenario, states, inmapGeom, alt, griddedPop, t, evalData)
 	}
 	outData := make(map[string]map[string]*gridStats)
 	for _, scenario := range scenarios {
@@ -115,7 +115,7 @@ func TestFuelScenarios(t *testing.T) {
 	f.Close()
 }
 
-func process(scenario string, states, inmapGeom []geom.Polygon, alt, griddedPop []float64, t *testing.T) (outChan chan map[string]*gridStats) {
+func process(scenario string, states, inmapGeom []geom.Polygon, alt, griddedPop []float64, t *testing.T, evalData string) (outChan chan map[string]*gridStats) {
 	outChan = make(chan map[string]*gridStats)
 
 	var polNames = []string{"Total PM2.5", "Primary PM2.5",
@@ -240,9 +240,9 @@ func process(scenario string, states, inmapGeom []geom.Polygon, alt, griddedPop 
 			}
 			if i == 0 { // Total PM2.5 is already ug/m3, others
 				// are ug/kg
-				gs.wrf = getWRFFuelScenarios(scenario, nil, WRFvars[i])
+				gs.wrf = getWRFFuelScenarios(scenario, nil, WRFvars[i], evalData)
 			} else {
-				gs.wrf = getWRFFuelScenarios(scenario, alt, WRFvars[i])
+				gs.wrf = getWRFFuelScenarios(scenario, alt, WRFvars[i], evalData)
 			}
 			for ii, vv := range gs.inmap {
 				gs.inmap[ii] = vv * 1000 // convert from μg to ng
@@ -379,9 +379,8 @@ func (gs *gridStats) calcStats(griddedPop []float64) {
 	}
 }
 
-func getWRFFuelScenarios(scenario string, alt []float64,
-	varNames []string) []float64 {
-	f := openNCFFuelScenarios(filepath.Join(os.Getenv(evalDataEnv), "FuelScenarios", "concentrations", fmt.Sprintf("%v.ncf", scenario)))
+func getWRFFuelScenarios(scenario string, alt []float64, varNames []string, evalData string) []float64 {
+	f := openNCFFuelScenarios(filepath.Join(evalData, "FuelScenarios", "concentrations", fmt.Sprintf("%v.ncf", scenario)))
 	var out []float64
 	for i, name := range varNames {
 		temp := f.readVar(name, 444, 336)
@@ -508,11 +507,11 @@ type popHolder struct {
 	TotalPop float64
 }
 
-func getPopulation() *rtree.Rtree {
+func getPopulation(evalData string) *rtree.Rtree {
 
 	p := rtree.NewTree(25, 50)
 
-	filename := filepath.Join(os.Getenv(evalDataEnv), "2014_population", "census2014blckgrp")
+	filename := filepath.Join(evalData, "census2015blckgrp")
 	f1, err := shp.NewDecoder(filename + ".shp")
 	if err != nil {
 		panic(err)
@@ -561,8 +560,8 @@ func gridPop(pop *rtree.Rtree, g []geom.Polygon) []float64 {
 	return popOut
 }
 
-func getAlt() []float64 {
-	filename := filepath.Join(os.Getenv(evalDataEnv), "InMAPData_v1.2.0.ncf")
+func getAlt(evalData string) []float64 {
+	filename := filepath.Join(evalData, "InMAPData_v1.2.0.ncf")
 	f := openNCFFuelScenarios(filename)
 	return f.readVar("alt", 444, 336)
 }

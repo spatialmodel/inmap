@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image/color"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"bitbucket.org/ctessum/cdf"
@@ -56,8 +57,8 @@ func TestSingleSource(t *testing.T) {
 		legendH   = 0.4 * vg.Inch
 		statsW    = 0.6 * vg.Inch
 	)
-	states := getShp("/home/chris/data/shapefiles/states")
-	pop := getPop()
+	states := getShp(filepath.Join(evalData, "states"))
+	pop := getPop(evalData)
 
 	c := vgimg.New(figWidth, figHeight)
 	dc := draw.New(c)
@@ -86,7 +87,7 @@ func TestSingleSource(t *testing.T) {
 	gridIndexes := []int{0, 2}
 	data := make([]dataHolder, len(gridIndexes))
 	for i, grids := range gridss {
-		wrfConc, wrfGrid, W, E, S, N := getWRFSingleSource(grids[0], gridIndexes[i])
+		wrfConc, wrfGrid, W, E, S, N := getWRFSingleSource(grids[0], gridIndexes[i], evalData)
 		tempInmap := getInMAP(grids[1])
 		inmapConc := make([]float64, len(wrfConc))
 		for j, g := range wrfGrid {
@@ -351,15 +352,14 @@ func getInMAP(gridType string) *rtree.Rtree {
 	return t
 }
 
-func getWRFSingleSource(gridType string, gridIndex int) ([]float64, []geom.Polygonal, float64, float64, float64, float64) {
-	filename := fmt.Sprintf("/home/chris/data/inmapData/la_test/InMAPData_%s.ncf", gridType)
+func getWRFSingleSource(gridType string, gridIndex int, evalData string) ([]float64, []geom.Polygonal, float64, float64, float64, float64) {
+	filename := fmt.Sprintf(filepath.Join(evalData, "la_test/InMAPData_%s.ncf"), gridType)
 	f := openNCF(filename)
 	data := f.readVar("TotalPM25")
 
-	const (
-		wrfNamelist = "/home/chris/data/inmapData/la_test/namelist.input"
-		wpsNamelist = "/home/chris/data/inmapData/la_test/namelist.wps"
-	)
+	wrfNamelist := filepath.Join(evalData, "la_test/namelist.input")
+	wpsNamelist := filepath.Join(evalData, "la_test/namelist.wps")
+
 	d, err := aep.ParseWRFConfig(wpsNamelist, wrfNamelist)
 	if err != nil {
 		panic(err)
@@ -452,8 +452,8 @@ func getShp(filename string) *rtree.Rtree {
 	return r
 }
 
-func getPop() *rtree.Rtree {
-	filename := "/home/chris/data/shapefiles/census2012blckgrp"
+func getPop(evalData string) *rtree.Rtree {
+	filename := filepath.Join(evalData, "census2015blckgrp")
 	s, err := shp.NewDecoder(filename + ".shp")
 	handle(err)
 	defer s.Close()
