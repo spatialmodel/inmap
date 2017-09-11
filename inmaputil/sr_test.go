@@ -19,34 +19,41 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package inmaputil
 
 import (
+	"fmt"
 	"os"
 	"testing"
 )
 
 func TestSR(t *testing.T) {
-	configFile := "../inmap/configExample.toml"
-	Cfg.SetConfigFile(configFile)
-	cfg, err := LoadConfigFile()
-	if err != nil {
+	fmt.Println("x1", Cfg.Get("VarGrid.CensusFile"))
+	Cfg.Set("SR.OutputFile", "../inmap/testdata/tempSR.ncf")
+	Cfg.Set("begin", 8)
+	Cfg.Set("end", 9)
+	Cfg.Set("layers", []int{0})
+	Cfg.Set("config", "../inmap/configExample.toml")
+	if err := Root.PersistentPreRunE(nil, nil); err != nil {
 		t.Fatal(err)
 	}
-	cfg.SR.OutputFile = "../inmap/testdata/tempSR.ncf"
-	begin := 8
-	end := 9
-	layers := []int{0}
-	if err := RunSR(cfg, configFile, begin, end, layers); err != nil {
+	if err := srCmd.RunE(nil, nil); err != nil {
 		t.Fatal(err)
 	}
-	os.Remove(cfg.SR.OutputFile)
+	os.Remove(Cfg.GetString("SR.OutputFile"))
 }
 
 func TestWorkerInit(t *testing.T) {
-	Cfg.SetConfigFile("../inmap/configExample.toml")
-	cfg, err := LoadConfigFile()
+	Cfg.Set("config", "../inmap/configExample.toml")
+	if err := Root.PersistentPreRunE(nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	vgc, err := VarGridConfig(Cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
-	w, err := NewWorker(cfg)
+	w, err := NewWorker(
+		os.ExpandEnv(Cfg.GetString("VariableGridData")),
+		os.ExpandEnv(Cfg.GetString("InMAPData")),
+		vgc,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,30 +63,30 @@ func TestWorkerInit(t *testing.T) {
 }
 
 func TestSRPredict(t *testing.T) {
-	Cfg.SetConfigFile("../inmap/configExample.toml")
-	cfg, err := LoadConfigFile()
-	if err != nil {
+	Cfg.Set("SR.OutputFile", "../inmap/testdata/testSR.ncf")
+	Cfg.Set("OutputFile", "../inmap/testdata/output_SRPredict.shp")
+	Cfg.Set("EmissionsShapefiles", []string{"../inmap/testdata/testEmisSR.shp"})
+
+	Cfg.Set("config", "../inmap/configExample.toml")
+	if err := Root.PersistentPreRunE(nil, nil); err != nil {
 		t.Fatal(err)
 	}
-	cfg.SR.OutputFile = "../inmap/testdata/testSR.ncf"
-	cfg.OutputFile = "../inmap/testdata/output_SRPredict.shp"
-	cfg.EmissionsShapefiles = []string{"../inmap/testdata/testEmisSR.shp"}
-
-	if err := SRPredict(cfg); err != nil {
+	if err := srPredictCmd.RunE(nil, nil); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestSRPredictAboveTop(t *testing.T) {
-	cfg, err := ReadConfigFile("../inmap/configExample.toml")
+	Cfg.Set("config", "../inmap/configExample.toml")
+	Cfg.Set("SR.OutputFile", "../inmap/testdata/testSR.ncf")
+	Cfg.Set("OutputFile", "../inmap/testdata/output_SRPredict.shp")
+	Cfg.Set("EmissionsShapefiles", []string{"../inmap/testdata/testEmis.shp"})
+	cfg, err := VarGridConfig(Cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
-	cfg.SR.OutputFile = "../inmap/testdata/testSR.ncf"
-	cfg.OutputFile = "../inmap/testdata/output_SRPredict.shp"
-	cfg.EmissionsShapefiles = []string{"../inmap/testdata/testEmis.shp"}
 
-	if err := SRPredict(cfg); err != nil {
+	if err := SRPredict(Cfg.GetString("EmissionUnits"), Cfg.GetString("SR.OutputFile"), Cfg.GetString("OutputFile"), Cfg.GetStringSlice("EmissionsShapefiles"), cfg); err != nil {
 		t.Fatal(err)
 	}
 }

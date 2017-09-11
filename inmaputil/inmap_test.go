@@ -24,54 +24,44 @@ import (
 )
 
 func TestCreateGrid(t *testing.T) {
-	Cfg.SetConfigFile("../inmap/configExample.toml")
-	cfg, err := LoadConfigFile()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := Grid(cfg); err != nil {
+	Cfg.Set("config", "../inmap/configExample.toml")
+	Root.SetArgs([]string{"grid"})
+	if err := Root.Execute(); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestInMAPStaticCreateGrid(t *testing.T) {
-	dynamic := false
-	createGrid := true
+	Cfg.Set("static", true)
+	Cfg.Set("createGrid", true)
 	os.Setenv("InMAPRunType", "static")
-	Cfg.SetConfigFile("../inmap/configExample.toml")
-	cfg, err := LoadConfigFile()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := Run(cfg, dynamic, createGrid, DefaultScienceFuncs, nil, nil, nil); err != nil {
+	Cfg.Set("config", "../inmap/configExample.toml")
+	Root.SetArgs([]string{"run", "steady"})
+	if err := Root.Execute(); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestInMAPStaticLoadGrid(t *testing.T) {
-	dynamic := false
-	createGrid := false
+	Cfg.Set("static", true)
+	Cfg.Set("createGrid", false)
 	os.Setenv("InMAPRunType", "staticLoadGrid")
-	Cfg.SetConfigFile("../inmap/configExample.toml")
-	cfg, err := LoadConfigFile()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := Run(cfg, dynamic, createGrid, DefaultScienceFuncs, nil, nil, nil); err != nil {
+	Cfg.Set("config", "../inmap/configExample.toml")
+	Root.SetArgs([]string{"run", "steady"})
+	if err := Root.Execute(); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestInMAPDynamic(t *testing.T) {
-	dynamic := true
-	createGrid := false // this isn't used for the dynamic grid
+	Cfg.Set("static", false)
+	Cfg.Set("createGrid", false) // this isn't used for the dynamic grid
 	os.Setenv("InMAPRunType", "dynamic")
-	Cfg.SetConfigFile("../inmap/configExample.toml")
-	cfg, err := LoadConfigFile()
-	if err != nil {
+	Cfg.Set("config", "../inmap/configExample.toml")
+	if err := Root.PersistentPreRunE(nil, nil); err != nil {
 		t.Fatal(err)
 	}
-	if err := Run(cfg, dynamic, createGrid, DefaultScienceFuncs, nil, nil, nil); err != nil {
+	if err := steadyCmd.RunE(nil, nil); err != nil {
 		t.Fatal(err)
 	}
 }

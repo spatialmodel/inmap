@@ -33,20 +33,17 @@ func TestNEI2005Dynamic(t *testing.T) {
 
 	os.MkdirAll("nei2005", os.ModePerm)
 
-	dynamic := true
-	createGrid := false // this isn't used for the dynamic grid
 	os.Setenv("InMAPRunType", "dynamic")
-	inmaputil.Cfg.SetConfigFile("nei2005Config.toml")
-	cfg, err := inmaputil.LoadConfigFile()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := inmaputil.Run(cfg, dynamic, createGrid, inmaputil.DefaultScienceFuncs, nil, nil, nil); err != nil {
+	inmaputil.Cfg.Set("config", "nei2005Config.toml")
+	inmaputil.Root.SetArgs([]string{"run", "steady"})
+	if err := inmaputil.Root.Execute(); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := obsCompare(cfg.OutputFile, cfg.InMAPData, filepath.Join(evalData, "annual_all_2005.csv"),
-		filepath.Join(evalData, "states.shp"), filepath.Dir(cfg.OutputFile), "dynamic"); err != nil {
+	outputFile := inmaputil.Cfg.GetString("OutputFile")
+	inmapData := inmaputil.Cfg.GetString("InMAPData")
+	if err := obsCompare(outputFile, inmapData, filepath.Join(evalData, "annual_all_2005.csv"),
+		filepath.Join(evalData, "states.shp"), filepath.Dir(outputFile), "dynamic"); err != nil {
 		t.Error(err)
 	}
 }
@@ -64,20 +61,16 @@ func TestNEI2005Static(t *testing.T) {
 
 	os.MkdirAll("nei2005", os.ModePerm)
 
-	dynamic := false
-	createGrid := false
 	os.Setenv("InMAPRunType", "static")
-	inmaputil.Cfg.SetConfigFile("nei2005Config.toml")
-	cfg, err := inmaputil.LoadConfigFile()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := inmaputil.Run(cfg, dynamic, createGrid, inmaputil.DefaultScienceFuncs, nil, nil, nil); err != nil {
+	inmaputil.Cfg.Set("config", "nei2005Config.toml")
+	inmaputil.Cfg.Set("static", true)
+	inmaputil.Root.SetArgs([]string{"run", "steady"})
+	if err := inmaputil.Root.Execute(); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := obsCompare(cfg.OutputFile, cfg.InMAPData, filepath.Join(evalData, "annual_all_2005.csv"),
-		filepath.Join(evalData, "states.shp"), filepath.Dir(cfg.OutputFile), "static"); err != nil {
+	if err := obsCompare(inmaputil.Cfg.GetString("OutputFile"), inmaputil.Cfg.GetString("InMAPData"), filepath.Join(evalData, "annual_all_2005.csv"),
+		filepath.Join(evalData, "states.shp"), filepath.Dir(inmaputil.Cfg.GetString("OutputFile")), "static"); err != nil {
 		t.Error(err)
 	}
 }

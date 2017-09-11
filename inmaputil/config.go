@@ -26,213 +26,127 @@ import (
 
 	"github.com/ctessum/geom/proj"
 	"github.com/spatialmodel/inmap"
+	"github.com/spf13/cast"
+	"github.com/spf13/viper"
 )
 
-// ConfigData holds information about an InMAP configuration.
-type ConfigData struct {
-	// VarGrid provides information for specifying the variable resolution grid.
-	VarGrid inmap.VarGridConfig
-
-	// InMAPData is the path to location of baseline meteorology and pollutant data.
-	// The path can include environment variables.
-	InMAPData string
-
-	// VariableGridData is the path to the location of the variable-resolution gridded
-	// InMAP data, or the location where it should be created if it doesn't already
-	// exist. The path can include environment variables.
-	VariableGridData string
-
-	// EmissionsShapefiles are the paths to any emissions shapefiles.
-	// Can be elevated or ground level; elevated files need to have columns
-	// labeled "height", "diam", "temp", and "velocity" containing stack
-	// information in units of m, m, K, and m/s, respectively.
-	// Emissions will be allocated from the geometries in the shape file
-	// to the InMAP computational grid, but the mapping projection of the
-	// shapefile must be the same as the projection InMAP uses.
-	// Can include environment variables.
-	EmissionsShapefiles []string
-
-	// EmissionUnits gives the units that the input emissions are in.
-	// Acceptable values are 'tons/year', 'kg/year', 'ug/s', and 'μg/s'.
-	EmissionUnits string
-
-	// OutputFile is the path to the desired output shapefile location. It can
-	// include environment variables.
-	OutputFile string
-
-	// LogFile is the path to the desired logfile location. It can include
-	// environment variables. If LogFile is left blank, the logfile will be saved in
-	// the same location as the OutputFile.
-	LogFile string
-
-	// If OutputAllLayers is true, output data for all model layers. If false, only output
-	// the lowest layer.
-	OutputAllLayers bool
-
-	// OutputVariables specifies which model variables should be included in the
-	// output file. It can include environment variables.
-	OutputVariables map[string]string
-
-	// NumIterations is the number of iterations to calculate. If < 1, convergence
-	// is automatically calculated.
-	NumIterations int
-
-	// Port for hosting web page. If HTTPport is `8080`, then the GUI
-	// would be viewed by visiting `localhost:8080` in a web browser.
-	// If HTTPport is "", then the web server doesn't run.
-	HTTPAddress string
-
-	// SR holds information related to source-receptor matrix
-	// creation.
-	SR struct {
-		// LogDir is the directory that log files should be stored in when creating
-		// a source-receptor matrix. It can contain environment variables.
-		LogDir string
-
-		// OutputFile is the path where the output file is or should be created
-		// when creating a source-receptor matrix. It can contain environment variables.
-		OutputFile string
-	}
-
-	// Preproc holds configuration information for the preprocessor.
-	Preproc struct {
-		// CTMType specifies what type of chemical transport
-		// model we are going to be reading data from. Valid
-		// options are "GEOS-Chem" and "WRF-Chem".
-		CTMType string
-
-		WRFChem struct {
-			// WRFOut is the location of WRF-Chem output files.
-			// [DATE] should be used as a wild card for the simulation date.
-			WRFOut string
-		}
-
-		GEOSChem struct {
-			// GEOSA1 is the location of the GEOS 1-hour time average files.
-			// [DATE] should be used as a wild card for the simulation date.
-			GEOSA1 string
-
-			// GEOSA3Cld is the location of the GEOS 3-hour average cloud
-			// parameter files. [DATE] should be used as a wild card for
-			// the simulation date.
-			GEOSA3Cld string
-
-			// GEOSA3Dyn is the location of the GEOS 3-hour average dynamical
-			// parameter files. [DATE] should be used as a wild card for
-			// the simulation date.
-			GEOSA3Dyn string
-
-			// GEOSI3 is the location of the GEOS 3-hour instantaneous parameter
-			// files. [DATE] should be used as a wild card for
-			// the simulation date.
-			GEOSI3 string
-
-			// GEOSA3MstE is the location of the GEOS 3-hour average moist parameters
-			// on level edges files. [DATE] should be used as a wild card for
-			// the simulation date.
-			GEOSA3MstE string
-
-			// GEOSChem is the location of GEOS-Chem output files.
-			// [DATE] should be used as a wild card for the simulation date.
-			GEOSChem string
-
-			// VegTypeGlobal is the location of the GEOS-Chem vegtype.global file,
-			// which is described here:
-			// http://wiki.seas.harvard.edu/geos-chem/index.php/Olson_land_map#Structure_of_the_vegtype.global_file
-			VegTypeGlobal string
-		}
-
-		// StartDate is the date of the beginning of the simulation.
-		// Format = "YYYYMMDD".
-		StartDate string
-
-		// EndDate is the date of the end of the simulation.
-		// Format = "YYYYMMDD".
-		EndDate string
-
-		CtmGridXo float64 // lower left of Chemical Transport Model (CTM) grid, x
-		CtmGridYo float64 // lower left of grid, y
-
-		CtmGridDx float64 // m
-		CtmGridDy float64 // m
-	}
-
-	sr *proj.SR
-}
-
-// LoadConfig reads and parses an InMAP configuration information.
-func LoadConfigFile() (*ConfigData, error) {
-	var err error
-	// Find and read in the configuration file, if there is one.
-	if err = Cfg.ReadInConfig(); err != nil {
-		return nil, fmt.Errorf("inmap: problem reading configuration file: %v", err)
-	}
-	var config ConfigData
-	// Load configuration info into our struct.
-	if err = Cfg.Unmarshal(&config); err != nil {
-		return nil, fmt.Errorf("inmap: problem reading configuration file: %v", err)
-	}
-
-	// Clean and check configuration.
-	for k, v := range config.OutputVariables {
-		v = strings.Replace(v, "\r\n", " ", -1)
-		v = strings.Replace(v, "\n", " ", -1)
-		config.OutputVariables[os.ExpandEnv(k)] = os.ExpandEnv(v)
-	}
-
-	config.InMAPData = os.ExpandEnv(config.InMAPData)
-	config.VariableGridData = os.ExpandEnv(config.VariableGridData)
-	config.OutputFile = os.ExpandEnv(config.OutputFile)
-	config.LogFile = os.ExpandEnv(config.LogFile)
-	config.VarGrid.CensusFile = os.ExpandEnv(config.VarGrid.CensusFile)
-	config.VarGrid.MortalityRateFile = os.ExpandEnv(config.VarGrid.MortalityRateFile)
-	config.SR.OutputFile = os.ExpandEnv(config.SR.OutputFile)
-	config.SR.LogDir = os.ExpandEnv(config.SR.LogDir)
-
-	for i := 0; i < len(config.EmissionsShapefiles); i++ {
-		config.EmissionsShapefiles[i] =
-			os.ExpandEnv(config.EmissionsShapefiles[i])
-	}
-
-	if config.OutputFile == "" {
-		return nil, fmt.Errorf("you need to specify an output file in the " +
-			"configuration file(for example: " +
-			"\"OutputFile\":\"output.shp\"")
-	}
-
-	if config.LogFile == "" {
-		config.LogFile = strings.TrimSuffix(config.OutputFile, filepath.Ext(config.OutputFile)) + ".log"
-	}
-
-	if config.VarGrid.GridProj == "" {
-		return nil, fmt.Errorf("you need to specify the InMAP grid projection in the " +
-			"'GridProj' configuration variable.")
-	}
-	config.sr, err = proj.Parse(config.VarGrid.GridProj)
-	if err != nil {
-		return nil, fmt.Errorf("the following error occured while parsing the InMAP grid"+
-			"projection (the InMAPProj variable): %v", err)
-	}
-
-	if len(config.OutputVariables) == 0 {
+// checkOutputVars removes end lines and expands environment
+// variables in the output variables.
+func checkOutputVars(vars map[string]string) (map[string]string, error) {
+	if len(vars) == 0 {
 		return nil, fmt.Errorf("there are no variables specified for output. Please fill in " +
 			"the OutputVariables configuration and try again.")
 	}
+	for k, v := range vars {
+		v = strings.Replace(v, "\r\n", " ", -1)
+		v = strings.Replace(v, "\n", " ", -1)
+		vars[os.ExpandEnv(k)] = os.ExpandEnv(v)
+	}
+	return vars, nil
+}
 
-	if _, ok := map[string]struct{}{
-		"tons/year": {},
-		"kg/year":   {},
-		"ug/s":      {},
-		"μg/s":      {}}[config.EmissionUnits]; !ok {
-		return nil, fmt.Errorf("the EmissionUnits variable in the configuration file "+
+// expandStringSlice expands the environment variables in a slice of strings.
+func expandStringSlice(s []string) []string {
+	for i := 0; i < len(s); i++ {
+		s[i] = os.ExpandEnv(s[i])
+	}
+	return s
+}
+
+// checkOutputFile makes sure that the output file is specified and its
+// directory exists, and expand any environment variables.
+func checkOutputFile(f string) (string, error) {
+	if f == "" {
+		return "", fmt.Errorf(`you need to specify an output file configuration variable (for example: OutputFile="output.shp"`)
+	}
+	f = os.ExpandEnv(f)
+	outdir := filepath.Dir(f)
+	if _, err := os.Stat(outdir); err != nil {
+		return f, fmt.Errorf("inmap: the OutputFile directory doesn't exist: %v", err)
+	}
+	return f, nil
+}
+
+// checkLogFile fills in a default value for the log file path if one isn't
+// specified.
+func checkLogFile(logFile, outputFile string) string {
+	if logFile == "" {
+		logFile = strings.TrimSuffix(outputFile, filepath.Ext(outputFile)) + ".log"
+	}
+	return logFile
+}
+
+// checkEmissionUnits expands any environment variables in the emissions
+// units and ensures that an acceptable value was specified.
+func checkEmissionUnits(u string) (string, error) {
+	u = os.ExpandEnv(u)
+	if u != "tons/year" && u != "kg/year" && u != "ug/s" && u != "μg/s" {
+		return u, fmt.Errorf("the EmissionUnits variable in the configuration file "+
 			"needs to be set to either tons/year, kg/year, ug/s, or μg/s, but is currently set to `%s`",
-			config.EmissionUnits)
+			u)
+	}
+	return u, nil
+}
+
+// spatialRef returns the spatial reference associated with config,
+// as defined by the GridProj field.
+func spatialRef(config *inmap.VarGridConfig) (*proj.SR, error) {
+	if config.GridProj == "" {
+		return nil, fmt.Errorf("you need to specify the InMAP grid projection in the " +
+			"'GridProj' configuration variable.")
+	}
+	sr, err := proj.Parse(config.GridProj)
+	if err != nil {
+		return nil, fmt.Errorf("the following error occured while parsing the InMAP grid"+
+			"projection (the GridProj variable): %v", err)
+	}
+	return sr, nil
+}
+
+// VarGridConfig unmarshals a viper configuration for a variable grid.
+func VarGridConfig(cfg *viper.Viper) (*inmap.VarGridConfig, error) {
+	c := inmap.VarGridConfig{
+		VariableGridXo:       cfg.GetFloat64("VarGrid.VariableGridXo"),
+		VariableGridYo:       cfg.GetFloat64("VarGrid.VariableGridYo"),
+		VariableGridDx:       cfg.GetFloat64("VarGrid.VariableGridDx"),
+		VariableGridDy:       cfg.GetFloat64("VarGrid.VariableGridDy"),
+		Xnests:               cast.ToIntSlice(cfg.Get("VarGrid.Xnests")),
+		Ynests:               cast.ToIntSlice(cfg.Get("VarGrid.Xnests")),
+		HiResLayers:          cfg.GetInt("VarGrid.HiResLayers"),
+		PopDensityThreshold:  cfg.GetFloat64("VarGrid.PopDensityThreshold"),
+		PopThreshold:         cfg.GetFloat64("VarGrid.PopThreshold"),
+		PopConcThreshold:     cfg.GetFloat64("VarGrid.PopConcThreshold"),
+		CensusFile:           os.ExpandEnv(cfg.GetString("VarGrid.CensusFile")),
+		CensusPopColumns:     expandStringSlice(cfg.GetStringSlice("VarGrid.CensusPopColumns")),
+		PopGridColumn:        os.ExpandEnv(cfg.GetString("VarGrid.PopGridColumn")),
+		MortalityRateFile:    os.ExpandEnv(cfg.GetString("VarGrid.MortalityRateFile")),
+		MortalityRateColumns: cfg.GetStringSlice("VarGrid.MortalityRateColumns"),
+		GridProj:             os.ExpandEnv(cfg.GetString("VarGrid.GridProj")),
 	}
 
-	outdir := filepath.Dir(config.OutputFile)
-	err = os.MkdirAll(outdir, os.ModePerm)
-	if err != nil {
-		return nil, fmt.Errorf("problem creating output directory: %v", err)
+	vars := []float64{c.VariableGridDx, c.VariableGridDy}
+	varNames := []string{"VarGrid.VariableGridDx", "VarGrid.VariableGridDy"}
+	for i, v := range vars {
+		if !(v > 0) {
+			return nil, fmt.Errorf("parsing grid configuration: %s=%g but should be >0", varNames[i], v)
+		}
 	}
-	return &config, nil
+
+	vars2 := [][]int{c.Xnests, c.Xnests}
+	varNames = []string{"VarGrid.Xnests", "VarGrid.Ynests"}
+	for i, v := range vars2 {
+		if len(v) == 0 {
+			return nil, fmt.Errorf("parsing grid configuration: %s is not specified", varNames[i])
+		}
+	}
+
+	if len(c.MortalityRateColumns) != len(c.CensusPopColumns) {
+		return nil, fmt.Errorf("the number of MortalityRateColumns (%d) != the number of CensusPopColumns (%d)", len(c.MortalityRateColumns), len(c.CensusPopColumns))
+	}
+
+	for i, v := range c.MortalityRateColumns {
+		c.MortalityRateColumns[i] = os.ExpandEnv(v)
+	}
+
+	return &c, nil
 }

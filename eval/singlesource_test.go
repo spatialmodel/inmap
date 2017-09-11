@@ -42,15 +42,10 @@ func TestSingleSource(t *testing.T) {
 	os.MkdirAll("singleSource", os.ModePerm)
 
 	for _, filename := range []string{"configSingleSource_9km.toml", "configSingleSource_nested.toml"} {
-		dynamic := true
-		createGrid := false // this isn't used for the dynamic grid
-		inmaputil.Cfg.SetConfigFile(filename)
-		cfg, err := inmaputil.LoadConfigFile()
-		if err != nil {
-			t.Fatal(err)
-		}
+		inmaputil.Cfg.Set("config", filename)
 
-		if err := inmaputil.Run(cfg, dynamic, createGrid, inmaputil.DefaultScienceFuncs, nil, nil, nil); err != nil {
+		inmaputil.Root.SetArgs([]string{"run", "steady"})
+		if err := inmaputil.Root.Execute(); err != nil {
 			t.Fatal(err)
 		}
 	}

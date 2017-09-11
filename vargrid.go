@@ -68,7 +68,7 @@ type VarGridConfig struct {
 
 	// MortalityRateColumns maps population groups to fields in the mortality rate
 	// shapefile containing their respective the mortality rates.
-	MortalityRateColumns map[string]string
+	MortalityRateColumns []string
 
 	GridProj string // projection info for CTM grid; Proj4 format
 }
@@ -744,14 +744,20 @@ func (c *Cell) loadPopMortalityRate(config *VarGridConfig, mortRates *MortalityR
 				continue
 			}
 			// Perform population-weighted average of area-weighted average mortality rates.
-			for mortType, popType := range config.MortalityRateColumns {
-				c.MortData[mortIndices[mortType]] += p.PopData[popIndices[popType]] * pAreaFrac * m.MortData[mortIndices[mortType]] * (mAreaIntersect / mAreaTotal)
+			for i, mortType := range config.MortalityRateColumns {
+				popType := config.CensusPopColumns[i]
+				mortIndex := mortIndices[mortType]
+				popIndex := popIndices[popType]
+				c.MortData[mortIndex] += p.PopData[popIndex] * pAreaFrac * m.MortData[mortIndex] * (mAreaIntersect / mAreaTotal)
 			}
 		}
 	}
-	for mortType, popType := range config.MortalityRateColumns {
-		if c.PopData[popIndices[popType]] > 0 {
-			c.MortData[mortIndices[mortType]] = c.MortData[mortIndices[mortType]] / c.PopData[popIndices[popType]]
+	for i, mortType := range config.MortalityRateColumns {
+		popType := config.CensusPopColumns[i]
+		mortIndex := mortIndices[mortType]
+		popIndex := popIndices[popType]
+		if c.PopData[popIndex] > 0 {
+			c.MortData[mortIndex] = c.MortData[mortIndex] / c.PopData[popIndex]
 		}
 	}
 }
@@ -855,10 +861,8 @@ func (config *VarGridConfig) loadMortality(sr *proj.SR) (*rtree.Rtree, map[strin
 
 	// Extract mortality rate column names from map of population to mortality rates
 	mortRateColumns := make([]string, len(config.MortalityRateColumns))
-	i := 0
-	for m := range config.MortalityRateColumns {
+	for i, m := range config.MortalityRateColumns {
 		mortRateColumns[i] = m
-		i++
 	}
 	sort.Strings(mortRateColumns)
 	for i, m := range mortRateColumns {

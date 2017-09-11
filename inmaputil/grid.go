@@ -27,7 +27,15 @@ import (
 )
 
 // Grid creates and saves a new variable resolution grid.
-func Grid(cfg *ConfigData) error {
+//
+// InMAPData is the path to location of baseline meteorology and pollutant data.
+// The path can include environment variables.
+//
+// VariableGridData is the path to the location where the variable-resolution gridded
+// InMAP data should be created.
+//
+// VarGrid provides information for specifying the variable resolution grid.
+func Grid(InMAPData, VariableGridData string, VarGrid *inmap.VarGridConfig) error {
 	// Start a function to receive and print log messages.
 	msgLog := make(chan string)
 	go func() {
@@ -36,39 +44,39 @@ func Grid(cfg *ConfigData) error {
 		}
 	}()
 
-	ctmData, err := getCTMData(cfg)
+	ctmData, err := getCTMData(InMAPData, VarGrid)
 	if err != nil {
 		return err
 	}
 
 	msgLog <- "Loading population and mortality rate data"
 
-	pop, popIndices, mr, mortIndices, err := cfg.VarGrid.LoadPopMort()
+	pop, popIndices, mr, mortIndices, err := VarGrid.LoadPopMort()
 	if err != nil {
 		return err
 	}
 
-	w, err := os.Create(cfg.VariableGridData)
+	w, err := os.Create(VariableGridData)
 	if err != nil {
 		return fmt.Errorf("problem creating file to store variable grid data in: %v", err)
 	}
 
 	msgLog <- "Creating grid"
 
-	mutator, err := inmap.PopulationMutator(&cfg.VarGrid, popIndices)
+	mutator, err := inmap.PopulationMutator(VarGrid, popIndices)
 	if err != nil {
 		return err
 	}
 	d := &inmap.InMAP{
 		InitFuncs: []inmap.DomainManipulator{
-			cfg.VarGrid.RegularGrid(ctmData, pop, popIndices, mr, mortIndices, nil),
-			cfg.VarGrid.MutateGrid(mutator, ctmData, pop, mr, nil, msgLog),
+			VarGrid.RegularGrid(ctmData, pop, popIndices, mr, mortIndices, nil),
+			VarGrid.MutateGrid(mutator, ctmData, pop, mr, nil, msgLog),
 			inmap.Save(w),
 		},
 	}
 	if err := d.Init(); err != nil {
 		return err
 	}
-	msgLog <- fmt.Sprintf("Grid successfully created at %s", cfg.VariableGridData)
+	msgLog <- fmt.Sprintf("Grid successfully created at %s", VariableGridData)
 	return nil
 }

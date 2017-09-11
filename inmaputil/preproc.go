@@ -21,7 +21,6 @@ package inmaputil
 import (
 	"fmt"
 	"os"
-	"reflect"
 
 	"github.com/spatialmodel/inmap"
 )
@@ -29,36 +28,98 @@ import (
 // Preproc preprocesses chemical transport model
 // output as specified by information in cfg
 // and saves the result for use in future InMAP simulations.
-func Preproc(cfg *ConfigData) error {
-	if err := preprocCheckConfig(cfg); err != nil {
-		return err
-	}
+//
+// StartDate is the date of the beginning of the simulation.
+// Format = "YYYYMMDD".
+//
+// EndDate is the date of the end of the simulation.
+// Format = "YYYYMMDD".
+//
+// CTMType specifies what type of chemical transport
+// model we are going to be reading data from. Valid
+// options are "GEOS-Chem" and "WRF-Chem".
+//
+// WRFOut is the location of WRF-Chem output files.
+// [DATE] should be used as a wild card for the simulation date.
+//
+// GEOSA1 is the location of the GEOS 1-hour time average files.
+// [DATE] should be used as a wild card for the simulation date.
+//
+// GEOSA3Cld is the location of the GEOS 3-hour average cloud
+// parameter files. [DATE] should be used as a wild card for
+// the simulation date.
+//
+// GEOSA3Dyn is the location of the GEOS 3-hour average dynamical
+// parameter files. [DATE] should be used as a wild card for
+// the simulation date.
+//
+// GEOSI3 is the location of the GEOS 3-hour instantaneous parameter
+// files. [DATE] should be used as a wild card for
+// the simulation date.
+//
+// GEOSA3MstE is the location of the GEOS 3-hour average moist parameters
+// on level edges files. [DATE] should be used as a wild card for
+// the simulation date.
+//
+// GEOSChem is the location of GEOS-Chem output files.
+// [DATE] should be used as a wild card for the simulation date.
+//
+// VegTypeGlobal is the location of the GEOS-Chem vegtype.global file,
+// which is described here:
+// http://wiki.seas.harvard.edu/geos-chem/index.php/Olson_land_map#Structure_of_the_vegtype.global_file
+//
+// InMAPData is the path where the preprocessed baseline meteorology and pollutant
+// data should be written.
+//
+// CtmGridXo is the lower left of Chemical Transport Model (CTM) grid [x].
+//
+// CtmGridYo is the lower left of grid [y]
+//
+// CtmGridDx is the grid cell size in the x direction [m].
+//
+// CtmGridDy is the grid cell size in the y direction [m].
+func Preproc(StartDate, EndDate, CTMType, WRFOut, GEOSA1, GEOSA3Cld, GEOSA3Dyn, GEOSI3, GEOSA3MstE,
+	GEOSChem, VegTypeGlobal, InMAPData string, CtmGridXo, CtmGridYo, CtmGridDx, CtmGridDy float64) error {
 	var ctm inmap.Preprocessor
-	switch cfg.Preproc.CTMType {
+	switch CTMType {
 	case "GEOS-Chem":
+		vars := []string{StartDate, EndDate, CTMType, GEOSA1, GEOSA3Cld, GEOSA3Dyn, GEOSI3, GEOSA3MstE, GEOSChem, VegTypeGlobal}
+		varNames := []string{"StartDate", "EndDate", "CTMType", "GEOSA1", "GEOSA3Cld", "GEOSA3Dyn", "GEOSI3", "GEOSA3MstE", "GEOSChem", "VegTypeGlobal"}
+		for i, v := range vars {
+			if v == "" {
+				return fmt.Errorf("inmap preprocessor: configuration variable %s is not specified", varNames[i])
+			}
+		}
 		var err error
 		ctm, err = inmap.NewGEOSChem(
-			cfg.Preproc.GEOSChem.GEOSA1,
-			cfg.Preproc.GEOSChem.GEOSA3Cld,
-			cfg.Preproc.GEOSChem.GEOSA3Dyn,
-			cfg.Preproc.GEOSChem.GEOSI3,
-			cfg.Preproc.GEOSChem.GEOSA3MstE,
-			cfg.Preproc.GEOSChem.GEOSChem,
-			cfg.Preproc.GEOSChem.VegTypeGlobal,
-			cfg.Preproc.StartDate,
-			cfg.Preproc.EndDate,
+			GEOSA1,
+			GEOSA3Cld,
+			GEOSA3Dyn,
+			GEOSI3,
+			GEOSA3MstE,
+			GEOSChem,
+			VegTypeGlobal,
+			StartDate,
+			EndDate,
 		)
 		if err != nil {
 			return err
 		}
 	case "WRF-Chem":
+		vars := []string{StartDate, EndDate, CTMType, WRFOut}
+		varNames := []string{"StartDate", "EndDate", "CTMType", "WRFOut"}
+		for i, v := range vars {
+			if v == "" {
+				return fmt.Errorf("inmap preprocessor: configuration variable %s is not specified", varNames[i])
+			}
+		}
 		var err error
-		ctm, err = inmap.NewWRFChem(cfg.Preproc.WRFChem.WRFOut, cfg.Preproc.StartDate, cfg.Preproc.EndDate)
+		ctm, err = inmap.NewWRFChem(WRFOut, StartDate, EndDate)
 		if err != nil {
 			return err
 		}
 	default:
-		return fmt.Errorf("inmap preprocessor: the CTMType you specified, '%s', is invalid. Valid options are WRF-Chem and GEOS-Chem", cfg.Preproc.CTMType)
+		return fmt.Errorf("inmap preprocessor: the CTMType you specified, '%s', is invalid. Valid options are WRF-Chem and GEOS-Chem", CTMType)
 	}
 	ctmData, err := inmap.Preprocess(ctm)
 	if err != nil {
@@ -66,55 +127,12 @@ func Preproc(cfg *ConfigData) error {
 	}
 
 	// Write out the result.
-	ff, err := os.Create(cfg.InMAPData)
+	ff, err := os.Create(InMAPData)
 	if err != nil {
 		return fmt.Errorf("inmap: preprocessor writing output file: %v", err)
 	}
-	ctmData.Write(ff, cfg.Preproc.CtmGridXo, cfg.Preproc.CtmGridYo, cfg.Preproc.CtmGridDx, cfg.Preproc.CtmGridDy)
+	ctmData.Write(ff, CtmGridXo, CtmGridYo, CtmGridDx, CtmGridDy)
 	ff.Close()
 
-	return nil
-}
-
-// preprocCheckConfig checks preprocessor-specific configuration
-// information.
-func preprocCheckConfig(cfg *ConfigData) error {
-
-	cfg.Preproc.StartDate = os.ExpandEnv(cfg.Preproc.StartDate)
-	cfg.Preproc.EndDate = os.ExpandEnv(cfg.Preproc.EndDate)
-
-	switch cfg.Preproc.CTMType {
-	case "WRF-Chem":
-		if err := preprocCheckPaths(&cfg.Preproc.WRFChem); err != nil {
-			return err
-		}
-	case "GEOS-Chem":
-		if err := preprocCheckPaths(&cfg.Preproc.GEOSChem); err != nil {
-			return err
-		}
-	default:
-		return fmt.Errorf("inmap preprocessor: the CTMType you specified, '%s', is invalid. Valid options are WRF-Chem and GEOS-Chem", cfg.Preproc.CTMType)
-	}
-	return nil
-}
-
-// preprocCheckPaths makes sure that none of the String
-// fields in the given variable are empty and expands
-// any environment variables that they contain.
-// The given variable must be a pointer to a struct.
-func preprocCheckPaths(paths interface{}) error {
-	v := reflect.ValueOf(paths).Elem()
-	for i := 0; i < v.NumField(); i++ {
-		f := v.Field(i)
-		if f.Type().Kind() == reflect.String {
-			s := f.String()
-			if s == "" {
-				name := v.Type().Field(i).Name
-				return fmt.Errorf("inmap preprocessor: configuration file field %s is empty", name)
-			}
-			s = os.ExpandEnv(s)
-			f.SetString(s)
-		}
-	}
 	return nil
 }

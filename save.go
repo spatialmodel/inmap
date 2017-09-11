@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"io"
 	"runtime"
-	"sort"
 
 	"github.com/ctessum/geom"
 )
@@ -91,19 +90,10 @@ func (d *InMAP) initFromCells(cells []*Cell, emis *Emissions, config *VarGridCon
 	d.init()
 	// Create a list of array indices for each population type.
 	d.popIndices = make(map[string]int)
+	d.mortIndices = make(map[string]int)
 	for i, p := range config.CensusPopColumns {
 		d.popIndices[p] = i
-	}
-	d.mortIndices = make(map[string]int)
-	mortRateColumns := make([]string, len(config.MortalityRateColumns))
-	i := 0
-	for m := range config.MortalityRateColumns {
-		mortRateColumns[i] = m
-		i++
-	}
-	sort.Strings(mortRateColumns)
-	for i, m := range mortRateColumns {
-		d.mortIndices[m] = i
+		d.mortIndices[config.MortalityRateColumns[i]] = i
 	}
 	for _, c := range cells {
 		d.InsertCell(c)

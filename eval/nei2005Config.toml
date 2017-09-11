@@ -145,5 +145,4 @@ MortalityRateFile= "${evaldata}/mortalityRates2013.shp"
 # of the field in MortalityRateFile that contains its respective baseline
 # mortality rate, in units of deaths per year per 100,000 people. Only mortality
 # rates used in output variable expressions need to be included here.
-[VarGrid.MortalityRateColumns]
-AllCause = "TotalPop"
+MortalityRateColumns = ["AllCause", "WhNoLMort", "BlackMort", "AsianMort", "NativeMort", "LatinoMort"]

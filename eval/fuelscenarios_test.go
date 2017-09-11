@@ -63,21 +63,17 @@ func TestFuelScenarios(t *testing.T) {
 	}
 
 	for i, scenario := range scenarios {
-		dynamic := true
-		createGrid := false // this isn't used for the dynamic grid
-		inmaputil.Cfg.SetConfigFile("nei2005Config.toml")
-		cfg, err := inmaputil.LoadConfigFile()
-		if err != nil {
-			t.Fatal(err)
-		}
+		inmaputil.Cfg.Set("config", "nei2005Config.toml")
 		emisName := emissionsNames[i]
-		cfg.EmissionsShapefiles = []string{
+		inmaputil.Cfg.Set("EmissionsShapefiles", []string{
 			filepath.Join(evalData, "FuelScenarios", "emissions", fmt.Sprintf("%s.elevated.shp", emisName)),
 			filepath.Join(evalData, "FuelScenarios", "emissions", fmt.Sprintf("%s.groundlevel.shp", emisName)),
-		}
-		cfg.OutputFile = filepath.Join("FuelScenarios", fmt.Sprintf("%s_vargrid.shp", scenario))
+		})
+		inmaputil.Cfg.Set("OutputFile", filepath.Join("FuelScenarios", fmt.Sprintf("%s_vargrid.shp", scenario)))
 
-		if err := inmaputil.Run(cfg, dynamic, createGrid, inmaputil.DefaultScienceFuncs, nil, nil, nil); err != nil {
+		inmaputil.Root.SetArgs([]string{"run", "steady"})
+
+		if err := inmaputil.Root.Execute(); err != nil {
 			t.Fatal(err)
 		}
 	}

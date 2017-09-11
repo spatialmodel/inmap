@@ -143,14 +143,7 @@ PopGridColumn= "TotalPop"
 # mortality rate data.
 MortalityRateFile= "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testMortalityRate.shp"
 
-# MortalityRateColumns maps the names of each input population group to the name
-# of the field in MortalityRateFile that contains its respective baseline
-# mortality rate, in units of deaths per year per 100,000 people. Only mortality
-# rates used in output variable expressions need to be included here.
-[VarGrid.MortalityRateColumns]
-AllCause = "TotalPop"
-WhNoLMort = "WhiteNoLat"
-BlackMort = "Black"
-AsianMort = "Native"
-NativeMort = "Asian"
-LatinoMort = "Latino"
+# MortalityRateColumns gives the name of the field in MortalityRateFile that
+# contains the baseline mortality rate corresponding to each input population group,
+# in units of deaths per year per 100,000 people.
+MortalityRateColumns = ["AllCause", "WhNoLMort", "BlackMort", "AsianMort", "NativeMort", "LatinoMort"]
