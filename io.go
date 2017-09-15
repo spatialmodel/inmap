@@ -241,20 +241,41 @@ func FromAEP(r []aep.Record, sp *aep.SpatialProcessor, gi int, VOC, NOx, NH3, SO
 			)
 
 			// Add the emissions to the new record.
-			for _, p := range VOC {
-				er.VOC += checkDim(e[p]) * frac * kgPerYearToUgPerS
-			}
-			for _, p := range NOx {
-				er.NOx += checkDim(e[p]) * frac * kgPerYearToUgPerS
-			}
-			for _, p := range NH3 {
-				er.NH3 += checkDim(e[p]) * frac * kgPerYearToUgPerS
-			}
-			for _, p := range SOx {
-				er.SOx += checkDim(e[p]) * frac * kgPerYearToUgPerS
-			}
-			for _, p := range PM25 {
-				er.PM25 += checkDim(e[p]) * frac * kgPerYearToUgPerS
+			for pRec, v := range e {
+				var found bool
+				for _, p := range VOC {
+					if pRec.Name == p.Name {
+						found = true
+						er.VOC += checkDim(v) * frac * kgPerYearToUgPerS
+					}
+				}
+				for _, p := range NOx {
+					if pRec.Name == p.Name {
+						found = true
+						er.NOx += checkDim(e[p]) * frac * kgPerYearToUgPerS
+					}
+				}
+				for _, p := range NH3 {
+					if pRec.Name == p.Name {
+						found = true
+						er.NH3 += checkDim(e[p]) * frac * kgPerYearToUgPerS
+					}
+				}
+				for _, p := range SOx {
+					if pRec.Name == p.Name {
+						found = true
+						er.SOx += checkDim(e[p]) * frac * kgPerYearToUgPerS
+					}
+				}
+				for _, p := range PM25 {
+					if pRec.Name == p.Name {
+						found = true
+						er.PM25 += checkDim(e[p]) * frac * kgPerYearToUgPerS
+					}
+				}
+				if !found {
+					return nil, fmt.Errorf("inmap: no match for pollutant '%s'", pRec.Name)
+				}
 			}
 
 			pointSource, ok := rec.(aep.PointSource)
@@ -602,7 +623,7 @@ func (d *InMAP) checkModelVars(g ...string) error {
 // and (2) if any output variable names include characters that are unsupported
 // in shapefile field names.
 func checkOutputNames(o map[string]string) error {
-	for key, _ := range o {
+	for key := range o {
 		long := len(key) > 10
 		noCharError, err := regexp.MatchString("^[A-Za-z]\\w*$", key)
 		if err != nil {
@@ -619,6 +640,7 @@ func checkOutputNames(o map[string]string) error {
 	return nil
 }
 
+// CheckOutputVars ensures the output variables can be calculated.
 func (o *Outputter) CheckOutputVars() DomainManipulator {
 	return func(d *InMAP) error {
 		if err := d.checkModelVars(o.modelVariables...); err != nil {
