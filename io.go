@@ -37,8 +37,8 @@ import (
 	"github.com/ctessum/geom/op"
 	"github.com/ctessum/geom/proj"
 	"github.com/ctessum/unit"
-	"github.com/gonum/floats"
 	goshp "github.com/jonas-p/go-shp"
+	"gonum.org/v1/gonum/floats"
 )
 
 // AddEmissionsFlux adds emissions to c.Cf and sets c.Ci equal to c.Cf.

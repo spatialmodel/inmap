@@ -32,7 +32,7 @@ import (
 	"github.com/ctessum/geom/encoding/shp"
 	"github.com/ctessum/geom/index/rtree"
 	"github.com/ctessum/geom/proj"
-	"github.com/gonum/floats"
+	"gonum.org/v1/gonum/floats"
 )
 
 // VarGridConfig is a holder for the configuration information for creating a
