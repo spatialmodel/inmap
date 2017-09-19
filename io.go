@@ -245,32 +245,49 @@ func FromAEP(r []aep.Record, sp *aep.SpatialProcessor, gi int, VOC, NOx, NH3, SO
 				var found bool
 				for _, p := range VOC {
 					if pRec.Name == p.Name {
-						found = true
 						er.VOC += checkDim(v) * frac * kgPerYearToUgPerS
+						found = true
+						break
 					}
+				}
+				if found {
+					continue
 				}
 				for _, p := range NOx {
 					if pRec.Name == p.Name {
+						er.NOx += checkDim(e[pRec]) * frac * kgPerYearToUgPerS
 						found = true
-						er.NOx += checkDim(e[p]) * frac * kgPerYearToUgPerS
+						break
 					}
+				}
+				if found {
+					continue
 				}
 				for _, p := range NH3 {
 					if pRec.Name == p.Name {
+						er.NH3 += checkDim(e[pRec]) * frac * kgPerYearToUgPerS
 						found = true
-						er.NH3 += checkDim(e[p]) * frac * kgPerYearToUgPerS
+						break
 					}
+				}
+				if found {
+					continue
 				}
 				for _, p := range SOx {
 					if pRec.Name == p.Name {
+						er.SOx += checkDim(e[pRec]) * frac * kgPerYearToUgPerS
 						found = true
-						er.SOx += checkDim(e[p]) * frac * kgPerYearToUgPerS
+						break
 					}
+				}
+				if found {
+					continue
 				}
 				for _, p := range PM25 {
 					if pRec.Name == p.Name {
+						er.PM25 += checkDim(e[pRec]) * frac * kgPerYearToUgPerS
 						found = true
-						er.PM25 += checkDim(e[p]) * frac * kgPerYearToUgPerS
+						break
 					}
 				}
 				if !found {
