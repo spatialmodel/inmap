@@ -800,7 +800,7 @@ func TestFromAEP(t *testing.T) {
 			name: "r1",
 			recs: []aep.Record{r1},
 			result: []*EmisRecord{
-				&EmisRecord{
+				{
 					Geom:     geom.Point{X: 2000, Y: -2000},
 					PM25:     kgPerSecondToUgPerSecond,
 					Height:   1,
@@ -814,7 +814,7 @@ func TestFromAEP(t *testing.T) {
 			name: "r2",
 			recs: []aep.Record{r2},
 			result: []*EmisRecord{
-				&EmisRecord{
+				{
 					Geom: geom.Point{X: -2000, Y: 2000},
 					PM25: kgPerSecondToUgPerSecond,
 				},
@@ -824,7 +824,7 @@ func TestFromAEP(t *testing.T) {
 			name: "r1, r2",
 			recs: []aep.Record{r1, r2},
 			result: []*EmisRecord{
-				&EmisRecord{
+				{
 					Geom:     geom.Point{X: 2000, Y: -2000},
 					PM25:     kgPerSecondToUgPerSecond,
 					Height:   1,
@@ -832,7 +832,7 @@ func TestFromAEP(t *testing.T) {
 					Temp:     1,
 					Velocity: 1,
 				},
-				&EmisRecord{
+				{
 					Geom: geom.Point{X: -2000, Y: 2000},
 					PM25: kgPerSecondToUgPerSecond,
 				},
@@ -842,7 +842,7 @@ func TestFromAEP(t *testing.T) {
 			name: "r1, r1, r1",
 			recs: []aep.Record{r1, r1, r1},
 			result: []*EmisRecord{
-				&EmisRecord{
+				{
 					Geom:     geom.Point{X: 2000, Y: -2000},
 					PM25:     kgPerSecondToUgPerSecond,
 					Height:   1,
@@ -850,7 +850,7 @@ func TestFromAEP(t *testing.T) {
 					Temp:     1,
 					Velocity: 1,
 				},
-				&EmisRecord{
+				{
 					Geom:     geom.Point{X: 2000, Y: -2000},
 					PM25:     kgPerSecondToUgPerSecond,
 					Height:   1,
@@ -858,7 +858,7 @@ func TestFromAEP(t *testing.T) {
 					Temp:     1,
 					Velocity: 1,
 				},
-				&EmisRecord{
+				{
 					Geom:     geom.Point{X: 2000, Y: -2000},
 					PM25:     kgPerSecondToUgPerSecond,
 					Height:   1,
@@ -872,7 +872,7 @@ func TestFromAEP(t *testing.T) {
 			name: "r2, r2, r2",
 			recs: []aep.Record{r2, r2, r2},
 			result: []*EmisRecord{
-				&EmisRecord{
+				{
 					Geom: geom.Point{X: -2000, Y: 2000},
 					PM25: 3 * kgPerSecondToUgPerSecond,
 				},
@@ -882,7 +882,7 @@ func TestFromAEP(t *testing.T) {
 			name: "r1, r2, r1",
 			recs: []aep.Record{r1, r2, r1},
 			result: []*EmisRecord{
-				&EmisRecord{
+				{
 					Geom:     geom.Point{X: 2000, Y: -2000},
 					PM25:     kgPerSecondToUgPerSecond,
 					Height:   1,
@@ -890,7 +890,7 @@ func TestFromAEP(t *testing.T) {
 					Temp:     1,
 					Velocity: 1,
 				},
-				&EmisRecord{
+				{
 					Geom:     geom.Point{X: 2000, Y: -2000},
 					PM25:     kgPerSecondToUgPerSecond,
 					Height:   1,
@@ -898,7 +898,7 @@ func TestFromAEP(t *testing.T) {
 					Temp:     1,
 					Velocity: 1,
 				},
-				&EmisRecord{
+				{
 					Geom: geom.Point{X: -2000, Y: 2000},
 					PM25: kgPerSecondToUgPerSecond,
 				},
@@ -908,7 +908,7 @@ func TestFromAEP(t *testing.T) {
 			name: "r2, r1, r2",
 			recs: []aep.Record{r2, r1, r2},
 			result: []*EmisRecord{
-				&EmisRecord{
+				{
 					Geom:     geom.Point{X: 2000, Y: -2000},
 					PM25:     kgPerSecondToUgPerSecond,
 					Height:   1,
@@ -916,7 +916,7 @@ func TestFromAEP(t *testing.T) {
 					Temp:     1,
 					Velocity: 1,
 				},
-				&EmisRecord{
+				{
 					Geom: geom.Point{X: -2000, Y: 2000},
 					PM25: 2 * kgPerSecondToUgPerSecond,
 				},
@@ -1026,7 +1026,7 @@ func BenchmarkFromAEP(b *testing.B) {
 		},
 		func(n int) []*EmisRecord {
 			return []*EmisRecord{
-				&EmisRecord{
+				{
 					Geom: geom.Point{X: -2000, Y: 2000},
 					PM25: float64(n) * kgPerSecondToUgPerSecond,
 				},

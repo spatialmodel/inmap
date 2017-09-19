@@ -430,9 +430,9 @@ func createImageWithInsets(data []geomConc, cmap *carto.ColorMap, states []geom.
 	for i, subfig := range subfigs {
 		rect := geom.Polygon{[]geom.Point{
 			subfig.b.Min,
-			geom.Point{X: subfig.b.Max.X, Y: subfig.b.Min.Y},
+			{X: subfig.b.Max.X, Y: subfig.b.Min.Y},
 			subfig.b.Max,
-			geom.Point{X: subfig.b.Min.X, Y: subfig.b.Max.Y},
+			{X: subfig.b.Min.X, Y: subfig.b.Max.Y},
 		}}
 		mapCanvas := carto.NewCanvas(subfig.b.Max.Y, subfig.b.Min.Y, subfig.b.Max.X, subfig.b.Min.X, subfig.c)
 		if i == 0 {

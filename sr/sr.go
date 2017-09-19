@@ -169,7 +169,7 @@ func (sr *SR) newRequestPayload(i int, cell *inmap.Cell) *IOData {
 	requestPayload.Row = i
 	requestPayload.Layer = cell.Layer
 	requestPayload.Emis = []*inmap.EmisRecord{
-		&inmap.EmisRecord{
+		{
 			Height: cell.LayerHeight + cell.Dz/2,
 			VOC:    1, // all units = μg/s
 			NOx:    1,

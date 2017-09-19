@@ -358,7 +358,7 @@ func (e AboveTopErr) Error() string {
 // 'index'. This function uses a cache with the size specified by
 // the CacheSize attribute of the receiver to speed up repeated requests
 // and is concurrency-safe. Users desiring to make changes to the returned
-// values should make a copy first to avoid inadvertantly editing the cached results
+// values should make a copy first to avoid inadvertently editing the cached results
 // which could cause subsequent results from this function to be incorrect.
 // If the layer and index are not known, use the Concentrations method instead.
 func (sr *Reader) Source(pol string, layer, index int) ([]float64, error) {

@@ -380,7 +380,7 @@ func TestChemistry(t *testing.T) {
 	sum *= c.Volume
 
 	if c.Cf[ipOrg] == 0 || c.Cf[ipS] == 0 || c.Cf[ipNH] == 0 || c.Cf[ipNO] == 0 {
-		t.Error("chemistry appears not to have occured")
+		t.Error("chemistry appears not to have occurred")
 	}
 	if different(sum, 5*E*d.Dt, testTolerance) {
 		t.Error("different")

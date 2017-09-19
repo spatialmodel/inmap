@@ -306,8 +306,8 @@ func process(scenario string, states, inmapGeom []geom.Polygon, alt, griddedPop 
 			labels := []string{"MFB", "MB", "MFE", "ME", "S", "R²"}
 			format := []string{"%.0f%%", "%.2f", "%.0f%%", "%.2f", "%.2f", "%.2f", "%.2f"}
 			stats := [][]float64{
-				[]float64{gs.MFB, gs.MB, gs.MFE, gs.ME, gs.S, gs.R2},
-				[]float64{gs.MFBWeighted, gs.MBWeighted, gs.MFEWeighted,
+				{gs.MFB, gs.MB, gs.MFE, gs.ME, gs.S, gs.R2},
+				{gs.MFBWeighted, gs.MBWeighted, gs.MFEWeighted,
 					gs.MEWeighted, gs.SWeighted, gs.R2Weighted},
 			}
 			for ii, clabel := range clabels {

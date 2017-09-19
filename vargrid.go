@@ -856,7 +856,7 @@ func (config *VarGridConfig) loadMortality(sr *proj.SR) (*rtree.Rtree, map[strin
 	// Extract mortality rate column names from map of population to mortality rates
 	mortRateColumns := make([]string, len(config.MortalityRateColumns))
 	i := 0
-	for m, _ := range config.MortalityRateColumns {
+	for m := range config.MortalityRateColumns {
 		mortRateColumns[i] = m
 		i++
 	}

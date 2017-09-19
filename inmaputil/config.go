@@ -232,10 +232,10 @@ func ReadConfigFile(filename string) (config *ConfigData, err error) {
 	}
 
 	if _, ok := map[string]struct{}{
-		"tons/year": struct{}{},
-		"kg/year":   struct{}{},
-		"ug/s":      struct{}{},
-		"μg/s":      struct{}{}}[config.EmissionUnits]; !ok {
+		"tons/year": {},
+		"kg/year":   {},
+		"ug/s":      {},
+		"μg/s":      {}}[config.EmissionUnits]; !ok {
 		return nil, fmt.Errorf("the EmissionUnits variable in the configuration file "+
 			"needs to be set to either tons/year, kg/year, ug/s, or μg/s, but is currently set to `%s`",
 			config.EmissionUnits)

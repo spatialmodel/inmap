@@ -97,7 +97,7 @@ func (d *InMAP) initFromCells(cells []*Cell, emis *Emissions, config *VarGridCon
 	d.mortIndices = make(map[string]int)
 	mortRateColumns := make([]string, len(config.MortalityRateColumns))
 	i := 0
-	for m, _ := range config.MortalityRateColumns {
+	for m := range config.MortalityRateColumns {
 		mortRateColumns[i] = m
 		i++
 	}

@@ -82,8 +82,8 @@ func TestSingleSource(t *testing.T) {
 	cmap2 := carto.NewColorMap(carto.LinCutoff)
 
 	gridss := [][]string{
-		[]string{"9km", "9km"},
-		[]string{"1km", "nested"},
+		{"9km", "9km"},
+		{"1km", "nested"},
 	}
 
 	// Get data.
@@ -160,9 +160,9 @@ func TestSingleSource(t *testing.T) {
 		var clearFill = color.NRGBA{0, 255, 0, 0}
 		for _, cc := range d.c {
 			b := geom.Polygon{[]geom.Point{
-				geom.Point{X: d.W, Y: d.S}, geom.Point{X: d.E, Y: d.S},
-				geom.Point{X: d.E, Y: d.N}, geom.Point{X: d.W, Y: d.N},
-				geom.Point{X: d.W, Y: d.S}},
+				{X: d.W, Y: d.S}, {X: d.E, Y: d.S},
+				{X: d.E, Y: d.N}, {X: d.W, Y: d.N},
+				{X: d.W, Y: d.S}},
 			}
 			for _, g := range states.SearchIntersect(b.Bounds()) {
 				gg, err := op.Simplify(g, 1000)
@@ -280,8 +280,8 @@ func TestSingleSource(t *testing.T) {
 		}
 
 		panelLabels := [][]string{
-			[]string{"a) WRF-Chem 9 km", "b) InMAP 9 km", "c) InMAP minus WRF-Chem"},
-			[]string{"d) WRF-Chem 1 km", "e) InMAP 1–27 km variable grid", "f) InMAP minus WRF-Chem"},
+			{"a) WRF-Chem 9 km", "b) InMAP 9 km", "c) InMAP minus WRF-Chem"},
+			{"d) WRF-Chem 1 km", "e) InMAP 1–27 km variable grid", "f) InMAP minus WRF-Chem"},
 		}
 		// write labels
 		ts3 := ts
