@@ -15,11 +15,13 @@ import (
 	"github.com/ctessum/geom/encoding/shp"
 	"github.com/ctessum/geom/op"
 	"github.com/ctessum/geom/proj"
-	"github.com/gonum/plot/vg"
-	vgdraw "github.com/gonum/plot/vg/draw"
-	"github.com/gonum/plot/vg/vgimg"
+
 	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/inmaputil"
+
+	"gonum.org/v1/plot/vg"
+	vgdraw "gonum.org/v1/plot/vg/draw"
+	"gonum.org/v1/plot/vg/vgimg"
 )
 
 // TestAnimation_logo creates a series of images that show the progression of a simulation

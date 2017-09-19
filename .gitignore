@@ -6,7 +6,4 @@
 *.log
 *.json
 *.png
-vendor/bitbucket.org
-vendor/github.com
-vendor/golang.org
-vendor/gopkg.in
+vendor/*

@@ -11,10 +11,10 @@ before_install:
 - go get github.com/axw/gocov/gocov
 - go get github.com/mattn/goveralls
 - go get golang.org/x/tools/cmd/cover
-- go get github.com/kardianos/govendor
+- go get github.com/golang/dep/cmd/dep
 
 install:
-- govendor sync
+- dep ensure
 script:
 - go test -short ./...
 - bash ./.travis/test_coverage.sh

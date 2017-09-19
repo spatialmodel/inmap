@@ -13,18 +13,21 @@ import (
 
 	"bitbucket.org/ctessum/cdf"
 	"github.com/GaryBoone/GoStats/stats"
+
 	"github.com/ctessum/atmos/evalstats"
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/carto"
 	"github.com/ctessum/geom/encoding/shp"
 	"github.com/ctessum/geom/index/rtree"
 	"github.com/ctessum/geom/op"
-	"github.com/gonum/floats"
-	"github.com/gonum/plot/vg"
-	"github.com/gonum/plot/vg/draw"
-	"github.com/gonum/plot/vg/vgimg"
+
 	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/inmaputil"
+
+	"gonum.org/v1/gonum/floats"
+	"gonum.org/v1/plot/vg"
+	"gonum.org/v1/plot/vg/draw"
+	"gonum.org/v1/plot/vg/vgimg"
 )
 
 func TestFuelScenarios(t *testing.T) {
