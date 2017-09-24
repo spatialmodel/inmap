@@ -226,12 +226,12 @@ func FromAEP(r []aep.Record, sp *aep.SpatialProcessor, gi int, VOC, NOx, NH3, SO
 		if !inGrid {
 			continue
 		}
+		e := rec.GetEmissions().Totals()
 		for i, frac := range gridSrg.Elements {
 			p := centroids[i]
 			er := EmisRecord{
 				Geom: p,
 			}
-			e := rec.GetEmissions().Totals()
 
 			// Convert units.
 			const (
