@@ -80,7 +80,7 @@ You can also compile InMAP from its source code. It should work on most types of
 
 ### Running the preprocessor
 
-InMAP includes a preprocessor to convert chemical transport model (CTM) output into InMAP meteorology and baseline chemistry input data. Unlike the main InMAP model, the preprocessor only needs to be run once for each spatiotemporal domain. Users that would like to use a different spatial or temporal domain than what is included with the InMAP download can obtain CTM output for that domain and run the preprocessor themselves. The WRF-Chem and GEOS-Chem CTMs are currently supported. Information on how to run the preprocessor is [here](inmap/inmap/doc/inmap_preproc.md), and information regarding preprocessor configuration is [here](https://godoc.org/github.com/spatialmodel/inmap/inmaputil#ConfigData.Preproc).
+InMAP includes a preprocessor to convert chemical transport model (CTM) output into InMAP meteorology and baseline chemistry input data. Unlike the main InMAP model, the preprocessor only needs to be run once for each spatiotemporal domain. Users that would like to use a different spatial or temporal domain than what is included with the InMAP download can obtain CTM output for that domain and run the preprocessor themselves. The WRF-Chem and GEOS-Chem CTMs are currently supported. Information on how to run the preprocessor is [here](inmap/doc/inmap_preproc.md), and information regarding preprocessor configuration is [here](https://godoc.org/github.com/spatialmodel/inmap/inmaputil#ConfigData.Preproc).
 
 ## API
 
