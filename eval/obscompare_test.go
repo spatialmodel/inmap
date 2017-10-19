@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"bitbucket.org/ctessum/cdf"
 	"github.com/GaryBoone/GoStats/stats"
@@ -570,6 +571,7 @@ func getWRFdata(wrfDataLoc string, wChan chan []*rtree.Rtree) {
 }
 
 func s2f(s string) float64 {
+	s = strings.Trim(s, "\x00")
 	f, err := strconv.ParseFloat(s, 64)
 	if err != nil {
 		panic(err)
