@@ -59,7 +59,7 @@
   branch = "master"
   name = "github.com/ctessum/aep"
   packages = ["."]
-  revision = "f316bca0a11f4a3ab46972f2fcd558f5ac8a6c0f"
+  revision = "d18865b4e31e431785455a7fce7ac806fdca5e95"
 
 [[projects]]
   branch = "master"
@@ -83,7 +83,7 @@
   branch = "master"
   name = "github.com/ctessum/requestcache"
   packages = ["."]
-  revision = "08d6ed8801c5f1da3265a1c79f4b864db7221bd0"
+  revision = "27453c71baf7105b62ec8cd9f668a5486500ccce"
 
 [[projects]]
   branch = "master"
@@ -125,7 +125,7 @@
   branch = "master"
   name = "github.com/jonas-p/go-shp"
   packages = ["."]
-  revision = "50c815e9c51049f19f9bc27462f4fafa6dffb82d"
+  revision = "5b9c3047ce59fcfe1a7c6e66d606a348ca04be08"
 
 [[projects]]
   branch = "master"
@@ -149,7 +149,7 @@
   branch = "master"
   name = "github.com/spf13/cobra"
   packages = [".","doc"]
-  revision = "b78744579491c1ceeaaa3b40205e56b0591b93a3"
+  revision = "7b2c5ac9fc04fc5efafb60700713d4fa609b777b"
 
 [[projects]]
   name = "github.com/spf13/pflag"
@@ -161,25 +161,25 @@
   branch = "master"
   name = "golang.org/x/image"
   packages = ["draw","font","math/f64","math/fixed","tiff","tiff/lzw"]
-  revision = "e20db36d77bd0cb36cea8fe49d5c37d82d21591f"
+  revision = "f7e31b4ea2e3413ab91b4e7d2dc83e5f8d19a44c"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = ["context"]
-  revision = "8351a756f30f1297fe94bbf4b767ec589c6ea6d0"
+  revision = "cd69bc3fc700721b709c3a59e16e24c67b58f6ff"
 
 [[projects]]
   branch = "master"
   name = "gonum.org/v1/gonum"
   packages = ["blas","blas/blas64","blas/gonum","floats","internal/asm/c128","internal/asm/f32","internal/asm/f64","internal/math32","lapack","lapack/gonum","lapack/lapack64","mat"]
-  revision = "f818f8f7a9e59de54e475b747a3dc9c86ed141f1"
+  revision = "ce73cefcda434183888c40895ea2fa306203906a"
 
 [[projects]]
   branch = "master"
   name = "gonum.org/v1/plot"
   packages = [".","palette","plotter","plotutil","tools/bezier","vg","vg/draw","vg/fonts","vg/vgeps","vg/vgimg","vg/vgpdf","vg/vgsvg"]
-  revision = "3469efe6bdc8ee9a270fcecfbd6c499150b18540"
+  revision = "50336e281717e5f1685e3c611828dfb42c82cf66"
 
 [[projects]]
   branch = "v2"

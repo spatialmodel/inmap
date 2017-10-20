@@ -2,9 +2,11 @@
 
 This file contains a checklist for steps to take to release a new version of InMAP.
 
-1. Update vendored packages using `govendor fetch`.
+1. Update vendored packages using `dep ensure -update`.
 
-1. Update the version number in `framework.go` and in `inmap/build.sh`, and the `year` variable in `inmap/cmd/root.go`.
+1. Update the version number in `framework.go` and in `inmap/build.sh`, and the `year` variable in `internal/cmd/cmd.go`.
+
+1. Update the version number in `README.md`. Make sure the README and other documentation is up to date.
 
 1. If the input data format has changed since the last release, change the `DataVersion` and/or `VarGridDataVersion` variables in `framework.go` and regenerate the input data with the new version number.
 
