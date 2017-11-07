@@ -360,8 +360,8 @@ func getWRFSingleSource(gridType string, gridIndex int, evalData string) ([]floa
 	f := openNCF(filename)
 	data := f.readVar("TotalPM25")
 
-	wrfNamelist := filepath.Join(evalData, "la_test/namelist.input")
-	wpsNamelist := filepath.Join(evalData, "la_test/namelist.wps")
+	wrfNamelist := "la_test/namelist.input"
+	wpsNamelist := "la_test/namelist.wps"
 
 	d, err := aep.ParseWRFConfig(wpsNamelist, wrfNamelist)
 	if err != nil {
