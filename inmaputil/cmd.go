@@ -327,8 +327,11 @@ func init() {
 			usage: `
               OutputVariables specifies which model variables should be included in the
               output file. It can include environment variables.`,
-			defaultVal: "",
-			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), workerCmd.Flags()},
+			defaultVal: map[string]string{
+				"TotalPopD": "coxHazard(loglogRR(TotalPM25), TotalPop, allcause)",
+				"TotalPM25": "TotalPM25",
+			},
+			flagsets: []*pflag.FlagSet{runCmd.PersistentFlags(), workerCmd.Flags()},
 		},
 		{
 			name: "NumIterations",
@@ -573,7 +576,15 @@ var Root = &cobra.Command{
 	Short: "A reduced-form air quality model.",
 	Long: `InMAP is a reduced-form air quality model for fine particulate matter (PM2.5).
 Use the subcommands specified below to access the model functionality.
-Additional information is available at http://inmap.spatialmodel.com.`,
+Additional information is available at http://inmap.spatialmodel.com.
+
+Refer to the subcommand documentation for configuration options and default settings.
+Configuration can be changed by using a configuration file (and providing the
+path to the file using the --config flag), by using command-line arguments,
+or by setting environment variables in the format 'INMAP_var' where 'var' is the
+name of the variable to be set. Many configuration variables are additionally
+allowed to contain environment variables within them.
+Refer to https://github.com/spf13/viper for additional configuration information.`,
 	DisableAutoGenTag: true,
 	PersistentPreRunE: func(*cobra.Command, []string) error {
 		// Find and read in the configuration file, if there is one.

@@ -1,3 +1,6 @@
+# Release 1.4.0 (?)
+* Made configuration more flexible using https://github.com/spf13/viper
+
 # Release 1.3.0 (2017-10-20)
 * Removed vendored libraries
 * A log file containing information about each model run is now automatically created
