@@ -19,6 +19,8 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package inmaputil
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"math"
 	"os"
@@ -241,11 +243,20 @@ func init() {
 		{
 			name: "VarGrid.MortalityRateColumns",
 			usage: `
-              VarGrid.MortalityRateColumns gives the name of the field in MortalityRateFile that
-              contains the baseline mortality rate corresponding to each input population group,
-              in units of deaths per year per 100,000 people.`,
-			defaultVal: []string{"AllCause", "WhNoLMort", "BlackMort", "AsianMort", "NativeMort", "LatinoMort"},
-			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
+              VarGrid.MortalityRateColumns gives names of fields in MortalityRateFile that
+              contain baseline mortality rates (as keys) in units of deaths per year per 100,000 people.
+							The values specify the population group that should be used with each mortality rate
+							for population-weighted averaging.
+              `,
+			defaultVal: map[string]string{
+				"AllCause":   "TotalPop",
+				"WhNoLMort":  "WhiteNoLat",
+				"BlackMort":  "Black",
+				"NativeMort": "Native",
+				"AsianMort":  "Asian",
+				"LatinoMort": "Latino",
+			},
+			flagsets: []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
 		},
 		{
 			name: "InMAPData",
@@ -526,6 +537,16 @@ func init() {
 				} else {
 					set.Float64P(option.name, option.shorthand, option.defaultVal.(float64), option.usage)
 				}
+			case map[string]string:
+				b := bytes.NewBuffer(nil)
+				e := json.NewEncoder(b)
+				e.Encode(option.defaultVal)
+				s := string(b.Bytes())
+				if option.shorthand == "" {
+					set.String(option.name, s, option.usage)
+				} else {
+					set.StringP(option.name, option.shorthand, s, option.usage)
+				}
 			default:
 				panic("invalid argument type")
 			}
@@ -599,7 +620,7 @@ concentrations with no temporal variability.`,
 		if err != nil {
 			return err
 		}
-		outputVars, err := checkOutputVars(Cfg.GetStringMapString("OutputVariables"))
+		outputVars, err := checkOutputVars(GetStringMapString("OutputVariables", Cfg))
 		if err != nil {
 			return err
 		}

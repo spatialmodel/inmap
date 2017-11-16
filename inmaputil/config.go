@@ -19,6 +19,8 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package inmaputil
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -120,7 +122,7 @@ func VarGridConfig(cfg *viper.Viper) (*inmap.VarGridConfig, error) {
 		CensusPopColumns:     expandStringSlice(cfg.GetStringSlice("VarGrid.CensusPopColumns")),
 		PopGridColumn:        os.ExpandEnv(cfg.GetString("VarGrid.PopGridColumn")),
 		MortalityRateFile:    os.ExpandEnv(cfg.GetString("VarGrid.MortalityRateFile")),
-		MortalityRateColumns: cfg.GetStringSlice("VarGrid.MortalityRateColumns"),
+		MortalityRateColumns: GetStringMapString("VarGrid.MortalityRateColumns", cfg),
 		GridProj:             os.ExpandEnv(cfg.GetString("VarGrid.GridProj")),
 	}
 
@@ -140,13 +142,32 @@ func VarGridConfig(cfg *viper.Viper) (*inmap.VarGridConfig, error) {
 		}
 	}
 
-	if len(c.MortalityRateColumns) != len(c.CensusPopColumns) {
-		return nil, fmt.Errorf("the number of MortalityRateColumns (%d) != the number of CensusPopColumns (%d)", len(c.MortalityRateColumns), len(c.CensusPopColumns))
-	}
-
-	for i, v := range c.MortalityRateColumns {
-		c.MortalityRateColumns[i] = os.ExpandEnv(v)
+	for k, v := range c.MortalityRateColumns {
+		c.MortalityRateColumns[os.ExpandEnv(k)] = os.ExpandEnv(v)
 	}
 
 	return &c, nil
+}
+
+// GetStringMapString returns a map[string]string from a viper configuration,
+// accounting for the fact that it might be a json object if it was set
+// from a command line argument.
+func GetStringMapString(varName string, cfg *viper.Viper) map[string]string {
+	i := cfg.Get(varName)
+	switch i.(type) {
+	case map[string]string:
+		return i.(map[string]string)
+	case map[string]interface{}:
+		return cast.ToStringMapString(i)
+	case string:
+		b := bytes.NewBuffer(([]byte)(i.(string)))
+		d := json.NewDecoder(b)
+		o := make(map[string]string)
+		if err := d.Decode(&o); err != nil {
+			panic(err)
+		}
+		return o
+	default:
+		panic(fmt.Errorf("invalid type for getStringMapString variable %s: %#v", varName, i))
+	}
 }

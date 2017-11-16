@@ -624,9 +624,9 @@ func (o *Outputter) checkForDerivatives() error {
 // the user-requested output variables are available in the model.
 func (d *InMAP) checkModelVars(g ...string) error {
 	outputOps, _, _ := d.OutputOptions()
-	mapOutputOps := make(map[string]uint8)
+	mapOutputOps := make(map[string]struct{})
 	for _, n := range outputOps {
-		mapOutputOps[n] = 0
+		mapOutputOps[n] = struct{}{}
 	}
 	for _, v := range g {
 		if _, ok := mapOutputOps[v]; !ok {

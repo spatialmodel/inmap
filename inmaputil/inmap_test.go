@@ -20,6 +20,7 @@ package inmaputil
 
 import (
 	"os"
+	"reflect"
 	"testing"
 )
 
@@ -58,10 +59,27 @@ func TestInMAPDynamic(t *testing.T) {
 	Cfg.Set("createGrid", false) // this isn't used for the dynamic grid
 	os.Setenv("InMAPRunType", "dynamic")
 	Cfg.Set("config", "../inmap/configExample.toml")
-	if err := Root.PersistentPreRunE(nil, nil); err != nil {
+	Root.SetArgs([]string{"run", "steady"})
+	if err := Root.Execute(); err != nil {
 		t.Fatal(err)
 	}
-	if err := steadyCmd.RunE(nil, nil); err != nil {
-		t.Fatal(err)
+}
+
+func TestGetStringMapString(t *testing.T) {
+	// Test regular map[string]string.
+	save := Cfg.Get("VarGrid.MortalityRateColumns")
+	Cfg.Set("VarGrid.MortalityRateColumns", map[string]string{"allcause": "TotalPop", "whnolmort": "WhiteNoLat"})
+	a := GetStringMapString("VarGrid.MortalityRateColumns", Cfg)
+	wantA := map[string]string{"allcause": "TotalPop", "whnolmort": "WhiteNoLat"}
+	if !reflect.DeepEqual(a, wantA) {
+		t.Errorf("b: %v != %v", a, wantA)
 	}
+	// Test json object.
+	Cfg.Set("VarGrid.MortalityRateColumns", `{"AllCause":"TotalPop"}`)
+	b := GetStringMapString("VarGrid.MortalityRateColumns", Cfg)
+	wantB := map[string]string{"AllCause": "TotalPop"}
+	if !reflect.DeepEqual(b, wantB) {
+		t.Errorf("b: %v != %v", b, wantB)
+	}
+	Cfg.Set("VarGrid.MortalityRateColumns", save)
 }

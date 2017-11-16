@@ -19,13 +19,11 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package inmaputil
 
 import (
-	"fmt"
 	"os"
 	"testing"
 )
 
 func TestSR(t *testing.T) {
-	fmt.Println("x1", Cfg.Get("VarGrid.CensusFile"))
 	Cfg.Set("SR.OutputFile", "../inmap/testdata/tempSR.ncf")
 	Cfg.Set("begin", 8)
 	Cfg.Set("end", 9)

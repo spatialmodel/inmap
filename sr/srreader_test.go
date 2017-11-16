@@ -64,13 +64,13 @@ func TestVariable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	vars, err := sr.Variables("TotalPop", "AllCause", "BaselineTotalPM25")
+	vars, err := sr.Variables("TotalPop", "allcause", "BaselineTotalPM25")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	want := map[string][]float64{
-		"AllCause": {800, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		"allcause": {800, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 		"BaselineTotalPM25": {4.907700538635254, 4.907700538635254, 4.907700538635254,
 			4.907700538635254, 4.907700538635254, 10.347429275512695, 4.907700538635254, 4.907700538635254,
 			4.25741720199585, 5.3623223304748535},

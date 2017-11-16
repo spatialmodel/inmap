@@ -237,7 +237,7 @@ func TestAnimation_nei(t *testing.T) {
 	const framePeriod = 3600.0
 
 	if err := inmaputil.Run("animation_nei/results.log", "animation_nei/results.shp", false,
-		inmaputil.Cfg.GetStringMapString("OutputVariables"), inmaputil.Cfg.GetString("EmissionUnits"),
+		inmaputil.GetStringMapString("OutputVariables", inmaputil.Cfg), inmaputil.Cfg.GetString("EmissionUnits"),
 		inmaputil.Cfg.GetStringSlice("EmissionsShapefiles"),
 		cfg, inmaputil.Cfg.GetString("InMAPData"), inmaputil.Cfg.GetString("VariableGridData"), inmaputil.Cfg.GetInt("NumIterations"),
 		dynamic, createGrid, inmaputil.DefaultScienceFuncs, nil,

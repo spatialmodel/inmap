@@ -428,7 +428,12 @@ func (c *Cell) getValue(varName string, popIndices map[string]int, mortIndices m
 		return c.MortData[i]
 
 	} // Everything else
-	val := reflect.ValueOf(c).Elem().FieldByName(varName)
+
+	v := reflect.ValueOf(c).Elem()
+	if _, ok := v.Type().FieldByName(varName); !ok {
+		panic(fmt.Errorf("inmap: missing variable %v", varName))
+	}
+	val := v.FieldByName(varName)
 	switch val.Type().Kind() {
 	case reflect.Float64:
 		return val.Float()
