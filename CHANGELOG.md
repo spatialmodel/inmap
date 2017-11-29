@@ -1,4 +1,5 @@
 # Release 1.4.0 (?)
+* Added graphical user interface https://github.com/ctessum/gobra
 * Made configuration more flexible using https://github.com/spf13/viper
 
 # Release 1.3.0 (2017-10-20)

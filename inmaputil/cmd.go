@@ -22,9 +22,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"math"
+	"html/template"
+	"log"
+	"net/http"
 	"os"
 
+	"github.com/ctessum/gobra"
+	"github.com/skratchdot/open-golang/open"
 	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/science/chem/simplechem"
 	"github.com/spatialmodel/inmap/sr"
@@ -37,17 +41,19 @@ import (
 // Cfg holds configuration information.
 var Cfg *viper.Viper
 
-type option struct {
+var options []struct {
 	name, usage, shorthand string
 	defaultVal             interface{}
 	flagsets               []*pflag.FlagSet
 }
 
-// Options are the configuration options available to InMAP.
-var Options []option
-
 func init() {
-	Options = []option{
+	// Options are the configuration options available to InMAP.
+	options = []struct {
+		name, usage, shorthand string
+		defaultVal             interface{}
+		flagsets               []*pflag.FlagSet
+	}{
 		{
 			name: "config",
 			usage: `
@@ -343,15 +349,6 @@ func init() {
 			flagsets:   []*pflag.FlagSet{steadyCmd.Flags(), workerCmd.Flags()},
 		},
 		{
-			name: "HTTPPort",
-			usage: `
-              Port for hosting web page. If HTTPport is ':8080', then the GUI
-               would be viewed by visiting "localhost:8080" in a web browser.
-              If HTTPport is "", then the web server doesn't run.`,
-			defaultVal: ":8080",
-			flagsets:   []*pflag.FlagSet{Root.PersistentFlags()},
-		},
-		{
 			name: "SR.LogDir",
 			usage: `
               LogDir is the directory that log files should be stored in when creating
@@ -465,28 +462,28 @@ func init() {
 			name: "Preproc.CtmGridXo",
 			usage: `
               Preproc.CtmGridXo is the lower left of Chemical Transport Model (CTM) grid, x`,
-			defaultVal: math.NaN(),
+			defaultVal: 0.0,
 			flagsets:   []*pflag.FlagSet{preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.CtmGridYo",
 			usage: `
               Preproc.CtmGridYo is the lower left of grid, y`,
-			defaultVal: math.NaN(),
+			defaultVal: 0.0,
 			flagsets:   []*pflag.FlagSet{preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.CtmGridDx",
 			usage: `
               Preproc.CtmGridDx is the grid cell length in x direction [m]`,
-			defaultVal: math.NaN(),
+			defaultVal: 1000.0,
 			flagsets:   []*pflag.FlagSet{preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.CtmGridDy",
 			usage: `
               Preproc.CtmGridDy is the grid cell length in y direction [m]`,
-			defaultVal: math.NaN(),
+			defaultVal: 1000.0,
 			flagsets:   []*pflag.FlagSet{preprocCmd.Flags()},
 		},
 	}
@@ -496,7 +493,7 @@ func init() {
 	// Set the prefix for configuration environment variables.
 	Cfg.SetEnvPrefix("INMAP")
 
-	for _, option := range Options {
+	for _, option := range options {
 		if Cfg.IsSet(option.name) {
 			// Don't set the option if it is already set somewhere else,
 			// such as in a test.
@@ -559,8 +556,8 @@ func init() {
 	}
 }
 
-// Link the commands together.
 func init() {
+	// Link the commands together.
 	Root.AddCommand(versionCmd)
 	Root.AddCommand(runCmd)
 	runCmd.AddCommand(steadyCmd)
@@ -569,6 +566,17 @@ func init() {
 	Root.AddCommand(srCmd)
 	srCmd.AddCommand(srPredictCmd)
 	Root.AddCommand(workerCmd)
+}
+
+// setConfig finds and reads in the configuration file, if there is one.
+func setConfig() error {
+	if cfgpath := Cfg.GetString("config"); cfgpath != "" {
+		Cfg.SetConfigFile(cfgpath)
+		if err := Cfg.ReadInConfig(); err != nil {
+			return fmt.Errorf("inmap: problem reading configuration file: %v", err)
+		}
+	}
+	return nil
 }
 
 // Root is the main command.
@@ -587,16 +595,7 @@ name of the variable to be set. Many configuration variables are additionally
 allowed to contain environment variables within them.
 Refer to https://github.com/spf13/viper for additional configuration information.`,
 	DisableAutoGenTag: true,
-	PersistentPreRunE: func(*cobra.Command, []string) error {
-		// Find and read in the configuration file, if there is one.
-		if cfgpath := Cfg.GetString("config"); cfgpath != "" {
-			Cfg.SetConfigFile(cfgpath)
-			if err := Cfg.ReadInConfig(); err != nil {
-				return fmt.Errorf("inmap: problem reading configuration file: %v", err)
-			}
-		}
-		return nil
-	},
+	PersistentPreRunE: func(*cobra.Command, []string) error { return setConfig() },
 }
 
 var versionCmd = &cobra.Command{
@@ -605,6 +604,7 @@ var versionCmd = &cobra.Command{
 	Long:  "version prints the version number of this version of InMAP.",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("InMAP v%s\n", inmap.Version)
+		cmd.Printf("InMAP v%s\n", inmap.Version)
 	},
 	DisableAutoGenTag: true,
 }
@@ -799,4 +799,129 @@ matter per m³ air.
 		)
 	},
 	DisableAutoGenTag: true,
+}
+
+// StartWebServer starts the web server.
+func StartWebServer() {
+	setConfig() // Ignore any errors for now.
+
+	http.HandleFunc("/setConfig", func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()
+		configFile := r.Form["config"][0]
+		Root.Flags().Set("config", configFile)
+		err := setConfig()
+		if err != nil {
+			http.Error(w, err.Error(), 204)
+			return
+		}
+		config := make(map[string]interface{})
+		for _, option := range options {
+			config[option.name] = Cfg.Get(option.name)
+		}
+		e := json.NewEncoder(w)
+		if err := e.Encode(config); err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+	})
+
+	log.Println("Loading front-end...")
+
+	for _, cmd := range []*cobra.Command{Root, versionCmd, runCmd, steadyCmd,
+		gridCmd, preprocCmd, srCmd, srPredictCmd, workerCmd} {
+		cmd.SilenceUsage = true // We don't want the usage messages in the GUI.
+	}
+
+	const address = "localhost:7171"
+	const tmpl = `
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>InMap</title>
+	<style>
+		html, body {padding: 0; margin: 2% 0; font-family: sans-serif;}
+		.container { max-width: 700px; margin: 0 auto; padding: 10px; }
+		div[id^="gobra-"] blockquote { border-left: 3px solid #bbb; margin: .3em; color: #333; padding-left: 5px; font-size: 75%; }
+		div[id^="gobra-"] code { font-weight: bold; }
+		div[id^="gobra-"] input { font-family: monospace; margin-left: .2em; width: 50%; outline:none; }
+		.red-border{ border: 1px solid #c35; }
+		.green-border{ border: 1px solid #3c5; }
+		.blue-border{ border: 1px solid #35c; }
+	</style>
+</head>
+<body>
+<div class="container">
+	<h1>InMap</h1>
+	<p>Configure the simulation below.</p>
+	<p>
+		Color key: black=default;
+		<font color="red">red</font>=error;
+		<font color="green">green</font>=value from config file;
+		<font color="blue">blue</font>=user entered
+	</p>
+	<div>
+		{{.}}
+	</div>
+	<footer>
+		© 2017 InMAP Authors
+	</footer>
+</div>
+
+<script>
+// If the configuration file is changed, send the new file path
+// to the server and update fields
+
+let allFlags = [...document.querySelectorAll('[data-name]')];
+allFlags.forEach(x => {
+	let inputField = x.children[0];
+	inputField.addEventListener("input", e => {
+		inputField.classList.remove("green-border");
+		inputField.classList.add("blue-border");
+	})
+})
+
+let configInput = allFlags.filter(x => x.dataset.name == "config")[0].children[0];
+configInput.addEventListener("input", e => {
+	fetch("http://` + address + `/setConfig?config="+configInput.value)
+		.then( res => {
+			if (res.status !== 200) {
+				if (res.status == 204) {
+					configInput.classList.remove("blue-border");
+					configInput.classList.remove("green-border");
+					configInput.classList.add("red-border");
+				} else {
+					console.log("Error fetching /setConfig: ", response.text());
+				}
+			} else {
+				res.json().then( data => {
+					configInput.classList.remove("red-border");
+					for (let key in data)
+						for(let f of allFlags)
+							if (f.dataset.name == key) {
+								let input = f.children[0];
+								var newValue = JSON.stringify(data[key]).replace(/^"+|"+$/g,'');
+								if (input.value != newValue) {
+									input.value = newValue
+									input.classList.remove("blue-border");
+									input.classList.add("green-border");
+								}
+							}
+				})
+			}
+		})
+		.catch( err => {
+			console.log("Error fetching /setConfig", err)
+		})
+})
+</script>
+</body>
+</html>`
+
+	output := template.Must(template.New("").Parse(tmpl))
+	server := gobra.Server{Root: Root, ServerAddress: address, AllowCORS: false, HTML: output}
+	log.Println("Server starting... ")
+	open.Run("http://" + address)
+	fmt.Println("If not opened automatically, please visit http://localhost:7171")
+	server.Start()
 }

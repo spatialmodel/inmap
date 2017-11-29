@@ -75,6 +75,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/ctessum/gobra"
+  packages = ["."]
+  revision = "e4b85947cf29d8fdc26d9c3e6eaaa21ad81ffaf3"
+
+[[projects]]
+  branch = "master"
   name = "github.com/ctessum/polyclip-go"
   packages = ["."]
   revision = "b21f39a8c20d5c40675eb4460465de71d81a64cc"
@@ -90,6 +96,12 @@
   name = "github.com/ctessum/unit"
   packages = [".","badunit"]
   revision = "755774ac2fcbe68f090798b4cdc47c5cd056b1f5"
+
+[[projects]]
+  name = "github.com/fsnotify/fsnotify"
+  packages = ["."]
+  revision = "629574ca2a5df945712d3079857300b5e4da0236"
+  version = "v1.4.2"
 
 [[projects]]
   branch = "master"
@@ -116,6 +128,12 @@
   revision = "e57e4534cf9b3b00ef6c0175f59d8d2d34f60914"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/hashicorp/hcl"
+  packages = [".","hcl/ast","hcl/parser","hcl/scanner","hcl/strconv","hcl/token","json/parser","json/scanner","json/token"]
+  revision = "23c074d0eceb2b8a5bfdbb271ab780cde70f05a8"
+
+[[projects]]
   name = "github.com/inconshreveable/mousetrap"
   packages = ["."]
   revision = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75"
@@ -140,10 +158,46 @@
   revision = "dcbfbe505d35de8166ccfc47ff9e4bb020473e18"
 
 [[projects]]
+  name = "github.com/magiconair/properties"
+  packages = ["."]
+  revision = "be5ece7dd465ab0765a9682137865547526d1dfb"
+  version = "v1.7.3"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/mitchellh/mapstructure"
+  packages = ["."]
+  revision = "06020f85339e21b2478f756a78e295255ffa4d6a"
+
+[[projects]]
+  name = "github.com/pelletier/go-toml"
+  packages = ["."]
+  revision = "16398bac157da96aa88f98a2df640c7f32af1da2"
+  version = "v1.0.1"
+
+[[projects]]
   name = "github.com/russross/blackfriday"
   packages = ["."]
   revision = "4048872b16cc0fc2c5fd9eacf0ed2c2fedaa0c8c"
   version = "v1.5"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/skratchdot/open-golang"
+  packages = ["open"]
+  revision = "75fb7ed4208cf72d323d7d02fd1a5964a7a9073c"
+
+[[projects]]
+  name = "github.com/spf13/afero"
+  packages = [".","mem"]
+  revision = "8d919cbe7e2627e417f3e45c3c0e489a5b7e2536"
+  version = "v1.0.0"
+
+[[projects]]
+  name = "github.com/spf13/cast"
+  packages = ["."]
+  revision = "acbeb36b902d72a7a4c18e8f3241075e7ab763e4"
+  version = "v1.1.0"
 
 [[projects]]
   branch = "master"
@@ -152,10 +206,22 @@
   revision = "7b2c5ac9fc04fc5efafb60700713d4fa609b777b"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/spf13/jwalterweatherman"
+  packages = ["."]
+  revision = "12bd96e66386c1960ab0f74ced1362f66f552f7b"
+
+[[projects]]
   name = "github.com/spf13/pflag"
   packages = ["."]
   revision = "e57e3eeb33f795204c1ca35f56c44f83227c6e66"
   version = "v1.0.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/spf13/viper"
+  packages = ["."]
+  revision = "4dddf7c62e16bce5807744018f5b753bfe21bbd2"
 
 [[projects]]
   branch = "master"
@@ -171,6 +237,18 @@
 
 [[projects]]
   branch = "master"
+  name = "golang.org/x/sys"
+  packages = ["unix"]
+  revision = "8b4580aae2a0dd0c231a45d3ccb8434ff533b840"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/text"
+  packages = ["internal/gen","internal/triegen","internal/ucd","transform","unicode/cldr","unicode/norm"]
+  revision = "75cc3cad82b5f47d3fb229ddda8c5167da14f294"
+
+[[projects]]
+  branch = "master"
   name = "gonum.org/v1/gonum"
   packages = ["blas","blas/blas64","blas/gonum","floats","internal/asm/c128","internal/asm/f32","internal/asm/f64","internal/math32","lapack","lapack/gonum","lapack/lapack64","mat"]
   revision = "ce73cefcda434183888c40895ea2fa306203906a"
@@ -178,7 +256,7 @@
 [[projects]]
   branch = "master"
   name = "gonum.org/v1/plot"
-  packages = [".","palette","plotter","plotutil","tools/bezier","vg","vg/draw","vg/fonts","vg/vgeps","vg/vgimg","vg/vgpdf","vg/vgsvg"]
+  packages = [".","palette","plotter","tools/bezier","vg","vg/draw","vg/fonts","vg/vgeps","vg/vgimg","vg/vgpdf","vg/vgsvg"]
   revision = "50336e281717e5f1685e3c611828dfb42c82cf66"
 
 [[projects]]
@@ -190,6 +268,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "57c1fcfc95c9408dc969c1a06db5f60907ff0f3a5d2cbc32dcc7b25492a8b97e"
+  inputs-digest = "0e2386dc2fffb2ec4a34e724194fd142f18f7d491056f1eade8c8c987c07a7cd"
   solver-name = "gps-cdcl"
   solver-version = 1

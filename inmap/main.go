@@ -27,6 +27,17 @@ import (
 )
 
 func main() {
+	var commands int
+	for _, arg := range os.Args { // Count the number of supplied commands.
+		if arg[0] != '-' {
+			commands++
+		}
+	}
+	if commands == 1 { // If only one command was supplied, start the GUI server.
+		inmaputil.StartWebServer()
+	}
+
+	// If more than one command was supplied, run in CLI mode.
 	if err := inmaputil.Root.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(-1)

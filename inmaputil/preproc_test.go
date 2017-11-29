@@ -26,10 +26,8 @@ func TestPreprocWRFChem(t *testing.T) {
 	// Here we only test whether the program runs. We
 	// check whether the output is correct elsewhere.
 	Cfg.Set("config", "../inmap/configExampleWRFChem.toml")
-	if err := Root.PersistentPreRunE(nil, nil); err != nil {
-		t.Fatal(err)
-	}
-	if err := preprocCmd.RunE(nil, nil); err != nil {
+	Root.SetArgs([]string{"preproc"})
+	if err := Root.Execute(); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -38,10 +36,8 @@ func TestPreprocGEOSChem(t *testing.T) {
 	// Here we only test whether the program runs. We
 	// check whether the output is correct elsewhere.
 	Cfg.Set("config", "../inmap/configExampleGEOSChem.toml")
-	if err := Root.PersistentPreRunE(nil, nil); err != nil {
-		t.Fatal(err)
-	}
-	if err := preprocCmd.RunE(nil, nil); err != nil {
+	Root.SetArgs([]string{"preproc"})
+	if err := Root.Execute(); err != nil {
 		t.Fatal(err)
 	}
 }

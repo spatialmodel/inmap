@@ -55,6 +55,11 @@
 
 [[constraint]]
   branch = "master"
+  name = "github.com/ctessum/gobra"
+
+
+[[constraint]]
+  branch = "master"
   name = "github.com/ctessum/geom"
 
 [[constraint]]
