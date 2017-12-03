@@ -61,8 +61,16 @@ type GEOSChem struct {
 	geosA3Dyn     string
 	geosI3        string
 	geosA3MstE    string
+	geosApBp      string
 	geosChem      string
 	vegTypeGlobal string
+
+	// If dash is '-', GEOS-Chem chemical variable names are assumed to be in the
+	// form 'IJ-AVG-S__xxx'. If dash is '_', they are assumed to be in the form
+	// 'IJ_AVG_S_xxx'.
+	dash string
+
+	msgChan chan string
 }
 
 // NewGEOSChem initializes a WRF-Chem preprocessor from the given
@@ -87,6 +95,10 @@ type GEOSChem struct {
 // on level edges files. [DATE] should be used as a wild card for
 // the simulation date.
 //
+// geosApBp is the location of the pressure level variable file.
+// It is optional; if it is not specified the Ap and Bp information
+// will be extracted from the geosChem file.
+//
 // GEOSChemOut is the location of GEOS-Chem output files.
 // [DATE] should be used as a wild card for the simulation date.
 //
@@ -96,7 +108,19 @@ type GEOSChem struct {
 //
 // startDate and endDate are the dates of the beginning and end of the
 // simulation, respectively, in the format "YYYYMMDD".
-func NewGEOSChem(GEOSA1, GEOSA3Cld, GEOSA3Dyn, GEOSI3, GEOSA3MstE, GEOSChemOut, VegTypeGlobal, startDate, endDate string) (*GEOSChem, error) {
+//
+// If dash is true, GEOS-Chem chemical variable names are assumed to be in the
+// form 'IJ-AVG-S__xxx'. If dash is false, they are assumed to be in the form
+// 'IJ_AVG_S_xxx'.
+//
+// If msgChan is not nil, status messages will be sent to it.
+func NewGEOSChem(GEOSA1, GEOSA3Cld, GEOSA3Dyn, GEOSI3, GEOSA3MstE, GEOSApBp, GEOSChemOut, VegTypeGlobal, startDate, endDate string, dash bool, msgChan chan string) (*GEOSChem, error) {
+	var d string
+	if dash {
+		d = "-"
+	} else {
+		d = "_"
+	}
 	gc := GEOSChem{
 		// These maps contain the GEOS-Chem variables that make
 		// up the chemical species groups, as well as the
@@ -110,83 +134,83 @@ func NewGEOSChem(GEOSA1, GEOSA3Cld, GEOSA3Dyn, GEOSI3, GEOSA3MstE, GEOSChemOut, 
 		// http://wiki.seas.harvard.edu/geos-chem/index.php/Species_in_GEOS-Chem.
 		// We assume condensable vapor from SOA has molar mass of 70.
 		aVOC: map[string]float64{
-			"IJ-AVG-S__BENZ": ppbcToUgKg(78.11, 6),
-			"IJ-AVG-S__TOLU": ppbcToUgKg(92.14, 7),
-			"IJ-AVG-S__XYLE": ppbcToUgKg(106.16, 8),
-			"IJ-AVG-S__NAP":  ppbcToUgKg(128.1705, 10),
-			"IJ-AVG-S__POG1": ppbvToUgKg(12),
-			"IJ-AVG-S__POG2": ppbvToUgKg(12),
+			"IJ" + d + "AVG" + d + "S__BENZ": ppbcToUgKg(78.11, 6),
+			"IJ" + d + "AVG" + d + "S__TOLU": ppbcToUgKg(92.14, 7),
+			"IJ" + d + "AVG" + d + "S__XYLE": ppbcToUgKg(106.16, 8),
+			"IJ" + d + "AVG" + d + "S__NAP":  ppbcToUgKg(128.1705, 10),
+			"IJ" + d + "AVG" + d + "S__POG1": ppbvToUgKg(12),
+			"IJ" + d + "AVG" + d + "S__POG2": ppbvToUgKg(12),
 		},
 		bVOC: map[string]float64{
-			"IJ-AVG-S__ISOP": ppbcToUgKg(68.12, 5),
-			"IJ-AVG-S__LIMO": ppbvToUgKg(136.23),
-			"IJ-AVG-S__MTPA": ppbvToUgKg(136.23),
-			"IJ-AVG-S__MTPO": ppbvToUgKg(136.23),
+			"IJ" + d + "AVG" + d + "S__ISOP": ppbcToUgKg(68.12, 5),
+			"IJ" + d + "AVG" + d + "S__LIMO": ppbvToUgKg(136.23),
+			"IJ" + d + "AVG" + d + "S__MTPA": ppbvToUgKg(136.23),
+			"IJ" + d + "AVG" + d + "S__MTPO": ppbvToUgKg(136.23),
 		},
 		// SOA species (anthropogenic only)
 		aSOA: map[string]float64{
-			"IJ-AVG-S__ASOA1": ppbvToUgKg(150),
-			"IJ-AVG-S__ASOA2": ppbvToUgKg(150),
-			"IJ-AVG-S__ASOA3": ppbvToUgKg(150),
+			"IJ" + d + "AVG" + d + "S__ASOA1": ppbvToUgKg(150),
+			"IJ" + d + "AVG" + d + "S__ASOA2": ppbvToUgKg(150),
+			"IJ" + d + "AVG" + d + "S__ASOA3": ppbvToUgKg(150),
 		},
 		// SOA species (biogenic only)
 		bSOA: map[string]float64{
-			"IJ-AVG-S__ISOA1": ppbvToUgKg(150),
-			"IJ-AVG-S__ISOA2": ppbvToUgKg(150),
-			"IJ-AVG-S__ISOA3": ppbvToUgKg(150),
-			"IJ-AVG-S__TSOA0": ppbvToUgKg(150),
-			"IJ-AVG-S__TSOA1": ppbvToUgKg(150),
-			"IJ-AVG-S__TSOA2": ppbvToUgKg(150),
-			"IJ-AVG-S__TSOA3": ppbvToUgKg(150),
+			"IJ" + d + "AVG" + d + "S__ISOA1": ppbvToUgKg(150),
+			"IJ" + d + "AVG" + d + "S__ISOA2": ppbvToUgKg(150),
+			"IJ" + d + "AVG" + d + "S__ISOA3": ppbvToUgKg(150),
+			"IJ" + d + "AVG" + d + "S__TSOA0": ppbvToUgKg(150),
+			"IJ" + d + "AVG" + d + "S__TSOA1": ppbvToUgKg(150),
+			"IJ" + d + "AVG" + d + "S__TSOA2": ppbvToUgKg(150),
+			"IJ" + d + "AVG" + d + "S__TSOA3": ppbvToUgKg(150),
 		},
 		// NOx species. We are only interested in the mass
 		// of Nitrogen, rather than the mass of the whole molecule, so
 		// we use the molecular weight of Nitrogen.
 		nox: map[string]float64{
-			"IJ-AVG-S__NO":  ppbvToUgKg(mwN),
-			"IJ-AVG-S__NO2": ppbvToUgKg(mwN),
+			"IJ" + d + "AVG" + d + "S__NO":  ppbvToUgKg(mwN),
+			"IJ" + d + "AVG" + d + "S__NO2": ppbvToUgKg(mwN),
 		},
 		// pNO is the Nitrogen fraction of the particulate
 		// NO species.
 		pNO: map[string]float64{
-			"IJ-AVG-S__NIT":  ppbvToUgKg(mwN),
-			"IJ-AVG-S__NITs": ppbvToUgKg(mwN),
+			"IJ" + d + "AVG" + d + "S__NIT":  ppbvToUgKg(mwN),
+			"IJ" + d + "AVG" + d + "S__NITs": ppbvToUgKg(mwN),
 		},
 		// SOx species. We are only interested in the mass
 		// of Sulfur, rather than the mass of the whole molecule, so
 		// we use the molecular weight of Sulfur.
 		sox: map[string]float64{
-			"IJ-AVG-S__SO2": ppbvToUgKg(mwS),
+			"IJ" + d + "AVG" + d + "S__SO2": ppbvToUgKg(mwS),
 		},
 		// pS is the MADE particulate Sulfur species; sulfur fraction
 		// sulfate (SO4) plus sulfate on the surface of sea ice (SO4s).
 		pS: map[string]float64{
-			"IJ-AVG-S__SO4":  ppbvToUgKg(mwS),
-			"IJ-AVG-S__SO4s": ppbvToUgKg(mwS),
-			"IJ-AVG-S__DMS":  ppbvToUgKg(mwS),
+			"IJ" + d + "AVG" + d + "S__SO4":  ppbvToUgKg(mwS),
+			"IJ" + d + "AVG" + d + "S__SO4s": ppbvToUgKg(mwS),
+			"IJ" + d + "AVG" + d + "S__DMS":  ppbvToUgKg(mwS),
 		},
 		// NH3 is ammonia. We are only interested in the mass
 		// of Nitrogen, rather than the mass of the whole molecule, so
 		// we use the molecular weight of Nitrogen.
-		nh3: map[string]float64{"IJ-AVG-S__NH3": ppbvToUgKg(mwN)},
+		nh3: map[string]float64{"IJ" + d + "AVG" + d + "S__NH3": ppbvToUgKg(mwN)},
 		// pNH is the Nitrogen fraction of the particulate
 		// ammonia species.
-		pNH: map[string]float64{"IJ-AVG-S__NH4": ppbvToUgKg(mwN)},
+		pNH: map[string]float64{"IJ" + d + "AVG" + d + "S__NH4": ppbvToUgKg(mwN)},
 		// totalPM25 is total mass of PM2.5.
 		// It is calculated based on the formula at:
 		// http://wiki.seas.harvard.edu/geos-chem/index.php/Particulate_matter_in_GEOS-Chem
 		totalPM25: map[string]float64{
-			"IJ-AVG-S__NH4":  ppbvToUgKg(150) * 1.33,
-			"IJ-AVG-S__NIT":  ppbvToUgKg(150) * 1.33,
-			"IJ-AVG-S__SO4":  ppbvToUgKg(150) * 1.33,
-			"IJ-AVG-S__BCPI": ppbvToUgKg(150),
-			"IJ-AVG-S__BCPO": ppbvToUgKg(150),
-			"IJ-AVG-S__OCPI": ppbvToUgKg(150) * 1.16 * 2.1,
-			"IJ-AVG-S__OCPO": ppbvToUgKg(150) * 1.16 * 2.1,
-			"IJ-AVG-S__SOA":  ppbvToUgKg(150) * 1.16,
-			"IJ-AVG-S__DST1": ppbvToUgKg(150),
-			"IJ-AVG-S__DST2": ppbvToUgKg(150) * 0.38,
-			"IJ-AVG-S__SALA": ppbvToUgKg(150) * 1.86,
+			"IJ" + d + "AVG" + d + "S__NH4":  ppbvToUgKg(150) * 1.33,
+			"IJ" + d + "AVG" + d + "S__NIT":  ppbvToUgKg(150) * 1.33,
+			"IJ" + d + "AVG" + d + "S__SO4":  ppbvToUgKg(150) * 1.33,
+			"IJ" + d + "AVG" + d + "S__BCPI": ppbvToUgKg(150),
+			"IJ" + d + "AVG" + d + "S__BCPO": ppbvToUgKg(150),
+			"IJ" + d + "AVG" + d + "S__OCPI": ppbvToUgKg(150) * 1.16 * 2.1,
+			"IJ" + d + "AVG" + d + "S__OCPO": ppbvToUgKg(150) * 1.16 * 2.1,
+			"IJ" + d + "AVG" + d + "S__SOA":  ppbvToUgKg(150) * 1.16,
+			"IJ" + d + "AVG" + d + "S__DST1": ppbvToUgKg(150),
+			"IJ" + d + "AVG" + d + "S__DST2": ppbvToUgKg(150) * 0.38,
+			"IJ" + d + "AVG" + d + "S__SALA": ppbvToUgKg(150) * 1.86,
 		},
 
 		geosA1:        GEOSA1,
@@ -194,8 +218,12 @@ func NewGEOSChem(GEOSA1, GEOSA3Cld, GEOSA3Dyn, GEOSI3, GEOSA3MstE, GEOSChemOut, 
 		geosA3Dyn:     GEOSA3Dyn,
 		geosI3:        GEOSI3,
 		geosA3MstE:    GEOSA3MstE,
+		geosApBp:      GEOSApBp,
 		geosChem:      GEOSChemOut,
 		vegTypeGlobal: VegTypeGlobal,
+
+		dash:    d,
+		msgChan: msgChan,
 	}
 
 	var err error
@@ -269,35 +297,42 @@ func ppbvToUgKg(mw float64) float64 {
 
 func (gc *GEOSChem) readA3Dyn(varName string) NextData {
 	conv := geosLayerConvert(gc.nz)
-	return conv(nextDataNCF(gc.geosA3Dyn, geosFormat, varName, gc.start, gc.end, gc.recordDelta3h, gc.fileDelta24h, readNCF))
+	return conv(nextDataNCF(gc.geosA3Dyn, geosFormat, varName, gc.start, gc.end, gc.recordDelta3h, gc.fileDelta24h, readNCF, gc.msgChan))
 }
 
 func (gc *GEOSChem) readA3MstE(varName string) NextData {
 	conv := geosLayerConvert(gc.nz)
-	return conv(nextDataNCF(gc.geosA3MstE, geosFormat, varName, gc.start, gc.end, gc.recordDelta3h, gc.fileDelta24h, readNCF))
+	return conv(nextDataNCF(gc.geosA3MstE, geosFormat, varName, gc.start, gc.end, gc.recordDelta3h, gc.fileDelta24h, readNCF, gc.msgChan))
 }
 
 func (gc *GEOSChem) readA3Cld(varName string) NextData {
 	conv := geosLayerConvert(gc.nz)
-	return conv(nextDataNCF(gc.geosA3Cld, geosFormat, varName, gc.start, gc.end, gc.recordDelta3h, gc.fileDelta24h, readNCF))
+	return conv(nextDataNCF(gc.geosA3Cld, geosFormat, varName, gc.start, gc.end, gc.recordDelta3h, gc.fileDelta24h, readNCF, gc.msgChan))
 }
 
 func (gc *GEOSChem) readA1(varName string) NextData {
 	// All variables in A1 are 2-d, so we don't need to perform a layer conversion.
-	return nextDataNCF(gc.geosA1, geosFormat, varName, gc.start, gc.end, gc.recordDelta1h, gc.fileDelta24h, readNCF)
+	return nextDataNCF(gc.geosA1, geosFormat, varName, gc.start, gc.end, gc.recordDelta1h, gc.fileDelta24h, readNCF, gc.msgChan)
 }
 
 func (gc *GEOSChem) readI3(varName string) NextData {
 	conv := geosLayerConvert(gc.nz)
-	return conv(nextDataNCF(gc.geosI3, geosFormat, varName, gc.start, gc.end, gc.recordDelta3h, gc.fileDelta24h, readNCF))
+	return conv(nextDataNCF(gc.geosI3, geosFormat, varName, gc.start, gc.end, gc.recordDelta3h, gc.fileDelta24h, readNCF, gc.msgChan))
 }
 
 func (gc *GEOSChem) readChem(varName string) NextData {
-	return nextDataNCF(gc.geosChem, geosChemFormat, varName, gc.start, gc.end, gc.recordDelta3h, gc.fileDelta3h, readNCFNoHour)
+	return nextDataNCF(gc.geosChem, geosChemFormat, varName, gc.start, gc.end, gc.recordDelta3h, gc.fileDelta3h, readNCFNoHour, gc.msgChan)
+}
+
+func (gc *GEOSChem) readApBp(varName string) NextData {
+	if gc.geosApBp != "" {
+		return nextDataConstantNCF(strings.ToLower(varName), gc.geosApBp)
+	}
+	return nextDataNCF(gc.geosChem, geosChemFormat, varName, gc.start, gc.end, gc.recordDelta3h, gc.fileDelta3h, readNCFNoHour, gc.msgChan)
 }
 
 func (gc *GEOSChem) readChemGroupAlt(varGroup map[string]float64) NextData {
-	return nextDataGroupAltNCF(gc.geosChem, geosChemFormat, gc.aVOC, gc.ALT(), gc.start, gc.end, gc.recordDelta3h, gc.fileDelta3h, readNCFNoHour)
+	return nextDataGroupAltNCF(gc.geosChem, geosChemFormat, gc.aVOC, gc.ALT(), gc.start, gc.end, gc.recordDelta3h, gc.fileDelta3h, readNCFNoHour, gc.msgChan)
 }
 
 var geosLayerConvert = func(nz int) func(NextData) NextData {
@@ -407,34 +442,53 @@ func geosLayerConvertStaggered(in *sparse.DenseArray, staggeredLayerMap map[int]
 // Nx helps fulfill the Preprocessor interface by returning
 // the number of grid cells in the West-East direction.
 func (gc *GEOSChem) Nx() (int, error) {
-	f, ff, err := ncfFromTemplate(gc.geosChem, geosChemFormat, gc.start)
+	f, ff, err := ncfFromTemplate(gc.geosA3Dyn, geosFormat, gc.start)
 	if err != nil {
 		return -1, err
 	}
 	defer f.Close()
-	return ff.Header.Lengths("IJ-AVG-S__SO2")[2], nil
+	v := "RH"
+	dims := ff.Header.Lengths(v)
+	if len(dims) == 0 {
+		return -1, fmt.Errorf("geos: missing variable %s", v)
+	}
+	return dims[3], nil
 }
 
 // Ny helps fulfill the Preprocessor interface by returning
 // the number of grid cells in the South-North direction.
 func (gc *GEOSChem) Ny() (int, error) {
-	f, ff, err := ncfFromTemplate(gc.geosChem, geosChemFormat, gc.start)
+	f, ff, err := ncfFromTemplate(gc.geosA3Dyn, geosFormat, gc.start)
 	if err != nil {
 		return -1, err
 	}
 	defer f.Close()
-	return ff.Header.Lengths("IJ-AVG-S__SO2")[1], nil
+	v := "RH"
+	dims := ff.Header.Lengths(v)
+	if len(dims) == 0 {
+		return -1, fmt.Errorf("geos: missing variable %s", v)
+	}
+	return dims[2], nil
 }
 
 // Nz helps fulfill the Preprocessor interface by returning
 // the number of grid cells in the below-above direction.
 func (gc *GEOSChem) Nz() (int, error) {
+	// We get Nz from the GEOS-Chem output to make sure we're using the
+	// GEOS-Chem number of layers rather than the GEOS number of layers.
 	f, ff, err := ncfFromTemplate(gc.geosChem, geosChemFormat, gc.start)
 	if err != nil {
 		return -1, err
 	}
 	defer f.Close()
-	return ff.Header.Lengths("IJ-AVG-S__SO2")[0], nil
+	v := "IJ" + gc.dash + "AVG" + gc.dash + "S__SO2"
+	dims := ff.Header.Lengths(v)
+	if len(dims) == 0 {
+		return -1, fmt.Errorf("geoschem: missing variable %s", v)
+	} else if len(dims) == 4 {
+		dims = dims[1:4] // Sometimes GEOS-Chem files also have a time dimension.
+	}
+	return dims[0], nil
 }
 
 // PBLH helps fulfill the Preprocessor interface.
@@ -474,11 +528,22 @@ func (gc *GEOSChem) Height() NextData {
 // ALT helps fulfill the Preprocessor interface, returning
 // inverse air density [m3/kg].
 func (gc *GEOSChem) ALT() NextData {
-	densityFunc := gc.readChem("TIME-SER__AIRDEN") // Air density in molec/cm3.
+	densityFunc1 := gc.readChem("TIME-SER__AIRDEN")   // Air density in molec/cm3.
+	densityFunc2 := gc.readChem("BXHGHT_S__AIRNUMDE") // Alternate: Dry air density in molec/cm3.
 	return func() (*sparse.DenseArray, error) {
-		density, err := densityFunc()
+		density, err := densityFunc1()
 		if err != nil {
-			return nil, err
+			if err == io.EOF {
+				return nil, err
+			}
+			holdErr := err
+			density, err = densityFunc2()
+			if err != nil {
+				if err == io.EOF {
+					return nil, err
+				}
+				return nil, fmt.Errorf("%s; %s", holdErr, err)
+			}
 		}
 		alt := sparse.ZerosDense(density.Shape...)
 		for i, val := range density.Elements {
@@ -573,8 +638,8 @@ func (gc *GEOSChem) T() NextData { return gc.readI3("T") }
 // P helps fulfill the Preprocessor interface by returning pressure [Pa].
 func (gc *GEOSChem) P() NextData {
 	PSFunc := gc.readI3("PS")   // Surface pressure [hPa]
-	apFunc := gc.readChem("Ap") // Hybrid-grid A parameter [hPa]
-	bpFunc := gc.readChem("Bp") // Hypbrid-grid b parameter [-]
+	apFunc := gc.readApBp("Ap") // Hybrid-grid A parameter [hPa]
+	bpFunc := gc.readApBp("Bp") // Hypbrid-grid b parameter [-]
 	return func() (*sparse.DenseArray, error) {
 		PS, err := PSFunc()
 		if err != nil {
@@ -604,12 +669,38 @@ func (gc *GEOSChem) P() NextData {
 // HO helps fulfill the Preprocessor interface by returning hydroxyl
 // radical concentration [ppmv].
 func (gc *GEOSChem) HO() NextData {
-	HOFunc := gc.readChem("TIME-SER__OH") // OH density (molec / cm3)
-	altFunc := gc.ALT()
-	return func() (*sparse.DenseArray, error) {
-		HO, err := HOFunc()
+	HOFunc1 := gc.readChem("TIME-SER__OH") // OH density (molec / cm3)
+	f := gc.readChem("CHEM_L_S__OH")       // Alternate OH density (molec / cm3)
+	HOFunc2 := func() (*sparse.DenseArray, error) {
+		data, err := f()
 		if err != nil {
 			return nil, err
+		}
+		if data.Shape[0] != 59 { // Sometimes this variable has 59 layers instead of 72. TODO: Why?
+			return data, nil
+		}
+		out := sparse.ZerosDense(72, data.Shape[1], data.Shape[2])
+		for k := 0; k < data.Shape[0]; k++ {
+			for j := 0; j < data.Shape[1]; j++ {
+				for i := 0; i < data.Shape[2]; i++ {
+					out.Set(data.Get(k, j, i), k, j, i)
+				}
+			}
+		}
+		return out, nil
+	}
+	altFunc := gc.ALT()
+	return func() (*sparse.DenseArray, error) {
+		HO, err := HOFunc1()
+		if err != nil {
+			if err == io.EOF {
+				return nil, err
+			}
+			errHold := err
+			HO, err = HOFunc2()
+			if err != nil {
+				return nil, fmt.Errorf("%s; %s", errHold, err)
+			}
 		}
 		alt, err := altFunc()
 		if err != nil {
@@ -629,7 +720,7 @@ func (gc *GEOSChem) HO() NextData {
 // H2O2 helps fulfill the Preprocessor interface by returning
 // hydrogen peroxide concentration [ppmv].
 func (gc *GEOSChem) H2O2() NextData {
-	H2O2Func := gc.readChem("IJ-AVG-S__H2O2") // H2O2 concentration [ppbv].
+	H2O2Func := gc.readChem("IJ" + gc.dash + "AVG" + gc.dash + "S__H2O2") // H2O2 concentration [ppbv].
 	return func() (*sparse.DenseArray, error) {
 		H2O2, err := H2O2Func()
 		if err != nil {

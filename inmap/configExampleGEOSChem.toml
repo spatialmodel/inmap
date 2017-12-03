@@ -30,3 +30,4 @@ GEOSI3= "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/preproc/GEOS
 GEOSA3MstE= "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/preproc/GEOSFP.[DATE].A3mstE.2x25.nc"
 GEOSChem= "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/preproc/gc_output.[DATE].nc"
 VegTypeGlobal= "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/preproc/vegtype.global.txt"
+Dash= true

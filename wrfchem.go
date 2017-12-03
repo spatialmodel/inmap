@@ -47,6 +47,8 @@ type WRFChem struct {
 	wrfOut string
 
 	recordDelta, fileDelta time.Duration
+
+	msgChan chan string
 }
 
 // NewWRFChem initializes a WRF-Chem preprocessor from the given
@@ -55,7 +57,8 @@ type WRFChem struct {
 // [DATE] should be used as a wild card for the simulation date.
 // startDate and endDate are the dates of the beginning and end of the
 // simulation, respectively, in the format "YYYYMMDD".
-func NewWRFChem(WRFOut, startDate, endDate string) (*WRFChem, error) {
+// If msgChan is not nil, status messages will be sent to it.
+func NewWRFChem(WRFOut, startDate, endDate string, msgChan chan string) (*WRFChem, error) {
 	w := WRFChem{
 		// These maps contain the WRF-Chem variables that make
 		// up the chemical species groups, as well as the
@@ -109,7 +112,8 @@ func NewWRFChem(WRFOut, startDate, endDate string) (*WRFChem, error) {
 		// totalPM25 is total mass of PM2.5  [μg/m3].
 		totalPM25: map[string]float64{"PM2_5_DRY": 1.},
 
-		wrfOut: WRFOut,
+		wrfOut:  WRFOut,
+		msgChan: msgChan,
 	}
 
 	var err error
@@ -141,15 +145,15 @@ func ppmvToUgKg(mw float64) float64 {
 }
 
 func (w *WRFChem) read(varName string) NextData {
-	return nextDataNCF(w.wrfOut, wrfFormat, varName, w.start, w.end, w.recordDelta, w.fileDelta, readNCF)
+	return nextDataNCF(w.wrfOut, wrfFormat, varName, w.start, w.end, w.recordDelta, w.fileDelta, readNCF, w.msgChan)
 }
 
 func (w *WRFChem) readGroupAlt(varGroup map[string]float64) NextData {
-	return nextDataGroupAltNCF(w.wrfOut, wrfFormat, varGroup, w.ALT(), w.start, w.end, w.recordDelta, w.fileDelta, readNCF)
+	return nextDataGroupAltNCF(w.wrfOut, wrfFormat, varGroup, w.ALT(), w.start, w.end, w.recordDelta, w.fileDelta, readNCF, w.msgChan)
 }
 
 func (w *WRFChem) readGroup(varGroup map[string]float64) NextData {
-	return nextDataGroupNCF(w.wrfOut, wrfFormat, varGroup, w.start, w.end, w.recordDelta, w.fileDelta, readNCF)
+	return nextDataGroupNCF(w.wrfOut, wrfFormat, varGroup, w.start, w.end, w.recordDelta, w.fileDelta, readNCF, w.msgChan)
 }
 
 // Nx helps fulfill the Preprocessor interface by returning

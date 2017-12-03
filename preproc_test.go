@@ -33,7 +33,7 @@ import (
 func TestWRFChemToInMAP(t *testing.T) {
 	const tolerance = 1.0e-6
 
-	wrf, err := NewWRFChem("inmap/testdata/preproc/wrfout_d01_[DATE]", "20050101", "20050103")
+	wrf, err := NewWRFChem("inmap/testdata/preproc/wrfout_d01_[DATE]", "20050101", "20050103", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +55,7 @@ func TestWRFChemToInMAP(t *testing.T) {
 }
 
 func BenchmarkWRFChemToInMAP(b *testing.B) {
-	wrf, err := NewWRFChem("inmap/testdata/preproc/wrfout_d01_[DATE]", "20050101", "20050103")
+	wrf, err := NewWRFChem("inmap/testdata/preproc/wrfout_d01_[DATE]", "20050101", "20050103", nil)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -74,10 +74,13 @@ func TestGEOSChemToInMAP(t *testing.T) {
 		"inmap/testdata/preproc/GEOSFP.[DATE].A3dyn.2x25.nc",
 		"inmap/testdata/preproc/GEOSFP.[DATE].I3.2x25.nc",
 		"inmap/testdata/preproc/GEOSFP.[DATE].A3mstE.2x25.nc",
+		"",
 		"inmap/testdata/preproc/gc_output.[DATE].nc",
 		"inmap/testdata/preproc/vegtype.global.txt",
 		"20130102",
 		"20130104",
+		true,
+		nil,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -106,10 +109,13 @@ func BenchmarkGEOSChemToInMAP(b *testing.B) {
 		"inmap/testdata/preproc/GEOSFP.[DATE].A3dyn.2x25.nc",
 		"inmap/testdata/preproc/GEOSFP.[DATE].I3.2x25.nc",
 		"inmap/testdata/preproc/GEOSFP.[DATE].A3mstE.2x25.nc",
+		"",
 		"inmap/testdata/preproc/gc_output.[DATE].nc",
 		"inmap/testdata/preproc/vegtype.global.txt",
 		"20130102",
 		"20130104",
+		true,
+		nil,
 	)
 	if err != nil {
 		b.Fatal(err)
@@ -598,5 +604,45 @@ func TestStagger(t *testing.T) {
 	for dim := 0; dim < 3; dim++ {
 		result := staggerWorker(a, dim)
 		arrayCompare(result, want[dim], 1.0e-8, fmt.Sprintf("dim %d", dim), t)
+	}
+}
+
+func TestReadApBp(t *testing.T) {
+	f := nextDataConstantNCF("ap", "inmap/testdata/preproc/GEOSFP.ApBp.nc")
+	dataWant := sparse.ZerosDense(73)
+	dataWant.Elements = []float64{0, 0.04804826155304909, 6.593751907348633,
+		13.13479995727539, 19.613109588623047, 26.092010498046875, 32.57080841064453,
+		38.98200988769531, 45.33900833129883, 51.696109771728516, 58.0532112121582,
+		64.36264038085938, 70.62197875976562, 78.83422088623047, 89.09992218017578,
+		99.3652114868164, 109.18170166015625, 118.95860290527344, 128.69590759277344,
+		142.91000366210938, 156.25999450683594, 169.60899353027344, 181.61900329589844,
+		193.0970001220703, 203.25900268554688, 212.14999389648438, 218.7760009765625,
+		223.8979949951172, 224.36300659179688, 216.86500549316406, 201.19200134277344,
+		176.92999267578125, 150.39300537109375, 127.83699798583984, 108.66300201416016,
+		92.36572265625, 78.5123062133789, 66.60340881347656, 56.387908935546875,
+		47.6439094543457, 40.175411224365234, 33.81000900268555, 28.367809295654297,
+		23.730409622192383, 19.79159927368164, 16.45709991455078, 13.643400192260742,
+		11.276900291442871, 9.29294204711914, 7.619842052459717, 6.216801166534424,
+		5.0468010902404785, 4.076570987701416, 3.276431083679199, 2.620210886001587,
+		2.084969997406006, 1.6507899761199951, 1.300510048866272, 1.0194400548934937,
+		0.7951341271400452, 0.616779088973999, 0.4758060872554779, 0.3650411069393158,
+		0.27852609753608704, 0.2113489955663681, 0.15949499607086182, 0.11970300227403641,
+		0.08934502303600311, 0.06600000709295273, 0.04758501052856445, 0.03269999846816063,
+		0.019999999552965164, 0.009999999776482582,
+	}
+	data, err := f()
+	if err != nil {
+		t.Error(err)
+	}
+	if !reflect.DeepEqual(data, dataWant) {
+		t.Errorf("1: %v != %v", data, dataWant)
+	}
+
+	data, err = f()
+	if err != nil {
+		t.Error(err)
+	}
+	if !reflect.DeepEqual(data, dataWant) {
+		t.Errorf("2: %v != %v", data, dataWant)
 	}
 }

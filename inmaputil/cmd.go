@@ -426,6 +426,15 @@ func init() {
 			flagsets:   []*pflag.FlagSet{preprocCmd.Flags()},
 		},
 		{
+			name: "Preproc.GEOSChem.GEOSApBp",
+			usage: `
+              Preproc.GEOSChem.GEOSApBp is the location of the constant GEOS pressure level
+              variable file. It is optional; if it is not specified the Ap and Bp information
+              will be extracted from the GEOSChem files.`,
+			defaultVal: "",
+			flagsets:   []*pflag.FlagSet{preprocCmd.Flags()},
+		},
+		{
 			name: "Preproc.GEOSChem.GEOSChem",
 			usage: `
               Preproc.GEOSChem.GEOSChem is the location of GEOS-Chem output files.
@@ -440,6 +449,15 @@ func init() {
               which is described here:
               http://wiki.seas.harvard.edu/geos-chem/index.php/Olson_land_map#Structure_of_the_vegtype.global_file`,
 			defaultVal: "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/preproc/vegtype.global.txt",
+			flagsets:   []*pflag.FlagSet{preprocCmd.Flags()},
+		},
+		{
+			name: "Preproc.GEOSChem.Dash",
+			usage: `
+              Preproc.GEOSChem.Dash indicates whether GEOS-Chem chemical variable
+              names should be assumed to be in the form 'IJ-AVG-S__xxx' vs.
+              the form 'IJ_AVG_S_xxx'.`,
+			defaultVal: false,
 			flagsets:   []*pflag.FlagSet{preprocCmd.Flags()},
 		},
 		{
@@ -693,6 +711,7 @@ file and saves the result for use in future InMAP simulations.`,
 			os.ExpandEnv(Cfg.GetString("Preproc.GEOSChem.GEOSA3Dyn")),
 			os.ExpandEnv(Cfg.GetString("Preproc.GEOSChem.GEOSI3")),
 			os.ExpandEnv(Cfg.GetString("Preproc.GEOSChem.GEOSA3MstE")),
+			os.ExpandEnv(Cfg.GetString("Preproc.GEOSChem.GEOSApBp")),
 			os.ExpandEnv(Cfg.GetString("Preproc.GEOSChem.GEOSChem")),
 			os.ExpandEnv(Cfg.GetString("Preproc.GEOSChem.VegTypeGlobal")),
 			os.ExpandEnv(Cfg.GetString("InMAPData")),
@@ -700,6 +719,7 @@ file and saves the result for use in future InMAP simulations.`,
 			Cfg.GetFloat64("Preproc.CtmGridYo"),
 			Cfg.GetFloat64("Preproc.CtmGridDx"),
 			Cfg.GetFloat64("Preproc.CtmGridDy"),
+			Cfg.GetBool("Preproc.GEOSChem.Dash"),
 		)
 	},
 	DisableAutoGenTag: true,

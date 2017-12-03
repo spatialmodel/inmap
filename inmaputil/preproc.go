@@ -20,6 +20,7 @@ package inmaputil
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/spatialmodel/inmap"
@@ -61,6 +62,10 @@ import (
 // on level edges files. [DATE] should be used as a wild card for
 // the simulation date.
 //
+// GEOSApBp is the location of the pressure level variable file.
+// It is optional; if it is not specified the Ap and Bp information
+// will be extracted from the GEOSChem files.
+//
 // GEOSChem is the location of GEOS-Chem output files.
 // [DATE] should be used as a wild card for the simulation date.
 //
@@ -78,8 +83,17 @@ import (
 // CtmGridDx is the grid cell size in the x direction [m].
 //
 // CtmGridDy is the grid cell size in the y direction [m].
-func Preproc(StartDate, EndDate, CTMType, WRFOut, GEOSA1, GEOSA3Cld, GEOSA3Dyn, GEOSI3, GEOSA3MstE,
-	GEOSChem, VegTypeGlobal, InMAPData string, CtmGridXo, CtmGridYo, CtmGridDx, CtmGridDy float64) error {
+//
+// dash indicates whether GEOS-Chem variable names are in the form 'IJ-AVG-S__xxx'
+// as opposed to 'IJ_AVG_S_xxx'.
+func Preproc(StartDate, EndDate, CTMType, WRFOut, GEOSA1, GEOSA3Cld, GEOSA3Dyn, GEOSI3, GEOSA3MstE, GEOSApBp,
+	GEOSChem, VegTypeGlobal, InMAPData string, CtmGridXo, CtmGridYo, CtmGridDx, CtmGridDy float64, dash bool) error {
+	msgChan := make(chan string)
+	go func() {
+		for {
+			log.Println(<-msgChan)
+		}
+	}()
 	var ctm inmap.Preprocessor
 	switch CTMType {
 	case "GEOS-Chem":
@@ -97,10 +111,13 @@ func Preproc(StartDate, EndDate, CTMType, WRFOut, GEOSA1, GEOSA3Cld, GEOSA3Dyn, 
 			GEOSA3Dyn,
 			GEOSI3,
 			GEOSA3MstE,
+			GEOSApBp,
 			GEOSChem,
 			VegTypeGlobal,
 			StartDate,
 			EndDate,
+			dash,
+			msgChan,
 		)
 		if err != nil {
 			return err
@@ -114,7 +131,7 @@ func Preproc(StartDate, EndDate, CTMType, WRFOut, GEOSA1, GEOSA3Cld, GEOSA3Dyn, 
 			}
 		}
 		var err error
-		ctm, err = inmap.NewWRFChem(WRFOut, StartDate, EndDate)
+		ctm, err = inmap.NewWRFChem(WRFOut, StartDate, EndDate, msgChan)
 		if err != nil {
 			return err
 		}

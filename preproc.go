@@ -21,6 +21,7 @@ package inmap
 import (
 	"fmt"
 	"io"
+	"log"
 	"math"
 	"os"
 	"strings"
@@ -980,7 +981,7 @@ func arrayAverage(s *sparse.DenseArray, numTsteps int) *sparse.DenseArray {
 // recordDelta and fileDelta specify the length of time between each file
 // and each record within a file, respectively. dateFormat is the format
 // in which dates appear in the filename.
-func nextDataNCF(fileTemplate string, dateFormat string, varName string, start, end time.Time, recordDelta, fileDelta time.Duration, readFunc readNCFFunc) NextData {
+func nextDataNCF(fileTemplate string, dateFormat string, varName string, start, end time.Time, recordDelta, fileDelta time.Duration, readFunc readNCFFunc, msgChan chan string) NextData {
 	recordsPerFile := int(fileDelta / recordDelta)
 	var i int
 	date := start
@@ -999,6 +1000,10 @@ func nextDataNCF(fileTemplate string, dateFormat string, varName string, start, 
 		}
 		i++
 		if i == recordsPerFile {
+			if msgChan != nil {
+				fileName := strings.Replace(fileTemplate, "[DATE]", date.Format(dateFormat), -1)
+				msgChan <- fmt.Sprintf("Read %d records of %s from %s", i, varName, fileName)
+			}
 			i = 0
 			date = date.Add(fileDelta)
 		}
@@ -1042,6 +1047,8 @@ func readNCFNoHour(pol string, ff *cdf.File, _ int) (*sparse.DenseArray, error) 
 	dims := ff.Header.Lengths(pol)
 	if len(dims) == 0 {
 		return nil, fmt.Errorf("inmap: preprocessor read netcdf: variable %v not in file", pol)
+	} else if dims[0] == 0 {
+		dims = dims[1:4] // TODO: This doesn't seem like a good solution here.
 	}
 	r := ff.Reader(pol, nil, nil)
 	buf := r.Zero(-1)
@@ -1056,12 +1063,29 @@ func readNCFNoHour(pol string, ff *cdf.File, _ int) (*sparse.DenseArray, error) 
 	return data, nil
 }
 
+// nextDataConstantNCF is a NetCDF file iterator for constant data.
+// It always returns the same array.
+func nextDataConstantNCF(pol, filename string) func() (*sparse.DenseArray, error) {
+	f, err := os.Open(filename)
+	var ff *cdf.File
+	var data *sparse.DenseArray
+	if err == nil {
+		ff, err = cdf.Open(f)
+		if err == nil {
+			data, err = readNCFNoHour(pol, ff, 0)
+		}
+	}
+	return func() (*sparse.DenseArray, error) {
+		return data, err
+	}
+}
+
 // nextDataGroupNCF reads a group of variables, mulitplies each by the
 // factors that are the values given in varNames.
-func nextDataGroupNCF(fileTemplate string, dateFormat string, varNames map[string]float64, start, end time.Time, recordDelta, fileDelta time.Duration, readFunc readNCFFunc) NextData {
+func nextDataGroupNCF(fileTemplate string, dateFormat string, varNames map[string]float64, start, end time.Time, recordDelta, fileDelta time.Duration, readFunc readNCFFunc, msgChan chan string) NextData {
 	dataFuncs := make(map[string]NextData)
 	for v := range varNames {
-		dataFuncs[v] = nextDataNCF(fileTemplate, dateFormat, v, start, end, recordDelta, fileDelta, readFunc)
+		dataFuncs[v] = nextDataNCF(fileTemplate, dateFormat, v, start, end, recordDelta, fileDelta, readFunc, msgChan)
 	}
 	return func() (*sparse.DenseArray, error) {
 		var out *sparse.DenseArray
@@ -1069,7 +1093,11 @@ func nextDataGroupNCF(fileTemplate string, dateFormat string, varNames map[strin
 		for varName, f := range dataFuncs {
 			data, err := f()
 			if err != nil {
-				return nil, err
+				if err == io.EOF {
+					return nil, err
+				}
+				log.Println(err) // Sometimes not all tracers are written out. TODO: How big of a problem is this?
+				continue
 			}
 			if firstData {
 				out = sparse.ZerosDense(data.Shape...)
@@ -1086,8 +1114,8 @@ func nextDataGroupNCF(fileTemplate string, dateFormat string, varNames map[strin
 
 // nextDataGroupAltNCF reads a group of variables using nextDataGroupNCF
 // and divides the result by inverse density (alt), as specified by altVar.
-func nextDataGroupAltNCF(fileTemplate string, dateFormat string, varNames map[string]float64, altFunc NextData, start, end time.Time, recordDelta, fileDelta time.Duration, readFunc readNCFFunc) NextData {
-	f := nextDataGroupNCF(fileTemplate, dateFormat, varNames, start, end, recordDelta, fileDelta, readFunc)
+func nextDataGroupAltNCF(fileTemplate string, dateFormat string, varNames map[string]float64, altFunc NextData, start, end time.Time, recordDelta, fileDelta time.Duration, readFunc readNCFFunc, msgChan chan string) NextData {
+	f := nextDataGroupNCF(fileTemplate, dateFormat, varNames, start, end, recordDelta, fileDelta, readFunc, msgChan)
 	return func() (*sparse.DenseArray, error) {
 		alt, err := altFunc()
 		if err != nil {
