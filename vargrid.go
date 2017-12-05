@@ -335,7 +335,7 @@ func (config *VarGridConfig) webMapTrans() (t proj.Transformer, notMeters bool, 
 	if err != nil {
 		return nil, false, fmt.Errorf("inmap: while creating webMapTrans: %v", err)
 	}
-	if gridSR.ToMeter > 1.0000001 || gridSR.ToMeter < 0.999999 {
+	if gridSR.ToMeter > 1.0000001 || gridSR.ToMeter < 0.999999 || gridSR.Name == "longlat" {
 		notMeters = true
 	}
 	return webMapTrans, notMeters, nil
