@@ -77,7 +77,7 @@
   branch = "master"
   name = "github.com/ctessum/gobra"
   packages = ["."]
-  revision = "e4b85947cf29d8fdc26d9c3e6eaaa21ad81ffaf3"
+  revision = "7bb7544a628eb39e557ab0fe899658997c09119e"
 
 [[projects]]
   branch = "master"
@@ -268,6 +268,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0e2386dc2fffb2ec4a34e724194fd142f18f7d491056f1eade8c8c987c07a7cd"
+  inputs-digest = "8efab23323d75f1b8cfe5b0fee6629b45760d833ab0e4439c72683e2e0807b46"
   solver-name = "gps-cdcl"
   solver-version = 1
