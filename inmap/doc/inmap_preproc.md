@@ -37,7 +37,7 @@ inmap preproc [flags]
       --Preproc.GEOSChem.Dash                   
               Preproc.GEOSChem.Dash indicates whether GEOS-Chem chemical variable
               names should be assumed to be in the form 'IJ-AVG-S__xxx' vs.
-              the form 'IJ_AVG_S_xxx'.
+              the form 'IJ_AVG_S__xxx'.
       --Preproc.GEOSChem.GEOSA1 string          
               Preproc.GEOSChem.GEOSA1 is the location of the GEOS 1-hour time average files.
               [DATE] should be used as a wild card for the simulation date. (default "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/preproc/GEOSFP.[DATE].A1.2x25.nc")

@@ -16,7 +16,7 @@ inmap grid [flags]
 ### Options
 
 ```
-      --EmissionsShapefiles string             
+      --EmissionsShapefiles stringSlice        
               EmissionsShapefiles are the paths to any emissions shapefiles.
               Can be elevated or ground level; elevated files need to have columns
               labeled "height", "diam", "temp", and "velocity" containing stack
@@ -24,7 +24,7 @@ inmap grid [flags]
               Emissions will be allocated from the geometries in the shape file
               to the InMAP computational grid, but the mapping projection of the
               shapefile must be the same as the projection InMAP uses.
-              Can include environment variables. (default "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testEmis.shp")
+              Can include environment variables. (default [${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testEmis.shp])
       --InMAPData string                       
               InMAPData is the path to location of baseline meteorology and pollutant data.
               The path can include environment variables. (default "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testInMAPInputData.ncf")
@@ -60,8 +60,7 @@ inmap grid [flags]
               option is only used with dynamic grids. (default 1e-09)
       --VarGrid.PopDensityThreshold float      
               PopDensityThreshold is a limit for people per unit area in a grid cell
-              (units will typically be either people / m^2 or people / degree^2,
-              depending on the spatial projection of the model grid). If
+              in units of people / m². If
               the population density in a grid cell is above this level, the cell in question
               is a candidate for splitting into smaller cells. This option is only used with
               static grids. (default 0.0055)

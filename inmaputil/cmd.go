@@ -185,8 +185,7 @@ func init() {
 			name: "VarGrid.PopDensityThreshold",
 			usage: `
               PopDensityThreshold is a limit for people per unit area in a grid cell
-              (units will typically be either people / m^2 or people / degree^2,
-              depending on the spatial projection of the model grid). If
+              in units of people / m². If
               the population density in a grid cell is above this level, the cell in question
               is a candidate for splitting into smaller cells. This option is only used with
               static grids.`,
@@ -293,7 +292,7 @@ func init() {
               to the InMAP computational grid, but the mapping projection of the
               shapefile must be the same as the projection InMAP uses.
               Can include environment variables.`,
-			defaultVal: "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testEmis.shp",
+			defaultVal: []string{"${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testEmis.shp"},
 			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
 		},
 		{
@@ -456,7 +455,7 @@ func init() {
 			usage: `
               Preproc.GEOSChem.Dash indicates whether GEOS-Chem chemical variable
               names should be assumed to be in the form 'IJ-AVG-S__xxx' vs.
-              the form 'IJ_AVG_S_xxx'.`,
+              the form 'IJ_AVG_S__xxx'.`,
 			defaultVal: false,
 			flagsets:   []*pflag.FlagSet{preprocCmd.Flags()},
 		},
