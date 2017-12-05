@@ -38,7 +38,7 @@ choose a run mode. (Currently 'steady' is the only available run mode.)
               include environment variables. (default "inmap_output.shp")
       --OutputVariables string                 
               OutputVariables specifies which model variables should be included in the
-              output file. It can include environment variables. (default "{\"TotalPM25\":\"TotalPM25\",\"TotalPopD\":\"coxHazard(loglogRR(TotalPM25), TotalPop, allcause)\"}\n")
+              output file. It can include environment variables. (default "{\"TotalPM25\":\"PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA\",\"TotalPopD\":\"coxHazard(loglogRR(TotalPM25), TotalPop, allcause)\"}\n")
       --VarGrid.CensusFile string              
               VarGrid.CensusFile is the path to the shapefile holding population information. (default "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testPopulation.shp")
       --VarGrid.CensusPopColumns stringSlice   
@@ -123,11 +123,7 @@ choose a run mode. (Currently 'steady' is the only available run mode.)
 ### Options inherited from parent commands
 
 ```
-      --HTTPPort string   
-              Port for hosting web page. If HTTPport is ':8080', then the GUI
-               would be viewed by visiting "localhost:8080" in a web browser.
-              If HTTPport is "", then the web server doesn't run. (default ":8080")
-      --config string     
+      --config string   
               config specifies the configuration file location.
 ```
 

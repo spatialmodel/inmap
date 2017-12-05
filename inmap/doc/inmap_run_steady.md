@@ -36,10 +36,6 @@ inmap run steady [flags]
               to the InMAP computational grid, but the mapping projection of the
               shapefile must be the same as the projection InMAP uses.
               Can include environment variables. (default "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testEmis.shp")
-      --HTTPPort string                        
-              Port for hosting web page. If HTTPport is ':8080', then the GUI
-               would be viewed by visiting "localhost:8080" in a web browser.
-              If HTTPport is "", then the web server doesn't run. (default ":8080")
       --InMAPData string                       
               InMAPData is the path to location of baseline meteorology and pollutant data.
               The path can include environment variables. (default "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testInMAPInputData.ncf")
@@ -55,7 +51,7 @@ inmap run steady [flags]
               include environment variables. (default "inmap_output.shp")
       --OutputVariables string                 
               OutputVariables specifies which model variables should be included in the
-              output file. It can include environment variables. (default "{\"TotalPM25\":\"TotalPM25\",\"TotalPopD\":\"coxHazard(loglogRR(TotalPM25), TotalPop, allcause)\"}\n")
+              output file. It can include environment variables. (default "{\"TotalPM25\":\"PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA\",\"TotalPopD\":\"coxHazard(loglogRR(TotalPM25), TotalPop, allcause)\"}\n")
       --VarGrid.CensusFile string              
               VarGrid.CensusFile is the path to the shapefile holding population information. (default "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testPopulation.shp")
       --VarGrid.CensusPopColumns stringSlice   

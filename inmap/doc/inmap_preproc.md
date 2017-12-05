@@ -24,16 +24,20 @@ inmap preproc [flags]
               model we are going to be reading data from. Valid
               options are "GEOS-Chem" and "WRF-Chem". (default "WRF-Chem")
       --Preproc.CtmGridDx float                 
-              Preproc.CtmGridDx is the grid cell length in x direction [m] (default NaN)
+              Preproc.CtmGridDx is the grid cell length in x direction [m] (default 1000)
       --Preproc.CtmGridDy float                 
-              Preproc.CtmGridDy is the grid cell length in y direction [m] (default NaN)
+              Preproc.CtmGridDy is the grid cell length in y direction [m] (default 1000)
       --Preproc.CtmGridXo float                 
-              Preproc.CtmGridXo is the lower left of Chemical Transport Model (CTM) grid, x (default NaN)
+              Preproc.CtmGridXo is the lower left of Chemical Transport Model (CTM) grid, x
       --Preproc.CtmGridYo float                 
-              Preproc.CtmGridYo is the lower left of grid, y (default NaN)
+              Preproc.CtmGridYo is the lower left of grid, y
       --Preproc.EndDate string                  
               Preproc.EndDate is the date of the end of the simulation.
               Format = "YYYYMMDD". (default "No Default")
+      --Preproc.GEOSChem.Dash                   
+              Preproc.GEOSChem.Dash indicates whether GEOS-Chem chemical variable
+              names should be assumed to be in the form 'IJ-AVG-S__xxx' vs.
+              the form 'IJ_AVG_S_xxx'.
       --Preproc.GEOSChem.GEOSA1 string          
               Preproc.GEOSChem.GEOSA1 is the location of the GEOS 1-hour time average files.
               [DATE] should be used as a wild card for the simulation date. (default "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/preproc/GEOSFP.[DATE].A1.2x25.nc")
@@ -49,6 +53,10 @@ inmap preproc [flags]
               Preproc.GEOSChem.GEOSA3MstE is the location of the GEOS 3-hour average moist parameters
               on level edges files. [DATE] should be used as a wild card for
               the simulation date. (default "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/preproc/GEOSFP.[DATE].A3mstE.2x25.nc")
+      --Preproc.GEOSChem.GEOSApBp string        
+              Preproc.GEOSChem.GEOSApBp is the location of the constant GEOS pressure level
+              variable file. It is optional; if it is not specified the Ap and Bp information
+              will be extracted from the GEOSChem files.
       --Preproc.GEOSChem.GEOSChem string        
               Preproc.GEOSChem.GEOSChem is the location of GEOS-Chem output files.
               [DATE] should be used as a wild card for the simulation date. (default "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/preproc/gc_output.[DATE].nc")
@@ -72,11 +80,7 @@ inmap preproc [flags]
 ### Options inherited from parent commands
 
 ```
-      --HTTPPort string   
-              Port for hosting web page. If HTTPport is ':8080', then the GUI
-               would be viewed by visiting "localhost:8080" in a web browser.
-              If HTTPport is "", then the web server doesn't run. (default ":8080")
-      --config string     
+      --config string   
               config specifies the configuration file location.
 ```
 
