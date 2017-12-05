@@ -232,12 +232,17 @@ func TestOutputEquation(t *testing.T) {
 		t.Error(err)
 	}
 
+	sr, err := proj.Parse(cfg.GridProj)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis, m),
 		},
 		CleanupFuncs: []DomainManipulator{
-			o.Output(),
+			o.Output(sr),
 		},
 	}
 	if err = d.Init(); err != nil {
@@ -342,13 +347,18 @@ func BenchmarkOutput(b *testing.B) {
 		o = oBench
 	})
 
+	sr, err := proj.Parse(cfg.GridProj)
+	if err != nil {
+		b.Fatal(err)
+	}
+
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis, m),
 			o.CheckOutputVars(m),
 		},
 		CleanupFuncs: []DomainManipulator{
-			o.Output(),
+			o.Output(sr),
 		},
 	}
 	b.Run("InitFuncs", func(b *testing.B) {
@@ -389,13 +399,18 @@ func TestOutput(t *testing.T) {
 		t.Error(err)
 	}
 
+	sr, err := proj.Parse(cfg.GridProj)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	d := &InMAP{
 		InitFuncs: []DomainManipulator{
 			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis, m),
 			o.CheckOutputVars(m),
 		},
 		CleanupFuncs: []DomainManipulator{
-			o.Output(),
+			o.Output(sr),
 		},
 	}
 	if err := d.Init(); err != nil {

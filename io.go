@@ -678,13 +678,29 @@ func (o *Outputter) CheckOutputVars(m Mechanism) DomainManipulator {
 }
 
 // Output writes the simulation results to a shapefile.
-func (o *Outputter) Output() DomainManipulator {
+// SR is the spatial reference of the model grid.
+func (o *Outputter) Output(sr *proj.SR) DomainManipulator {
 	return func(d *InMAP) error {
 		// Projection definition. This may need to be changed for a different
 		// spatial domain.
 		// TODO: Make this settable by the user, or at least check to make sure it
 		// matches the InMAPProj configuration variable.
-		const proj4 = `PROJCS["Lambert_Conformal_Conic",GEOGCS["GCS_unnamed ellipse",DATUM["D_unknown",SPHEROID["Unknown",6370997,0]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],PROJECTION["Lambert_Conformal_Conic"],PARAMETER["standard_parallel_1",33],PARAMETER["standard_parallel_2",45],PARAMETER["latitude_of_origin",40],PARAMETER["central_meridian",-97],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]`
+		var wkt string
+		switch sr.Name {
+		case "lcc":
+			wkt = fmt.Sprintf("PROJCS[\"Lambert_Conformal_Conic\",GEOGCS[\"GCS_unnamed ellipse\","+
+				"DATUM[\"D_unknown\",SPHEROID[\"Unknown\",%f,0]],PRIMEM[\"Greenwich\",0],"+
+				"UNIT[\"Degree\",0.017453292519943295]],PROJECTION[\"Lambert_Conformal_Conic\"],"+
+				"PARAMETER[\"standard_parallel_1\",%g],PARAMETER[\"standard_parallel_2\",%g],"+
+				"PARAMETER[\"latitude_of_origin\",%g],PARAMETER[\"central_meridian\",%g],"+
+				"PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"Meter\",1]]",
+				sr.A, sr.Lat1/math.Pi*180, sr.Lat2/math.Pi*180, sr.Lat0/math.Pi*180,
+				sr.Long0/math.Pi*180)
+		case "longlat":
+			wkt = `GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]]`
+		default:
+			return fmt.Errorf("only `lcc` and `longlat` projections are supported, not %s", sr.Name)
+		}
 
 		// Create slice of output variable names
 		outputVariableNames := make([]string, len(o.outputVariables))
@@ -734,7 +750,7 @@ func (o *Outputter) Output() DomainManipulator {
 		if err != nil {
 			return fmt.Errorf("error creating output prj file: %v", err)
 		}
-		fmt.Fprint(f, proj4)
+		fmt.Fprint(f, wkt)
 		f.Close()
 
 		return nil

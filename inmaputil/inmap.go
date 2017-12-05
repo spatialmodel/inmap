@@ -233,7 +233,7 @@ func Run(LogFile string, OutputFile string, OutputAllLayers bool, OutputVariable
 		InitFuncs: append(initFuncs, addInit...),
 		RunFuncs:  append(runFuncs, addRun...),
 		CleanupFuncs: append([]inmap.DomainManipulator{
-			o.Output(),
+			o.Output(sr),
 		}, addCleanup...),
 	}
 
