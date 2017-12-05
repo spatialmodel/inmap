@@ -114,7 +114,7 @@ func Run(LogFile string, OutputFile string, OutputAllLayers bool, OutputVariable
 	EmissionUnits string, EmissionsShapefiles []string, VarGrid *inmap.VarGridConfig, InMAPData, VariableGridData string,
 	NumIterations int,
 	dynamic, createGrid bool, scienceFuncs []inmap.CellManipulator, addInit, addRun, addCleanup []inmap.DomainManipulator,
-	m inmap.Mechanism, notMeters bool) error {
+	m inmap.Mechanism) error {
 
 	startTime := time.Now()
 
@@ -235,7 +235,6 @@ func Run(LogFile string, OutputFile string, OutputAllLayers bool, OutputVariable
 		CleanupFuncs: append([]inmap.DomainManipulator{
 			o.Output(),
 		}, addCleanup...),
-		NotMeters: notMeters,
 	}
 
 	log.Println("Initializing model...")

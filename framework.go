@@ -88,10 +88,6 @@ type InMAP struct {
 	index *rtree.Rtree
 
 	cellLock sync.Mutex
-
-	// NotMeters should be set to true if the units of the grid are not
-	// in meters.
-	NotMeters bool
 }
 
 // Init initializes the simulation by running d.InitFuncs.
@@ -332,22 +328,13 @@ func SetTimestepCFL() DomainManipulator {
 		)
 		d.Dt = math.Inf(1)
 		for _, c := range *d.cells {
-			// Calculate Dx and Dy in meters. For some grids, the native
-			// units may not be meters so we use the web map geometry.
-			dx, dy := c.Dx, c.Dy
-			if d.NotMeters {
-				b := c.WebMapGeom.Bounds()
-				dx = b.Max.X - b.Min.X
-				dy = b.Max.Y - b.Min.Y
-			}
-
 			// Advection time step
-			cUadv := (math.Abs(c.UAvg) + c.UDeviation*2) / dx
-			cVadv := (math.Abs(c.VAvg) + c.VDeviation*2) / dy
+			cUadv := (math.Abs(c.UAvg) + c.UDeviation*2) / c.Dx
+			cVadv := (math.Abs(c.VAvg) + c.VDeviation*2) / c.Dy
 			cWadv := math.Abs(c.WAvg) / c.Dz
 			// horizontal diffusion time step
-			cXdiff := 2. * c.Kxxyy / (dx * dx)
-			cYdiff := 2. * c.Kxxyy / (dy * dy)
+			cXdiff := 2. * c.Kxxyy / (c.Dx * c.Dx)
+			cYdiff := 2. * c.Kxxyy / (c.Dy * c.Dy)
 			// vertical diffusion time step
 			cZdiff := 2. * c.Kzz / (c.Dz * c.Dz)
 

@@ -317,25 +317,28 @@ func getCells(cellTree *rtree.Rtree, box *geom.Bounds, layer int) *cellList {
 	return cells
 }
 
-func (config *VarGridConfig) webMapTrans() (proj.Transformer, error) {
+func (config *VarGridConfig) webMapTrans() (t proj.Transformer, notMeters bool, err error) {
 
 	// webMapProj is the spatial reference definition for web mapping.
 	const webMapProj = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs"
 	// webMapSR is the spatial reference for web mapping.
 	webMapSR, err := proj.Parse(webMapProj)
 	if err != nil {
-		return nil, fmt.Errorf("inmap: while parsing webMapProj: %v", err)
+		return nil, false, fmt.Errorf("inmap: while parsing webMapProj: %v", err)
 	}
 
 	gridSR, err := proj.Parse(config.GridProj)
 	if err != nil {
-		return nil, fmt.Errorf("inmap: while parsing GridProj: %v", err)
+		return nil, false, fmt.Errorf("inmap: while parsing GridProj: %v", err)
 	}
 	webMapTrans, err := gridSR.NewTransform(webMapSR)
 	if err != nil {
-		return nil, fmt.Errorf("inmap: while creating webMapTrans: %v", err)
+		return nil, false, fmt.Errorf("inmap: while creating webMapTrans: %v", err)
 	}
-	return webMapTrans, nil
+	if gridSR.ToMeter > 1.0000001 || gridSR.ToMeter < 0.999999 {
+		notMeters = true
+	}
+	return webMapTrans, notMeters, nil
 }
 
 // RegularGrid returns a function that creates a new regular
@@ -343,7 +346,7 @@ func (config *VarGridConfig) webMapTrans() (proj.Transformer, error) {
 // as specified by the information in c.
 func (config *VarGridConfig) RegularGrid(data *CTMData, pop *Population, popIndex PopIndices, mortRates *MortalityRates, mortIndex MortIndices, emis *Emissions, m Mechanism) DomainManipulator {
 	return func(d *InMAP) error {
-		webMapTrans, err := config.webMapTrans()
+		webMapTrans, notMeters, err := config.webMapTrans()
 		if err != nil {
 			return err
 		}
@@ -372,7 +375,7 @@ func (config *VarGridConfig) RegularGrid(data *CTMData, pop *Population, popInde
 				}
 			}
 		}
-		err = d.addCells(config, indices, layers, nil, data, pop, mortRates, emis, webMapTrans, m)
+		err = d.addCells(config, indices, layers, nil, data, pop, mortRates, emis, webMapTrans, m, notMeters)
 		if err != nil {
 			return err
 		}
@@ -415,7 +418,7 @@ func (config *VarGridConfig) MutateGrid(divideRule GridMutator, data *CTMData, p
 			return err
 		}
 
-		webMapTrans, err := config.webMapTrans()
+		webMapTrans, notMeters, err := config.webMapTrans()
 		if err != nil {
 			return err
 		}
@@ -462,7 +465,7 @@ func (config *VarGridConfig) MutateGrid(divideRule GridMutator, data *CTMData, p
 
 			// Add new cells.
 			err = d.addCells(config, newCellIndices, newCellLayers, newCellConc,
-				data, pop, mortRates, emis, webMapTrans, m)
+				data, pop, mortRates, emis, webMapTrans, m, notMeters)
 			if err != nil {
 				return err
 			}
@@ -481,7 +484,7 @@ func (config *VarGridConfig) MutateGrid(divideRule GridMutator, data *CTMData, p
 func (d *InMAP) addCells(config *VarGridConfig, newCellIndices [][][2]int,
 	newCellLayers []int, conc [][]float64, data *CTMData, pop *Population,
 	mortRates *MortalityRates, emis *Emissions, webMapTrans proj.Transformer,
-	m Mechanism) error {
+	m Mechanism, notMeters bool) error {
 	type cellErr struct {
 		cell *Cell
 		err  error
@@ -499,7 +502,7 @@ func (d *InMAP) addCells(config *VarGridConfig, newCellIndices [][][2]int,
 					conci = conc[i]
 				}
 				cell, err2 := config.createCell(data, pop, d.popIndices, mortRates, d.mortIndices, ii,
-					newCellLayers[i], conci, webMapTrans, m)
+					newCellLayers[i], conci, webMapTrans, m, notMeters)
 				cellErrChan <- cellErr{cell: cell, err: err2}
 			}
 		}(p)
@@ -664,8 +667,10 @@ func (config *VarGridConfig) cellGeometry(index [][2]int) geom.Polygonal {
 // that intersect the cell are above the population density threshold,
 // then the grid cell is also set to being above the density threshold.
 // If conc != nil, the concentration data for the new cell will be set to conc.
+// notMeters should be set to true if the units of the grid are not
+// in meters.
 func (config *VarGridConfig) createCell(data *CTMData, pop *Population, popIndices PopIndices,
-	mortRates *MortalityRates, mortIndices MortIndices, index [][2]int, layer int, conc []float64, webMapTrans proj.Transformer, m Mechanism) (*Cell, error) {
+	mortRates *MortalityRates, mortIndices MortIndices, index [][2]int, layer int, conc []float64, webMapTrans proj.Transformer, m Mechanism, notMeters bool) (*Cell, error) {
 
 	cell := new(Cell)
 	cell.PopData = make([]float64, len(popIndices))
@@ -678,7 +683,19 @@ func (config *VarGridConfig) createCell(data *CTMData, pop *Population, popIndic
 		// only ground level grid cells have people
 		cell.loadPopMortalityRate(config, mortRates, mortIndices, pop, popIndices)
 	}
-	bounds := cell.Polygonal.Bounds()
+
+	gg, err := cell.Polygonal.Transform(webMapTrans)
+	if err != nil {
+		return nil, err
+	}
+	cell.WebMapGeom = gg.(geom.Polygonal)
+
+	var bounds *geom.Bounds
+	if notMeters {
+		bounds = cell.WebMapGeom.Bounds()
+	} else {
+		bounds = cell.Polygonal.Bounds()
+	}
 	cell.Dx = bounds.Max.X - bounds.Min.X
 	cell.Dy = bounds.Max.Y - bounds.Min.Y
 
@@ -687,12 +704,6 @@ func (config *VarGridConfig) createCell(data *CTMData, pop *Population, popIndic
 		return nil, err
 	}
 	cell.Volume = cell.Dx * cell.Dy * cell.Dz
-
-	gg, err := cell.Polygonal.Transform(webMapTrans)
-	if err != nil {
-		return nil, err
-	}
-	cell.WebMapGeom = gg.(geom.Polygonal)
 
 	if conc != nil {
 		copy(cell.Cf, conc)
