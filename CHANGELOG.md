@@ -1,4 +1,5 @@
-# Release 1.4.0 (?)
+# Release 1.4.0 (2017-12-05)
+* Bug fixes for GEOS-Chem preprocessor
 * Added graphical user interface https://github.com/ctessum/gobra
 * Made configuration more flexible using https://github.com/spf13/viper
 
