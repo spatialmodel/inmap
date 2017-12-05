@@ -64,7 +64,7 @@ func TestNEI2005Dynamic_mosaic(t *testing.T) {
 		m.Chemistry(),
 	}
 
-	if err := inmaputil.Run(cfg, dynamic, createGrid, scienceFuncs, nil, nil, nil, m); err != nil {
+	if err := inmaputil.Run(cfg, dynamic, createGrid, scienceFuncs, nil, nil, nil, m, false); err != nil {
 		t.Fatal(err)
 	}
 

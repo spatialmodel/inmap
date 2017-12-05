@@ -107,10 +107,14 @@ var DefaultScienceFuncs = []inmap.CellManipulator{
 // to perform in each cell at each time step. addInit, addRun, and addCleanup
 // specifies functions beyond the default functions to run at initialization,
 // runtime, and cleanup, respectively.
+//
+// notMeters should be set to true if the units of the grid are not meters
+// (e.g., if the grid is in degrees latitude/longitude.)
 func Run(LogFile string, OutputFile string, OutputAllLayers bool, OutputVariables map[string]string,
 	EmissionUnits string, EmissionsShapefiles []string, VarGrid *inmap.VarGridConfig, InMAPData, VariableGridData string,
 	NumIterations int,
-	dynamic, createGrid bool, scienceFuncs []inmap.CellManipulator, addInit, addRun, addCleanup []inmap.DomainManipulator, m inmap.Mechanism) error {
+	dynamic, createGrid bool, scienceFuncs []inmap.CellManipulator, addInit, addRun, addCleanup []inmap.DomainManipulator,
+	m inmap.Mechanism, notMeters bool) error {
 
 	startTime := time.Now()
 
@@ -231,6 +235,7 @@ func Run(LogFile string, OutputFile string, OutputAllLayers bool, OutputVariable
 		CleanupFuncs: append([]inmap.DomainManipulator{
 			o.Output(),
 		}, addCleanup...),
+		NotMeters: notMeters,
 	}
 
 	log.Println("Initializing model...")

@@ -189,7 +189,7 @@ func TestAnimation_logo(t *testing.T) {
 		[]string{"animation_logo/logo.shp"},
 		cfg, inmaputil.Cfg.GetString("InMAPData"), inmaputil.Cfg.GetString("VariableGridData"), inmaputil.Cfg.GetInt("NumIterations"),
 		dynamic, createGrid, inmaputil.DefaultScienceFuncs, nil,
-		[]inmap.DomainManipulator{inmap.RunPeriodically(framePeriod, saveConc(dataChan))}, nil, simplechem.Mechanism{}); err != nil {
+		[]inmap.DomainManipulator{inmap.RunPeriodically(framePeriod, saveConc(dataChan))}, nil, simplechem.Mechanism{}, false); err != nil {
 		t.Fatal(err)
 	}
 
@@ -242,7 +242,7 @@ func TestAnimation_nei(t *testing.T) {
 		inmaputil.Cfg.GetStringSlice("EmissionsShapefiles"),
 		cfg, inmaputil.Cfg.GetString("InMAPData"), inmaputil.Cfg.GetString("VariableGridData"), inmaputil.Cfg.GetInt("NumIterations"),
 		dynamic, createGrid, inmaputil.DefaultScienceFuncs, nil,
-		[]inmap.DomainManipulator{inmap.RunPeriodically(framePeriod, saveConc(dataChan))}, nil, simplechem.Mechanism{}); err != nil {
+		[]inmap.DomainManipulator{inmap.RunPeriodically(framePeriod, saveConc(dataChan))}, nil, simplechem.Mechanism{}, false); err != nil {
 		t.Fatal(err)
 	}
 

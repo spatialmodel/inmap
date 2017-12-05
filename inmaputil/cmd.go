@@ -349,6 +349,14 @@ func init() {
 			flagsets:   []*pflag.FlagSet{steadyCmd.Flags(), workerCmd.Flags()},
 		},
 		{
+			name: "NotMeters",
+			usage: `
+              NotMeters should be set to true if the units of the grid are not meters
+              (e.g., if the grid is in degrees latitude/longitude).`,
+			defaultVal: false,
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), workerCmd.Flags()},
+		},
+		{
 			name: "SR.LogDir",
 			usage: `
               LogDir is the directory that log files should be stored in when creating
@@ -670,7 +678,8 @@ concentrations with no temporal variability.`,
 			os.ExpandEnv(Cfg.GetString("VariableGridData")),
 			Cfg.GetInt("NumIterations"),
 			!Cfg.GetBool("static"), Cfg.GetBool("createGrid"), DefaultScienceFuncs, nil, nil, nil,
-			simplechem.Mechanism{})
+			simplechem.Mechanism{},
+			Cfg.GetBool("NotMeters"))
 	},
 	DisableAutoGenTag: true,
 }

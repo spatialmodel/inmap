@@ -30,6 +30,9 @@ choose a run mode. (Currently 'steady' is the only available run mode.)
               LogFile is the path to the desired logfile location. It can include
               environment variables. If LogFile is left blank, the logfile will be saved in
               the same location as the OutputFile.
+      --NotMeters                              
+              NotMeters should be set to true if the units of the grid are not meters
+              (e.g., if the grid is in degrees latitude/longitude).
       --OutputAllLayers                        
               If OutputAllLayers is true, output data for all model layers. If false, only output
               the lowest layer.
