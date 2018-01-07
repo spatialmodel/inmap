@@ -113,7 +113,7 @@ func VarGridConfig(cfg *viper.Viper) (*inmap.VarGridConfig, error) {
 		VariableGridDx:       cfg.GetFloat64("VarGrid.VariableGridDx"),
 		VariableGridDy:       cfg.GetFloat64("VarGrid.VariableGridDy"),
 		Xnests:               cast.ToIntSlice(cfg.Get("VarGrid.Xnests")),
-		Ynests:               cast.ToIntSlice(cfg.Get("VarGrid.Xnests")),
+		Ynests:               cast.ToIntSlice(cfg.Get("VarGrid.Ynests")),
 		HiResLayers:          cfg.GetInt("VarGrid.HiResLayers"),
 		PopDensityThreshold:  cfg.GetFloat64("VarGrid.PopDensityThreshold"),
 		PopThreshold:         cfg.GetFloat64("VarGrid.PopThreshold"),
@@ -134,7 +134,7 @@ func VarGridConfig(cfg *viper.Viper) (*inmap.VarGridConfig, error) {
 		}
 	}
 
-	vars2 := [][]int{c.Xnests, c.Xnests}
+	vars2 := [][]int{c.Xnests, c.Ynests}
 	varNames = []string{"VarGrid.Xnests", "VarGrid.Ynests"}
 	for i, v := range vars2 {
 		if len(v) == 0 {
