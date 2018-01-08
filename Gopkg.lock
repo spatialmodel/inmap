@@ -93,7 +93,7 @@
   branch = "master"
   name = "github.com/ctessum/gobra"
   packages = ["."]
-  revision = "7bb7544a628eb39e557ab0fe899658997c09119e"
+  revision = "612d66f1db494e8f95fed5695d3698d4ee6d7c4c"
 
 [[projects]]
   branch = "master"
@@ -157,6 +157,7 @@
     ".",
     "hcl/ast",
     "hcl/parser",
+    "hcl/printer",
     "hcl/scanner",
     "hcl/strconv",
     "hcl/token",
@@ -246,7 +247,7 @@
     ".",
     "doc"
   ]
-  revision = "7b2c5ac9fc04fc5efafb60700713d4fa609b777b"
+  revision = "b95ab734e27d33e0d8fbabf71ca990568d4e2020"
 
 [[projects]]
   branch = "master"
@@ -264,7 +265,7 @@
   branch = "master"
   name = "github.com/spf13/viper"
   packages = ["."]
-  revision = "4dddf7c62e16bce5807744018f5b753bfe21bbd2"
+  revision = "aafc9e6bc7b7bb53ddaa75a5ef49a17d6e654be5"
 
 [[projects]]
   branch = "master"

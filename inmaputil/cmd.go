@@ -511,13 +511,11 @@ func init() {
 	Cfg.SetEnvPrefix("INMAP")
 
 	for _, option := range options {
-		if Cfg.IsSet(option.name) {
-			// Don't set the option if it is already set somewhere else,
-			// such as in a test.
-			continue
-		}
-		Cfg.SetDefault(option.name, option.defaultVal)
-		for _, set := range option.flagsets {
+		for i, set := range option.flagsets {
+			if i != 0 { // We don't want to create the same flag twice.
+				set.AddFlag(option.flagsets[0].Lookup(option.name))
+				continue
+			}
 			switch option.defaultVal.(type) {
 			case string:
 				if option.shorthand == "" {
