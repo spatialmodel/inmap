@@ -1,3 +1,6 @@
+# Release 1.4.1 (2018-1-10)
+* Configuration and GUI bug fixes
+
 # Release 1.4.0 (2017-12-05)
 * Bug fixes for GEOS-Chem preprocessor
 * Added graphical user interface https://github.com/ctessum/gobra
