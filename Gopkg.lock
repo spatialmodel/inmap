@@ -93,7 +93,7 @@
   branch = "master"
   name = "github.com/ctessum/gobra"
   packages = ["."]
-  revision = "612d66f1db494e8f95fed5695d3698d4ee6d7c4c"
+  revision = "c4487115d72c87acf0eb24c90717cc07d615b836"
 
 [[projects]]
   branch = "master"
