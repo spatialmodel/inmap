@@ -28,24 +28,24 @@ You can also compile InMAP from its source code. The instructions here are speci
 
 4. Download and install the main program:
 
-``` bash
-mkdir -p $GOPATH/src/github.com/spatialmodel # Create the directory for the code.
-cd $GOPATH/src/github.com/spatialmodel # Move to the directory.
-git clone https://github.com/spatialmodel/inmap.git # Download the code.
-cd inmap # Move into the InMAP directory
-go get github.com/golang/dep/cmd/dep # Install the program that will download the required libraries
-dep ensure # Download the required libraries
-go install ./inmap # Compile and install the InMAP executable.
-```
+	``` bash
+	mkdir -p $GOPATH/src/github.com/spatialmodel # Create the directory for the code.
+	cd $GOPATH/src/github.com/spatialmodel # Move to the directory.
+	git clone https://github.com/spatialmodel/inmap.git # Download the code.
+	cd inmap # Move into the InMAP directory
+	go get github.com/golang/dep/cmd/dep # Install the program that will download the required libraries
+	dep ensure # Download the required libraries
+	go install ./inmap # Compile and install the InMAP executable.
+	```
 
 5. Optional: run the tests and evaluations (this may take a while):
 
-``` bash
-cd $GOPATH/src/github.com/spatialmodel/inmap
-go test ./... -timeout="200h"
-# or
-go test ./... -short
-```
+	``` bash
+	cd $GOPATH/src/github.com/spatialmodel/inmap
+	go test ./... -timeout="200h"
+	# or
+	go test ./... -short
+	```
 
 	To only run the tests and not the evaluations, run `go test ./...  -short`. If you do run the evaluations, make sure you first download the evaluation data from the [InMAP release page](https://github.com/spatialmodel/inmap/releases) and set the `evaldata` environment variable to the location of the unzipped directory.
 
