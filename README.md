@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/spatialmodel/inmap.svg?branch=master)](https://travis-ci.org/spatialmodel/inmap) [![Coverage Status](https://coveralls.io/repos/github/spatialmodel/inmap/badge.svg?branch=master)](https://coveralls.io/github/spatialmodel/inmap?branch=master) [![GoDoc](http://godoc.org/github.com/spatialmodel/inmap?status.svg)](http://godoc.org/github.com/spatialmodel/inmap) [![Go Report Card](https://goreportcard.com/badge/github.com/spatialmodel/inmap)](https://goreportcard.com/report/github.com/spatialmodel/inmap)
 
-_Note: This is the documentation for InMAP version 1.4.1. Documentation for other versions is available [here](https://github.com/spatialmodel/inmap/releases)._
+_Note: This is the documentation for the development version of InMAP. Documentation for other versions is available [here](https://github.com/spatialmodel/inmap/releases)._
 
 ## About InMAP
 
@@ -18,7 +18,7 @@ Go to [releases](https://github.com/spatialmodel/inmap/releases) to download the
 
 ### Compiling from source
 
-You can also compile InMAP from its source code. It should work on most types of computers. Refer [here](http://golang.org/doc/install#requirements) for a list of theoretically supported systems. Instructions follow:
+You can also compile InMAP from its source code. The instructions here are specific to Linux or Mac computers; other systems should work with minor changes to the commands below. Refer [here](http://golang.org/doc/install#requirements) for a list of theoretically supported systems.
 
 1. Install the [Go compiler](http://golang.org/doc/install). Make sure you install the correct version (64 bit) for your system. It may be useful to go through one of the tutorials to make sure the compiler is correctly installed.
 
@@ -28,13 +28,20 @@ You can also compile InMAP from its source code. It should work on most types of
 
 4. Download and install the main program:
 
-		go get github.com/spatialmodel/inmap/inmap
-	The Go language has an automatic system for finding and installing library dependencies; you may want to refer [here](http://golang.org/doc/code.html) to understand how it works.
+		mkdir -p $GOPATH/src/github.com/spatialmodel # Create the directory for the code.
+		cd $GOPATH/src/github.com/spatialmodel # Move to the directory.
+		git clone https://github.com/spatialmodel/inmap.git # Download the code.
+		cd inmap # Move into the InMAP directory
+		go get github.com/golang/dep/cmd/dep # Install the program that will download the required libraries
+		dep ensure # Download the required libraries
+		go install inmap # Compile and install the InMAP executable.
 
 5. Optional: run the tests and evaluations (this may take a while):
 
 		cd $GOPATH/src/github.com/spatialmodel/inmap
 		go test ./... -timeout="200h"
+		# or
+		go test ./... -short
 
 	To only run the tests and not the evaluations, run `go test ./...  -short`. If you do run the evaluations, make sure you first download the evaluation data from the [InMAP release page](https://github.com/spatialmodel/inmap/releases) and set the `evaldata` environment variable to the location of the unzipped directory.
 
