@@ -59,7 +59,7 @@
   branch = "master"
   name = "github.com/ctessum/aep"
   packages = ["."]
-  revision = "d18865b4e31e431785455a7fce7ac806fdca5e95"
+  revision = "c5677dc9ccbdbff6b936c1fc7f03327a204c3bde"
 
 [[projects]]
   branch = "master"

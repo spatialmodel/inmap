@@ -297,8 +297,8 @@ func FromAEP(r []aep.Record, sp *aep.SpatialProcessor, gi int, VOC, NOx, NH3, SO
 				}
 			}
 
-			pointSource, ok := rec.(aep.PointSource)
-			if !ok || pointSource.PointData().GroundLevel() {
+			pointData := rec.PointData()
+			if pointData == nil || pointData.GroundLevel() {
 				// For ground level sources, combine with other records
 				// at the same point.
 				if _, ok := groundERecs[p]; !ok {
@@ -307,11 +307,10 @@ func FromAEP(r []aep.Record, sp *aep.SpatialProcessor, gi int, VOC, NOx, NH3, SO
 					groundERecs[p].add(&er)
 				}
 			} else {
-				stack := pointSource.PointData()
-				er.Height = stack.StackHeight.Value()
-				er.Diam = stack.StackDiameter.Value()
-				er.Temp = stack.StackTemp.Value()
-				er.Velocity = stack.StackVelocity.Value()
+				er.Height = pointData.StackHeight.Value()
+				er.Diam = pointData.StackDiameter.Value()
+				er.Temp = pointData.StackTemp.Value()
+				er.Velocity = pointData.StackVelocity.Value()
 				eRecs = append(eRecs, &er)
 			}
 		}
