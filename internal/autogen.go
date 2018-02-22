@@ -16,8 +16,6 @@ You should have received a copy of the GNU General Public License
 along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-//+build ignore
-
 package main
 
 import (
@@ -63,7 +61,7 @@ func loadConfig(file string) (*config, error) {
 	_, err = toml.Decode(string(bytes), cfg)
 	if err != nil {
 		return nil, fmt.Errorf(
-			"there has been an error parsing the configuration file: %v\n", err)
+			"there has been an error parsing the configuration file: %v", err)
 	}
 
 	cfg.InMAPData = os.ExpandEnv(cfg.InMAPData)
