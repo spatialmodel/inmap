@@ -50,6 +50,12 @@
   revision = "fec71ff44529c89ddb4211a62f3d672f31e50bc5"
 
 [[projects]]
+  name = "github.com/cavaliercoder/grab"
+  packages = ["."]
+  revision = "3b6830dae49bc01e25b4676dae3a2a06c1b1485e"
+  version = "v2.0.0"
+
+[[projects]]
   name = "github.com/cpuguy83/go-md2man"
   packages = ["md2man"]
   revision = "1d903dcb749992f3741d744c0f8376b4bd7eb3e1"
@@ -64,29 +70,13 @@
 [[projects]]
   branch = "master"
   name = "github.com/ctessum/atmos"
-  packages = [
-    "acm2",
-    "advect",
-    "emep",
-    "evalstats",
-    "plumerise",
-    "seinfeld",
-    "wesely1989"
-  ]
+  packages = ["acm2","advect","emep","evalstats","plumerise","seinfeld","wesely1989"]
   revision = "cba69f7ca647e4802a2fc348281d6ab269806a7a"
 
 [[projects]]
   branch = "master"
   name = "github.com/ctessum/geom"
-  packages = [
-    ".",
-    "carto",
-    "encoding/geojson",
-    "encoding/shp",
-    "index/rtree",
-    "op",
-    "proj"
-  ]
+  packages = [".","carto","encoding/geojson","encoding/shp","index/rtree","op","proj"]
   revision = "1cd0f1efc691950863e98ac8da882f497d5ce287"
 
 [[projects]]
@@ -110,11 +100,14 @@
 [[projects]]
   branch = "master"
   name = "github.com/ctessum/unit"
-  packages = [
-    ".",
-    "badunit"
-  ]
+  packages = [".","badunit"]
   revision = "755774ac2fcbe68f090798b4cdc47c5cd056b1f5"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/dsnet/compress"
+  packages = [".","bzip2","bzip2/internal/sais","internal","internal/errors","internal/prefix"]
+  revision = "cc9eb1d7ad760af14e8f918698f745e80377af4f"
 
 [[projects]]
   name = "github.com/fsnotify/fsnotify"
@@ -125,11 +118,7 @@
 [[projects]]
   branch = "master"
   name = "github.com/golang/freetype"
-  packages = [
-    ".",
-    "raster",
-    "truetype"
-  ]
+  packages = [".","raster","truetype"]
   revision = "e2365dfdc4a05e4b8299a783240d4a7d5a65d4e4"
 
 [[projects]]
@@ -153,18 +142,7 @@
 [[projects]]
   branch = "master"
   name = "github.com/hashicorp/hcl"
-  packages = [
-    ".",
-    "hcl/ast",
-    "hcl/parser",
-    "hcl/printer",
-    "hcl/scanner",
-    "hcl/strconv",
-    "hcl/token",
-    "json/parser",
-    "json/scanner",
-    "json/token"
-  ]
+  packages = [".","hcl/ast","hcl/parser","hcl/printer","hcl/scanner","hcl/strconv","hcl/token","json/parser","json/scanner","json/token"]
   revision = "23c074d0eceb2b8a5bfdbb271ab780cde70f05a8"
 
 [[projects]]
@@ -188,11 +166,7 @@
 [[projects]]
   branch = "master"
   name = "github.com/llgcode/draw2d"
-  packages = [
-    ".",
-    "draw2dbase",
-    "draw2dimg"
-  ]
+  packages = [".","draw2dbase","draw2dimg"]
   revision = "dcbfbe505d35de8166ccfc47ff9e4bb020473e18"
 
 [[projects]]
@@ -202,10 +176,22 @@
   version = "v1.7.3"
 
 [[projects]]
+  name = "github.com/mholt/archiver"
+  packages = ["."]
+  revision = "cdc68dd1f170b8dfc1a0d2231b5bb0967ed67006"
+  version = "v2.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/mitchellh/mapstructure"
   packages = ["."]
   revision = "06020f85339e21b2478f756a78e295255ffa4d6a"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/nwaples/rardecode"
+  packages = ["."]
+  revision = "e06696f847aeda6f39a8f0b7cdff193b7690aef6"
 
 [[projects]]
   name = "github.com/pelletier/go-toml"
@@ -227,10 +213,7 @@
 
 [[projects]]
   name = "github.com/spf13/afero"
-  packages = [
-    ".",
-    "mem"
-  ]
+  packages = [".","mem"]
   revision = "8d919cbe7e2627e417f3e45c3c0e489a5b7e2536"
   version = "v1.0.0"
 
@@ -243,10 +226,7 @@
 [[projects]]
   branch = "master"
   name = "github.com/spf13/cobra"
-  packages = [
-    ".",
-    "doc"
-  ]
+  packages = [".","doc"]
   revision = "b95ab734e27d33e0d8fbabf71ca990568d4e2020"
 
 [[projects]]
@@ -268,16 +248,15 @@
   revision = "aafc9e6bc7b7bb53ddaa75a5ef49a17d6e654be5"
 
 [[projects]]
+  name = "github.com/ulikunitz/xz"
+  packages = [".","internal/hash","internal/xlog","lzma"]
+  revision = "0c6b41e72360850ca4f98dc341fd999726ea007f"
+  version = "v0.5.4"
+
+[[projects]]
   branch = "master"
   name = "golang.org/x/image"
-  packages = [
-    "draw",
-    "font",
-    "math/f64",
-    "math/fixed",
-    "tiff",
-    "tiff/lzw"
-  ]
+  packages = ["draw","font","math/f64","math/fixed","tiff","tiff/lzw"]
   revision = "f7e31b4ea2e3413ab91b4e7d2dc83e5f8d19a44c"
 
 [[projects]]
@@ -295,51 +274,19 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/text"
-  packages = [
-    "internal/gen",
-    "internal/triegen",
-    "internal/ucd",
-    "transform",
-    "unicode/cldr",
-    "unicode/norm"
-  ]
+  packages = ["internal/gen","internal/triegen","internal/ucd","transform","unicode/cldr","unicode/norm"]
   revision = "75cc3cad82b5f47d3fb229ddda8c5167da14f294"
 
 [[projects]]
   branch = "master"
   name = "gonum.org/v1/gonum"
-  packages = [
-    "blas",
-    "blas/blas64",
-    "blas/gonum",
-    "floats",
-    "internal/asm/c128",
-    "internal/asm/f32",
-    "internal/asm/f64",
-    "internal/math32",
-    "lapack",
-    "lapack/gonum",
-    "lapack/lapack64",
-    "mat"
-  ]
+  packages = ["blas","blas/blas64","blas/gonum","floats","internal/asm/c128","internal/asm/f32","internal/asm/f64","internal/math32","lapack","lapack/gonum","lapack/lapack64","mat"]
   revision = "ce73cefcda434183888c40895ea2fa306203906a"
 
 [[projects]]
   branch = "master"
   name = "gonum.org/v1/plot"
-  packages = [
-    ".",
-    "palette",
-    "plotter",
-    "tools/bezier",
-    "vg",
-    "vg/draw",
-    "vg/fonts",
-    "vg/vgeps",
-    "vg/vgimg",
-    "vg/vgpdf",
-    "vg/vgsvg"
-  ]
+  packages = [".","palette","plotter","tools/bezier","vg","vg/draw","vg/fonts","vg/vgeps","vg/vgimg","vg/vgpdf","vg/vgsvg"]
   revision = "50336e281717e5f1685e3c611828dfb42c82cf66"
 
 [[projects]]
@@ -351,6 +298,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "8efab23323d75f1b8cfe5b0fee6629b45760d833ab0e4439c72683e2e0807b46"
+  inputs-digest = "4021d08f859234d87c5ab56beb593bf2ba27e0361ed2dabc63dbf23607f8e72f"
   solver-name = "gps-cdcl"
   solver-version = 1

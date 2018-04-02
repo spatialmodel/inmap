@@ -583,6 +583,18 @@ func init() {
 	Root.AddCommand(workerCmd)
 }
 
+// outChan returns a channel printing to standard output.
+func outChan() chan string {
+	outChan := make(chan string)
+	go func() {
+		for {
+			msg := <-outChan
+			fmt.Printf(msg)
+		}
+	}()
+	return outChan
+}
+
 // setConfig finds and reads in the configuration file, if there is one.
 func setConfig() error {
 	if cfgpath := Cfg.GetString("config"); cfgpath != "" {
@@ -639,6 +651,8 @@ var steadyCmd = &cobra.Command{
 	Long: `steady runs InMAP in steady-state mode to calculate annual average
 concentrations with no temporal variability.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		outChan := outChan()
+
 		vgc, err := VarGridConfig(Cfg)
 		if err != nil {
 			return err
@@ -655,16 +669,23 @@ concentrations with no temporal variability.`,
 		if err != nil {
 			return err
 		}
+
+		shapeFiles := expandStringSlice(Cfg.GetStringSlice("EmissionsShapefiles"))
+		// This goes over each shapeFile and downloads it.
+		for i, _ := range shapeFiles {
+			shapeFiles[i] = maybeDownload(shapeFiles[i], outChan)
+		}
+
 		return Run(
 			checkLogFile(Cfg.GetString("LogFile"), outputFile),
 			outputFile,
 			Cfg.GetBool("OutputAllLayers"),
 			outputVars,
 			emisUnits,
-			expandStringSlice(Cfg.GetStringSlice("EmissionsShapefiles")),
+			shapeFiles,
 			vgc,
-			os.ExpandEnv(Cfg.GetString("InMAPData")),
-			os.ExpandEnv(Cfg.GetString("VariableGridData")),
+			maybeDownload(os.ExpandEnv(Cfg.GetString("InMAPData")), outChan),
+			maybeDownload(os.ExpandEnv(Cfg.GetString("VariableGridData")), outChan),
 			Cfg.GetInt("NumIterations"),
 			!Cfg.GetBool("static"), Cfg.GetBool("createGrid"), DefaultScienceFuncs, nil, nil, nil,
 			simplechem.Mechanism{})
@@ -680,13 +701,16 @@ var gridCmd = &cobra.Command{
 information in the configuration file. The saved data can then be loaded
 for future InMAP simulations.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		outChan := outChan()
+
 		vgc, err := VarGridConfig(Cfg)
 		if err != nil {
 			return err
 		}
 		return Grid(
-			os.ExpandEnv(Cfg.GetString("InMAPData")),
-			os.ExpandEnv(Cfg.GetString("VariableGridData")), vgc)
+			maybeDownload(os.ExpandEnv(Cfg.GetString("InMAPData")), outChan),
+			maybeDownload(os.ExpandEnv(Cfg.GetString("VariableGridData")), outChan),
+			vgc)
 	},
 	DisableAutoGenTag: true,
 }
@@ -698,20 +722,22 @@ var preprocCmd = &cobra.Command{
 output as specified by information in the configuration
 file and saves the result for use in future InMAP simulations.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		outChan := outChan()
+
 		return Preproc(
 			os.ExpandEnv(Cfg.GetString("Preproc.StartDate")),
 			os.ExpandEnv(Cfg.GetString("Preproc.EndDate")),
 			os.ExpandEnv(Cfg.GetString("Preproc.CTMType")),
-			os.ExpandEnv(Cfg.GetString("Preproc.WRFChem.WRFOut")),
-			os.ExpandEnv(Cfg.GetString("Preproc.GEOSChem.GEOSA1")),
-			os.ExpandEnv(Cfg.GetString("Preproc.GEOSChem.GEOSA3Cld")),
-			os.ExpandEnv(Cfg.GetString("Preproc.GEOSChem.GEOSA3Dyn")),
-			os.ExpandEnv(Cfg.GetString("Preproc.GEOSChem.GEOSI3")),
-			os.ExpandEnv(Cfg.GetString("Preproc.GEOSChem.GEOSA3MstE")),
+			maybeDownload(os.ExpandEnv(Cfg.GetString("Preproc.WRFChem.WRFOut")), outChan),
+			maybeDownload(os.ExpandEnv(Cfg.GetString("Preproc.GEOSChem.GEOSA1")), outChan),
+			maybeDownload(os.ExpandEnv(Cfg.GetString("Preproc.GEOSChem.GEOSA3Cld")), outChan),
+			maybeDownload(os.ExpandEnv(Cfg.GetString("Preproc.GEOSChem.GEOSA3Dyn")), outChan),
+			maybeDownload(os.ExpandEnv(Cfg.GetString("Preproc.GEOSChem.GEOSI3")), outChan),
+			maybeDownload(os.ExpandEnv(Cfg.GetString("Preproc.GEOSChem.GEOSA3MstE")), outChan),
 			os.ExpandEnv(Cfg.GetString("Preproc.GEOSChem.GEOSApBp")),
-			os.ExpandEnv(Cfg.GetString("Preproc.GEOSChem.GEOSChem")),
-			os.ExpandEnv(Cfg.GetString("Preproc.GEOSChem.VegTypeGlobal")),
-			os.ExpandEnv(Cfg.GetString("InMAPData")),
+			maybeDownload(os.ExpandEnv(Cfg.GetString("Preproc.GEOSChem.GEOSChem")), outChan),
+			maybeDownload(os.ExpandEnv(Cfg.GetString("Preproc.GEOSChem.VegTypeGlobal")), outChan),
+			maybeDownload(os.ExpandEnv(Cfg.GetString("InMAPData")), outChan),
 			Cfg.GetFloat64("Preproc.CtmGridXo"),
 			Cfg.GetFloat64("Preproc.CtmGridYo"),
 			Cfg.GetFloat64("Preproc.CtmGridDx"),
@@ -731,6 +757,8 @@ Simulations will be run on the cluster defined by $PBS_NODEFILE.
 If $PBS_NODEFILE doesn't exist, the simulations will run on the
 local machine.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		outChan := outChan()
+
 		vgc, err := VarGridConfig(Cfg)
 		if err != nil {
 			return err
@@ -740,8 +768,8 @@ local machine.`,
 			return fmt.Errorf("inmap: reading SR 'layers': %v", err)
 		}
 		return RunSR(
-			os.ExpandEnv(Cfg.GetString("VariableGridData")),
-			os.ExpandEnv(Cfg.GetString("InMAPData")),
+			maybeDownload(os.ExpandEnv(Cfg.GetString("VariableGridData")), outChan),
+			maybeDownload(os.ExpandEnv(Cfg.GetString("InMAPData")), outChan),
 			os.ExpandEnv(Cfg.GetString("SR.LogDir")),
 			os.ExpandEnv(Cfg.GetString("SR.OutputFile")),
 			vgc,
@@ -757,13 +785,15 @@ var workerCmd = &cobra.Command{
 	Long: `worker starts an InMAP worker that listens over RPC for simulation requests,
 does the simulations, and returns results.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		outChan := outChan()
+
 		vgc, err := VarGridConfig(Cfg)
 		if err != nil {
 			return err
 		}
 		worker, err := NewWorker(
-			os.ExpandEnv(Cfg.GetString("VariableGridData")),
-			os.ExpandEnv(Cfg.GetString("InMAPData")),
+			maybeDownload(os.ExpandEnv(Cfg.GetString("VariableGridData")), outChan),
+			maybeDownload(os.ExpandEnv(Cfg.GetString("InMAPData")), outChan),
 			vgc,
 		)
 		if err != nil {
@@ -794,6 +824,8 @@ matter per m³ air.
 	PrimaryPM25: Primarily emitted PM2.5
 	TotalPM25: The sum of the above components`,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		outChan := outChan()
+
 		vgc, err := VarGridConfig(Cfg)
 		if err != nil {
 			return err
@@ -807,11 +839,17 @@ matter per m³ air.
 			return err
 		}
 
+		shapeFiles := expandStringSlice(Cfg.GetStringSlice("EmissionsShapefiles"))
+		// This goes over each shapeFile and downloads it.
+		for i, _ := range shapeFiles {
+			shapeFiles[i] = maybeDownload(shapeFiles[i], outChan)
+		}
+
 		return SRPredict(
 			emisUnits,
 			os.ExpandEnv(Cfg.GetString("SR.OutputFile")),
 			outputFile,
-			expandStringSlice(Cfg.GetStringSlice("EmissionsShapefiles")),
+			shapeFiles,
 			vgc,
 		)
 	},
@@ -881,7 +919,7 @@ func StartWebServer() {
 		{{.}}
 	</div>
 	<footer>
-		© 2017 InMAP Authors
+		© 2018 InMAP Authors
 	</footer>
 </div>
 
