@@ -118,10 +118,10 @@ func VarGridConfig(cfg *viper.Viper) (*inmap.VarGridConfig, error) {
 		PopDensityThreshold:  cfg.GetFloat64("VarGrid.PopDensityThreshold"),
 		PopThreshold:         cfg.GetFloat64("VarGrid.PopThreshold"),
 		PopConcThreshold:     cfg.GetFloat64("VarGrid.PopConcThreshold"),
-		CensusFile:           os.ExpandEnv(cfg.GetString("VarGrid.CensusFile")),
+		CensusFile:           maybeDownload(os.ExpandEnv(cfg.GetString("VarGrid.CensusFile")), outChan()),
 		CensusPopColumns:     expandStringSlice(cfg.GetStringSlice("VarGrid.CensusPopColumns")),
 		PopGridColumn:        os.ExpandEnv(cfg.GetString("VarGrid.PopGridColumn")),
-		MortalityRateFile:    os.ExpandEnv(cfg.GetString("VarGrid.MortalityRateFile")),
+		MortalityRateFile:    maybeDownload(os.ExpandEnv(cfg.GetString("VarGrid.MortalityRateFile")), outChan()),
 		MortalityRateColumns: GetStringMapString("VarGrid.MortalityRateColumns", cfg),
 		GridProj:             os.ExpandEnv(cfg.GetString("VarGrid.GridProj")),
 	}
