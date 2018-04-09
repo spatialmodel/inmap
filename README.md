@@ -20,7 +20,7 @@ Go to [releases](https://github.com/spatialmodel/inmap/releases) to download the
 
 You can also compile InMAP from its source code. The instructions here are specific to Linux or Mac computers; other systems should work with minor changes to the commands below. Refer [here](http://golang.org/doc/install#requirements) for a list of theoretically supported systems.
 
-1. Install the [Go compiler](http://golang.org/doc/install). Make sure you install the correct version (64 bit) for your system. It may be useful to go through one of the tutorials to make sure the compiler is correctly installed.
+1. Install the [Go compiler](http://golang.org/doc/install). Make sure you install the correct version (64 bit) for your system. It may be useful to go through one of the tutorials to make sure the compiler is correctly installed. Make sure that you have set the `$GOPATH` environment variable. On Linux or Macintosh systems, this can be done using the command `export GOPATH=$HOME/go`. On Windows systems, you can follow [these](http://www.computerhope.com/issues/ch000549.htm) directions.
 
 2. Make sure your `$PATH` environment variable includes the directories `$GOROOT/bin` and `$GOPATH/bin`. On Linux or Macintosh systems, this can be done using the command `export PATH=$PATH:$GOROOT/bin:$GOPATH/bin`. On Windows systems, you can follow [these](http://www.computerhope.com/issues/ch000549.htm) directions.
 
