@@ -1,0 +1,505 @@
+SpatialRefFile = "${GOPATH}/src/bitbucket.org/ctessum/slca/bea/data/SCC_codes.xlsx"
+
+[Config]
+  Years = [2007, 2014]
+  DetailYear = 2007
+  UseSummary = "${GOPATH}/src/bitbucket.org/ctessum/slca/bea/data/IOUse_Before_Redefinitions_PRO_1997-2015_Summary.xlsx"
+  UseDetail = "${GOPATH}/src/bitbucket.org/ctessum/slca/bea/data/IOUse_Before_Redefinitions_PRO_2007_Detail.xlsx"
+  ImportsSummary = "${GOPATH}/src/bitbucket.org/ctessum/slca/bea/data/ImportMatrices_Before_Redefinitions_SUM_1997-2016.xlsx"
+  ImportsDetail = "${GOPATH}/src/bitbucket.org/ctessum/slca/bea/data/ImportMatrices_Before_Redefinitions_DET_2007.xlsx"
+  TotalRequirementsSummary = "${GOPATH}/src/bitbucket.org/ctessum/slca/bea/data/IxC_TR_1997-2015_Summary.xlsx"
+  TotalRequirementsDetail =     "${GOPATH}/src/bitbucket.org/ctessum/slca/bea/data/IxC_TR_2007_Detail.xlsx"
+  DomesticRequirementsSummary = "${GOPATH}/src/bitbucket.org/ctessum/slca/bea/data/IxC_Domestic_1997-2015_Summary.xlsx"
+  DomesticRequirementsDetail =  "${GOPATH}/src/bitbucket.org/ctessum/slca/bea/data/IxC_Domestic_2007_Detail.xlsx"
+
+[SpatialEIO]
+  SpatialCache = "${SLCASpatialCache}/bea"
+[SpatialEIO.CSTConfig]
+  SRFile = "${ISRM}"
+  SRCacheSize = 480000 # This will take about 100GB of RAM. Reduce the number to decrease RAM requirements.
+
+  CensusPopColumns = ["TotalPop", "WhiteNoLat", "Black", "Native", "Asian", "Latino"]
+
+  NEIBaseYear = 2014
+  NEITrends = "$GOPATH/src/github.com/ctessum/aep/aeputil/testdata/state_tier1_90-16.xlsx"
+  SCCReference = "$GOPATH/src/github.com/ctessum/aep/aeputil/testdata/SCCDownload-2017-0622-080147.csv"
+  ConcentrationCache = "${SLCASpatialCache}/concentration"
+  HealthCache = "${SLCASpatialCache}/health"
+  SpatialCache = "${SLCASpatialCache}/spatial"
+  MaxCacheEntries=30
+  DefaultFIPS = "00000"
+
+  FugitiveDustSectors = ["afdust", "othafdust"]
+  FugitiveDustAdjustment = "${GOPATH}/src/bitbucket.org/ctessum/slca/bea/data/dust_adjustment_isrm.csv"
+
+  AdditionalEmissionsShapefilesForEvaluation = [
+    "${evaldata}/2005_emissions/bioFireEmis.shp",
+  ]
+
+[SpatialEIO.CSTConfig.CensusFile]
+  2014 = "${evaldata}/census2013blckgrp.shp"
+
+[SpatialEIO.CSTConfig.MortalityRateFile]
+  2014 = "${evaldata}/mortalityRates2013.shp"
+
+[SpatialEIO.CSTConfig.MortalityRateColumns]
+  AllCause = "TotalPop"
+  WhNoLMort = "WhiteNoLat"
+  BlackMort = "Black"
+  AsianMort = "Native"
+  NativeMort = "Asian"
+  LatinoMort = "Latino"
+
+
+[SpatialEIO.CSTConfig.SpatialConfig]
+  SrgSpec = "${GOPATH}/src/github.com/ctessum/aep/data/nei2014/surrogate_specification_2014.csv"
+  SrgShapefileDirectory = "$nei2014Dir"
+  SCCExactMatch = true
+  GridRef = [
+    "$nei2014Dir/ge_dat/gridding/agref_us_2014platform_08nov2016_nf_v3.txt",
+    "$nei2014Dir/ge_dat/gridding/amgref_can2010_mex2010v3_12US1_26aug2016_nf_v9.txt",
+    "$nei2014Dir/ge_dat/gridding/mgref_onroad_us_2014platform_03oct2016_nf_v2.txt",
+   ]
+   OutputSR = "+proj=lcc +lat_1=33.000000 +lat_2=45.000000 +lat_0=40.000000 +lon_0=-97.000000 +x_0=0 +y_0=0 +a=6370997.000000 +b=6370997.000000 +to_meter=1"
+   InputSR = "+proj=longlat"
+   SimplifyTolerance = 0.0
+   SpatialCache="${SLCASpatialCache}/nei"
+   GridName = "InMAP"
+
+
+[SpatialEIO.CSTConfig.InventoryConfig]
+  InputUnits = "tons"
+
+  [SpatialEIO.CSTConfig.InventoryConfig.NEIFiles]
+    afdust = [
+      "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/afdust/afdust_pm_2014NEIv1_NONPOINT_final_28oct2016_v0.csv",
+    ]
+    ag = [
+    	"$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/ag/ag_nh3_2014NEIv1_NONPOINT_final_28oct2016_v0.csv",
+    ]
+    agfire = [
+      "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/agfire/agfire_2014NEIv1_NONPOINT_final_31oct2016_v2.csv",
+    ]
+    cmv = [
+      "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/cmv/c1c2_offshore_2014NEIv1_NONPOINT_final_28oct2016_v0.csv",
+    	"$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/cmv/c1c2_onshore_2014NEIv1_NONPOINT_final_28oct2016_v0.csv",
+    	"$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/cmv/c3_onshore_2014NEIv1_NONPOINT_final_28oct2016_v0.csv",
+    ]
+    nonpt = [
+      "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/nonpt/2014NEIv1_NONPOINT_final_31oct2016_nf_v3.csv",
+    	"$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/nonpt/pfc_2014NEIv1_NONPOINT_final_28oct2016_v0.csv",
+    ]
+    nonroad = [
+      "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/nonroad/2014NEIv1_california_nonroad_augmented_VOC_plusETOH_14nov2016_v2.csv",
+    	"$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/nonroad/2014NEIv1_nonroad_from_MOVES_forAQ_18oct2016_v6_part1.csv",
+    	"$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/nonroad/2014NEIv1_nonroad_from_MOVES_forAQ_18oct2016_v6_part2.csv",
+    	"$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/nonroad/2014NEIv1_nonroad_from_MOVES_forAQ_18oct2016_v6_part3.csv",
+    	"$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/nonroad/2014NEIv1_nonroad_from_MOVES_forAQ_18oct2016_v6_part4.csv",
+    ]
+    np_oilgas = [
+      "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/np_oilgas/np_oilgas_2014NEIv1_NONPOINT_final_28oct2016_v0.csv",
+    ]
+    onroad = [
+     "$nei2014Dir/SmokeFlatFile_ONROAD_20160910.csv",
+    ]
+    ptagfire = [
+    	"$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/ptagfire/point_agfire_2014NEIv1_from_daily_31oct2016_v1.csv",
+    ]
+    ptegu = [
+      "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/ptegu/ptegu_2014NEIv1_final_POINT_02nov2016_v0.csv",
+    ]
+    ptfire_f = [
+      "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/ptfire_f/ptinv_ptfire_2014_large_split_ff10_03nov2016_v2.csv",
+    ]
+    ptfire_s = [
+      "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/ptfire_s/ptinv_ptfire_2014_large_split_ff10_04nov2016_v3.csv",
+    ]
+    ptnonipm = [
+      "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/ptnonipm/ptnonipm_2014NEIv1_final_POINT_commentfix_07mar2017_v0.csv",
+    ]
+    pt_oilgas = [
+    	"$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/pt_oilgas/pt_oilgas_2014NEIv1_final_POINT_03nov2016_v3.csv",
+    ]
+    rail = [
+      "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/rail/rail_2014NEIv1_NONPOINT_final_27oct2016_v0.csv",
+    ]
+    rwc = [
+    	"$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/rwc/rwc_2014NEIv1_NONPOINT_final_27oct2016_v0.csv",
+    ]
+
+
+  [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep]
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.VOC]
+  		SpecType ="VOC"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PM25-PRI]
+  		SpecType= "PM2.5"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PM2_5]
+  		SpecType= "PM2.5"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.NOX]
+  		SpecType= "NOx"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.NH3.SpecNames]
+  		Names= ["NH3"]
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.SO2.SpecNames]
+      Names= ["SOx"]
+    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.XYL]
+      SpecType ="VOC"
+    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.TOL]
+      SpecType ="VOC"
+    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.TERP]
+      SpecType ="VOC"
+    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PAR]
+      SpecType ="VOC"
+    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.OLE]
+      SpecType ="VOC"
+    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.NVOL]
+      SpecType ="VOC"
+    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.MEOH]
+      SpecType ="VOC"
+    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.ISOP]
+      SpecType ="VOC"
+    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.IOLE]
+      SpecType ="VOC"
+    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.FORM]
+      SpecType ="VOC"
+    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.ETOH]
+      SpecType ="VOC"
+    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.ETHA]
+      SpecType ="VOC"
+    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.ETH]
+      SpecType ="VOC"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.ALD2]
+  		SpecType="VOC"
+    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.ALDX]
+      SpecType="VOC"
+    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.CB05_ALD2]
+  		SpecType="VOC"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.CB05_ALDX]
+  		SpecType="VOC"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.CB05_BENZENE]
+  		SpecType="VOC"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.CB05_ETH]
+  		SpecType="VOC"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.CB05_ETHA]
+  		SpecType="VOC"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.CB05_ETOH]
+  		SpecType="VOC"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.CB05_FORM]
+  		SpecType="VOC"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.CB05_IOLE]
+  		SpecType="VOC"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.CB05_ISOP]
+  		SpecType="VOC"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.CB05_MEOH]
+  		SpecType="VOC"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.CB05_OLE]
+  		SpecType="VOC"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.CB05_PAR]
+  		SpecType="VOC"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.CB05_TERP]
+  		SpecType="VOC"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.CB05_TOL]
+  		SpecType="VOC"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.CB05_XYL]
+  		SpecType="VOC"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.DIESEL-PM25]
+  		SpecType="PM2.5"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.EC]
+  		SpecType="PM2.5"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.ETHANOL]
+  		SpecType="VOC"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.HONO]
+  		SpecType="NOx"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.NHTOG]
+  		SpecType="VOC"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.NMOG]
+  		SpecType="VOC"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.NO]
+  		SpecType="NOx"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.NO2]
+  		SpecType="NOx"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.NO3]
+  		SpecType="NOx"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.OC]
+  		SpecType="PM2.5"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PAL]
+  		SpecType="PM2.5"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PCA]
+  		SpecType="PM2.5"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PCL]
+  		SpecType="PM2.5"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PEC]
+  		SpecType="PM2.5"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PFE]
+  		SpecType="PM2.5"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PK]
+  		SpecType="PM2.5"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PMFINE]
+  		SpecType="PM2.5"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PMG]
+  		SpecType="PM2.5"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PMN]
+  		SpecType="PM2.5"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PMOTHR]
+  		SpecType="PM2.5"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PNH4]
+  		SpecType="PM2.5"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PNO3]
+  		SpecType="PM2.5"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.POC]
+  		SpecType="PM2.5"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PSI]
+  		SpecType="PM2.5"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PSO4]
+  		SpecType="PM2.5"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PTI]
+  		SpecType="PM2.5"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.SO4.SpecNames]
+      Names= ["SOx"]
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.VOC_INV]
+  		SpecType="VOC"
+
+
+  [SpatialEIO.CSTConfig.EvaluationInventoryConfig]
+    InputUnits = "tons"
+
+    [SpatialEIO.CSTConfig.EvaluationInventoryConfig.NEIFiles]
+      afdust = [
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/afdust/afdust_pm_2014NEIv1_NONPOINT_final_28oct2016_v0.csv",
+      ]
+      ag = [
+        #"$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/ag/ag_daily_2014NEIv1_livestock_matchNEI_02nov2016_v0.csv",
+        #"$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/ag/ag_daily_2014NEIv1_livestock_matchNEI_prevdec_02nov2016_v0.csv",
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/ag/ag_nh3_2014NEIv1_NONPOINT_final_28oct2016_v0.csv",
+      ]
+      agfire = [
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/agfire/agfire_2014NEIv1_NONPOINT_final_31oct2016_v2.csv",
+      ]
+      cmv = [
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/cmv/c1c2_offshore_2014NEIv1_NONPOINT_final_28oct2016_v0.csv",
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/cmv/c1c2_onshore_2014NEIv1_NONPOINT_final_28oct2016_v0.csv",
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/cmv/c3_onshore_2014NEIv1_NONPOINT_final_28oct2016_v0.csv",
+      ]
+      nonpt = [
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/nonpt/2014NEIv1_NONPOINT_final_31oct2016_nf_v3.csv",
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/nonpt/pfc_2014NEIv1_NONPOINT_final_28oct2016_v0.csv",
+      ]
+      nonroad = [
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/nonroad/2014NEIv1_california_nonroad_augmented_VOC_plusETOH_14nov2016_v2.csv",
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/nonroad/2014NEIv1_nonroad_from_MOVES_forAQ_18oct2016_v6_part1.csv",
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/nonroad/2014NEIv1_nonroad_from_MOVES_forAQ_18oct2016_v6_part2.csv",
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/nonroad/2014NEIv1_nonroad_from_MOVES_forAQ_18oct2016_v6_part3.csv",
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/nonroad/2014NEIv1_nonroad_from_MOVES_forAQ_18oct2016_v6_part4.csv",
+      ]
+      np_oilgas = [
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/np_oilgas/np_oilgas_2014NEIv1_NONPOINT_final_28oct2016_v0.csv",
+      ]
+      onroad = [
+       "$nei2014Dir/SmokeFlatFile_ONROAD_20160910.csv",
+       # "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/onroad/HOTELLING_NEI_v1_2014_22sep2016_v1.csv",
+       # "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/onroad/SPEED_NEI_v1_2014_22sep2016_v2.csv",
+       # "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/onroad/VMT_NEI_v1_2014_22sep2016_v2.csv",
+       # "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/onroad/VPOP_NEI_v1_2014_12oct2016_v4.csv",
+      ]
+      #onroad_ca_adj = [
+      # "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/onroad_ca_adj/HOTELLING_NEI_v1_2014_13oct2016_nf_v3.csv",
+      # "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/onroad_ca_adj/SPEED_NEI_v1_2014_22sep2016_v3.csv",
+      # "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/onroad_ca_adj/VMT_NEI_v1_2014_22sep2016_v3.csv",
+      # "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/onroad_ca_adj/VPOP_NEI_v1_2014_22sep2016_v3.csv",
+      #]
+      onroad_can = [
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/onroad_can/onroad_canada_2014_projection_FF10_26oct2016_v0.csv",
+      ]
+      onroad_mex = [
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/onroad_mex/Mexico_2014_onroad_MOVES_aggSCC_21oct2016_nf_v1_part1.csv",
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/onroad_mex/Mexico_2014_onroad_MOVES_aggSCC_21oct2016_nf_v1_part2.csv",
+      ]
+      othafdust = [
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/othafdust/afdust_canada_2010_FF10_05aug2014_v0.csv",
+      ]
+      othar = [
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/othar/ag_canada_2010_FF10_05aug2014_v0.csv",
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/othar/c3marine_canada_2010_FF10_06aug2014_v0.csv",
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/othar/Mexico_2014v1_area_21jul2016_v1.csv",
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/othar/Mexico_2014v1_area_26oct2016_v2.csv",
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/othar/Mexico_2014v1_nonroad_19jul2016_v0.csv",
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/othar/nonpoint_miscsolvents_canada_2010_FF10_06aug2014_v0.csv",
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/othar/nonpoint_nosolvents_norwc_canada_2010_FF10_01jul2015_v1.csv",
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/othar/nonpoint_rfc_canada_2010_FF10_06aug2014_v0.csv",
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/othar/nonroad_t1t5_canada_2010_FF10_06aug2014_v0.csv",
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/othar/nonroad_t2_canada_2010_FF10_06aug2014_v0.csv",
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/othar/nonroad_t4_canada_2014_projection_FF10_26oct2016_v0.csv",
+      ]
+      othpt = [
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/othpt/Mexico_2014v1_CMV_point_27jul2016_v0.csv",
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/othpt/Mexico_2014v1_point_17aug2016_v1.csv",
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/othpt/offshore_2014NEIv1_final_POINT_03nov2016_v0.csv",
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/othpt/point_CB05_canada_Future_FF10_08dec2015_v1.csv",
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/othpt/point_novoc_canada_Future_FF10_08dec2015_v2.csv",
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/othpt/point_oilsands_canada_2010_FF10_06aug2014_v0.csv",
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/othpt/point_summed_VOC_canada_Future_FF10_03nov2016_v0.csv",
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/othpt/point_uog_canada_2010_FF10_06aug2014_v0.csv",
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/othpt/ptinv_eca_imo_nonUS_nonCANADA_caps_vochaps_2011_16jun2015_v1_orl.txt",
+      ]
+      ptagfire = [
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/ptagfire/point_agfire_2014NEIv1_from_daily_31oct2016_v1.csv",
+      ]
+      ptegu = [
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/ptegu/ptegu_2014NEIv1_final_POINT_02nov2016_v0.csv",
+      ]
+      #ptfire_f = [
+      #  "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/ptfire_f/ptinv_ptfire_2014_large_split_ff10_03nov2016_v2.csv",
+      #]
+      ptfire_mxca = [
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/ptfire_mxca/ptinv_ptfire_CA_2013_finn_ff10_10nov2016_v0.csv",
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/ptfire_mxca/ptinv_ptfire_CA_2014_finn_ff10_jan_may_dec_10nov2016_v0.csv",
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/ptfire_mxca/ptinv_ptfire_EC_2014_ff10_fuels_14nov2016_v0.csv",
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/ptfire_mxca/ptinv_ptfire_MX_2013_finn_ff10_10nov2016_v0.csv",
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/ptfire_mxca/ptinv_ptfire_MX_2014_finn_ff10_10nov2016_v0.csv",
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/ptfire_mxca/ptinv_ptfire_mx_ca_dummy_txt_14nov2016_v1.csv",
+      ]
+      #ptfire_s = [
+      #  "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/ptfire_s/ptinv_ptfire_2014_large_split_ff10_04nov2016_v3.csv",
+      #]
+      ptnonipm = [
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/ptnonipm/ptnonipm_2014NEIv1_final_POINT_commentfix_07mar2017_v0.csv",
+      ]
+      pt_oilgas = [
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/pt_oilgas/pt_oilgas_2014NEIv1_final_POINT_03nov2016_v3.csv",
+      ]
+      rail = [
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/rail/rail_2014NEIv1_NONPOINT_final_27oct2016_v0.csv",
+      ]
+      rwc = [
+        "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/rwc/rwc_2014NEIv1_NONPOINT_final_27oct2016_v0.csv",
+      ]
+
+
+      [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep]
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.VOC]
+      		SpecType ="VOC"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PM25-PRI]
+      		SpecType= "PM2.5"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PM2_5]
+      		SpecType= "PM2.5"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.NOX]
+      		SpecType= "NOx"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.NH3.SpecNames]
+      		Names= ["NH3"]
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.SO2.SpecNames]
+          Names= ["SOx"]
+        [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.XYL]
+          SpecType ="VOC"
+        [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.TOL]
+          SpecType ="VOC"
+        [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.TERP]
+          SpecType ="VOC"
+        [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PAR]
+          SpecType ="VOC"
+        [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.OLE]
+          SpecType ="VOC"
+        [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.NVOL]
+          SpecType ="VOC"
+        [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.MEOH]
+          SpecType ="VOC"
+        [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.ISOP]
+          SpecType ="VOC"
+        [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.IOLE]
+          SpecType ="VOC"
+        [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.FORM]
+          SpecType ="VOC"
+        [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.ETOH]
+          SpecType ="VOC"
+        [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.ETHA]
+          SpecType ="VOC"
+        [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.ETH]
+          SpecType ="VOC"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.ALD2]
+      		SpecType="VOC"
+        [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.ALDX]
+          SpecType="VOC"
+        [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.CB05_ALD2]
+      		SpecType="VOC"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.CB05_ALDX]
+      		SpecType="VOC"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.CB05_BENZENE]
+      		SpecType="VOC"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.CB05_ETH]
+      		SpecType="VOC"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.CB05_ETHA]
+      		SpecType="VOC"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.CB05_ETOH]
+      		SpecType="VOC"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.CB05_FORM]
+      		SpecType="VOC"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.CB05_IOLE]
+      		SpecType="VOC"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.CB05_ISOP]
+      		SpecType="VOC"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.CB05_MEOH]
+      		SpecType="VOC"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.CB05_OLE]
+      		SpecType="VOC"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.CB05_PAR]
+      		SpecType="VOC"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.CB05_TERP]
+      		SpecType="VOC"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.CB05_TOL]
+      		SpecType="VOC"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.CB05_XYL]
+      		SpecType="VOC"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.DIESEL-PM25]
+      		SpecType="PM2.5"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.EC]
+      		SpecType="PM2.5"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.ETHANOL]
+      		SpecType="VOC"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.HONO]
+      		SpecType="NOx"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.NHTOG]
+      		SpecType="VOC"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.NMOG]
+      		SpecType="VOC"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.NO]
+      		SpecType="NOx"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.NO2]
+      		SpecType="NOx"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.NO3]
+      		SpecType="NOx"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.OC]
+      		SpecType="PM2.5"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PAL]
+      		SpecType="PM2.5"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PCA]
+      		SpecType="PM2.5"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PCL]
+      		SpecType="PM2.5"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PEC]
+      		SpecType="PM2.5"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PFE]
+      		SpecType="PM2.5"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PK]
+      		SpecType="PM2.5"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PMFINE]
+      		SpecType="PM2.5"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PMG]
+      		SpecType="PM2.5"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PMN]
+      		SpecType="PM2.5"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PMOTHR]
+      		SpecType="PM2.5"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PNH4]
+      		SpecType="PM2.5"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PNO3]
+      		SpecType="PM2.5"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.POC]
+      		SpecType="PM2.5"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PSI]
+      		SpecType="PM2.5"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PSO4]
+      		SpecType="PM2.5"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PTI]
+      		SpecType="PM2.5"
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.SO4.SpecNames]
+          Names= ["SOx"]
+      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.VOC_INV]
+      		SpecType="VOC"

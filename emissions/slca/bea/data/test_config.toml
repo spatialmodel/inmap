@@ -1,0 +1,171 @@
+SpatialRefFile = "data/SCC_codes.xlsx"
+
+[Config]
+  Years = [2007, 2011]
+  DetailYear = 2007
+  UseSummary = "data/IOUse_Before_Redefinitions_PRO_1997-2015_Summary.xlsx"
+  UseDetail = "data/IOUse_Before_Redefinitions_PRO_2007_Detail.xlsx"
+  ImportsSummary = "data/ImportMatrices_Before_Redefinitions_SUM_1997-2016.xlsx"
+  ImportsDetail = "data/ImportMatrices_Before_Redefinitions_DET_2007.xlsx"
+  TotalRequirementsSummary = "data/IxC_TR_1997-2015_Summary.xlsx"
+  TotalRequirementsDetail =     "data/IxC_TR_2007_Detail.xlsx"
+  DomesticRequirementsSummary = "data/IxC_Domestic_1997-2015_Summary.xlsx"
+  DomesticRequirementsDetail =  "data/IxC_Domestic_2007_Detail.xlsx"
+
+[SpatialEIO]
+  SpatialCache = ""
+[SpatialEIO.CSTConfig]
+  SRFile = "../testdata/testSR.ncf"
+
+  NEIBaseYear = 2014
+  NEITrends = "$GOPATH/src/github.com/ctessum/aep/aeputil/testdata/state_tier1_90-16.xlsx"
+  SCCReference = "$GOPATH/src/github.com/ctessum/aep/aeputil/testdata/SCCDownload-2017-0622-080147.csv"
+  ConcentrationCache = ""
+  HealthCache = ""
+  SpatialCache = ""
+  MaxCacheEntries=30
+  DefaultFIPS = "00000"
+
+  FugitiveDustSectors = ["test_adj"]
+  FugitiveDustAdjustment = "../testdata/fugitive_dust_adj.csv"
+
+  CensusPopColumns = ["TotalPop", "WhiteNoLat", "Black", "Native", "Asian", "Latino"]
+
+  # CensusFile is the path to the shapefile holding population information.
+  [SpatialEIO.CSTConfig.CensusFile]
+    2011 = "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testPopulation.shp"
+    2014 = "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testPopulation.shp"
+
+  # MortalityRateFile is the path to the shapefile containing baseline
+  # mortality rate data.
+  [SpatialEIO.CSTConfig.MortalityRateFile]
+    2011 = "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testMortalityRate.shp"
+    2014 = "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testMortalityRate.shp"
+
+
+  # MortalityRateColumns maps the names of each input population group to the name
+  # of the field in MortalityRateFile that contains its respective baseline
+  # mortality rate, in units of deaths per year per 100,000 people. Only mortality
+  # rates used in output variable expressions need to be included here.
+  [SpatialEIO.CSTConfig.MortalityRateColumns]
+    AllCause = "TotalPop"
+    WhNoLMort = "WhiteNoLat"
+    BlackMort = "Black"
+    AsianMort = "Native"
+    NativeMort = "Asian"
+    LatinoMort = "Latino"
+
+[SpatialEIO.CSTConfig.SpatialConfig]
+  SrgSpec = "$GOPATH/src/github.com/ctessum/aep/aeputil/testdata/surrogate_specification.csv"
+  SrgShapefileDirectory = "$GOPATH/src/github.com/ctessum/aep/testdata/"
+  SCCExactMatch = true
+  GridRef = [
+    "$GOPATH/src/github.com/ctessum/aep/aeputil/testdata/gridref.txt",
+  ]
+  OutputSR = "+proj=lcc +lat_1=33.000000 +lat_2=45.000000 +lat_0=40.000000 +lon_0=-97.000000 +x_0=0 +y_0=0 +a=6370997.000000 +b=6370997.000000 +to_meter=1"
+  InputSR = "+proj=longlat"
+  SimplifyTolerance = 0.0
+  SpatialCache=""
+  GridName = "InMAP"
+
+
+[SpatialEIO.CSTConfig.InventoryConfig]
+  InputUnits = "tons"
+
+  [SpatialEIO.CSTConfig.InventoryConfig.NEIFiles]
+    test = [
+      "data/testemis.csv",
+    ]
+
+
+  [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep]
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.VOC]
+  		SpecType ="VOC"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PM25-PRI]
+  		SpecType= "PM2.5"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PM2_5]
+  		SpecType= "PM2.5"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.NOX]
+  		SpecType= "NOx"
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.NH3.SpecNames]
+  		Names= ["NH3"]
+  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.SO2.SpecNames]
+      Names= ["SOx"]
+    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.XYL]
+      SpecType ="VOC"
+    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.UNR]
+      SpecType ="VOC"
+    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.TOL]
+      SpecType ="VOC"
+    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.TERP]
+      SpecType ="VOC"
+    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PAR]
+      SpecType ="VOC"
+    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.OLE]
+      SpecType ="VOC"
+    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.NVOL]
+      SpecType ="VOC"
+    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.MEOH]
+      SpecType ="VOC"
+    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.ISOP]
+      SpecType ="VOC"
+    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.IOLE]
+      SpecType ="VOC"
+    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.FORM]
+      SpecType ="VOC"
+    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.ETOH]
+      SpecType ="VOC"
+    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.ETHA]
+      SpecType ="VOC"
+    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.ETH]
+      SpecType ="VOC"
+
+  [SpatialEIO.CSTConfig.EvaluationInventoryConfig]
+    InputUnits = "tons"
+
+    [SpatialEIO.CSTConfig.EvaluationInventoryConfig.NEIFiles]
+      test = [
+        "data/testemis.csv",
+      ]
+
+    [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep]
+    	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.VOC]
+    		SpecType ="VOC"
+    	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PM25-PRI]
+    		SpecType= "PM2.5"
+    	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PM2_5]
+    		SpecType= "PM2.5"
+    	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.NOX]
+    		SpecType= "NOx"
+    	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.NH3.SpecNames]
+    		Names= ["NH3"]
+    	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.SO2.SpecNames]
+        Names= ["SOx"]
+      [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.XYL]
+        SpecType ="VOC"
+      [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.UNR]
+        SpecType ="VOC"
+      [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.TOL]
+        SpecType ="VOC"
+      [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.TERP]
+        SpecType ="VOC"
+      [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PAR]
+        SpecType ="VOC"
+      [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.OLE]
+        SpecType ="VOC"
+      [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.NVOL]
+        SpecType ="VOC"
+      [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.MEOH]
+        SpecType ="VOC"
+      [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.ISOP]
+        SpecType ="VOC"
+      [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.IOLE]
+        SpecType ="VOC"
+      [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.FORM]
+        SpecType ="VOC"
+      [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.ETOH]
+        SpecType ="VOC"
+      [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.ETHA]
+        SpecType ="VOC"
+      [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.ETH]
+        SpecType ="VOC"

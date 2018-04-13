@@ -1,0 +1,160 @@
+SRFile = "testdata/testSR.ncf"
+
+NEIBaseYear = 2014
+NEITrends = "$GOPATH/src/github.com/ctessum/aep/aeputil/testdata/state_tier1_90-16.xlsx"
+SCCReference = "$GOPATH/src/github.com/ctessum/aep/aeputil/testdata/SCCDownload-2017-0622-080147.csv"
+ConcentrationCache = ""
+HealthCache = ""
+SpatialCache = ""
+MaxCacheEntries= 30
+DefaultFIPS = "00000"
+
+FugitiveDustSectors = ["test_adj"]
+FugitiveDustAdjustment = "testdata/fugitive_dust_adj.csv"
+
+# CensusPopColumns is a list of the data fields in CensusFile that should
+# be included as population estimates in the model. They can be population
+# of different demographics or for different population scenarios.
+CensusPopColumns= ["TotalPop", "WhiteNoLat", "Black", "Native", "Asian", "Latino"]
+
+# CensusFile is the path to the shapefile holding population information.
+[CensusFile]
+2001 = "${GOPATH}/src/bitbucket.org/ctessum/slca/testdata/testPopulation_half.shp"
+2011 = "${GOPATH}/src/bitbucket.org/ctessum/slca/testdata/testPopulation.shp"
+2014 = "${GOPATH}/src/bitbucket.org/ctessum/slca/testdata/testPopulation.shp"
+
+# MortalityRateFile is the path to the shapefile containing baseline
+# mortality rate data.
+[MortalityRateFile]
+2001 = "${GOPATH}/src/bitbucket.org/ctessum/slca/testdata/testMortalityRate_half.shp"
+2011 = "${GOPATH}/src/bitbucket.org/ctessum/slca/testdata/testMortalityRate.shp"
+2014 = "${GOPATH}/src/bitbucket.org/ctessum/slca/testdata/testMortalityRate.shp"
+
+
+# MortalityRateColumns maps the names of each input population group to the name
+# of the field in MortalityRateFile that contains its respective baseline
+# mortality rate, in units of deaths per year per 100,000 people. Only mortality
+# rates used in output variable expressions need to be included here.
+[MortalityRateColumns]
+  AllCause = "TotalPop"
+  WhNoLMort = "WhiteNoLat"
+  BlackMort = "Black"
+  AsianMort = "Native"
+  NativeMort = "Asian"
+  LatinoMort = "Latino"
+
+
+[SpatialConfig]
+SrgSpec = "$GOPATH/src/github.com/ctessum/aep/aeputil/testdata/surrogate_specification.csv"
+SrgShapefileDirectory = "$GOPATH/src/github.com/ctessum/aep/testdata/"
+SCCExactMatch = false
+GridRef = [
+  "$GOPATH/src/github.com/ctessum/aep/aeputil/testdata/gridref.txt",
+ ]
+ OutputSR = "+proj=lcc +lat_1=33.000000 +lat_2=45.000000 +lat_0=40.000000 +lon_0=-97.000000 +x_0=0 +y_0=0 +a=6370997.000000 +b=6370997.000000 +to_meter=1"
+ InputSR = "+proj=longlat"
+ SimplifyTolerance = 0.0
+ SpatialCache = ""
+ GridName = "InMAP"
+
+
+[InventoryConfig]
+InputUnits = "tons"
+
+  [InventoryConfig.NEIFiles]
+    test = [
+      "testdata/testemis.csv",
+    ]
+
+  [InventoryConfig.PolsToKeep]
+  	[InventoryConfig.PolsToKeep.VOC]
+  		SpecType ="VOC"
+  	[InventoryConfig.PolsToKeep.PM25-PRI]
+  		SpecType= "PM2.5"
+  	[InventoryConfig.PolsToKeep.PM2_5]
+  		SpecType= "PM2.5"
+  	[InventoryConfig.PolsToKeep.NOX]
+  		SpecType= "NOx"
+  	[InventoryConfig.PolsToKeep.NH3.SpecNames]
+  		Names= ["NH3"]
+  	[InventoryConfig.PolsToKeep.SO2.SpecNames]
+      Names= ["SOx"]
+    [InventoryConfig.PolsToKeep.XYL]
+      SpecType ="VOC"
+    [InventoryConfig.PolsToKeep.UNR]
+      SpecType ="VOC"
+    [InventoryConfig.PolsToKeep.TOL]
+      SpecType ="VOC"
+    [InventoryConfig.PolsToKeep.TERP]
+      SpecType ="VOC"
+    [InventoryConfig.PolsToKeep.PAR]
+      SpecType ="VOC"
+    [InventoryConfig.PolsToKeep.OLE]
+      SpecType ="VOC"
+    [InventoryConfig.PolsToKeep.NVOL]
+      SpecType ="VOC"
+    [InventoryConfig.PolsToKeep.MEOH]
+      SpecType ="VOC"
+    [InventoryConfig.PolsToKeep.ISOP]
+      SpecType ="VOC"
+    [InventoryConfig.PolsToKeep.IOLE]
+      SpecType ="VOC"
+    [InventoryConfig.PolsToKeep.FORM]
+      SpecType ="VOC"
+    [InventoryConfig.PolsToKeep.ETOH]
+      SpecType ="VOC"
+    [InventoryConfig.PolsToKeep.ETHA]
+      SpecType ="VOC"
+    [InventoryConfig.PolsToKeep.ETH]
+      SpecType ="VOC"
+
+
+[EvaluationInventoryConfig]
+InputUnits = "tons"
+
+  [EvaluationInventoryConfig.NEIFiles]
+    test = [
+      "testdata/testemis.csv",
+    ]
+
+  [EvaluationInventoryConfig.PolsToKeep]
+  	[EvaluationInventoryConfig.PolsToKeep.VOC]
+  		SpecType ="VOC"
+  	[EvaluationInventoryConfig.PolsToKeep.PM25-PRI]
+  		SpecType= "PM2.5"
+  	[EvaluationInventoryConfig.PolsToKeep.PM2_5]
+  		SpecType= "PM2.5"
+  	[EvaluationInventoryConfig.PolsToKeep.NOX]
+  		SpecType= "NOx"
+  	[EvaluationInventoryConfig.PolsToKeep.NH3.SpecNames]
+  		Names= ["NH3"]
+  	[EvaluationInventoryConfig.PolsToKeep.SO2.SpecNames]
+      Names= ["SOx"]
+    [EvaluationInventoryConfig.PolsToKeep.XYL]
+      SpecType ="VOC"
+    [EvaluationInventoryConfig.PolsToKeep.UNR]
+      SpecType ="VOC"
+    [EvaluationInventoryConfig.PolsToKeep.TOL]
+      SpecType ="VOC"
+    [EvaluationInventoryConfig.PolsToKeep.TERP]
+      SpecType ="VOC"
+    [EvaluationInventoryConfig.PolsToKeep.PAR]
+      SpecType ="VOC"
+    [EvaluationInventoryConfig.PolsToKeep.OLE]
+      SpecType ="VOC"
+    [EvaluationInventoryConfig.PolsToKeep.NVOL]
+      SpecType ="VOC"
+    [EvaluationInventoryConfig.PolsToKeep.MEOH]
+      SpecType ="VOC"
+    [EvaluationInventoryConfig.PolsToKeep.ISOP]
+      SpecType ="VOC"
+    [EvaluationInventoryConfig.PolsToKeep.IOLE]
+      SpecType ="VOC"
+    [EvaluationInventoryConfig.PolsToKeep.FORM]
+      SpecType ="VOC"
+    [EvaluationInventoryConfig.PolsToKeep.ETOH]
+      SpecType ="VOC"
+    [EvaluationInventoryConfig.PolsToKeep.ETHA]
+      SpecType ="VOC"
+    [EvaluationInventoryConfig.PolsToKeep.ETH]
+      SpecType ="VOC"

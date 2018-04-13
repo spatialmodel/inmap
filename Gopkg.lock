@@ -85,6 +85,15 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/ctessum/go-leaflet"
+  packages = [
+    ".",
+    "plugin/glify"
+  ]
+  revision = "2f9e4c38fb5e008f72c7d21c3621cc825d5c4347"
+
+[[projects]]
+  branch = "master"
   name = "github.com/ctessum/gobra"
   packages = ["."]
   revision = "ddfa5eeb30173420214c70ac0c279f7674f4e148"
@@ -156,6 +165,21 @@
   name = "github.com/gonum/internal"
   packages = ["asm/f64"]
   revision = "e57e4534cf9b3b00ef6c0175f59d8d2d34f60914"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/gopherjs/gopherjs"
+  packages = ["js"]
+  revision = "558a9132744c22476178edf3126fd35a9754f565"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/gopherjs/websocket"
+  packages = [
+    ".",
+    "websocketjs"
+  ]
+  revision = "87ee47603f137e7f8419765b3621b3c36e715a08"
 
 [[projects]]
   branch = "master"
@@ -267,6 +291,12 @@
   name = "github.com/skratchdot/open-golang"
   packages = ["open"]
   revision = "75fb7ed4208cf72d323d7d02fd1a5964a7a9073c"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/spatialmodel/epi"
+  packages = ["."]
+  revision = "11aca7c5f89419c31e9d9ee71de6416fc21526b4"
 
 [[projects]]
   name = "github.com/spf13/afero"
@@ -387,6 +417,7 @@
   packages = [
     ".",
     "palette",
+    "palette/moreland",
     "plotter",
     "tools/bezier",
     "vg",
@@ -405,9 +436,19 @@
   packages = ["."]
   revision = "eb3733d160e74a9c7e442f435eb3bea458e1d19f"
 
+[[projects]]
+  branch = "master"
+  name = "honnef.co/go/js/dom"
+  packages = ["."]
+  revision = "6da835bec70f84cd4f0c0b8a7239a9260b6bc37f"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
+<<<<<<< HEAD
   inputs-digest = "52eacee419d621f00ee3520fc6a3b27c9c83cf220a733f4b3f156e264276635e"
+=======
+  inputs-digest = "7ef2ea957d8ba4c5c900499adcfcdbfdb4086966c5b8a69a2c1425d8b2c24679"
+>>>>>>> emissions: Add SLCA/bea
   solver-name = "gps-cdcl"
   solver-version = 1

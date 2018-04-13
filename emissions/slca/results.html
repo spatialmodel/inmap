@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+  <meta name="description" content="">
+  <meta name="author" content="">
+  <link rel="icon" href="../../favicon.ico">
+  <title>GREET</title>
+
+  <!-- Bootstrap -->
+  <!-- Latest compiled and minified CSS -->
+  <link rel="stylesheet" href="css/bootstrap.min.css">
+
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.6.2/css/bootstrap-select.min.css" />
+  <!-- Custom styles for this page -->
+  <link href="sidebar.css" rel="stylesheet">
+
+  <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+  <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+  <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+  <![endif]-->
+</head>
+
+<body>
+
+  <div class="row-offcanvas row-offcanvas-left">
+    <div id="sidebar" class="sidebar-offcanvas">
+      <div class="col-md-12">
+        <h3>GREET</h3>
+        <form class="navbar-form">
+
+          <!-- Required amount -->
+          <div class="form-group" style="display:inline;">
+            <label for="amt">Functional unit</label>
+            <div class="input-group" style="display:table;">
+              <input class="form-control" type="text" name="amount" aria-label="amount" placeholder="Amount" value="1" id="amt" onchange="updateMajor()" />
+              <div class="input-group-btn">
+                <select name="units" class="form-control" id="units" onchange="updateMajor()">
+                  <option selected value="kg">kg</option>
+                  <option value="J">J</option>
+                  <option value="m3">m<sup>3</sup></option>
+                </select>
+              </div>
+              <!-- /btn-group -->
+            </div>
+          </div>
+
+          <!-- Pathway search -->
+          <div class="form-group" style="display:inline;">
+            <label for="pathselect">Pathway</label>
+            <div class="input-group" style="display:table;">
+              <span class="input-group-addon" style="width:1%;">
+                <span class="glyphicon glyphicon-search"></span>
+              </span>
+              <input type="text" class="form-control" name="SearchBox" id="SearchBox" placeholder="Search pathways" />
+            </div>
+
+            <!-- Pathway selector -->
+            <div class="input-group" style="display:table;">
+              <select class="form-control" id="pathselect" size=10 onchange="updateMajor()">
+                <option selected disabled>Choose pathway</option>
+                {{range .}}
+                <option value="{{.ID}}">{{.Path}}</option> {{end}}
+              </select>
+            </div>
+          </div>
+
+          <!-- Result variable selector -->
+          <div class="form-group" style="display:inline;">
+            <label for="resultVarSelect">Result variable</label>
+            <select class="form-control" id="resultVarSelect" onchange="updateMinor()">
+              <option selected value='Gas9'>CO2</option>
+            </select>
+          </div>
+
+          <!-- Display type selector -->
+          <div class="form-group" style="display:inline;">
+            <label for="viewTypeSelect">Visualization type</label>
+            <select class="form-control" id="viewTypeSelect" onchange="updateMajor()">
+              <option selected value='network'>Process network</option>
+              <option value='map'>Spatial map</option>
+            </select>
+          </div>
+
+        </form>
+      </div>
+    </div>
+
+    <div id="main">
+      <div class="col-md-12">
+        <p class="visible-xs">
+          <button type="button" class="btn btn-primary btn-xs" data-toggle="offcanvas"><i class="glyphicon glyphicon-chevron-left"></i></button>
+        </p>
+        <div id="viewer"></div>
+      </div>
+    </div>
+  </div>
+  <!--/row-offcanvas -->
+
+
+  <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+  <!-- Include all compiled plugins (below), or include individual files as needed -->
+  <script src="js/bootstrap.min.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.6.2/js/bootstrap-select.min.js"></script>
+  <script src="results.js"></script>
+  <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
+  <script src="js/vis.min.js"></script>
+</body>
+
+
+</html>
