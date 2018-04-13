@@ -1,0 +1,26 @@
+#FORMAT=FF10_NONPOINT
+#COUNTRY=CANADA
+#YEAR=2010
+#DESC     Canada marine C3 offroad emissions
+#DESC     ANNUAL
+#DESC     david.niemi@ec.gc.ca, mourad.sassi@ec.gc.ca
+#DESC     Emissions, in short tons, for the off-road Transportation
+#DESC     Created: June 6, 2013
+#DESC     2010v1
+#EXPORT_DATE=Wed Oct 26 13:19:55 EDT 2016
+#EXPORT_VERSION_NAME=Initial Version
+#EXPORT_VERSION_NUMBER=0
+country_cd,region_cd,tribal_code,census_tract_cd,shape_id,scc,emis_type,poll,ann_value,ann_pct_red,control_ids,control_measures,current_cost,cumulative_cost,projection_factor,reg_codes,calc_method,calc_year,date_updated,data_set_id,jan_value,feb_value,mar_value,apr_value,may_value,jun_value,jul_value,aug_value,sep_value,oct_value,nov_value,dec_value,jan_pctred,feb_pctred,mar_pctred,apr_pctred,may_pctred,jun_pctred,jul_pctred,aug_pctred,sep_pctred,oct_pctred,nov_pctred,dec_pctred,comment
+"CA","36061",,,,"2280003010",,"SO2",17421.3432331000004,,,,,,,,,2010,20130606,,,,,,,,,,,,,,,,,,,,,,,,,,
+"CA","36061",,,,"2280003010",,"CO",1751.46164421999993,,,,,,,,,2010,20130606,,,,,,,,,,,,,,,,,,,,,,,,,,
+"CA","36061",,,,"2280003010",,"NOX",21709.4748887999995,,,,,,,,,2010,20130606,,,,,,,,,,,,,,,,,,,,,,,,,,
+"CA","36061",,,,"2280003010",,"VOC",716.950409809999996,,,,,,,,,2010,20130606,,,,,,,,,,,,,,,,,,,,,,,,,,
+"CA","36061",,,,"2280003010",,"PM2_5",1460.73287241000003,,,,,,,,,2010,20130606,,,,,,,,,,,,,,,,,,,,,,,,,,
+"CA","36061",,,,"2280003010",,"PM10",1623.0365248999999,,,,,,,,,2010,20130606,,,,,,,,,,,,,,,,,,,,,,,,,,
+"CA","36061",,,,"2280003030",,"NH3",0.037540419999999998,,,,,,,,,2010,20130606,,,,,,,,,,,,,,,,,,,,,,,,,,
+"CA","36061",,,,"2280003030",,"SO2",2.13812871799999993,,,,,,,,,2010,20130606,,,,,,,,,,,,,,,,,,,,,,,,,,
+"CA","36061",,,,"2280003030",,"CO",0.249818997999999987,,,,,,,,,2010,20130606,,,,,,,,,,,,,,,,,,,,,,,,,,
+"CA","36061",,,,"2280003030",,"NOX",3.6699232180000001,,,,,,,,,2010,20130606,,,,,,,,,,,,,,,,,,,,,,,,,,
+"CA","36061",,,,"2280003030",,"VOC",0.0223691620000000015,,,,,,,,,2010,20130606,,,,,,,,,,,,,,,,,,,,,,,,,,
+"CA","36061",,,,"2280003030",,"PM10",0.205472458999999996,,,,,,,,,2010,20130606,,,,,,,,,,,,,,,,,,,,,,,,,,
+"CA","36061",,,,"2280003030",,"PM2_5",0.205472458999999996,,,,,,,,,2010,20130606,,,,,,,,,,,,,,,,,,,,,,,,,,

@@ -43,10 +43,6 @@
 
 [[constraint]]
   branch = "master"
-  name = "github.com/ctessum/aep"
-
-[[constraint]]
-  branch = "master"
   name = "github.com/ctessum/atmos"
 
 [[constraint]]

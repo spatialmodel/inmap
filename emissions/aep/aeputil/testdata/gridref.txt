@@ -1,0 +1,4 @@
+# Created by C. Allen (CSC), 1 Jul 2013, for 2011eb.
+#EXPORT_DATE=Mon Jan 05 14:10:11 EST 2015
+#EXPORT_VERSION_NAME=add afdust SCC
+100000;0000000000;100

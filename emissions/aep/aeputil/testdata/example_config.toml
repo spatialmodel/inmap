@@ -1,0 +1,60 @@
+[Spatial]
+  SrgSpec = "testdata/surrogate_specification.csv"
+  SrgShapefileDirectory = "../testdata"
+  SCCExactMatch = false
+  GridRef = [
+    "testdata/gridref.txt",
+   ]
+   OutputSR = "+proj=lcc +lat_1=33.000000 +lat_2=45.000000 +lat_0=40.000000 +lon_0=-97.000000 +x_0=0 +y_0=0 +a=6370997.000000 +b=6370997.000000 +to_meter=1"
+   InputSR = "+proj=longlat"
+   SimplifyTolerance = 0.0
+
+[Inventory]
+  InputUnits = "tons"
+
+  [Inventory.NEIFiles]
+    othar = [
+    	"testdata/testemis.csv",
+    ]
+
+  [Inventory.PolsToKeep]
+  	[Inventory.PolsToKeep.VOC]
+  		SpecType ="VOC"
+  	[Inventory.PolsToKeep.PM25-PRI]
+  		SpecType= "PM2.5"
+  	[Inventory.PolsToKeep.PM2_5]
+  		SpecType= "PM2.5"
+  	[Inventory.PolsToKeep.NOX]
+  		SpecType= "NOx"
+  	[Inventory.PolsToKeep.NH3.SpecNames]
+  		Names= ["Ammonia"]
+  	[Inventory.PolsToKeep.SO2.SpecNames]
+      Names= ["Sulfur dioxide"]
+    [Inventory.PolsToKeep.XYL]
+      SpecType ="VOC"
+    [Inventory.PolsToKeep.UNR]
+      SpecType ="VOC"
+    [Inventory.PolsToKeep.TOL]
+      SpecType ="VOC"
+    [Inventory.PolsToKeep.TERP]
+      SpecType ="VOC"
+    [Inventory.PolsToKeep.PAR]
+      SpecType ="VOC"
+    [Inventory.PolsToKeep.OLE]
+      SpecType ="VOC"
+    [Inventory.PolsToKeep.NVOL]
+      SpecType ="VOC"
+    [Inventory.PolsToKeep.MEOH]
+      SpecType ="VOC"
+    [Inventory.PolsToKeep.ISOP]
+      SpecType ="VOC"
+    [Inventory.PolsToKeep.IOLE]
+      SpecType ="VOC"
+    [Inventory.PolsToKeep.FORM]
+      SpecType ="VOC"
+    [Inventory.PolsToKeep.ETOH]
+      SpecType ="VOC"
+    [Inventory.PolsToKeep.ETHA]
+      SpecType ="VOC"
+    [Inventory.PolsToKeep.ETH]
+      SpecType ="VOC"

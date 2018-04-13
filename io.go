@@ -31,7 +31,6 @@ import (
 	"strings"
 
 	"github.com/Knetic/govaluate"
-	"github.com/ctessum/aep"
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/encoding/shp"
 	"github.com/ctessum/geom/index/rtree"
@@ -39,6 +38,7 @@ import (
 	"github.com/ctessum/geom/proj"
 	"github.com/ctessum/unit"
 	goshp "github.com/jonas-p/go-shp"
+	"github.com/spatialmodel/inmap/emissions/aep"
 	"gonum.org/v1/gonum/floats"
 )
 

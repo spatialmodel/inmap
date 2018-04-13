@@ -28,11 +28,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ctessum/aep"
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/encoding/shp"
 	"github.com/ctessum/geom/proj"
 	"github.com/ctessum/unit"
+	"github.com/spatialmodel/inmap/emissions/aep"
 )
 
 const (

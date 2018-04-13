@@ -10,7 +10,6 @@ import (
 	"bitbucket.org/ctessum/cdf"
 	"github.com/GaryBoone/GoStats/stats"
 
-	"github.com/ctessum/aep"
 	"github.com/ctessum/atmos/evalstats"
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/carto"
@@ -19,6 +18,7 @@ import (
 	"github.com/ctessum/geom/op"
 	"github.com/ctessum/geom/proj"
 
+	"github.com/spatialmodel/inmap/emissions/aep"
 	"github.com/spatialmodel/inmap/inmaputil"
 
 	"gonum.org/v1/gonum/floats"

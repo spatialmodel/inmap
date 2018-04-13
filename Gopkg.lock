@@ -57,12 +57,6 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/ctessum/aep"
-  packages = ["."]
-  revision = "c5677dc9ccbdbff6b936c1fc7f03327a204c3bde"
-
-[[projects]]
-  branch = "master"
   name = "github.com/ctessum/atmos"
   packages = [
     "acm2",
@@ -200,6 +194,18 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/kr/pretty"
+  packages = ["."]
+  revision = "cfb55aafdaf3ec08f0db22699ab822c50091b1c4"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/kr/text"
+  packages = ["."]
+  revision = "7cafcd837844e784b526369c9bce262804aebc60"
+
+[[projects]]
+  branch = "master"
   name = "github.com/llgcode/draw2d"
   packages = [
     ".",
@@ -243,6 +249,12 @@
   packages = ["."]
   revision = "16398bac157da96aa88f98a2df640c7f32af1da2"
   version = "v1.0.1"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/remogatto/ftpget"
+  packages = ["."]
+  revision = "5c3c8286a3b00a13d6e88f181504db722e419519"
 
 [[projects]]
   name = "github.com/russross/blackfriday"
@@ -291,6 +303,12 @@
   packages = ["."]
   revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
   version = "v1.0.1"
+
+[[projects]]
+  name = "github.com/tealeg/xlsx"
+  packages = ["."]
+  revision = "8be35264fa75a1bbe954ce51eba04f273e2c59e5"
+  version = "v1.0.3"
 
 [[projects]]
   name = "github.com/ulikunitz/xz"
