@@ -1,3 +1,6 @@
+# Release 1.5 (?)
+* Add emissions processors
+
 # Release 1.4.2 (2018-5-16)
 * Fixed configuration bugs
 * Removed default health impact function to clarify calculations
