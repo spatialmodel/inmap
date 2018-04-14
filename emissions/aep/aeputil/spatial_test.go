@@ -23,13 +23,16 @@ import (
 	"testing"
 
 	"github.com/BurntSushi/toml"
-	"github.com/spatialmodel/inmap/emissions/aep"
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/proj"
 	"github.com/ctessum/unit"
+	"github.com/spatialmodel/inmap/emissions/aep"
 )
 
 func TestSpatial(t *testing.T) {
+	if testing.Short() {
+		return
+	}
 	type config struct {
 		Inventory InventoryConfig
 		Spatial   SpatialConfig
