@@ -35,7 +35,7 @@ You can also compile InMAP from its source code. The instructions here are speci
 	cd inmap # Move into the InMAP directory
 	go get github.com/golang/dep/cmd/dep # Install the program that will download the required libraries
 	dep ensure # Download the required libraries
-	go install ./inmap # Compile and install the InMAP executable.
+	go install ./cmd/inmap # Compile and install the InMAP executable.
 	```
 
 5. Optional: run the tests and evaluations (this may take a while):

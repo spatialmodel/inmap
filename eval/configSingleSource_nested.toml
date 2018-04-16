@@ -34,7 +34,7 @@ HTTPAddress = ":8080"
 
 # SROutputFile is the path where the output file is or should be created
 # when creating a source-receptor matrix. It can contain environment variables.
-SROutputFile = "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testSR.ncf"
+SROutputFile = "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/testSR.ncf"
 
 # OutputVariables specifies which model variables should be included in the
 # output file.

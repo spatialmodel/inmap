@@ -33,7 +33,7 @@ import (
 func TestWRFChemToInMAP(t *testing.T) {
 	const tolerance = 1.0e-6
 
-	wrf, err := NewWRFChem("inmap/testdata/preproc/wrfout_d01_[DATE]", "20050101", "20050103", nil)
+	wrf, err := NewWRFChem("cmd/inmap/testdata/preproc/wrfout_d01_[DATE]", "20050101", "20050103", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,7 +43,7 @@ func TestWRFChemToInMAP(t *testing.T) {
 	}
 
 	cfg := VarGridConfig{}
-	f2, err := os.Open("inmap/testdata/preproc/inmapData_WRFChem_golden.ncf")
+	f2, err := os.Open("cmd/inmap/testdata/preproc/inmapData_WRFChem_golden.ncf")
 	if err != nil {
 		t.Fatalf("opening golden file: %v", err)
 	}
@@ -55,7 +55,7 @@ func TestWRFChemToInMAP(t *testing.T) {
 }
 
 func BenchmarkWRFChemToInMAP(b *testing.B) {
-	wrf, err := NewWRFChem("inmap/testdata/preproc/wrfout_d01_[DATE]", "20050101", "20050103", nil)
+	wrf, err := NewWRFChem("cmd/inmap/testdata/preproc/wrfout_d01_[DATE]", "20050101", "20050103", nil)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -69,14 +69,14 @@ func TestGEOSChemToInMAP(t *testing.T) {
 	const tolerance = 1.0e-6
 
 	gc, err := NewGEOSChem(
-		"inmap/testdata/preproc/GEOSFP.[DATE].A1.2x25.nc",
-		"inmap/testdata/preproc/GEOSFP.[DATE].A3cld.2x25.nc",
-		"inmap/testdata/preproc/GEOSFP.[DATE].A3dyn.2x25.nc",
-		"inmap/testdata/preproc/GEOSFP.[DATE].I3.2x25.nc",
-		"inmap/testdata/preproc/GEOSFP.[DATE].A3mstE.2x25.nc",
+		"cmd/inmap/testdata/preproc/GEOSFP.[DATE].A1.2x25.nc",
+		"cmd/inmap/testdata/preproc/GEOSFP.[DATE].A3cld.2x25.nc",
+		"cmd/inmap/testdata/preproc/GEOSFP.[DATE].A3dyn.2x25.nc",
+		"cmd/inmap/testdata/preproc/GEOSFP.[DATE].I3.2x25.nc",
+		"cmd/inmap/testdata/preproc/GEOSFP.[DATE].A3mstE.2x25.nc",
 		"",
-		"inmap/testdata/preproc/gc_output.[DATE].nc",
-		"inmap/testdata/preproc/vegtype.global.txt",
+		"cmd/inmap/testdata/preproc/gc_output.[DATE].nc",
+		"cmd/inmap/testdata/preproc/vegtype.global.txt",
 		"20130102",
 		"20130104",
 		true,
@@ -91,7 +91,7 @@ func TestGEOSChemToInMAP(t *testing.T) {
 	}
 
 	cfg := VarGridConfig{}
-	f2, err := os.Open("inmap/testdata/preproc/inmapData_GEOSChem_golden.ncf")
+	f2, err := os.Open("cmd/inmap/testdata/preproc/inmapData_GEOSChem_golden.ncf")
 	if err != nil {
 		t.Fatalf("opening golden file: %v", err)
 	}
@@ -104,14 +104,14 @@ func TestGEOSChemToInMAP(t *testing.T) {
 
 func BenchmarkGEOSChemToInMAP(b *testing.B) {
 	gc, err := NewGEOSChem(
-		"inmap/testdata/preproc/GEOSFP.[DATE].A1.2x25.nc",
-		"inmap/testdata/preproc/GEOSFP.[DATE].A3cld.2x25.nc",
-		"inmap/testdata/preproc/GEOSFP.[DATE].A3dyn.2x25.nc",
-		"inmap/testdata/preproc/GEOSFP.[DATE].I3.2x25.nc",
-		"inmap/testdata/preproc/GEOSFP.[DATE].A3mstE.2x25.nc",
+		"cmd/inmap/testdata/preproc/GEOSFP.[DATE].A1.2x25.nc",
+		"cmd/inmap/testdata/preproc/GEOSFP.[DATE].A3cld.2x25.nc",
+		"cmd/inmap/testdata/preproc/GEOSFP.[DATE].A3dyn.2x25.nc",
+		"cmd/inmap/testdata/preproc/GEOSFP.[DATE].I3.2x25.nc",
+		"cmd/inmap/testdata/preproc/GEOSFP.[DATE].A3mstE.2x25.nc",
 		"",
-		"inmap/testdata/preproc/gc_output.[DATE].nc",
-		"inmap/testdata/preproc/vegtype.global.txt",
+		"cmd/inmap/testdata/preproc/gc_output.[DATE].nc",
+		"cmd/inmap/testdata/preproc/vegtype.global.txt",
 		"20130102",
 		"20130104",
 		true,
@@ -608,7 +608,7 @@ func TestStagger(t *testing.T) {
 }
 
 func TestReadApBp(t *testing.T) {
-	f := nextDataConstantNCF("ap", "inmap/testdata/preproc/GEOSFP.ApBp.nc")
+	f := nextDataConstantNCF("ap", "cmd/inmap/testdata/preproc/GEOSFP.ApBp.nc")
 	dataWant := sparse.ZerosDense(73)
 	dataWant.Elements = []float64{0, 0.04804826155304909, 6.593751907348633,
 		13.13479995727539, 19.613109588623047, 26.092010498046875, 32.57080841064453,

@@ -1,5 +1,3 @@
-//+build !js
-
 /*
 Copyright © 2017 the InMAP authors.
 This file is part of InMAP.
@@ -17,32 +15,38 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with InMAP.  If not, see <http://www.gnu.org/licenses/>.*/
 
-package main
+package eioserve
+
+// Install the code generation dependencies.
+// go get github.com/golang/protobuf/protoc-gen-go
+// go get github.com/johanbrandhorst/protobuf/protoc-gen-gopherjs
+
+// Generate the gRPC client/server code. (Information at https://grpc.io/docs/quickstart/go.html)
+//go:generate protoc -I proto/ eioserve.proto --go_out=plugins=grpc:proto/eioservepb --gopherjs_out=plugins=grpc:proto/eioclientpb
 
 // Build the client javascript code.
-//go:generate gopherjs build
+//go:generate gopherjs build -m ./gui
 
 import (
 	"bytes"
 	"context"
 	"encoding/base64"
-	"encoding/json"
+	"encoding/gob"
 	"fmt"
 	"image/color"
 	"log"
 	"net/http"
-	"net/rpc"
-	"net/rpc/jsonrpc"
 	"os"
 	"runtime"
 	"sort"
+	"strings"
 	"sync"
 
 	"github.com/ctessum/geom"
-	"github.com/ctessum/geom/carto"
-	"github.com/ctessum/geom/encoding/geojson"
 	"github.com/ctessum/geom/proj"
 	"github.com/ctessum/requestcache"
+	"github.com/gorilla/websocket"
+	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"github.com/spatialmodel/epi"
 	"gonum.org/v1/gonum/mat"
 	"gonum.org/v1/plot"
@@ -52,11 +56,13 @@ import (
 	"gonum.org/v1/plot/vg"
 	"gonum.org/v1/plot/vg/draw"
 	"gonum.org/v1/plot/vg/vgimg"
-
-	"golang.org/x/net/websocket"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/testdata"
 
 	"github.com/spatialmodel/inmap/emissions/slca"
 	"github.com/spatialmodel/inmap/emissions/slca/bea"
+	"github.com/spatialmodel/inmap/emissions/slca/bea/eioserve/proto/eioservepb"
 )
 
 type config struct {
@@ -75,42 +81,57 @@ type Server struct {
 
 	geomCache, areaCache         *requestcache.Cache
 	geomCacheOnce, areaCacheOnce sync.Once
+
+	grpcServer   *grpcweb.WrappedGrpcServer
+	staticServer http.Handler
 }
 
-func main() {
-	log.Println("Starting up...")
-	f, err := os.Open(os.ExpandEnv("${GOPATH}/src/bitbucket.org/ctessum/slca/bea/data/example_config.toml"))
+// NewServer creates a new EIO-LCA server.
+func NewServer() (*Server, error) {
+	f, err := os.Open(os.ExpandEnv("${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/example_config.toml"))
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	s, err := bea.NewSpatial(f)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	f.Close()
 
-	a, err := s.EIO.NewAggregator(os.ExpandEnv("${GOPATH}/src/bitbucket.org/ctessum/slca/bea/data/aggregates.xlsx"))
+	a, err := s.EIO.NewAggregator(os.ExpandEnv("${GOPATH}//src/github.com/spatialmodel/inmap/emissions/slca/bea/data/aggregates.xlsx"))
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	model := &Server{agg: a, spatial: s}
 
-	rpc.Register(model)
+	creds, err := credentials.NewServerTLSFromFile(testdata.Path("server1.pem"), testdata.Path("server1.key"))
+	if err != nil {
+		return nil, err
+	}
+	opt := grpc.Creds(creds)
+	grpcServer := grpc.NewServer(opt)
+	eiopb.RegisterEIOServeServer(grpcServer, model)
 
-	http.Handle("/ws-rpc", websocket.Handler(func(conn *websocket.Conn) {
-		jsonrpc.ServeConn(conn)
-	}))
+	model.grpcServer = grpcweb.WrapServer(grpcServer, grpcweb.WithWebsockets(true))
 
-	// Serve the static files.
-	http.Handle("/", http.FileServer(http.Dir(".")))
+	model.staticServer = http.FileServer(http.Dir(os.ExpandEnv("${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/eioserve")))
 
-	log.Println("Ready!")
-	panic(http.ListenAndServe(port, nil))
+	return model, nil
 }
 
-func (s *Server) impactsMenu(ctx context.Context, selection *Selection, commodityMask, industryMask *bea.Mask) (*mat.VecDense, error) {
+func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc") || websocket.IsWebSocketUpgrade(r) {
+		fmt.Println("grpc serving", r.URL)
+		s.grpcServer.ServeHTTP(w, r)
+	} else {
+		fmt.Println("static serving", r.URL)
+		s.staticServer.ServeHTTP(w, r)
+	}
+}
+
+func (s *Server) impactsMenu(ctx context.Context, selection *eiopb.Selection, commodityMask, industryMask *bea.Mask) (*mat.VecDense, error) {
 	demand, err := s.spatial.EIO.FinalDemand(bea.FinalDemand(selection.DemandType), commodityMask, year, bea.Domestic)
 	if err != nil {
 		return nil, err
@@ -153,7 +174,7 @@ func (s *Server) impactsMenu(ctx context.Context, selection *Selection, commodit
 	}
 }
 
-func (s *Server) impactsMap(ctx context.Context, selection *Selection, commodityMask, industryMask *bea.Mask) (*mat.VecDense, error) {
+func (s *Server) impactsMap(ctx context.Context, selection *eiopb.Selection, commodityMask, industryMask *bea.Mask) (*mat.VecDense, error) {
 	demand, err := s.spatial.EIO.FinalDemand(bea.FinalDemand(selection.DemandType), commodityMask, year, bea.Domestic)
 	if err != nil {
 		return nil, err
@@ -211,36 +232,37 @@ func (s *Server) perArea(v *mat.VecDense, err error) (*mat.VecDense, error) {
 }
 
 // DemandGroups returns the available demand groups.
-func (s *Server) DemandGroups(in *Selection, out *Selectors) error {
-	ctx := context.Background()
-	out.Names = make([]string, len(s.agg.Names())+1)
-	out.Values = make([]float64, len(s.agg.Names())+1)
-	out.Names[0] = All
+func (s *Server) DemandGroups(ctx context.Context, in *eiopb.Selection) (*eiopb.Selectors, error) {
+	out := &eiopb.Selectors{
+		Names:  make([]string, len(s.agg.Names())+1),
+		Values: make([]float32, len(s.agg.Names())+1),
+	}
+	out.Names[0] = eiopb.All
 	// impacts produced by all sectors owing to all sectors.
 	impacts, err := s.impactsMenu(ctx, in, nil, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	out.Values[0] = mat.Sum(impacts)
+	out.Values[0] = float32(mat.Sum(impacts))
 	i := 1
 	for _, g := range s.agg.Names() {
 		out.Names[i] = g
 
 		// impacts produced by all sectors owing to consumption in this group
 		// of sectors.
-		mask, err := s.demandMask(g, All)
+		mask, err := s.demandMask(g, eiopb.All)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		impacts, err := s.impactsMenu(ctx, in, mask, nil)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		out.Values[i] = mat.Sum(impacts)
+		out.Values[i] = float32(mat.Sum(impacts))
 		i++
 	}
 	sort.Sort(out)
-	return nil
+	return out, nil
 }
 
 func commodityGroup(e *bea.EIO, m *bea.Mask) []string {
@@ -266,54 +288,53 @@ func industryGroup(e *bea.EIO, m *bea.Mask) []string {
 }
 
 // DemandSectors returns the available demand sectors.
-func (s *Server) DemandSectors(in *Selection, out *Selectors) error {
-	ctx := context.Background()
-	out.Names = []string{All}
-	if in.DemandGroup == All {
+func (s *Server) DemandSectors(ctx context.Context, in *eiopb.Selection) (*eiopb.Selectors, error) {
+	out := &eiopb.Selectors{Names: []string{eiopb.All}}
+	if in.DemandGroup == eiopb.All {
 		// impacts produced by all sectors owing to all sectors.
 		impacts, err := s.impactsMenu(ctx, in, nil, nil)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		out.Values = []float64{mat.Sum(impacts)}
-		return nil
+		out.Values = []float32{float32(mat.Sum(impacts))}
+		return out, nil
 	}
-	mask, err := s.demandMask(in.DemandGroup, All)
+	mask, err := s.demandMask(in.DemandGroup, eiopb.All)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	impacts, err := s.impactsMenu(ctx, in, mask, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	out.Values = []float64{mat.Sum(impacts)}
+	out.Values = []float32{float32(mat.Sum(impacts))}
 
 	sectors := commodityGroup(&s.spatial.EIO, mask)
 	out.Names = append(out.Names, sectors...)
-	temp := make([]float64, len(sectors))
+	temp := make([]float32, len(sectors))
 	out.Values = append(out.Values, temp...)
 	for i, sector := range sectors {
 		// impacts produced by all sectors owing to consumption in this sector.
 		mask, err := s.demandMask(in.DemandGroup, sector)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		impacts, err := s.impactsMenu(ctx, in, mask, nil)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		out.Values[i+1] = mat.Sum(impacts)
+		out.Values[i+1] = float32(mat.Sum(impacts))
 	}
 	sort.Sort(out)
-	return nil
+	return out, nil
 }
 
 // demandMask returns a commodity mask corresponding to the
 // given selection.
 func (s *Server) demandMask(demandGroup, demandSector string) (*bea.Mask, error) {
-	if demandGroup == All {
+	if demandGroup == eiopb.All {
 		return nil, nil
-	} else if demandSector == All {
+	} else if demandSector == eiopb.All {
 		// demand from a group of sectors.
 		abbrev, err := s.agg.Abbreviation(demandGroup)
 		if err != nil {
@@ -328,9 +349,9 @@ func (s *Server) demandMask(demandGroup, demandSector string) (*bea.Mask, error)
 // productionMask returns a commodity mask corresponding to the
 // given selection.
 func (s *Server) productionMask(productionGroup, productionSector string) (*bea.Mask, error) {
-	if productionGroup == All {
+	if productionGroup == eiopb.All {
 		return nil, nil
-	} else if productionSector == All {
+	} else if productionSector == eiopb.All {
 		// demand from a group of sectors.
 		abbrev, err := s.agg.Abbreviation(productionGroup)
 		if err != nil {
@@ -343,98 +364,97 @@ func (s *Server) productionMask(productionGroup, productionSector string) (*bea.
 }
 
 // ProdGroups returns the available production groups.
-func (s *Server) ProdGroups(in *Selection, out *Selectors) error {
-	ctx := context.Background()
+func (s *Server) ProdGroups(ctx context.Context, in *eiopb.Selection) (*eiopb.Selectors, error) {
 	demandMask, err := s.demandMask(in.DemandGroup, in.DemandSector)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	out.Names = make([]string, len(s.agg.Names())+1)
-	out.Values = make([]float64, len(s.agg.Names())+1)
-	out.Names[0] = All
+	out := &eiopb.Selectors{
+		Names:  make([]string, len(s.agg.Names())+1),
+		Values: make([]float32, len(s.agg.Names())+1),
+	}
+	out.Names[0] = eiopb.All
 	v, err := s.impactsMenu(ctx, in, demandMask, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	out.Values[0] = mat.Sum(v)
+	out.Values[0] = float32(mat.Sum(v))
 	i := 1
 	for _, g := range s.agg.Names() {
 		out.Names[i] = g
-		mask, err := s.productionMask(g, All)
+		mask, err := s.productionMask(g, eiopb.All)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		v, err := s.impactsMenu(ctx, in, demandMask, mask)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		out.Values[i] = mat.Sum(v)
+		out.Values[i] = float32(mat.Sum(v))
 		i++
 	}
 	sort.Sort(out)
-	return nil
+	return out, nil
 }
 
 // ProdSectors returns the available production sectors.
-func (s *Server) ProdSectors(in *Selection, out *Selectors) error {
-	ctx := context.Background()
+func (s *Server) ProdSectors(ctx context.Context, in *eiopb.Selection) (*eiopb.Selectors, error) {
 	demandMask, err := s.demandMask(in.DemandGroup, in.DemandSector)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	out.Names = []string{All}
-	if in.ProductionGroup == All {
+	out := &eiopb.Selectors{Names: []string{eiopb.All}}
+	if in.ProductionGroup == eiopb.All {
 		v, err2 := s.impactsMenu(ctx, in, demandMask, nil)
 		if err2 != nil {
-			return err2
+			return nil, err2
 		}
-		out.Values = []float64{mat.Sum(v)}
-		return nil
+		out.Values = []float32{float32(mat.Sum(v))}
+		return out, nil
 	}
-	mask, err := s.productionMask(in.ProductionGroup, All)
+	mask, err := s.productionMask(in.ProductionGroup, eiopb.All)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	v, err := s.impactsMenu(ctx, in, demandMask, mask)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	out.Values = []float64{mat.Sum(v)}
+	out.Values = []float32{float32(mat.Sum(v))}
 	sectors := industryGroup(&s.spatial.EIO, mask)
 	out.Names = append(out.Names, sectors...)
-	temp := make([]float64, len(sectors))
+	temp := make([]float32, len(sectors))
 	out.Values = append(out.Values, temp...)
 	for i, sector := range sectors {
 		mask, err := s.productionMask(in.ProductionGroup, sector)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		v, err := s.impactsMenu(ctx, in, demandMask, mask)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		out.Values[i+1] = mat.Sum(v)
+		out.Values[i+1] = float32(mat.Sum(v))
 	}
 	sort.Sort(out)
-	return nil
+	return out, nil
 }
 
 // MapInfo returns the grid cell colors and a legend for the given selection.
-func (s *Server) MapInfo(in *Selection, out *MapInfo) error {
-	ctx := context.Background()
-
+func (s *Server) MapInfo(ctx context.Context, in *eiopb.Selection) (*eiopb.ColorInfo, error) {
+	out := new(eiopb.ColorInfo)
 	commodityMask, err := s.demandMask(in.DemandGroup, in.DemandSector)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	industryMask, err := s.productionMask(in.ProductionGroup, in.ProductionSector)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	impacts, err := s.impactsMap(ctx, in, commodityMask, industryMask)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	cm := moreland.ExtendedBlackBody()
@@ -455,7 +475,7 @@ func (s *Server) MapInfo(in *Selection, out *MapInfo) error {
 	cm2.SetMax(max)
 
 	rows, _ := impacts.Dims()
-	(*out).Color = make([]RGB, rows)
+	out.RGB = make([][]byte, rows)
 	for i := 0; i < rows; i++ {
 		v := impacts.At(i, 0)
 		c, err := cm.At(v)
@@ -470,10 +490,10 @@ func (s *Server) MapInfo(in *Selection, out *MapInfo) error {
 			}
 		}
 		col := color.NRGBAModel.Convert(c).(color.NRGBA)
-		(*out).Color[i] = RGB{R: float64(col.R) / 255, G: float64(col.G) / 255, B: float64(col.B) / 255}
+		out.RGB[i] = []byte{col.R, col.G, col.B}
 	}
 	out.Legend = legend(cm, cm2, cutpt, max)
-	return nil
+	return out, nil
 }
 
 func legend(cm, cm2 palette.ColorMap, cutpt, max float64) string {
@@ -550,7 +570,11 @@ func roundInt(x float64) int {
 	return int(x + 0.5)
 }
 
-func (s *Server) getGeometry(ctx context.Context, requestPayload interface{}) (resultPayload interface{}, err error) {
+func init() {
+	gob.Register([]*eiopb.Rectangle{})
+}
+
+func (s *Server) getGeometry(ctx context.Context, _ interface{}) (interface{}, error) {
 	const (
 		inProj  = "+proj=lcc +lat_1=33.000000 +lat_2=45.000000 +lat_0=40.000000 +lon_0=-97.000000 +x_0=0 +y_0=0 +a=6370997.000000 +b=6370997.000000 +to_meter=1"
 		outProj = "+proj=longlat"
@@ -572,34 +596,25 @@ func (s *Server) getGeometry(ctx context.Context, requestPayload interface{}) (r
 	if err != nil {
 		return nil, err
 	}
-	o := new(carto.GeoJSON)
-	o.Type = "FeatureCollection"
-	o.Features = make([]*carto.GeoJSONfeature, len(g))
-	var ggg geom.Geom
+	o := make([]*eiopb.Rectangle, len(g))
 	for i, gg := range g {
-		ggg, err = gg.Transform(ct)
+		gT, err := gg.Transform(ct)
 		if err != nil {
 			return nil, err
 		}
-		var geojsonGeom *geojson.Geometry
-		geojsonGeom, err = geojson.ToGeoJSON(ggg)
-		if err != nil {
-			return nil, err
-		}
-		o.Features[i] = &carto.GeoJSONfeature{
-			Type:     "Feature",
-			Geometry: geojsonGeom,
+		gr := gT.(geom.Polygon)[0]
+		o[i] = &eiopb.Rectangle{
+			LL: &eiopb.Point{X: float32(gr[0].X), Y: float32(gr[0].Y)},
+			LR: &eiopb.Point{X: float32(gr[1].X), Y: float32(gr[1].Y)},
+			UR: &eiopb.Point{X: float32(gr[2].X), Y: float32(gr[2].Y)},
+			UL: &eiopb.Point{X: float32(gr[3].X), Y: float32(gr[3].Y)},
 		}
 	}
-	b, err := json.Marshal(o)
-	if err != nil {
-		return nil, err
-	}
-	return b, nil
+	return o, nil
 }
 
 // Geometry returns the InMAP grid geometry in the Google mercator projection.
-func (s *Server) Geometry(in *Empty, out *[]byte) error {
+func (s *Server) Geometry(_ *eiopb.Selection, stream eiopb.EIOServe_GeometryServer) error {
 	s.geomCacheOnce.Do(func() {
 		if s.spatial.SpatialCache == "" {
 			s.geomCache = requestcache.NewCache(s.getGeometry, runtime.GOMAXPROCS(-1),
@@ -608,21 +623,22 @@ func (s *Server) Geometry(in *Empty, out *[]byte) error {
 			s.geomCache = requestcache.NewCache(s.getGeometry, runtime.GOMAXPROCS(-1),
 				requestcache.Deduplicate(), requestcache.Memory(1),
 				requestcache.Disk(s.spatial.SpatialCache,
-					func(i interface{}) ([]byte, error) {
-						i2 := i.(*interface{})
-						return (*i2).([]byte), nil
-					},
-					func(b []byte) (interface{}, error) { return b, nil },
+					requestcache.MarshalGob, requestcache.UnmarshalGob,
 				),
 			)
 		}
 	})
-	req := s.geomCache.NewRequest(context.Background(), in, "geometry")
+	req := s.geomCache.NewRequest(context.Background(), struct{}{}, "geometry")
 	iface, err := req.Result()
 	if err != nil {
 		return err
 	}
-	(*out) = iface.([]byte)
+	out := iface.([]*eiopb.Rectangle)
+	for _, r := range out {
+		if err := stream.Send(r); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

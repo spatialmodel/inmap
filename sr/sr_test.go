@@ -63,7 +63,7 @@ func loadConfig(file string) (*config, error) {
 }
 
 func TestSR(t *testing.T) {
-	cfg, err := loadConfig("../inmap/configExample.toml")
+	cfg, err := loadConfig("../cmd/inmap/configExample.toml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +76,7 @@ func TestSR(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	outfile := "../inmap/testdata/testSR.ncf"
+	outfile := "../cmd/inmap/testdata/testSR.ncf"
 	os.Remove(outfile)
 	layers := []int{0, 2, 4}
 	begin := 0 // layer 0

@@ -1,0 +1,61 @@
+// Copyright © 2017 the InMAP authors.
+// This file is part of InMAP.
+
+// InMAP is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// InMAP is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
+
+syntax = "proto3";
+
+package eiopb;
+
+service EIOServe {
+  rpc DemandGroups(Selection) returns (Selectors) {}
+  rpc DemandSectors(Selection) returns (Selectors) {}
+  rpc ProdGroups(Selection) returns (Selectors) {}
+  rpc ProdSectors(Selection) returns (Selectors) {}
+
+  rpc MapInfo(Selection) returns (ColorInfo) {}
+
+  rpc Geometry(Selection) returns (stream Rectangle) {}
+}
+
+message Selectors {
+  repeated string Names = 1;
+  repeated float Values = 2;
+}
+
+message Selection {
+	string DemandGroup = 1;
+	string DemandSector = 2;
+	string ProductionGroup = 3;
+	string ProductionSector = 4;
+	string ImpactType = 5;
+	string DemandType = 6;
+}
+
+message Point {
+  float X = 1;
+  float Y = 2;
+}
+
+message Rectangle {
+  Point LL = 1;
+  Point LR = 2;
+  Point UR = 3;
+  Point UL = 4;
+}
+
+message ColorInfo {
+  repeated bytes RGB = 1;
+  string Legend = 2;
+}

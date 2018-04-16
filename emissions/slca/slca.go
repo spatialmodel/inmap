@@ -262,6 +262,7 @@ type gridIndex struct {
 
 func init() {
 	gob.Register([]geom.Polygonal{})
+	gob.Register(geom.Polygon{})
 }
 
 // Geometry returns the air quality model grid cell geometry.

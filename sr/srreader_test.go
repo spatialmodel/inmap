@@ -32,7 +32,7 @@ import (
 )
 
 func TestLayerFracs(t *testing.T) {
-	r, err := os.Open("../inmap/testdata/testSR.ncf")
+	r, err := os.Open("../cmd/inmap/testdata/testSR.ncf")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,7 +56,7 @@ func TestLayerFracs(t *testing.T) {
 }
 
 func TestVariable(t *testing.T) {
-	r, err := os.Open("../inmap/testdata/testSR.ncf")
+	r, err := os.Open("../cmd/inmap/testdata/testSR.ncf")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,7 +89,7 @@ func TestVariable(t *testing.T) {
 }
 
 func TestGeometry(t *testing.T) {
-	r, err := os.Open("../inmap/testdata/testSR.ncf")
+	r, err := os.Open("../cmd/inmap/testdata/testSR.ncf")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -178,7 +178,7 @@ func TestGeometry(t *testing.T) {
 }
 
 func TestSR_Source(t *testing.T) {
-	r, err := os.Open("../inmap/testdata/testSR.ncf")
+	r, err := os.Open("../cmd/inmap/testdata/testSR.ncf")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -213,7 +213,7 @@ func TestSR_Source(t *testing.T) {
 }
 
 func TestConcentrations(t *testing.T) {
-	r, err := os.Open("../inmap/testdata/testSR.ncf")
+	r, err := os.Open("../cmd/inmap/testdata/testSR.ncf")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -330,7 +330,7 @@ func TestConcentrations(t *testing.T) {
 }
 
 func BenchmarkConcentrations(b *testing.B) {
-	r, err := os.Open("../inmap/testdata/testSR.ncf")
+	r, err := os.Open("../cmd/inmap/testdata/testSR.ncf")
 	if err != nil {
 		b.Fatal(err)
 	}

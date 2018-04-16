@@ -32,7 +32,7 @@ import (
 func TestSaveSRGrid(t *testing.T) {
 	cfg, ctmdata, pop, popIndices, mr, mortIndices := inmap.VarGridTestData()
 	cfg.HiResLayers = 6
-	f, err := os.Create("inmap/testdata/inmapVarGrid_SR.gob")
+	f, err := os.Create("cmd/inmap/testdata/inmapVarGrid_SR.gob")
 	if err != nil {
 		t.Fatal(err)
 	}

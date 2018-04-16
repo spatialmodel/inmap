@@ -33,14 +33,14 @@ SpatialRefFile = "data/SCC_codes.xlsx"
 
   # CensusFile is the path to the shapefile holding population information.
   [SpatialEIO.CSTConfig.CensusFile]
-    2011 = "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testPopulation.shp"
-    2014 = "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testPopulation.shp"
+    2011 = "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/testPopulation.shp"
+    2014 = "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/testPopulation.shp"
 
   # MortalityRateFile is the path to the shapefile containing baseline
   # mortality rate data.
   [SpatialEIO.CSTConfig.MortalityRateFile]
-    2011 = "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testMortalityRate.shp"
-    2014 = "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testMortalityRate.shp"
+    2011 = "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/testMortalityRate.shp"
+    2014 = "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/testMortalityRate.shp"
 
 
   # MortalityRateColumns maps the names of each input population group to the name

@@ -25,7 +25,7 @@ import (
 func TestPreprocWRFChem(t *testing.T) {
 	// Here we only test whether the program runs. We
 	// check whether the output is correct elsewhere.
-	Cfg.Set("config", "../inmap/configExampleWRFChem.toml")
+	Cfg.Set("config", "../cmd/inmap/configExampleWRFChem.toml")
 	Root.SetArgs([]string{"preproc"})
 	if err := Root.Execute(); err != nil {
 		t.Fatal(err)
@@ -35,7 +35,7 @@ func TestPreprocWRFChem(t *testing.T) {
 func TestPreprocGEOSChem(t *testing.T) {
 	// Here we only test whether the program runs. We
 	// check whether the output is correct elsewhere.
-	Cfg.Set("config", "../inmap/configExampleGEOSChem.toml")
+	Cfg.Set("config", "../cmd/inmap/configExampleGEOSChem.toml")
 	Root.SetArgs([]string{"preproc"})
 	if err := Root.Execute(); err != nil {
 		t.Fatal(err)

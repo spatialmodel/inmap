@@ -24,7 +24,7 @@ import (
 )
 
 func TestSR(t *testing.T) {
-	Cfg.Set("SR.OutputFile", "../inmap/testdata/tempSR.ncf")
+	Cfg.Set("SR.OutputFile", "../cmd/inmap/testdata/tempSR.ncf")
 	Cfg.Set("begin", 8)
 	Cfg.Set("end", 9)
 	Cfg.Set("layers", []int{0})
@@ -59,9 +59,9 @@ func TestWorkerInit(t *testing.T) {
 }
 
 func TestSRPredict(t *testing.T) {
-	Cfg.Set("SR.OutputFile", "../inmap/testdata/testSR.ncf")
-	Cfg.Set("OutputFile", "../inmap/testdata/output_SRPredict.shp")
-	Cfg.Set("EmissionsShapefiles", []string{"../inmap/testdata/testEmisSR.shp"})
+	Cfg.Set("SR.OutputFile", "../cmd/inmap/testdata/testSR.ncf")
+	Cfg.Set("OutputFile", "../cmd/inmap/testdata/output_SRPredict.shp")
+	Cfg.Set("EmissionsShapefiles", []string{"../cmd/inmap/testdata/testEmisSR.shp"})
 
 	Cfg.Set("config", "../inmap/configExample.toml")
 	Root.SetArgs([]string{"sr", "predict"})
@@ -72,9 +72,9 @@ func TestSRPredict(t *testing.T) {
 
 func TestSRPredictAboveTop(t *testing.T) {
 	Cfg.Set("config", "../inmap/configExample.toml")
-	Cfg.Set("SR.OutputFile", "../inmap/testdata/testSR.ncf")
-	Cfg.Set("OutputFile", "../inmap/testdata/output_SRPredict.shp")
-	Cfg.Set("EmissionsShapefiles", []string{"../inmap/testdata/testEmis.shp"})
+	Cfg.Set("SR.OutputFile", "../cmd/inmap/testdata/testSR.ncf")
+	Cfg.Set("OutputFile", "../cmd/inmap/testdata/output_SRPredict.shp")
+	Cfg.Set("EmissionsShapefiles", []string{"../cmd/inmap/testdata/testEmis.shp"})
 	cfg, err := VarGridConfig(Cfg)
 	if err != nil {
 		t.Fatal(err)
