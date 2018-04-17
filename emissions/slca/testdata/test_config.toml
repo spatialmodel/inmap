@@ -19,16 +19,16 @@ CensusPopColumns= ["TotalPop", "WhiteNoLat", "Black", "Native", "Asian", "Latino
 
 # CensusFile is the path to the shapefile holding population information.
 [CensusFile]
-2001 = "${GOPATH}/src/bitbucket.org/ctessum/slca/testdata/testPopulation_half.shp"
-2011 = "${GOPATH}/src/bitbucket.org/ctessum/slca/testdata/testPopulation.shp"
-2014 = "${GOPATH}/src/bitbucket.org/ctessum/slca/testdata/testPopulation.shp"
+2001 = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/testdata/testPopulation_half.shp"
+2011 = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/testdata/testPopulation.shp"
+2014 = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/testdata/testPopulation.shp"
 
 # MortalityRateFile is the path to the shapefile containing baseline
 # mortality rate data.
 [MortalityRateFile]
-2001 = "${GOPATH}/src/bitbucket.org/ctessum/slca/testdata/testMortalityRate_half.shp"
-2011 = "${GOPATH}/src/bitbucket.org/ctessum/slca/testdata/testMortalityRate.shp"
-2014 = "${GOPATH}/src/bitbucket.org/ctessum/slca/testdata/testMortalityRate.shp"
+2001 = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/testdata/testMortalityRate_half.shp"
+2011 = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/testdata/testMortalityRate.shp"
+2014 = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/testdata/testMortalityRate.shp"
 
 
 # MortalityRateColumns maps the names of each input population group to the name

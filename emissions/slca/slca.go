@@ -24,7 +24,6 @@ import (
 	"io"
 	"os"
 	"reflect"
-	"runtime"
 	"strconv"
 	"sync"
 
@@ -268,15 +267,8 @@ func init() {
 // Geometry returns the air quality model grid cell geometry.
 func (c *CSTConfig) Geometry() ([]geom.Polygonal, error) {
 	c.loadGeometryOnce.Do(func() {
-		if c.SpatialCache == "" {
-			c.geometryCache = requestcache.NewCache(c.geometry, runtime.GOMAXPROCS(-1),
-				requestcache.Deduplicate(), requestcache.Memory(1))
-		} else {
-			c.geometryCache = requestcache.NewCache(c.geometry, runtime.GOMAXPROCS(-1),
-				requestcache.Deduplicate(), requestcache.Memory(1),
-				requestcache.Disk(c.SpatialCache, requestcache.MarshalGob, requestcache.UnmarshalGob),
-			)
-		}
+		c.geometryCache = loadCacheOnce(c.geometry, 1, 1, c.SpatialCache,
+			requestcache.MarshalGob, requestcache.UnmarshalGob)
 	})
 	req := c.geometryCache.NewRequest(context.Background(), nil, "geometry")
 	iface, err := req.Result()

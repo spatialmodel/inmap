@@ -47,13 +47,8 @@ func init() {
 // incidence rates. hr specifies the function used to calculate the hazard ratio.
 func (c *CSTConfig) PopulationIncidence(ctx context.Context, year int, popType string, hr epi.HRer) (p, Io []float64, err error) {
 	c.loadPopulationOnce.Do(func() {
-		if c.ConcentrationCache == "" {
-			c.popRequestCache = requestcache.NewCache(c.popIncidenceWorker, 1, requestcache.Deduplicate(),
-				requestcache.Memory(c.MaxCacheEntries))
-		} else {
-			c.popRequestCache = requestcache.NewCache(c.popIncidenceWorker, 1, requestcache.Deduplicate(),
-				requestcache.Memory(c.MaxCacheEntries), requestcache.Disk(c.HealthCache, requestcache.MarshalGob, requestcache.UnmarshalGob))
-		}
+		c.popRequestCache = loadCacheOnce(c.popIncidenceWorker, 1, 1, c.SpatialCache,
+			requestcache.MarshalGob, requestcache.UnmarshalGob)
 	})
 	if _, ok := c.censusFile[year]; !ok {
 		return c.interpolatePopulationIncidence(ctx, year, popType, hr)

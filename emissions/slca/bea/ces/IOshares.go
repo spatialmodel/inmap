@@ -41,7 +41,7 @@ import (
 var Filedir string
 
 func init() {
-	cespkg, err := build.Import("bitbucket.org/ctessum/slca/bea/ces", "", build.FindOnly)
+	cespkg, err := build.Import("github.com/spatialmodel/inmap/emissions/slca/bea/ces", "", build.FindOnly)
 	if err != nil {
 		panic(err)
 	}

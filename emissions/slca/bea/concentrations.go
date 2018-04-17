@@ -20,6 +20,7 @@ package bea
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/ctessum/requestcache"
 	"gonum.org/v1/gonum/mat"
@@ -94,18 +95,25 @@ type concPolYear struct {
 	year Year
 }
 
+// loadCacheOnce inititalizes a request cache.
+func loadCacheOnce(f requestcache.ProcessFunc, workers, memCacheSize int, cacheLoc string, marshal func(interface{}) ([]byte, error), unmarshal func([]byte) (interface{}, error)) *requestcache.Cache {
+	if cacheLoc == "" {
+		return requestcache.NewCache(f, workers, requestcache.Deduplicate(),
+			requestcache.Memory(memCacheSize))
+	} else if strings.HasPrefix(cacheLoc, "http") {
+		return requestcache.NewCache(f, workers, requestcache.Deduplicate(),
+			requestcache.Memory(memCacheSize), requestcache.HTTP(cacheLoc, unmarshal))
+	}
+	return requestcache.NewCache(f, workers, requestcache.Deduplicate(),
+		requestcache.Memory(memCacheSize), requestcache.Disk(cacheLoc, marshal, unmarshal))
+}
+
 // concentrationFactors returns spatially-explicit pollutant concentrations per unit of economic
 // production for each industry. In the result matrix, the rows represent
 // air quality model grid cells and the columns represent industries.
 func (e *SpatialEIO) concentrationFactors(ctx context.Context, pol Pollutant, year Year) (*mat.Dense, error) {
 	e.loadConcOnce.Do(func() {
-		if e.SpatialCache == "" {
-			e.concentrationFactorCache = requestcache.NewCache(e.concentrationFactorsWorker, 1, requestcache.Deduplicate(),
-				requestcache.Memory(1))
-		} else {
-			e.concentrationFactorCache = requestcache.NewCache(e.concentrationFactorsWorker, 1, requestcache.Deduplicate(),
-				requestcache.Memory(1), requestcache.Disk(e.SpatialCache, matrixMarshal, matrixUnmarshal))
-		}
+		e.concentrationFactorCache = loadCacheOnce(e.concentrationFactorsWorker, 1, 1, e.SpatialCache, matrixMarshal, matrixUnmarshal)
 	})
 	rr := e.concentrationFactorCache.NewRequest(ctx, concPolYear{pol: pol, year: year}, fmt.Sprintf("concentrationFactors_%v_%d", pol, year))
 	resultI, err := rr.Result()

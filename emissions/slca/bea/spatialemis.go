@@ -23,7 +23,6 @@ import (
 
 	"github.com/spatialmodel/inmap/emissions/slca"
 
-	"github.com/ctessum/requestcache"
 	"gonum.org/v1/gonum/mat"
 )
 
@@ -83,13 +82,8 @@ func (e *SpatialEIO) EmissionsMatrix(ctx context.Context, demand *mat.VecDense, 
 // air quality model grid cells and the columns represent industries.
 func (e *SpatialEIO) emissionFactors(ctx context.Context, pol slca.Pollutant, year Year) (*mat.Dense, error) {
 	e.loadEFOnce.Do(func() {
-		if e.SpatialCache == "" {
-			e.emissionFactorCache = requestcache.NewCache(e.emissionFactorsWorker, 1, requestcache.Deduplicate(),
-				requestcache.Memory(1))
-		} else {
-			e.emissionFactorCache = requestcache.NewCache(e.emissionFactorsWorker, 1, requestcache.Deduplicate(),
-				requestcache.Memory(1), requestcache.Disk(e.SpatialCache, matrixMarshal, matrixUnmarshal))
-		}
+		e.emissionFactorCache = loadCacheOnce(e.emissionFactorsWorker, 1, 1, e.SpatialCache,
+			matrixMarshal, matrixUnmarshal)
 	})
 	rr := e.emissionFactorCache.NewRequest(ctx, polYear{pol: pol, year: year}, fmt.Sprintf("emissionFactors_%v_%d", pol, year))
 	resultI, err := rr.Result()

@@ -22,6 +22,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/emissions/aep"
@@ -40,17 +41,25 @@ func init() {
 	gob.Register([]*inmap.EmisRecord{})
 }
 
+// loadCacheOnce inititalizes a request cache.
+func loadCacheOnce(f requestcache.ProcessFunc, workers, memCacheSize int, cacheLoc string, marshal func(interface{}) ([]byte, error), unmarshal func([]byte) (interface{}, error)) *requestcache.Cache {
+	if cacheLoc == "" {
+		return requestcache.NewCache(f, workers, requestcache.Deduplicate(),
+			requestcache.Memory(memCacheSize))
+	} else if strings.HasPrefix(cacheLoc, "http") {
+		return requestcache.NewCache(f, workers, requestcache.Deduplicate(),
+			requestcache.Memory(memCacheSize), requestcache.HTTP(cacheLoc, unmarshal))
+	}
+	return requestcache.NewCache(f, workers, requestcache.Deduplicate(),
+		requestcache.Memory(memCacheSize), requestcache.Disk(cacheLoc, marshal, unmarshal))
+}
+
 // ConcentrationSurrogate calculates the pollutant concentration impacts of
 // spatialRef, accounting for the effects of elevated emissions plumes.
 func (c *CSTConfig) ConcentrationSurrogate(ctx context.Context, spatialRef *SpatialRef) (*sr.Concentrations, error) {
 	c.loadConcentrationOnce.Do(func() {
-		if c.ConcentrationCache == "" {
-			c.concRequestCache = requestcache.NewCache(c.inMAPSurrogate, 1, requestcache.Deduplicate(),
-				requestcache.Memory(c.MaxCacheEntries))
-		} else {
-			c.concRequestCache = requestcache.NewCache(c.inMAPSurrogate, 1, requestcache.Deduplicate(),
-				requestcache.Memory(c.MaxCacheEntries), requestcache.Disk(c.ConcentrationCache, requestcache.MarshalGob, requestcache.UnmarshalGob))
-		}
+		c.concRequestCache = loadCacheOnce(c.inMAPSurrogate, 1, c.MaxCacheEntries, c.ConcentrationCache,
+			requestcache.MarshalGob, requestcache.UnmarshalGob)
 	})
 	r := c.concRequestCache.NewRequest(ctx, spatialRef, spatialRef.Key())
 	result, err := r.Result()
@@ -99,13 +108,8 @@ type sRHR struct {
 // Output format = map[popType][pol]values
 func (c *CSTConfig) HealthSurrogate(ctx context.Context, spatialRef *SpatialRef, HR epi.HRer) (map[string]map[string]*sparse.DenseArray, error) {
 	c.loadHealthOnce.Do(func() {
-		if c.HealthCache == "" {
-			c.healthRequestCache = requestcache.NewCache(c.healthSurrogate, 1, requestcache.Deduplicate(),
-				requestcache.Memory(c.MaxCacheEntries))
-		} else {
-			c.healthRequestCache = requestcache.NewCache(c.healthSurrogate, 1, requestcache.Deduplicate(),
-				requestcache.Memory(c.MaxCacheEntries), requestcache.Disk(c.HealthCache, requestcache.MarshalGob, requestcache.UnmarshalGob))
-		}
+		c.healthRequestCache = loadCacheOnce(c.healthSurrogate, 1, c.MaxCacheEntries, c.HealthCache,
+			requestcache.MarshalGob, requestcache.UnmarshalGob)
 	})
 	r := c.healthRequestCache.NewRequest(ctx, sRHR{sr: spatialRef, hr: HR}, fmt.Sprintf("%s_%s", spatialRef.Key(), HR.Name()))
 	result, err := r.Result()
@@ -172,13 +176,8 @@ func (c *CSTConfig) healthSurrogate(ctx context.Context, request interface{}) (i
 // response function. hr specifies the function used to calculate the hazard ratio.
 func (c *CSTConfig) ConcentrationResponseAverage(ctx context.Context, year int, popType string, hr epi.HRer) ([]float64, error) {
 	c.loadCROnce.Do(func() {
-		if c.HealthCache == "" {
-			c.crRequestCache = requestcache.NewCache(c.concentrationResponseAverageWorker, 1, requestcache.Deduplicate(),
-				requestcache.Memory(1))
-		} else {
-			c.crRequestCache = requestcache.NewCache(c.concentrationResponseAverageWorker, 1, requestcache.Deduplicate(),
-				requestcache.Memory(1), requestcache.Disk(c.HealthCache, requestcache.MarshalGob, requestcache.UnmarshalGob))
-		}
+		c.crRequestCache = loadCacheOnce(c.concentrationResponseAverageWorker, 1, 1, c.HealthCache,
+			requestcache.MarshalGob, requestcache.UnmarshalGob)
 	})
 	r := c.crRequestCache.NewRequest(ctx, struct {
 		year    int
@@ -224,13 +223,8 @@ func (c *CSTConfig) concentrationResponseAverageWorker(ctx context.Context, year
 // fields of the receiver, adjusting emissions to the specified year.
 func (c *CSTConfig) EvaluationEmissions(ctx context.Context, year int) ([]*inmap.EmisRecord, error) {
 	c.loadEvalEmisOnce.Do(func() {
-		if c.SpatialCache == "" {
-			c.evalEmisRequestCache = requestcache.NewCache(c.evaluationEmissions, 1, requestcache.Deduplicate(),
-				requestcache.Memory(1))
-		} else {
-			c.evalEmisRequestCache = requestcache.NewCache(c.evaluationEmissions, 1, requestcache.Deduplicate(),
-				requestcache.Memory(1), requestcache.Disk(c.SpatialCache, requestcache.MarshalGob, requestcache.UnmarshalGob))
-		}
+		c.evalEmisRequestCache = loadCacheOnce(c.evaluationEmissions, 1, 1, c.SpatialCache,
+			requestcache.MarshalGob, requestcache.UnmarshalGob)
 	})
 	r := c.evalEmisRequestCache.NewRequest(ctx, year, fmt.Sprintf("evaluation_%d", year))
 	result, err := r.Result()
@@ -245,13 +239,8 @@ func (c *CSTConfig) EvaluationEmissions(ctx context.Context, year int) ([]*inmap
 // fields of the receiver, adjusting emissions to the specified year.
 func (c *CSTConfig) EvaluationConcentrations(ctx context.Context, year int) (*sr.Concentrations, error) {
 	c.loadEvalConcOnce.Do(func() {
-		if c.ConcentrationCache == "" {
-			c.evalConcRequestCache = requestcache.NewCache(c.inMAPEval, 1, requestcache.Deduplicate(),
-				requestcache.Memory(1))
-		} else {
-			c.evalConcRequestCache = requestcache.NewCache(c.inMAPEval, 1, requestcache.Deduplicate(),
-				requestcache.Memory(1), requestcache.Disk(c.ConcentrationCache, requestcache.MarshalGob, requestcache.UnmarshalGob))
-		}
+		c.evalConcRequestCache = loadCacheOnce(c.inMAPEval, 1, 1, c.ConcentrationCache,
+			requestcache.MarshalGob, requestcache.UnmarshalGob)
 	})
 	r := c.evalConcRequestCache.NewRequest(ctx, year, fmt.Sprintf("evaluation_%d", year))
 	result, err := r.Result()
@@ -276,13 +265,8 @@ func (c *CSTConfig) EvaluationConcentrations(ctx context.Context, year int) (*sr
 // Output format = map[popType][pol]values
 func (c *CSTConfig) EvaluationHealth(ctx context.Context, year int, HR epi.HRer) (map[string]map[string]*sparse.DenseArray, error) {
 	c.loadEvalHealthOnce.Do(func() {
-		if c.HealthCache == "" {
-			c.evalHealthRequestCache = requestcache.NewCache(c.evaluationHealth, 1, requestcache.Deduplicate(),
-				requestcache.Memory(1))
-		} else {
-			c.evalHealthRequestCache = requestcache.NewCache(c.evaluationHealth, 1, requestcache.Deduplicate(),
-				requestcache.Memory(1), requestcache.Disk(c.HealthCache, requestcache.MarshalGob, requestcache.UnmarshalGob))
-		}
+		c.evalHealthRequestCache = loadCacheOnce(c.evaluationHealth, 1, 1, c.HealthCache,
+			requestcache.MarshalGob, requestcache.UnmarshalGob)
 	})
 	r := c.evalHealthRequestCache.NewRequest(ctx, struct {
 		year int

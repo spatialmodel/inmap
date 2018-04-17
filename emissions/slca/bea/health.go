@@ -23,7 +23,6 @@ import (
 
 	"bitbucket.org/ctessum/sparse"
 
-	"github.com/ctessum/requestcache"
 	"github.com/spatialmodel/epi"
 	"gonum.org/v1/gonum/mat"
 )
@@ -90,13 +89,7 @@ type concPolPopYearHR struct {
 // air quality model grid cells and the columns represent industries.
 func (e *SpatialEIO) healthFactors(ctx context.Context, pol Pollutant, pop string, year Year, HR epi.HRer) (*mat.Dense, error) {
 	e.loadHealthOnce.Do(func() {
-		if e.SpatialCache == "" {
-			e.healthFactorCache = requestcache.NewCache(e.healthFactorsWorker, 1, requestcache.Deduplicate(),
-				requestcache.Memory(1))
-		} else {
-			e.healthFactorCache = requestcache.NewCache(e.healthFactorsWorker, 1, requestcache.Deduplicate(),
-				requestcache.Memory(1), requestcache.Disk(e.SpatialCache, matrixMarshal, matrixUnmarshal))
-		}
+		e.healthFactorCache = loadCacheOnce(e.healthFactorsWorker, 1, 1, e.SpatialCache, matrixMarshal, matrixUnmarshal)
 	})
 	rr := e.healthFactorCache.NewRequest(ctx, concPolPopYearHR{pol: pol, year: year, pop: pop, hr: HR}, fmt.Sprintf("healthFactors_%v_%v_%d_%s", pol, pop, year, HR.Name()))
 	resultI, err := rr.Result()

@@ -53,13 +53,8 @@ func (c *CSTConfig) EmissionsSurrogate(ctx context.Context, pol Pollutant, spati
 // spatialSurrogate gets spatial information for a given spatial reference.
 func (c *CSTConfig) spatialSurrogate(ctx context.Context, spatialRef *SpatialRef) ([]*inmap.EmisRecord, error) {
 	c.loadSpatialOnce.Do(func() {
-		if c.SpatialCache == "" {
-			c.spatializeRequestCache = requestcache.NewCache(c.spatialSurrogateWorker, 1, requestcache.Deduplicate(),
-				requestcache.Memory(c.MaxCacheEntries))
-		} else {
-			c.spatializeRequestCache = requestcache.NewCache(c.spatialSurrogateWorker, 1, requestcache.Deduplicate(),
-				requestcache.Memory(c.MaxCacheEntries), requestcache.Disk(c.SpatialCache, marshalGob, unmarshalGob))
-		}
+		c.spatializeRequestCache = loadCacheOnce(c.spatialSurrogateWorker, 1, c.MaxCacheEntries, c.SpatialCache,
+			requestcache.MarshalGob, requestcache.UnmarshalGob)
 	})
 	rr := c.spatializeRequestCache.NewRequest(ctx, spatialRef, spatialRef.Key())
 	resultI, err := rr.Result()

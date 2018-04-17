@@ -37,7 +37,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -47,6 +46,7 @@ import (
 	"github.com/ctessum/requestcache"
 	"github.com/gorilla/websocket"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
+	"github.com/sirupsen/logrus"
 	"github.com/spatialmodel/epi"
 	"gonum.org/v1/gonum/mat"
 	"gonum.org/v1/plot"
@@ -84,11 +84,13 @@ type Server struct {
 
 	grpcServer   *grpcweb.WrappedGrpcServer
 	staticServer http.Handler
+
+	Log logrus.FieldLogger
 }
 
 // NewServer creates a new EIO-LCA server.
 func NewServer() (*Server, error) {
-	f, err := os.Open(os.ExpandEnv("${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/example_config.toml"))
+	f, err := os.Open(os.ExpandEnv("${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/eioserve/config.toml"))
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +106,7 @@ func NewServer() (*Server, error) {
 		return nil, err
 	}
 
-	model := &Server{agg: a, spatial: s}
+	model := &Server{agg: a, spatial: s, Log: logrus.StandardLogger()}
 
 	creds, err := credentials.NewServerTLSFromFile(testdata.Path("server1.pem"), testdata.Path("server1.key"))
 	if err != nil {
@@ -123,10 +125,16 @@ func NewServer() (*Server, error) {
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc") || websocket.IsWebSocketUpgrade(r) {
-		fmt.Println("grpc serving", r.URL)
+		s.Log.WithFields(logrus.Fields{
+			"url":  r.URL.String(),
+			"addr": r.RemoteAddr,
+		}).Info("eioserve grpc request")
 		s.grpcServer.ServeHTTP(w, r)
 	} else {
-		fmt.Println("static serving", r.URL)
+		s.Log.WithFields(logrus.Fields{
+			"url":  r.URL.String(),
+			"addr": r.RemoteAddr,
+		}).Info("eioserve static request")
 		s.staticServer.ServeHTTP(w, r)
 	}
 }
@@ -233,6 +241,15 @@ func (s *Server) perArea(v *mat.VecDense, err error) (*mat.VecDense, error) {
 
 // DemandGroups returns the available demand groups.
 func (s *Server) DemandGroups(ctx context.Context, in *eiopb.Selection) (*eiopb.Selectors, error) {
+	s.Log.WithFields(logrus.Fields{
+		"DemandGroup":      in.DemandGroup,
+		"DemandSector":     in.DemandSector,
+		"ProductionGroup":  in.ProductionGroup,
+		"ProductionSector": in.ProductionSector,
+		"ImpactType":       in.ImpactType,
+		"DemandType":       in.DemandType,
+	}).Info("eioserve generating DemandGroups")
+
 	out := &eiopb.Selectors{
 		Names:  make([]string, len(s.agg.Names())+1),
 		Values: make([]float32, len(s.agg.Names())+1),
@@ -262,6 +279,14 @@ func (s *Server) DemandGroups(ctx context.Context, in *eiopb.Selection) (*eiopb.
 		i++
 	}
 	sort.Sort(out)
+	s.Log.WithFields(logrus.Fields{
+		"DemandGroup":      in.DemandGroup,
+		"DemandSector":     in.DemandSector,
+		"ProductionGroup":  in.ProductionGroup,
+		"ProductionSector": in.ProductionSector,
+		"ImpactType":       in.ImpactType,
+		"DemandType":       in.DemandType,
+	}).Info("eioserve finished generating DemandGroups")
 	return out, nil
 }
 
@@ -289,6 +314,14 @@ func industryGroup(e *bea.EIO, m *bea.Mask) []string {
 
 // DemandSectors returns the available demand sectors.
 func (s *Server) DemandSectors(ctx context.Context, in *eiopb.Selection) (*eiopb.Selectors, error) {
+	s.Log.WithFields(logrus.Fields{
+		"DemandGroup":      in.DemandGroup,
+		"DemandSector":     in.DemandSector,
+		"ProductionGroup":  in.ProductionGroup,
+		"ProductionSector": in.ProductionSector,
+		"ImpactType":       in.ImpactType,
+		"DemandType":       in.DemandType,
+	}).Info("eioserve generating DemandSectors")
 	out := &eiopb.Selectors{Names: []string{eiopb.All}}
 	if in.DemandGroup == eiopb.All {
 		// impacts produced by all sectors owing to all sectors.
@@ -326,6 +359,14 @@ func (s *Server) DemandSectors(ctx context.Context, in *eiopb.Selection) (*eiopb
 		out.Values[i+1] = float32(mat.Sum(impacts))
 	}
 	sort.Sort(out)
+	s.Log.WithFields(logrus.Fields{
+		"DemandGroup":      in.DemandGroup,
+		"DemandSector":     in.DemandSector,
+		"ProductionGroup":  in.ProductionGroup,
+		"ProductionSector": in.ProductionSector,
+		"ImpactType":       in.ImpactType,
+		"DemandType":       in.DemandType,
+	}).Info("eioserve finished generating DemandSectors")
 	return out, nil
 }
 
@@ -365,6 +406,14 @@ func (s *Server) productionMask(productionGroup, productionSector string) (*bea.
 
 // ProdGroups returns the available production groups.
 func (s *Server) ProdGroups(ctx context.Context, in *eiopb.Selection) (*eiopb.Selectors, error) {
+	s.Log.WithFields(logrus.Fields{
+		"DemandGroup":      in.DemandGroup,
+		"DemandSector":     in.DemandSector,
+		"ProductionGroup":  in.ProductionGroup,
+		"ProductionSector": in.ProductionSector,
+		"ImpactType":       in.ImpactType,
+		"DemandType":       in.DemandType,
+	}).Info("eioserve generating ProdGroups")
 	demandMask, err := s.demandMask(in.DemandGroup, in.DemandSector)
 	if err != nil {
 		return nil, err
@@ -394,11 +443,27 @@ func (s *Server) ProdGroups(ctx context.Context, in *eiopb.Selection) (*eiopb.Se
 		i++
 	}
 	sort.Sort(out)
+	s.Log.WithFields(logrus.Fields{
+		"DemandGroup":      in.DemandGroup,
+		"DemandSector":     in.DemandSector,
+		"ProductionGroup":  in.ProductionGroup,
+		"ProductionSector": in.ProductionSector,
+		"ImpactType":       in.ImpactType,
+		"DemandType":       in.DemandType,
+	}).Info("eioserve finished generating ProdGroups")
 	return out, nil
 }
 
 // ProdSectors returns the available production sectors.
 func (s *Server) ProdSectors(ctx context.Context, in *eiopb.Selection) (*eiopb.Selectors, error) {
+	s.Log.WithFields(logrus.Fields{
+		"DemandGroup":      in.DemandGroup,
+		"DemandSector":     in.DemandSector,
+		"ProductionGroup":  in.ProductionGroup,
+		"ProductionSector": in.ProductionSector,
+		"ImpactType":       in.ImpactType,
+		"DemandType":       in.DemandType,
+	}).Info("eioserve generating ProdSectors")
 	demandMask, err := s.demandMask(in.DemandGroup, in.DemandSector)
 	if err != nil {
 		return nil, err
@@ -438,11 +503,27 @@ func (s *Server) ProdSectors(ctx context.Context, in *eiopb.Selection) (*eiopb.S
 		out.Values[i+1] = float32(mat.Sum(v))
 	}
 	sort.Sort(out)
+	s.Log.WithFields(logrus.Fields{
+		"DemandGroup":      in.DemandGroup,
+		"DemandSector":     in.DemandSector,
+		"ProductionGroup":  in.ProductionGroup,
+		"ProductionSector": in.ProductionSector,
+		"ImpactType":       in.ImpactType,
+		"DemandType":       in.DemandType,
+	}).Info("eioserve finished generating ProdSectors")
 	return out, nil
 }
 
 // MapInfo returns the grid cell colors and a legend for the given selection.
 func (s *Server) MapInfo(ctx context.Context, in *eiopb.Selection) (*eiopb.ColorInfo, error) {
+	s.Log.WithFields(logrus.Fields{
+		"DemandGroup":      in.DemandGroup,
+		"DemandSector":     in.DemandSector,
+		"ProductionGroup":  in.ProductionGroup,
+		"ProductionSector": in.ProductionSector,
+		"ImpactType":       in.ImpactType,
+		"DemandType":       in.DemandType,
+	}).Info("eioserve generating MapInfo")
 	out := new(eiopb.ColorInfo)
 	commodityMask, err := s.demandMask(in.DemandGroup, in.DemandSector)
 	if err != nil {
@@ -493,6 +574,14 @@ func (s *Server) MapInfo(ctx context.Context, in *eiopb.Selection) (*eiopb.Color
 		out.RGB[i] = []byte{col.R, col.G, col.B}
 	}
 	out.Legend = legend(cm, cm2, cutpt, max)
+	s.Log.WithFields(logrus.Fields{
+		"DemandGroup":      in.DemandGroup,
+		"DemandSector":     in.DemandSector,
+		"ProductionGroup":  in.ProductionGroup,
+		"ProductionSector": in.ProductionSector,
+		"ImpactType":       in.ImpactType,
+		"DemandType":       in.DemandType,
+	}).Info("eioserve finished generating MapInfo")
 	return out, nil
 }
 
@@ -613,32 +702,40 @@ func (s *Server) getGeometry(ctx context.Context, _ interface{}) (interface{}, e
 	return o, nil
 }
 
+// loadCacheOnce inititalizes a request cache.
+func loadCacheOnce(f requestcache.ProcessFunc, workers, memCacheSize int, cacheLoc string, marshal func(interface{}) ([]byte, error), unmarshal func([]byte) (interface{}, error)) *requestcache.Cache {
+	if cacheLoc == "" {
+		return requestcache.NewCache(f, workers, requestcache.Deduplicate(),
+			requestcache.Memory(memCacheSize))
+	} else if strings.HasPrefix(cacheLoc, "http") {
+		return requestcache.NewCache(f, workers, requestcache.Deduplicate(),
+			requestcache.Memory(memCacheSize), requestcache.HTTP(cacheLoc, unmarshal))
+	}
+	return requestcache.NewCache(f, workers, requestcache.Deduplicate(),
+		requestcache.Memory(memCacheSize), requestcache.Disk(cacheLoc, marshal, unmarshal))
+}
+
 // Geometry returns the InMAP grid geometry in the Google mercator projection.
 func (s *Server) Geometry(_ *eiopb.Selection, stream eiopb.EIOServe_GeometryServer) error {
+	s.Log.Info("eioserve generating Geometry")
 	s.geomCacheOnce.Do(func() {
-		if s.spatial.SpatialCache == "" {
-			s.geomCache = requestcache.NewCache(s.getGeometry, runtime.GOMAXPROCS(-1),
-				requestcache.Deduplicate(), requestcache.Memory(1))
-		} else {
-			s.geomCache = requestcache.NewCache(s.getGeometry, runtime.GOMAXPROCS(-1),
-				requestcache.Deduplicate(), requestcache.Memory(1),
-				requestcache.Disk(s.spatial.SpatialCache,
-					requestcache.MarshalGob, requestcache.UnmarshalGob,
-				),
-			)
-		}
+		s.geomCache = loadCacheOnce(s.getGeometry, 1, 1, s.spatial.SpatialCache,
+			requestcache.MarshalGob, requestcache.UnmarshalGob)
 	})
 	req := s.geomCache.NewRequest(context.Background(), struct{}{}, "geometry")
 	iface, err := req.Result()
 	if err != nil {
+		s.Log.WithError(err).Errorf("generating/retrieving geometry")
 		return err
 	}
 	out := iface.([]*eiopb.Rectangle)
 	for _, r := range out {
 		if err := stream.Send(r); err != nil {
+			s.Log.WithError(err).Errorf("sending geometry")
 			return err
 		}
 	}
+	s.Log.Info("eioserve finished generating Geometry")
 	return nil
 }
 
@@ -656,15 +753,8 @@ func (s *Server) inverseArea() (*mat.VecDense, error) {
 		return area, nil
 	}
 	s.areaCacheOnce.Do(func() {
-		if s.spatial.SpatialCache == "" {
-			s.areaCache = requestcache.NewCache(f, runtime.GOMAXPROCS(-1),
-				requestcache.Deduplicate(), requestcache.Memory(1))
-		} else {
-			s.areaCache = requestcache.NewCache(f, runtime.GOMAXPROCS(-1),
-				requestcache.Deduplicate(), requestcache.Memory(1),
-				requestcache.Disk(s.spatial.SpatialCache, vectorMarshal, vectorUnmarshal),
-			)
-		}
+		s.areaCache = loadCacheOnce(f, 1, 1, s.spatial.SpatialCache,
+			vectorMarshal, vectorUnmarshal)
 	})
 	req := s.areaCache.NewRequest(context.Background(), nil, "grid_area")
 	iface, err := req.Result()

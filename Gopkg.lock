@@ -108,7 +108,7 @@
   branch = "master"
   name = "github.com/ctessum/requestcache"
   packages = ["."]
-  revision = "27453c71baf7105b62ec8cd9f668a5486500ccce"
+  revision = "1462fad4c316d8d600cf359fa5484ca49c2d4960"
 
 [[projects]]
   branch = "master"
@@ -155,6 +155,18 @@
   revision = "b710c8433bd175204919eb38776e944233235d03"
 
 [[projects]]
+  name = "github.com/golang/protobuf"
+  packages = [
+    "proto",
+    "ptypes",
+    "ptypes/any",
+    "ptypes/duration",
+    "ptypes/timestamp"
+  ]
+  revision = "925541529c1fa6821df4e44ce2723319eb2be768"
+  version = "v1.0.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/gonum/floats"
   packages = ["."]
@@ -173,13 +185,10 @@
   revision = "558a9132744c22476178edf3126fd35a9754f565"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/gopherjs/websocket"
-  packages = [
-    ".",
-    "websocketjs"
-  ]
-  revision = "87ee47603f137e7f8419765b3621b3c36e715a08"
+  name = "github.com/gorilla/websocket"
+  packages = ["."]
+  revision = "ea4d1f681babbce9545c9c5f3d5194a789c89f5b"
+  version = "v1.2.0"
 
 [[projects]]
   branch = "master"
@@ -199,10 +208,27 @@
   revision = "23c074d0eceb2b8a5bfdbb271ab780cde70f05a8"
 
 [[projects]]
+  name = "github.com/improbable-eng/grpc-web"
+  packages = ["go/grpcweb"]
+  revision = "58d1f6c3d97b6d81d7eebd7d26d5942a1d40cb46"
+  version = "0.6.0"
+
+[[projects]]
   name = "github.com/inconshreveable/mousetrap"
   packages = ["."]
   revision = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75"
   version = "v1.0"
+
+[[projects]]
+  name = "github.com/johanbrandhorst/protobuf"
+  packages = [
+    "grpcweb",
+    "grpcweb/grpcwebjs",
+    "grpcweb/status",
+    "jspb"
+  ]
+  revision = "03cf8d1fcba5d373ba975bae76317adacb264184"
+  version = "v0.6.1"
 
 [[projects]]
   branch = "master"
@@ -281,10 +307,22 @@
   revision = "5c3c8286a3b00a13d6e88f181504db722e419519"
 
 [[projects]]
+  name = "github.com/rs/cors"
+  packages = ["."]
+  revision = "feef513b9575b32f84bafa580aad89b011259019"
+  version = "v1.3.0"
+
+[[projects]]
   name = "github.com/russross/blackfriday"
   packages = ["."]
   revision = "4048872b16cc0fc2c5fd9eacf0ed2c2fedaa0c8c"
   version = "v1.5"
+
+[[projects]]
+  name = "github.com/sirupsen/logrus"
+  packages = ["."]
+  revision = "c155da19408a8799da419ed3eeb0cb5db0ad5dbc"
+  version = "v1.0.5"
 
 [[projects]]
   branch = "master"
@@ -353,6 +391,12 @@
 
 [[projects]]
   branch = "master"
+  name = "golang.org/x/crypto"
+  packages = ["ssh/terminal"]
+  revision = "d6449816ce06963d9d136eee5a56fca5b0616e7e"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/image"
   packages = [
     "draw",
@@ -369,26 +413,42 @@
   name = "golang.org/x/net"
   packages = [
     "context",
-    "websocket"
+    "http2",
+    "http2/hpack",
+    "idna",
+    "internal/timeseries",
+    "lex/httplex",
+    "trace"
   ]
   revision = "cd69bc3fc700721b709c3a59e16e24c67b58f6ff"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
-  packages = ["unix"]
+  packages = [
+    "unix",
+    "windows"
+  ]
   revision = "8b4580aae2a0dd0c231a45d3ccb8434ff533b840"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/text"
   packages = [
+    "collate",
+    "collate/build",
+    "internal/colltab",
     "internal/gen",
+    "internal/tag",
     "internal/triegen",
     "internal/ucd",
+    "language",
+    "secure/bidirule",
     "transform",
+    "unicode/bidi",
     "unicode/cldr",
-    "unicode/norm"
+    "unicode/norm",
+    "unicode/rangetable"
   ]
   revision = "75cc3cad82b5f47d3fb229ddda8c5167da14f294"
 
@@ -431,6 +491,43 @@
   revision = "50336e281717e5f1685e3c611828dfb42c82cf66"
 
 [[projects]]
+  branch = "master"
+  name = "google.golang.org/genproto"
+  packages = ["googleapis/rpc/status"]
+  revision = "7fd901a49ba6a7f87732eb344f6e3c5b19d1b200"
+
+[[projects]]
+  name = "google.golang.org/grpc"
+  packages = [
+    ".",
+    "balancer",
+    "balancer/base",
+    "balancer/roundrobin",
+    "codes",
+    "connectivity",
+    "credentials",
+    "encoding",
+    "encoding/proto",
+    "grpclb/grpc_lb_v1/messages",
+    "grpclog",
+    "internal",
+    "keepalive",
+    "metadata",
+    "naming",
+    "peer",
+    "resolver",
+    "resolver/dns",
+    "resolver/passthrough",
+    "stats",
+    "status",
+    "tap",
+    "testdata",
+    "transport"
+  ]
+  revision = "d11072e7ca9811b1100b80ca0269ac831f06d024"
+  version = "v1.11.3"
+
+[[projects]]
   branch = "v2"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
@@ -448,7 +545,7 @@
 <<<<<<< HEAD
   inputs-digest = "52eacee419d621f00ee3520fc6a3b27c9c83cf220a733f4b3f156e264276635e"
 =======
-  inputs-digest = "7ef2ea957d8ba4c5c900499adcfcdbfdb4086966c5b8a69a2c1425d8b2c24679"
->>>>>>> emissions: Add SLCA/bea
+  inputs-digest = "d79ca8287facf0b50547c4870f62b08cdd6cfa277476e7c13fe847396fbecf94"
+>>>>>>> emissions: Bug fixes
   solver-name = "gps-cdcl"
   solver-version = 1
