@@ -184,7 +184,7 @@ func TestAnimation_logo(t *testing.T) {
 	// framePeriod is the interval in seconds between snapshots
 	const framePeriod = 3600.0 * 3
 
-	if err := inmaputil.Run("animation_logo/logoOut.log", "animation_logo/logoOut.shp", false,
+	if err := inmaputil.Run(nil, "animation_logo/logoOut.log", "animation_logo/logoOut.shp", false,
 		map[string]string{"TotalPM25": "TotalPM25"}, inmaputil.Cfg.GetString("EmissionUnits"),
 		[]string{"animation_logo/logo.shp"},
 		cfg, inmaputil.Cfg.GetString("InMAPData"), inmaputil.Cfg.GetString("VariableGridData"), inmaputil.Cfg.GetInt("NumIterations"),
@@ -237,7 +237,7 @@ func TestAnimation_nei(t *testing.T) {
 	// framePeriod is the interval in seconds between snapshots
 	const framePeriod = 3600.0
 
-	if err := inmaputil.Run("animation_nei/results.log", "animation_nei/results.shp", false,
+	if err := inmaputil.Run(nil, "animation_nei/results.log", "animation_nei/results.shp", false,
 		inmaputil.GetStringMapString("OutputVariables", inmaputil.Cfg), inmaputil.Cfg.GetString("EmissionUnits"),
 		inmaputil.Cfg.GetStringSlice("EmissionsShapefiles"),
 		cfg, inmaputil.Cfg.GetString("InMAPData"), inmaputil.Cfg.GetString("VariableGridData"), inmaputil.Cfg.GetInt("NumIterations"),

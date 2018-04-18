@@ -27,6 +27,7 @@ import (
 
 	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/science/chem/simplechem"
+	"github.com/spf13/cobra"
 )
 
 func getCTMData(inmapData string, VarGrid *inmap.VarGridConfig) (*inmap.CTMData, error) {
@@ -66,6 +67,9 @@ var DefaultScienceFuncs = []inmap.CellManipulator{
 // Run runs the model. dynamic and createGrid specify whether the variable
 // resolution grid should be created dynamically and whether the static
 // grid should be created or read from a file, respectively.
+//
+// CobraCommand is the cobra.Command instance where Run is called from.
+// It is needed to print certain outputs to the web interface.
 //
 // LogFile is the path to the desired logfile location. It can include
 // environment variables. If LogFile is left blank, the logfile will be saved in
@@ -110,7 +114,7 @@ var DefaultScienceFuncs = []inmap.CellManipulator{
 //
 // notMeters should be set to true if the units of the grid are not meters
 // (e.g., if the grid is in degrees latitude/longitude.)
-func Run(LogFile string, OutputFile string, OutputAllLayers bool, OutputVariables map[string]string,
+func Run(CobraCommand *cobra.Command, LogFile string, OutputFile string, OutputAllLayers bool, OutputVariables map[string]string,
 	EmissionUnits string, EmissionsShapefiles []string, VarGrid *inmap.VarGridConfig, InMAPData, VariableGridData string,
 	NumIterations int,
 	dynamic, createGrid bool, scienceFuncs []inmap.CellManipulator, addInit, addRun, addCleanup []inmap.DomainManipulator,
@@ -124,7 +128,7 @@ func Run(LogFile string, OutputFile string, OutputAllLayers bool, OutputVariable
 		return fmt.Errorf("inmap: problem creating log file: %v", err)
 	}
 	defer logfile.Close()
-	mw := io.MultiWriter(os.Stdout, logfile)
+	mw := io.MultiWriter(CobraCommand.OutOrStdout(), logfile)
 	log.SetOutput(mw)
 	cConverge := make(chan inmap.ConvergenceStatus)
 	cLog := make(chan *inmap.SimulationStatus)
