@@ -20,6 +20,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"strings"
 
 	leaflet "github.com/ctessum/go-leaflet"
@@ -53,6 +54,9 @@ type client struct {
 	prodSector        *dom.HTMLSelectElement
 	impactType        *dom.HTMLSelectElement
 	demandType        *dom.HTMLSelectElement
+	sccButton         *dom.HTMLButtonElement
+	sccModalTitle     dom.Element
+	sccTable          *sccTable
 
 	selection eioclientpb.Selection
 
@@ -74,6 +78,10 @@ func newClient() (*client, error) {
 	c.prodSector = c.doc.GetElementByID("prodSector").(*dom.HTMLSelectElement)
 	c.impactType = c.doc.GetElementByID("resultType").(*dom.HTMLSelectElement)
 	c.demandType = c.doc.GetElementByID("demandType").(*dom.HTMLSelectElement)
+	c.sccButton = c.doc.GetElementByID("sccButton").(*dom.HTMLButtonElement)
+	c.sccModalTitle = c.doc.GetElementByID("sccModalTitle")
+
+	c.sccTable = newSCCTable()
 
 	c.addSelectListener(c.demandSectorGroup)
 	c.addSelectListener(c.demandSector)
@@ -81,6 +89,7 @@ func newClient() (*client, error) {
 	c.addSelectListener(c.prodSector)
 	c.addSelectListener(c.impactType)
 	c.addSelectListener(c.demandType)
+	c.addSCCButtonListener()
 
 	return c, nil
 }
@@ -118,6 +127,13 @@ func (c *client) updateSelection() {
 	if err := c.sectorSelection(); err != nil {
 		dom.GetWindow().Alert(err.Error())
 	}
+
+	if c.selection.ProductionSector == All {
+		c.sccButton.Disabled = true
+	} else {
+		c.sccButton.Disabled = false
+	}
+
 	funcs := []func(context.Context, *eioclientpb.Selection, ...grpcweb.CallOption) (*eioclientpb.Selectors, error){
 		c.DemandGroups, c.DemandSectors, c.ProdGroups, c.ProdSectors}
 	selections := []string{c.selection.DemandGroup, c.selection.DemandSector, c.selection.ProductionGroup, c.selection.ProductionSector}
@@ -195,6 +211,33 @@ func (c *client) sectorSelection() error {
 		c.selection.ProductionSector = All
 	}
 	return nil
+}
+
+// addSCCButtonListener creates a table of SCC codes associated with the
+// current production sector when the button is clicked.
+func (c *client) addSCCButtonListener() {
+	c.sccButton.AddEventListener("click", false, func(_ dom.Event) {
+		go func() {
+			c.sccModalTitle.SetInnerHTML(fmt.Sprintf("Source Classification Codes (SCCs) associated with %s", c.selection.ProductionSector))
+			c.sccTable.delete()
+			c.sccTable = newSCCTable()
+			sccClient, err := c.EIOServeClient.SCCs(context.Background(), &c.selection)
+			if err != nil {
+				dom.GetWindow().Alert(err.Error())
+				return
+			}
+			for {
+				sccInfo, err := sccClient.Recv()
+				if err != nil {
+					if err != io.EOF {
+						dom.GetWindow().Alert(err.Error())
+					}
+					return
+				}
+				c.sccTable.addRow(sccInfo)
+			}
+		}()
+	})
 }
 
 func (c *client) startLoading() {
