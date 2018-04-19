@@ -188,7 +188,7 @@ func ReadEmissionShapefiles(gridSR *proj.SR, units string, c chan string, shapef
 	return emis, nil
 }
 
-// FromAEP converts the given AEP (github.com/ctessum/aep) records to
+// FromAEP converts the given AEP (github.com/spatialmodel/inmap/emissions/aep) records to
 // EmisRecords using the given SpatialProcessor and the SpatialProcessor
 // grid index gi. VOC, NOx, NH3, SOx, and PM25 are lists of
 // AEP Polluants that should be mapped to those InMAP species.

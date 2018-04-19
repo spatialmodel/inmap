@@ -21,8 +21,8 @@ SpatialRefFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea
   CensusPopColumns = ["TotalPop", "WhiteNoLat", "Black", "Native", "Asian", "Latino"]
 
   NEIBaseYear = 2014
-  NEITrends = "$GOPATH/src/github.com/ctessum/aep/aeputil/testdata/state_tier1_90-16.xlsx"
-  SCCReference = "$GOPATH/src/github.com/ctessum/aep/aeputil/testdata/SCCDownload-2017-0622-080147.csv"
+  NEITrends = "$GOPATH/src/github.com/spatialmodel/inmap/emissions/aep/aeputil/testdata/state_tier1_90-16.xlsx"
+  SCCReference = "$GOPATH/src/github.com/spatialmodel/inmap/emissions/aep/aeputil/testdata/SCCDownload-2017-0622-080147.csv"
   ConcentrationCache = "${SLCASpatialCache}/concentration"
   HealthCache = "${SLCASpatialCache}/health"
   SpatialCache = "${SLCASpatialCache}/spatial"
@@ -52,7 +52,7 @@ SpatialRefFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea
 
 
 [SpatialEIO.CSTConfig.SpatialConfig]
-  SrgSpec = "${GOPATH}/src/github.com/ctessum/aep/data/nei2014/surrogate_specification_2014.csv"
+  SrgSpec = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/aep/data/nei2014/surrogate_specification_2014.csv"
   SrgShapefileDirectory = "$nei2014Dir"
   SCCExactMatch = true
   GridRef = [

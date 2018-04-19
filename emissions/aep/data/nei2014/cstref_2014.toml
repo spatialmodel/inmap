@@ -2,7 +2,7 @@ SpatialCache="cache_2014"
 MaxCacheEntries=30
 
 [NEIData]
-  SrgSpec = "${GOPATH}/src/github.com/ctessum/aep/data/nei2014/surrogate_specification_2014.csv"
+  SrgSpec = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/aep/data/nei2014/surrogate_specification_2014.csv"
   SrgShapefileDirectory = "$nei2014Dir"
   SCCExactMatch = true
   GridRef = [

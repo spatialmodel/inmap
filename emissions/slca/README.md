@@ -7,7 +7,7 @@ This model is also coupled to the [InMAP](http://inmap.spatialmodel.com) model S
 
 ### Installation ###
 
-* Download the 2014 US National Emissions Inventory data as described [here](https://github.com/ctessum/aep/tree/master/data/nei2014).
+* Download the 2014 US National Emissions Inventory data as described [here](https://github.com/spatialmodel/inmap/emissions/aep/tree/master/data/nei2014).
 * Install the [go compiler](http://golang.org/doc/install)
 * Install the slca package ("go get github.com/spatialmodel/inmap/emissions/slca")
 

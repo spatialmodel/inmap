@@ -41,7 +41,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/ctessum/aep"
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/proj"
 	"github.com/ctessum/requestcache"
@@ -49,6 +48,7 @@ import (
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"github.com/sirupsen/logrus"
 	"github.com/spatialmodel/epi"
+	"github.com/spatialmodel/inmap/emissions/aep"
 	"gonum.org/v1/gonum/mat"
 	"gonum.org/v1/plot"
 	"gonum.org/v1/plot/palette"
