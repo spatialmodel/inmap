@@ -454,25 +454,25 @@ func NewOutputter(fileName string, allLayers bool, outputVariables map[string]st
 	defaultOutputFuncs := map[string]govaluate.ExpressionFunction{
 		"exp": func(arg ...interface{}) (interface{}, error) {
 			if len(arg) != 1 {
-				return nil, fmt.Errorf("inmap: got %d arguments for function 'exp', but needs 1", len(arg))
+				return nil, fmt.Errorf("inmap: got %d arguments for function 'exp', but need 1", len(arg))
 			}
 			return (float64)(math.Exp(arg[0].(float64))), nil
 		},
 		"log": func(arg ...interface{}) (interface{}, error) {
 			if len(arg) != 1 {
-				return nil, fmt.Errorf("inmap: got %d arguments for function 'exp', but needs 1", len(arg))
+				return nil, fmt.Errorf("inmap: got %d arguments for function 'exp', but need 1", len(arg))
 			}
 			return (float64)(math.Log(arg[0].(float64))), nil
 		},
 		"log10": func(arg ...interface{}) (interface{}, error) {
 			if len(arg) != 1 {
-				return nil, fmt.Errorf("inmap: got %d arguments for function 'exp', but needs 1", len(arg))
+				return nil, fmt.Errorf("inmap: got %d arguments for function 'exp', but need 1", len(arg))
 			}
 			return (float64)(math.Log(arg[0].(float64))), nil
 		},
 		"sum": func(arg ...interface{}) (interface{}, error) {
 			if len(arg) != 1 {
-				return nil, fmt.Errorf("inmap: got %d arguments for function 'sum', but needs 1", len(arg))
+				return nil, fmt.Errorf("inmap: got %d arguments for function 'sum', but need 1", len(arg))
 			}
 			return floats.Sum(arg[0].([]float64)), nil
 		},
