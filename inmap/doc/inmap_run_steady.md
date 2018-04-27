@@ -51,7 +51,7 @@ inmap run steady [flags]
               include environment variables. (default "inmap_output.shp")
       --OutputVariables string                 
               OutputVariables specifies which model variables should be included in the
-              output file. It can include environment variables. (default "{\"TotalPM25\":\"PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA\",\"TotalPopD\":\"coxHazard(loglogRR(TotalPM25), TotalPop, allcause)\"}\n")
+              output file. It can include environment variables. (default "{\"TotalPM25\":\"PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA\",\"TotalPopD\":\"(exp(log(1.078)/10 * TotalPM25) - 1) * TotalPop * allcause / 100000\"}\n")
       --VarGrid.CensusFile string              
               VarGrid.CensusFile is the path to the shapefile holding population information. (default "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testPopulation.shp")
       --VarGrid.CensusPopColumns stringSlice   
@@ -135,4 +135,3 @@ inmap run steady [flags]
 
 ### SEE ALSO
 * [inmap run](inmap_run.md)	 - Run the model.
-

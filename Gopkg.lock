@@ -3,12 +3,6 @@
 
 [[projects]]
   branch = "default"
-  name = "bitbucket.org/ctessum/aqhealth"
-  packages = ["."]
-  revision = "47005cccbd6327078596174850daa61552b3f5d8"
-
-[[projects]]
-  branch = "default"
   name = "bitbucket.org/ctessum/cdf"
   packages = ["."]
   revision = "ca25c8d1d9116cd0c62596ab37fc3e80f26aee79"
@@ -396,6 +390,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "4021d08f859234d87c5ab56beb593bf2ba27e0361ed2dabc63dbf23607f8e72f"
+  inputs-digest = "2640dd57e2893d772aa457f3be51f62c8677e6fdf37f0b55190ee0b4f7d06f64"
   solver-name = "gps-cdcl"
   solver-version = 1

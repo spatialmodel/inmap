@@ -30,7 +30,6 @@ import (
 	"strconv"
 	"strings"
 
-	"bitbucket.org/ctessum/aqhealth"
 	"github.com/Knetic/govaluate"
 	"github.com/ctessum/aep"
 	"github.com/ctessum/geom"
@@ -444,15 +443,11 @@ type Outputter struct {
 // NewOutputter initializes a new Outputter holder and adds a set of default
 // output functions. Default functions include:
 //
-// 'exp(x)' which applies the exponetional function e^x.
+// 'exp(x)' which applies the exponental function e^x.
 //
-// 'loglogRR(PM 2.5 Concentration)' which calculates relative risk (or risk ratio)
-// associated with a given change in PM2.5 concentration, assumung a log-log
-// dose response (almost a linear relationship).
+// 'log(x)' which applies the natural logarithm function log(e).
 //
-// 'coxHazard(Relative Risk, Population, Mortality Rate)' which calculates a
-// deaths estimate based on the relative risk associated with PM 2.5 changes,
-// population, and the baseline mortality rate (deaths per 100,000 people per year).
+// 'log10(x)' which applies the base-10 logarithm function log10(e).
 //
 // 'sum(x)' which sums a variable across all grid cells.
 func NewOutputter(fileName string, allLayers bool, outputVariables map[string]string, outputFunctions map[string]govaluate.ExpressionFunction, m Mechanism) (*Outputter, error) {
@@ -463,17 +458,17 @@ func NewOutputter(fileName string, allLayers bool, outputVariables map[string]st
 			}
 			return (float64)(math.Exp(arg[0].(float64))), nil
 		},
-		"loglogRR": func(arg ...interface{}) (interface{}, error) {
+		"log": func(arg ...interface{}) (interface{}, error) {
 			if len(arg) != 1 {
-				return nil, fmt.Errorf("inmap: got %d arguments for function 'loglogRR', but needs 1", len(arg))
+				return nil, fmt.Errorf("inmap: got %d arguments for function 'exp', but needs 1", len(arg))
 			}
-			return (float64)(aqhealth.RRpm25Linear(arg[0].(float64))), nil
+			return (float64)(math.Log(arg[0].(float64))), nil
 		},
-		"coxHazard": func(args ...interface{}) (interface{}, error) {
-			if len(args) != 3 {
-				return nil, fmt.Errorf("inmap: got %d arguments for function 'coxHazard', but needs 3", len(args))
+		"log10": func(arg ...interface{}) (interface{}, error) {
+			if len(arg) != 1 {
+				return nil, fmt.Errorf("inmap: got %d arguments for function 'exp', but needs 1", len(arg))
 			}
-			return (float64)((args[0].(float64) - 1) * args[1].(float64) * args[2].(float64) / 100000), nil
+			return (float64)(math.Log(arg[0].(float64))), nil
 		},
 		"sum": func(arg ...interface{}) (interface{}, error) {
 			if len(arg) != 1 {

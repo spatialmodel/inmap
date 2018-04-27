@@ -95,7 +95,9 @@ func TestDynamicGrid(t *testing.T) {
 		t.Errorf("dynamic grid should have %v cells but instead has %v", wantCells, cells)
 	}
 
-	o, err := inmap.NewOutputter("", false, map[string]string{"TotalPopD": "coxHazard(loglogRR(TotalPM25), TotalPop, AllCause)", "Latino": "Latino", "LatinoMort": "LatinoMort"}, nil, m)
+	o, err := inmap.NewOutputter("", false, map[string]string{
+		"TotalPopD": "(exp(log(1.078)/10 * TotalPM25) - 1) * TotalPop * AllCause / 100000",
+		"Latino":    "Latino", "LatinoMort": "LatinoMort"}, nil, m)
 	if err != nil {
 		t.Error(err)
 	}
@@ -107,7 +109,7 @@ func TestDynamicGrid(t *testing.T) {
 	deaths := r["TotalPopD"]
 	latino := r["Latino"]
 	latinoMort := r["LatinoMort"]
-	expectedDeaths := []float64{17.061717399701948, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	expectedDeaths := []float64{17.06171797059639, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	expectedLatinoPops := []float64{25000.00000157229, 4999.999998427711, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	expectedLatinoMorts := []float64{480.00000002012524, 800, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 

@@ -23,10 +23,6 @@
 
 [[constraint]]
   branch = "default"
-  name = "bitbucket.org/ctessum/aqhealth"
-
-[[constraint]]
-  branch = "default"
   name = "bitbucket.org/ctessum/cdf"
 
 [[constraint]]

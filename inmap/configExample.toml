@@ -46,20 +46,16 @@ LogFile = ""
 # variables built into the model, user-defined variables, and functions.
 # Available functions include:
 # 'exp(x)' which applies the exponetional function e^x.
-# 'loglogRR(PM 2.5 Concentration)' which calculates relative risk (or risk ratio)
-# 		associated with a given change in PM 2.5 concentration, assumung a log-log
-# 		dose response (almost a linear relationship).
-# 'coxHazard(Relative Risk, Population, Mortality Rate)' which calculates a
-#		deaths estimate based on the relative risk associated with PM 2.5 changes
-#		and the baseline number of deaths.
+# 'log(x)' which applies the natural logarithm function log(e).
+# 'log10(x)' which applies the base-10 logarithm function log10(e).
 # Note: Environment variables can be used in both variable names and expressions.
 [OutputVariables]
-TotalPopD = "coxHazard(loglogRR(totalpm25), TotalPop, allcause)"
-WhitNoLatD = "coxHazard(loglogRR(totalpm25), WhiteNoLat, allcause)"
-BlackD = "coxHazard(loglogRR(totalpm25), Black, allcause)"
-NativeD = "coxHazard(loglogRR(totalpm25), Native, allcause)"
-AsianD = "coxHazard(loglogRR(totalpm25), Asian, allcause)"
-LatinoD = "coxHazard(loglogRR(totalpm25), Latino, allcause)"
+TotalPopD = "(exp(log(1.078)/10 * totalpm25) - 1) * TotalPop * allcause / 100000"
+WhitNoLatD = "(exp(log(1.078)/10 * totalpm25) - 1) * WhiteNoLat * allcause / 100000"
+BlackD = "(exp(log(1.078)/10 * totalpm25) - 1) * Black * allcause / 100000"
+NativeD = "(exp(log(1.078)/10 * totalpm25) - 1) * Native * allcause / 100000"
+AsianD = "(exp(log(1.078)/10 * totalpm25) - 1) * Asian * allcause / 100000"
+LatinoD = "(exp(log(1.078)/10 * totalpm25) - 1) * Latino * allcause / 100000"
 TotalPop = "TotalPop"
 TotalPM25 = "PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA"
 BasePM25 = "BaselineTotalPM25"
