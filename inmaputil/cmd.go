@@ -28,6 +28,7 @@ import (
 	"os"
 
 	"github.com/ctessum/gobra"
+	"github.com/lnashier/viper"
 	"github.com/skratchdot/open-golang/open"
 	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/science/chem/simplechem"
@@ -35,7 +36,6 @@ import (
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
 )
 
 // Cfg holds configuration information.

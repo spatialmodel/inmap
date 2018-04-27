@@ -209,6 +209,12 @@
   revision = "dcbfbe505d35de8166ccfc47ff9e4bb020473e18"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/lnashier/viper"
+  packages = ["."]
+  revision = "74d425cf731f312373d93d58006a5445abe1c7d8"
+
+[[projects]]
   name = "github.com/magiconair/properties"
   packages = ["."]
   revision = "be5ece7dd465ab0765a9682137865547526d1dfb"
@@ -285,12 +291,6 @@
   packages = ["."]
   revision = "e57e3eeb33f795204c1ca35f56c44f83227c6e66"
   version = "v1.0.0"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/spf13/viper"
-  packages = ["."]
-  revision = "aafc9e6bc7b7bb53ddaa75a5ef49a17d6e654be5"
 
 [[projects]]
   name = "github.com/ulikunitz/xz"
@@ -390,6 +390,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "2640dd57e2893d772aa457f3be51f62c8677e6fdf37f0b55190ee0b4f7d06f64"
+  inputs-digest = "52eacee419d621f00ee3520fc6a3b27c9c83cf220a733f4b3f156e264276635e"
   solver-name = "gps-cdcl"
   solver-version = 1
