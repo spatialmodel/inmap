@@ -27,9 +27,9 @@ import (
 	"strings"
 
 	"github.com/ctessum/geom/proj"
+	"github.com/lnashier/viper"
 	"github.com/spatialmodel/inmap"
 	"github.com/spf13/cast"
-	"github.com/spf13/viper"
 )
 
 // checkOutputVars removes end lines and expands environment

@@ -83,8 +83,8 @@
   name = "github.com/spf13/cobra"
 
 [[constraint]]
+  name = "github.com/lnashier/viper"
   branch = "master"
-  name = "github.com/spf13/viper"
 
 [[constraint]]
   branch = "master"

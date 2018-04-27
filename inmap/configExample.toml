@@ -50,12 +50,12 @@ LogFile = ""
 # 'log10(x)' which applies the base-10 logarithm function log10(e).
 # Note: Environment variables can be used in both variable names and expressions.
 [OutputVariables]
-TotalPopD = "(exp(log(1.078)/10 * totalpm25) - 1) * TotalPop * allcause / 100000"
-WhitNoLatD = "(exp(log(1.078)/10 * totalpm25) - 1) * WhiteNoLat * allcause / 100000"
-BlackD = "(exp(log(1.078)/10 * totalpm25) - 1) * Black * allcause / 100000"
-NativeD = "(exp(log(1.078)/10 * totalpm25) - 1) * Native * allcause / 100000"
-AsianD = "(exp(log(1.078)/10 * totalpm25) - 1) * Asian * allcause / 100000"
-LatinoD = "(exp(log(1.078)/10 * totalpm25) - 1) * Latino * allcause / 100000"
+TotalPopD = "(exp(log(1.078)/10 * TotalPM25) - 1) * TotalPop * allcause / 100000"
+WhitNoLatD = "(exp(log(1.078)/10 * TotalPM25) - 1) * WhiteNoLat * allcause / 100000"
+BlackD = "(exp(log(1.078)/10 * TotalPM25) - 1) * Black * allcause / 100000"
+NativeD = "(exp(log(1.078)/10 * TotalPM25) - 1) * Native * allcause / 100000"
+AsianD = "(exp(log(1.078)/10 * TotalPM25) - 1) * Asian * allcause / 100000"
+LatinoD = "(exp(log(1.078)/10 * TotalPM25) - 1) * Latino * allcause / 100000"
 TotalPop = "TotalPop"
 TotalPM25 = "PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA"
 BasePM25 = "BaselineTotalPM25"
