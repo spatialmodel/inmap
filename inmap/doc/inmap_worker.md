@@ -39,7 +39,7 @@ inmap worker [flags]
               is automatically calculated.
       --OutputVariables string                 
               OutputVariables specifies which model variables should be included in the
-              output file. It can include environment variables. (default "{\"TotalPM25\":\"PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA\",\"TotalPopD\":\"coxHazard(loglogRR(TotalPM25), TotalPop, allcause)\"}\n")
+              output file. It can include environment variables. (default "{\"TotalPM25\":\"PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA\",\"TotalPopD\":\"(exp(log(1.078)/10 * TotalPM25) - 1) * TotalPop * allcause / 100000\"}\n")
       --SR.LogDir string                       
               LogDir is the directory that log files should be stored in when creating
               a source-receptor matrix. It can contain environment variables. (default "log")

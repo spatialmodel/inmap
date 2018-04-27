@@ -172,7 +172,7 @@ func BenchmarkRun(b *testing.B) {
 		b.Error(err)
 	}
 
-	o, err := inmap.NewOutputter("", false, map[string]string{"TotalPopDeaths": "coxHazard(loglogRR(TotalPM25), TotalPop, MortalityRate)"}, nil, m)
+	o, err := inmap.NewOutputter("", false, map[string]string{"TotalPopDeaths": "(exp(log(1.078)/10 * TotalPM25) - 1) * TotalPop * MortalityRate / 100000"}, nil, m)
 	if err != nil {
 		b.Error(err)
 	}

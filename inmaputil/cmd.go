@@ -335,7 +335,7 @@ func init() {
               output file. It can include environment variables.`,
 			defaultVal: map[string]string{
 				"TotalPM25": "PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA",
-				"TotalPopD": "coxHazard(loglogRR(TotalPM25), TotalPop, allcause)",
+				"TotalPopD": "(exp(log(1.078)/10 * TotalPM25) - 1) * TotalPop * allcause / 100000",
 			},
 			flagsets: []*pflag.FlagSet{runCmd.PersistentFlags(), workerCmd.Flags()},
 		},
