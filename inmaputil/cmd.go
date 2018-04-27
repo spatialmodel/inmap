@@ -677,6 +677,7 @@ concentrations with no temporal variability.`,
 		}
 
 		return Run(
+			cmd,
 			checkLogFile(Cfg.GetString("LogFile"), outputFile),
 			outputFile,
 			Cfg.GetBool("OutputAllLayers"),
