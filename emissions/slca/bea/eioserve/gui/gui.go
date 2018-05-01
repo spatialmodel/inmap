@@ -38,9 +38,7 @@ func main() {
 		dom.GetWindow().Alert(err.Error())
 		return
 	}
-	if err := c.Load(); err != nil {
-		dom.GetWindow().Alert(err.Error())
-	}
+	go c.Load()
 }
 
 type client struct {
@@ -81,15 +79,17 @@ func newClient() (*client, error) {
 	c.sccButton = c.doc.GetElementByID("sccButton").(*dom.HTMLButtonElement)
 	c.sccModalTitle = c.doc.GetElementByID("sccModalTitle")
 
-	c.sccTable = newSCCTable()
+	go func() {
+		c.sccTable = newSCCTable()
 
-	c.addSelectListener(c.demandSectorGroup)
-	c.addSelectListener(c.demandSector)
-	c.addSelectListener(c.prodSectorGroup)
-	c.addSelectListener(c.prodSector)
-	c.addSelectListener(c.impactType)
-	c.addSelectListener(c.demandType)
-	c.addSCCButtonListener()
+		c.addSelectListener(c.demandSectorGroup)
+		c.addSelectListener(c.demandSector)
+		c.addSelectListener(c.prodSectorGroup)
+		c.addSelectListener(c.prodSector)
+		c.addSelectListener(c.impactType)
+		c.addSelectListener(c.demandType)
+		c.addSCCButtonListener()
+	}()
 
 	return c, nil
 }
@@ -97,7 +97,7 @@ func newClient() (*client, error) {
 // Load prepares the environment.
 func (c *client) Load() error {
 	if err := c.LoadMap("eiomap"); err != nil {
-		return err
+		dom.GetWindow().Alert(err.Error())
 	}
 
 	c.updateSelection()
@@ -139,15 +139,19 @@ func (c *client) updateSelection() {
 	selections := []string{c.selection.DemandGroup, c.selection.DemandSector, c.selection.ProductionGroup, c.selection.ProductionSector}
 	objects := []*dom.HTMLSelectElement{c.demandSectorGroup, c.demandSector, c.prodSectorGroup, c.prodSector}
 	for i, f := range funcs {
-		sectors, err := f(context.Background(), &c.selection)
-		if err != nil {
+		go func(i int, f func(context.Context, *eioclientpb.Selection, ...grpcweb.CallOption) (*eioclientpb.Selectors, error)) {
+			sectors, err := f(context.Background(), &c.selection)
+			if err != nil {
+				dom.GetWindow().Alert(err.Error())
+			}
+			c.updateSelect(objects[i], selections[i], sectors)
+		}(i, f)
+	}
+	go func() {
+		if err := c.SetMapColors(); err != nil {
 			dom.GetWindow().Alert(err.Error())
 		}
-		c.updateSelect(objects[i], selections[i], sectors)
-	}
-	if err := c.SetMapColors(); err != nil {
-		dom.GetWindow().Alert(err.Error())
-	}
+	}()
 }
 
 func (c *client) updateSelect(e *dom.HTMLSelectElement, selection string, s *eioclientpb.Selectors) {

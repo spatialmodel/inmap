@@ -19,16 +19,12 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 
 	"honnef.co/go/js/dom"
 
 	"github.com/ctessum/geom"
-	"github.com/ctessum/geom/carto"
-	"github.com/ctessum/geom/encoding/geojson"
 	leaflet "github.com/ctessum/go-leaflet"
 	"github.com/ctessum/go-leaflet/plugin/glify"
 	"github.com/gopherjs/gopherjs/js"
@@ -68,7 +64,6 @@ type gridCell struct {
 }
 
 func (c *client) LoadGeometry() error {
-	log.Println("calling Server.Geometry")
 	geomClient, err := c.Geometry(context.Background(), &c.selection)
 	if err != nil {
 		return err
@@ -86,46 +81,19 @@ func (c *client) LoadGeometry() error {
 		rects = append(rects, r)
 	}
 
-	log.Println("received geometry; parsing polygons")
+	o := js.Global.Get("Object").New()
+	o.Set("Features", rects)
 
-	gj := new(carto.GeoJSON)
-	gj.Type = "FeatureCollection"
-	gj.Features = make([]*carto.GeoJSONfeature, len(rects))
-
-	for i, r := range rects {
-		gjGeom, err := geojson.ToGeoJSON(geom.Polygon{{
-			{float64(r.LL.X), float64(r.LL.Y)},
-			{float64(r.LR.X), float64(r.LR.Y)},
-			{float64(r.UR.X), float64(r.UR.Y)},
-			{float64(r.UL.X), float64(r.UL.Y)},
-			{float64(r.LL.X), float64(r.LL.Y)},
-		}})
-		if err != nil {
-			return err
-		}
-		gj.Features[i] = &carto.GeoJSONfeature{
-			Type:     "Feature",
-			Geometry: gjGeom,
-		}
-	}
-
-	b, err := json.Marshal(gj)
-	if err != nil {
-		return err
-	}
-	c.Polygons = js.Global.Get("JSON").Call("parse", string(b))
-	log.Println("finished parsing polygons")
+	c.Polygons = o
 	return nil
 }
 
 func (c *client) SetMapColors() error {
 
-	log.Println("calling Server.MapInfo")
 	colorInfo, err := c.MapInfo(context.Background(), &c.selection)
 	if err != nil {
 		return err
 	}
-	log.Println("received from Server.MapInfo; setting polygon colors")
 
 	options := glify.DefaultShapeOptions()
 	options.Map = c.Map
@@ -140,8 +108,6 @@ func (c *client) SetMapColors() error {
 		return rgb
 	}
 	glify.NewShapes(options)
-
-	log.Println("finished setting polygon colors; setting legend")
 
 	c.doc.GetElementByID("eiolegend").SetInnerHTML(`<img id="legendimg" alt="Embedded Image" src="data:image/png;base64,` + colorInfo.Legend + `" />`)
 	c.setLegendCSS()

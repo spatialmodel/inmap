@@ -49,19 +49,14 @@ please submit pull requests by first editing src/* and then running `node build.
       return new this.Shapes(settings);
     },
     flattenData: function (data) {
-      var dim = data[0][0].length,
-        result = {vertices: [], holes: [], dimensions: dim},
-        holeIndex = 0;
-
-      for (var i = 0; i < data.length; i++) {
-        for (var j = 0; j < data[i].length; j++) {
-          for (var d = 0; d < dim; d++) result.vertices.push(data[i][j][d]);
-        }
-        if (i > 0) {
-          holeIndex += data[i - 1].length;
-          result.holes.push(holeIndex);
-        }
-      }
+      var dim = 2,
+        result = {vertices: [
+          data.LL.X, data.LL.Y,
+          data.LR.X, data.LR.Y,
+          data.UR.X, data.UR.Y,
+          data.UL.X, data.UL.Y,
+          data.LL.X, data.LL.Y
+        ], holes: [], dimensions: dim}
 
       return result;
     },
@@ -607,14 +602,13 @@ please submit pull requests by first editing src/* and then running `node build.
     resetVertices: function () {
       this.verts = [];
       this.polygonLookup = new PolygonLookup();
-
       var pixel,
         verts = this.verts,
         polygonLookup = this.polygonLookup,
         index,
         settings = this.settings,
         data = settings.data,
-        features = data.features,
+        features = data.Features,
         feature,
         colorFn,
         color = tryFunction(settings.color, L.glify.color),
@@ -627,7 +621,7 @@ please submit pull requests by first editing src/* and then running `node build.
         iMax,
         i;
 
-      polygonLookup.loadFeatureCollection(data);
+      polygonLookup.loadFeatureCollection(features);
 
       if (color === null) {
         throw new Error('color is not properly defined');
@@ -647,11 +641,11 @@ please submit pull requests by first editing src/* and then running `node build.
           color = colorFn(featureIndex);
         }
 
-        flat = L.glify.flattenData(feature.geometry.coordinates);
+        flat = L.glify.flattenData(feature);
 
         indices = earcut(flat.vertices, flat.holes, flat.dimensions);
 
-        dim = feature.geometry.coordinates[0][0].length;
+        dim = 2;
         for (i = 0, iMax = indices.length; i < iMax; i++) {
           index = indices[i];
           triangles.push(flat.vertices[index * dim + L.glify.longitudeKey], flat.vertices[index * dim + L.glify.latitudeKey]);
@@ -2396,45 +2390,6 @@ window.polygonUtils = (function() {
 
 'use strict';
 
-/**
- * @param {2d array of number} poly An array of 2D point arrays.
- * @return {array of numbe} The bounding box of the polygon, in
- *    `minX, minY, maxX, maxY` format.
- */
-function getBoundingBox( poly ){
-  var firstPt = poly[ 0 ];
-  var bbox = [
-    firstPt[ 0 ], firstPt[ 1 ],
-    firstPt[ 0 ], firstPt[ 1 ]
-  ];
-
-  for( var ind = 1; ind < poly.length; ind++ ){
-    var pt = poly[ ind ];
-
-    var x = pt[ 0 ];
-    if( x < bbox[ 0 ] ){
-      bbox[ 0 ] = x;
-    }
-    else if( x > bbox[ 2 ] ){
-      bbox[ 2 ] = x;
-    }
-
-    var y = pt[ 1 ];
-    if( y < bbox[ 1 ] ){
-      bbox[ 1 ] = y;
-    }
-    else if( y > bbox[ 3 ] ){
-      bbox[ 3 ] = y;
-    }
-  }
-
-  return bbox;
-}
-
-return {
-  getBoundingBox: getBoundingBox
-};
-
 })();
 window.PolygonLookup = (function() {
 /**
@@ -2504,38 +2459,22 @@ PolygonLookup.prototype.loadFeatureCollection = function loadFeatureCollection( 
 
   function indexPolygon( poly ){
     polygons.push(poly);
-    var bbox = polygonUtils.getBoundingBox( poly.geometry.coordinates[ 0 ] );
+    var bbox = [
+      poly.LL.X, poly.LL.Y,
+      poly.UR.X, poly.UR.Y
+    ];
     bbox.polyId = polyId++;
     bboxes.push(bbox);
   }
 
   function indexFeature( poly ){
-    if( poly.geometry.coordinates[ 0 ] !== undefined &&
-        poly.geometry.coordinates[ 0 ].length > 0){
-      switch( poly.geometry.type ){
-        case 'Polygon':
+    if( poly !== undefined &&
+        poly.length > 0){
           indexPolygon( poly );
-          break;
-
-        case 'MultiPolygon':
-          var childPolys = poly.geometry.coordinates;
-          for( var ind = 0; ind < childPolys.length; ind++ ){
-            var childPoly = {
-              type: 'Feature',
-              properties: poly.properties,
-              geometry: {
-                type: 'Polygon',
-                coordinates: childPolys[ ind ]
-              }
-            };
-            indexPolygon( childPoly );
-          }
-          break;
       }
     }
-  }
 
-  collection.features.forEach( indexFeature );
+  collection.forEach( indexFeature );
   this.rtree = new rbush().load( bboxes );
   this.polygons = polygons;
 };
