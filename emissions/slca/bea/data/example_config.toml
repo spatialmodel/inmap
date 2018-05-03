@@ -1,4 +1,5 @@
-SpatialRefFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/SCC_codes.xlsx"
+SCCMapFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/scc-io.xlsx"
+
 
 [Config]
   Years = [2007, 2014]

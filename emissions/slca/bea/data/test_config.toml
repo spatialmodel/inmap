@@ -1,4 +1,4 @@
-SpatialRefFile = "data/SCC_codes.xlsx"
+SCCMapFile = "data/scc-io_small_test.xlsx"
 
 [Config]
   Years = [2007, 2011]

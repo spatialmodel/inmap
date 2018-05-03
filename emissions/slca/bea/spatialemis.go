@@ -38,7 +38,7 @@ func (e *SpatialEIO) Emissions(ctx context.Context, demand *mat.VecDense, indust
 	}
 
 	// Calculate economic activity. vector dimension: [# industries, 1]
-	activity, err := e.EconomicImpacts(demand, year, loc)
+	activity, err := e.economicImpactsSCC(demand, year, loc)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +63,7 @@ func (e *SpatialEIO) EmissionsMatrix(ctx context.Context, demand *mat.VecDense, 
 		return nil, err
 	}
 
-	activity, err := e.EconomicImpacts(demand, year, loc) // rows = industries
+	activity, err := e.economicImpactsSCC(demand, year, loc) // rows = industries
 	if err != nil {
 		return nil, err
 	}
@@ -98,25 +98,23 @@ func (e *SpatialEIO) emissionFactors(ctx context.Context, pol slca.Pollutant, ye
 // air quality model grid cells and the columns represent industries.
 func (e *SpatialEIO) emissionFactorsWorker(ctx context.Context, request interface{}) (interface{}, error) {
 	polyear := request.(polYear)
-	prod, err := e.EIO.domesticProduction(polyear.year)
+	prod, err := e.domesticProductionSCC(polyear.year)
 	if err != nil {
 		return nil, err
 	}
-	spatialRefs, ok := e.SpatialRefs[polyear.year]
-	if !ok {
-		return nil, fmt.Errorf("bea: SpatialEIO missing SpatialRefs for year %d", polyear.year)
-	}
 	var emisFac *mat.Dense
-	for i, ref := range spatialRefs {
-		if len(ref.SCCs) == 0 {
-			continue
+	for i, refTemp := range e.SpatialRefs {
+		if len(refTemp.SCCs) == 0 {
+			return nil, fmt.Errorf("bea: industry %d; no SCCs", i)
 		}
-		industryEmis, err := e.CSTConfig.EmissionsSurrogate(ctx, polyear.pol, ref)
+		ref := refTemp
+		ref.EmisYear = int(polyear.year)
+		industryEmis, err := e.CSTConfig.EmissionsSurrogate(ctx, polyear.pol, &ref)
 		if err != nil {
 			return nil, err
 		}
 		if i == 0 {
-			emisFac = mat.NewDense(industryEmis.Shape[0], len(spatialRefs), nil)
+			emisFac = mat.NewDense(industryEmis.Shape[0], len(e.SpatialRefs), nil)
 		}
 		for r, v := range industryEmis.Elements {
 			// The emissions factor is the industry emissions divided by the

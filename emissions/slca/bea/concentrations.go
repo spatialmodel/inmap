@@ -36,7 +36,7 @@ func (e *SpatialEIO) Concentrations(ctx context.Context, demand *mat.VecDense, i
 		return nil, err
 	}
 
-	activity, err := e.EconomicImpacts(demand, year, loc)
+	activity, err := e.economicImpactsSCC(demand, year, loc)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func (e *SpatialEIO) ConcentrationMatrix(ctx context.Context, demand *mat.VecDen
 		return nil, err
 	}
 
-	activity, err := e.EconomicImpacts(demand, year, loc) // rows = industries
+	activity, err := e.economicImpactsSCC(demand, year, loc) // rows = industries
 	if err != nil {
 		return nil, err
 	}
@@ -128,20 +128,18 @@ func (e *SpatialEIO) concentrationFactors(ctx context.Context, pol Pollutant, ye
 // air quality model grid cells and the columns represent industries.
 func (e *SpatialEIO) concentrationFactorsWorker(ctx context.Context, request interface{}) (interface{}, error) {
 	polyear := request.(concPolYear)
-	prod, err := e.EIO.domesticProduction(polyear.year)
+	prod, err := e.domesticProductionSCC(polyear.year)
 	if err != nil {
 		return nil, err
 	}
-	spatialRefs, ok := e.SpatialRefs[polyear.year]
-	if !ok {
-		return nil, fmt.Errorf("bea: SpatialEIO missing SpatialRefs for year %d", polyear.year)
-	}
 	var concFac *mat.Dense
-	for i, ref := range spatialRefs {
-		if len(ref.SCCs) == 0 {
-			continue
+	for i, refTemp := range e.SpatialRefs {
+		if len(refTemp.SCCs) == 0 {
+			return nil, fmt.Errorf("bea: industry %d; no SCCs", i)
 		}
-		concentrations, err := e.CSTConfig.ConcentrationSurrogate(ctx, ref)
+		ref := refTemp
+		ref.EmisYear = int(polyear.year)
+		concentrations, err := e.CSTConfig.ConcentrationSurrogate(ctx, &ref)
 		if err != nil {
 			return nil, err
 		}
@@ -163,7 +161,7 @@ func (e *SpatialEIO) concentrationFactorsWorker(ctx context.Context, request int
 			return nil, fmt.Errorf("bea.concentrations: invalid pollutant %v", polyear.pol)
 		}
 		if i == 0 {
-			concFac = mat.NewDense(len(industryConc), len(e.SpatialRefs[polyear.year]), nil)
+			concFac = mat.NewDense(len(industryConc), len(e.SpatialRefs), nil)
 		}
 		for r, v := range industryConc {
 			// The concentrations factor is the industry concentrations divided by the

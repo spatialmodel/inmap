@@ -19,7 +19,6 @@ package bea
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"sync"
 	"testing"
@@ -60,7 +59,7 @@ func TestConcentrations(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := 0.5574290770354347
+	want := 0.6092829446666378
 	have := mat.Sum(conc)
 	if want != have {
 		t.Errorf("have %g, want %g", have, want)
@@ -79,75 +78,18 @@ func TestConcentrationMatrix(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := 0.5574290770354343
+	r, c := conc.Dims()
+	wantR, wantC := 10, 188
+	if r != wantR {
+		t.Errorf("rows: %d !=  %d", r, wantR)
+	}
+	if c != wantC {
+		t.Errorf("cols: %d !=  %d", c, wantC)
+	}
+
+	want := 0.6092829446666519
 	have := mat.Sum(conc)
 	if want != have {
 		t.Errorf("have %g, want %g", have, want)
-	}
-}
-
-func TestConcentrations_long(t *testing.T) {
-	if testing.Short() {
-		return
-	}
-	f, err := os.Open("data/example_config.toml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	s, err := NewSpatial(f)
-	if err != nil {
-		t.Fatal(err)
-	}
-	const year = 2014
-	demand, err := s.EIO.FinalDemand(All, nil, year, Domestic)
-	if err != nil {
-		t.Fatal(err)
-	}
-	ctx := context.Background()
-	tests := []struct {
-		pol    Pollutant
-		result float64
-	}{
-		{
-			pol:    PNH4,
-			result: 34146.995227718384,
-		},
-		{
-			pol:    PNO3,
-			result: 19366.49435073656,
-		},
-		{
-			pol:    PSO4,
-			result: 27890.642109846598,
-		},
-		{
-			pol:    SOA,
-			result: 6908.045187570745,
-		},
-		{
-			pol:    PrimaryPM25,
-			result: 89144.0790637183,
-		},
-		{
-			pol:    TotalPM25,
-			result: 177456.25593959185,
-		},
-	}
-	for _, test := range tests {
-		var failed bool
-		t.Run(fmt.Sprintf("%v", test.pol), func(t *testing.T) {
-			conc, err := s.Concentrations(ctx, demand, nil, test.pol, year, Domestic)
-			if err != nil {
-				failed = true
-				t.Fatal(err)
-			}
-			have := mat.Sum(conc)
-			if test.result != have {
-				t.Errorf("have %g, want %g", have, test.result)
-			}
-		})
-		if failed {
-			break
-		}
 	}
 }

@@ -38,7 +38,7 @@ func (e *SpatialEIO) Health(ctx context.Context, demand *mat.VecDense, industrie
 		return nil, err
 	}
 
-	activity, err := e.EconomicImpacts(demand, year, loc)
+	activity, err := e.economicImpactsSCC(demand, year, loc)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +63,7 @@ func (e *SpatialEIO) HealthMatrix(ctx context.Context, demand *mat.VecDense, pol
 		return nil, err
 	}
 
-	activity, err := e.EconomicImpacts(demand, year, loc) // rows = industries
+	activity, err := e.economicImpactsSCC(demand, year, loc) // rows = industries
 	if err != nil {
 		return nil, err
 	}
@@ -104,20 +104,18 @@ func (e *SpatialEIO) healthFactors(ctx context.Context, pol Pollutant, pop strin
 // air quality model grid cells and the columns represent industries.
 func (e *SpatialEIO) healthFactorsWorker(ctx context.Context, request interface{}) (interface{}, error) {
 	polyearHR := request.(concPolPopYearHR)
-	prod, err := e.EIO.domesticProduction(polyearHR.year)
+	prod, err := e.domesticProductionSCC(polyearHR.year)
 	if err != nil {
 		return nil, err
 	}
-	spatialRefs, ok := e.SpatialRefs[polyearHR.year]
-	if !ok {
-		return nil, fmt.Errorf("bea: SpatialEIO missing SpatialRefs for year %d", polyearHR.year)
-	}
 	var healthFac *mat.Dense
-	for i, ref := range spatialRefs {
-		if len(ref.SCCs) == 0 {
-			continue
+	for i, refTemp := range e.SpatialRefs {
+		if len(refTemp.SCCs) == 0 {
+			return nil, fmt.Errorf("bea: industry %d; no SCCs", i)
 		}
-		health, err := e.CSTConfig.HealthSurrogate(ctx, ref, polyearHR.hr)
+		ref := refTemp
+		ref.EmisYear = int(polyearHR.year)
+		health, err := e.CSTConfig.HealthSurrogate(ctx, &ref, polyearHR.hr)
 		if err != nil {
 			return nil, err
 		}
@@ -147,7 +145,7 @@ func (e *SpatialEIO) healthFactorsWorker(ctx context.Context, request interface{
 			return nil, fmt.Errorf("bea.health: invalid pollutant %v", pol)
 		}
 		if i == 0 {
-			healthFac = mat.NewDense(industryHealth.Shape[0], len(e.SpatialRefs[polyearHR.year]), nil)
+			healthFac = mat.NewDense(industryHealth.Shape[0], len(e.SpatialRefs), nil)
 		}
 		for r, v := range industryHealth.Elements {
 			// The health factor is the industry health impacts divided by the

@@ -42,9 +42,21 @@ type SpatialEIO struct {
 	// cache spatial information.
 	SpatialCache string
 
+	// SCCs are the source codes for emissions sources in the model.
+	SCCs []slca.SCC
+
+	// sccMap provides a mapping between the SCC codes ('SCCs' above)
+	// and IO industries, where the outer index is the SCC code  and the
+	// inner index is the IO industry.
+	sccMap [][]int
+
 	// SpatialRefs are a list of spatial references
-	// corresponding to the EIO industries.
-	SpatialRefs map[Year][]*slca.SpatialRef
+	// corresponding to the SCCs.
+	SpatialRefs []slca.SpatialRef
+
+	totalRequirementsSCC    map[Year]*mat.Dense
+	domesticRequirementsSCC map[Year]*mat.Dense
+	importRequirementsSCC   map[Year]*mat.Dense
 
 	loadEFOnce               sync.Once
 	loadConcOnce             sync.Once
@@ -55,12 +67,12 @@ type SpatialEIO struct {
 }
 
 // domesticProduction calculates total domestic economic production.
-func (e *EIO) domesticProduction(year Year) (*mat.VecDense, error) {
+func (e *SpatialEIO) domesticProductionSCC(year Year) (*mat.VecDense, error) {
 	demand, err := e.FinalDemand(All, nil, year, Domestic)
 	if err != nil {
 		return nil, err
 	}
-	return e.EconomicImpacts(demand, year, Domestic)
+	return e.economicImpactsSCC(demand, year, Domestic)
 }
 
 type polYear struct {
@@ -71,7 +83,7 @@ type polYear struct {
 // SpatialConfig holds configuration information for performing
 // spatial EIO LCA.
 type SpatialConfig struct {
-	SpatialRefFile string
+	SCCMapFile string
 
 	Config     Config
 	SpatialEIO SpatialEIO
@@ -94,27 +106,29 @@ func NewSpatial(r io.Reader) (*SpatialEIO, error) {
 	}
 	c.SpatialEIO.EIO = *eio
 
-	c.SpatialEIO.SpatialRefs = make(map[Year][]*slca.SpatialRef)
-	for _, year := range c.Config.Years {
-		c.SpatialEIO.SpatialRefs[year], err = NEISpatialRefs(c.SpatialRefFile, year, eio)
-		if err != nil {
-			return nil, err
-		}
-
-		// Multiply light-duty vehicle emissions by 0.05 to account for
-		// fact that most vehicle emissions are non-transactional.
-		// TODO: Figure out a less-tricky way to do this.
-		lightDutyIndex, err := c.SpatialEIO.EIO.IndustryIndex("Couriers and messengers")
-		if err != nil {
-			return nil, err
-		}
-		ref := c.SpatialEIO.SpatialRefs[year][lightDutyIndex]
-		for i := range ref.SCCFractions {
-			ref.SCCFractions[i] *= 0.05
-		}
-
+	if err := c.SpatialEIO.loadSCCMap(c.SCCMapFile); err != nil {
+		return nil, err
 	}
-	return &c.SpatialEIO, nil
+	s := &c.SpatialEIO
+
+	s.totalRequirementsSCC = make(map[Year]*mat.Dense)
+	s.domesticRequirementsSCC = make(map[Year]*mat.Dense)
+	s.importRequirementsSCC = make(map[Year]*mat.Dense)
+	for year := range s.EIO.totalRequirements {
+		s.totalRequirementsSCC[year], err = s.requirementsSCC(s.EIO.totalRequirements[year])
+		if err != nil {
+			return nil, err
+		}
+		s.domesticRequirementsSCC[year], err = s.requirementsSCC(s.EIO.domesticRequirements[year])
+		if err != nil {
+			return nil, err
+		}
+
+		imports := new(mat.Dense)
+		imports.Sub(s.totalRequirementsSCC[year], s.domesticRequirementsSCC[year])
+		s.importRequirementsSCC[year] = imports
+	}
+	return s, nil
 }
 
 // expandEnv expands the environment variables in v.

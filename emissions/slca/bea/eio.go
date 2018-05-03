@@ -259,6 +259,32 @@ func (e *EIO) EconomicImpacts(demand *mat.VecDense, year Year, loc Location) (*m
 	return o, nil
 }
 
+// economicImpactsSCC returns the quasi-economic
+// impacts of the given economic demand in the given year.
+// These do not represent real economic values, only the relationships between
+// sectors, so they should only be used for emissions, air quality or health modeling.
+// Location specifies whether return domestic, import, or total impacts.
+func (e *SpatialEIO) economicImpactsSCC(demand *mat.VecDense, year Year, loc Location) (*mat.VecDense, error) {
+	var req *mat.Dense
+	var ok bool
+	switch loc {
+	case Domestic:
+		req, ok = e.domesticRequirementsSCC[year]
+	case Imported:
+		req, ok = e.importRequirementsSCC[year]
+	case Total:
+		req, ok = e.totalRequirementsSCC[year]
+	default:
+		return nil, fmt.Errorf("bea: invalid Location %v", loc)
+	}
+	if !ok {
+		return nil, fmt.Errorf("invalid year %d", year)
+	}
+	o := new(mat.VecDense)
+	o.MulVec(req, demand)
+	return o, nil
+}
+
 // FinalDemand returns a final demand vector for the given year
 // and demand type. commodities
 // specifies which commodities the demand should be calculated for.

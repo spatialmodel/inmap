@@ -19,112 +19,60 @@ package bea
 
 import (
 	"fmt"
-	"sort"
 
 	"github.com/spatialmodel/inmap/emissions/slca"
+	"gonum.org/v1/gonum/mat"
 )
 
-// NEISpatialRefs returns spatial references corresponding to the detailed EIO
-// sectors based on information in the US National Emissions Inventory,
-// where filename represents a spreadsheet containing information
-// regarding which SCC codes correspond to which economic industry.
-//
-// In cases where an SCC corresponds to more than one industry, emissions
-// are allocated among industries according to the economic production
-// in each industry.
-func NEISpatialRefs(filename string, year Year, eio *EIO) ([]*slca.SpatialRef, error) {
-	f, err := eio.loadExcelFile(filename)
+// loadSCCMap loads the mapping between IO industry sectors and SCC codes.
+func (s *SpatialEIO) loadSCCMap(sccMapFile string) error {
+	f, err := s.loadExcelFile(sccMapFile)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("bea: loading SCC map: %v", err)
 	}
-	s, ok := f.Sheet["Sheet1"]
-	if !ok {
-		return nil, fmt.Errorf("bea.NEISpatialRefs: excel file sheet 'Sheet1' is missing")
-	}
-	if len(s.Rows)-1 != len(eio.Industries) {
-		return nil, fmt.Errorf("bea.NEISpatialRefs: invalid number of sectors in file: %d != %d", len(s.Rows)-1, len(eio.Industries))
-	}
+	sheet := f.Sheets[0]
 
-	production, err := eio.domesticProduction(year)
-	if err != nil {
-		return nil, err
-	}
-	spatialRefs := make([]*slca.SpatialRef, len(eio.Industries))
-	sccFractions := make(map[slca.SCC]map[int]float64)
+	s.SCCs = make([]slca.SCC, len(sheet.Rows)-1)
+	s.sccMap = make([][]int, len(s.SCCs))
+	s.SpatialRefs = make([]slca.SpatialRef, len(s.SCCs))
+	for i := 0; i < len(s.SCCs); i++ {
+		r := sheet.Rows[i+1]
+		s.SCCs[i] = slca.SCC(r.Cells[0].String())
 
-	for i := 1; i < len(s.Rows); i++ {
-		r := s.Rows[i]
-		if industry := r.Cells[1].Value; industry != eio.Industries[i-1] {
-			return nil, fmt.Errorf("bea.NEISpatialRefs: invalid industry order: %s != %s", industry, eio.Industries[i-1])
-		}
-		spatialRef := &slca.SpatialRef{
-			SCCs:            make([]slca.SCC, 0, len(r.Cells)-3),
-			EmisYear:        int(year),
+		s.SpatialRefs[i] = slca.SpatialRef{
+			SCCs:            []slca.SCC{s.SCCs[i]},
+			EmisYear:        -9,
 			Type:            slca.Stationary,
 			NoNormalization: true,
 		}
-		for j := 3; j < len(r.Cells); j++ {
-			scc := slca.SCC(r.Cells[j].Value)
-			if scc == "" {
-				continue
-			}
-			if len(scc) == 9 {
-				scc += "0"
-			}
-			if len(scc) == 8 {
-				scc = "00" + scc
-			}
-			if len(scc) != 10 {
-				return nil, fmt.Errorf("bea.NEISpatialRefs: invalid SCC code '%s'", scc)
-			}
-			spatialRef.SCCs = append(spatialRef.SCCs, scc)
 
-			if _, ok := sccFractions[scc]; !ok {
-				sccFractions[scc] = make(map[int]float64)
+		for j := 2; j < len(r.Cells); j++ { // Skip first two columns.
+			industry := r.Cells[j].String()
+			ioRow, err := s.IndustryIndex(industry)
+			if err != nil {
+				return fmt.Errorf("bea: loading SCC map: %v", err)
 			}
-			sccFractions[scc][i-1] = production.At(i-1, 0)
-		}
-		spatialRefs[i-1] = spatialRef
-	}
-
-	// Make sure we loop through the SCCs in the same order
-	// every time to avoid rounding differences in the fractions.
-	sccs := make([]string, 0, len(sccFractions))
-	for scc := range sccFractions {
-		sccs = append(sccs, string(scc))
-	}
-	sort.Strings(sccs)
-
-	// Normalize the SCC fractions.
-	for _, scc := range sccs {
-		sectors := sccFractions[slca.SCC(scc)]
-
-		// Make sure we loop through the sectors in the same order
-		// every time to avoid rounding differnces in the fractions.
-		iSectors := make([]int, 0, len(sectors))
-		for i := range sectors {
-			iSectors = append(iSectors, i)
-		}
-		sort.Ints(iSectors)
-
-		var total float64
-		for _, i := range iSectors {
-			total += sectors[i]
-		}
-		for _, i := range iSectors {
-			sccFractions[slca.SCC(scc)][i] /= total
+			s.sccMap[i] = append(s.sccMap[i], ioRow)
 		}
 	}
+	return nil
+}
 
-	for i, sr := range spatialRefs {
-		sr.SCCFractions = make([]float64, len(sr.SCCs))
-		for j, scc := range sr.SCCs {
-			var ok bool
-			sr.SCCFractions[j], ok = sccFractions[scc][i]
-			if !ok {
-				panic("missing SCC fraction")
+// requirementsSCC returns a detailed requirements matrix
+// that is mapped from the IO industries in the input matrix
+// to individual SCC codes.
+// The resulting SCC requirements are the sum of the requirements for
+// all of the IO industries that are mapped to each SCC.
+func (s *SpatialEIO) requirementsSCC(ioR *mat.Dense) (*mat.Dense, error) {
+	_, cols := ioR.Dims()
+	rows := len(s.SCCs)
+	m := mat.NewDense(rows, cols, nil)
+	for i := 0; i < rows; i++ {
+		for _, ioRow := range s.sccMap[i] {
+			for c := 0; c < cols; c++ {
+				m.Set(i, c, m.At(i, c)+ioR.At(ioRow, c))
 			}
 		}
 	}
-	return spatialRefs, nil
+	return m, nil
 }
