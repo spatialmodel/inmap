@@ -166,7 +166,7 @@ func TestCalcPartitioning(t *testing.T) {
 
 	gasFunc := testNextData(so2)
 	particleFunc := testNextData(sulf)
-	gasResult, particleResult, partitioning, err := marginalPartitioning(gasFunc, particleFunc)
+	partitioning, gasResult, particleResult, err := marginalPartitioning(gasFunc, particleFunc)
 	if err != nil {
 		t.Fatal(err)
 	}

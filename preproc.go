@@ -399,7 +399,7 @@ func Preprocess(p Preprocessor) (*CTMData, error) {
 // one time step to the next. The fraction is forced to be
 // between zero and one. Both gas phase and particle phase concentration
 // should be in units of [mass/volume].
-func marginalPartitioning(gasFunc, particleFunc NextData) (gasConc, particleConc, partitioning *sparse.DenseArray, err error) {
+func marginalPartitioning(gasFunc, particleFunc NextData) (partitioning, gasConc, particleConc *sparse.DenseArray, err error) {
 	var gas, particle, oldgas, oldparticle *sparse.DenseArray
 	firstData := true
 	var n int
@@ -408,7 +408,7 @@ func marginalPartitioning(gasFunc, particleFunc NextData) (gasConc, particleConc
 		if err != nil {
 			if err == io.EOF {
 				// Divide the arrays by the total number of timesteps and return.
-				return arrayAverage(gas, n), arrayAverage(particle, n), arrayAverage(partitioning, n), nil
+				return arrayAverage(partitioning, n), arrayAverage(gas, n), arrayAverage(particle, n), nil
 			}
 			return nil, nil, nil, err
 		}
