@@ -31,3 +31,6 @@ GEOSA3MstE= "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/prep
 GEOSChem= "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/preproc/gc_output.[DATE].nc"
 VegTypeGlobal= "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/preproc/vegtype.global.txt"
 Dash= true
+ChemRecordInterval= "3h"
+ChemFileInterval= "3h"
+NoChemHourIndex= true

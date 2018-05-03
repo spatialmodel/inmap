@@ -87,7 +87,7 @@ import (
 // dash indicates whether GEOS-Chem variable names are in the form 'IJ-AVG-S__xxx'
 // as opposed to 'IJ_AVG_S_xxx'.
 func Preproc(StartDate, EndDate, CTMType, WRFOut, GEOSA1, GEOSA3Cld, GEOSA3Dyn, GEOSI3, GEOSA3MstE, GEOSApBp,
-	GEOSChem, VegTypeGlobal, InMAPData string, CtmGridXo, CtmGridYo, CtmGridDx, CtmGridDy float64, dash bool) error {
+	GEOSChem, VegTypeGlobal, InMAPData string, CtmGridXo, CtmGridYo, CtmGridDx, CtmGridDy float64, dash bool, recordDeltaStr, fileDeltaStr string, noChemHour bool) error {
 	msgChan := make(chan string)
 	go func() {
 		for {
@@ -97,8 +97,8 @@ func Preproc(StartDate, EndDate, CTMType, WRFOut, GEOSA1, GEOSA3Cld, GEOSA3Dyn, 
 	var ctm inmap.Preprocessor
 	switch CTMType {
 	case "GEOS-Chem":
-		vars := []string{StartDate, EndDate, CTMType, GEOSA1, GEOSA3Cld, GEOSA3Dyn, GEOSI3, GEOSA3MstE, GEOSChem, VegTypeGlobal}
-		varNames := []string{"StartDate", "EndDate", "CTMType", "GEOSA1", "GEOSA3Cld", "GEOSA3Dyn", "GEOSI3", "GEOSA3MstE", "GEOSChem", "VegTypeGlobal"}
+		vars := []string{StartDate, EndDate, CTMType, GEOSA1, GEOSA3Cld, GEOSA3Dyn, GEOSI3, GEOSA3MstE, GEOSChem, VegTypeGlobal, recordDeltaStr, fileDeltaStr}
+		varNames := []string{"StartDate", "EndDate", "CTMType", "GEOSA1", "GEOSA3Cld", "GEOSA3Dyn", "GEOSI3", "GEOSA3MstE", "GEOSChem", "VegTypeGlobal", "recordDeltaStr", "fileDeltaStr"}
 		for i, v := range vars {
 			if v == "" {
 				return fmt.Errorf("inmap preprocessor: configuration variable %s is not specified", varNames[i])
@@ -117,6 +117,9 @@ func Preproc(StartDate, EndDate, CTMType, WRFOut, GEOSA1, GEOSA3Cld, GEOSA3Dyn, 
 			StartDate,
 			EndDate,
 			dash,
+			recordDeltaStr,
+			fileDeltaStr,
+			noChemHour,
 			msgChan,
 		)
 		if err != nil {
