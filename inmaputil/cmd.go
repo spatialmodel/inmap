@@ -452,6 +452,29 @@ func init() {
 			flagsets:   []*pflag.FlagSet{preprocCmd.Flags()},
 		},
 		{
+			name: "Preproc.GEOSChem.ChemFileInterval",
+			usage: `
+              Preproc.GEOSChem.ChemFileInterval specifies the time duration represented by each GEOS-Chem output file.
+              E.g. "3h" for 3 hours`,
+			defaultVal: "3h",
+			flagsets:   []*pflag.FlagSet{preprocCmd.Flags()},
+		},
+		{
+			name: "Preproc.GEOSChem.ChemRecordInterval",
+			usage: `
+              Preproc.GEOSChem.ChemRecordInterval specifies the time duration represented by each GEOS-Chem output record.
+              E.g. "3h" for 3 hours`,
+			defaultVal: "3h",
+			flagsets:   []*pflag.FlagSet{preprocCmd.Flags()},
+		},
+		{
+			name: "Preproc.GEOSChem.NoChemHourIndex",
+			usage: `
+              If Preproc.GEOSChem.NoChemHourIndex is true, the GEOS-Chem output files will be assumed to not contain a time dimension.`,
+			defaultVal: false,
+			flagsets:   []*pflag.FlagSet{preprocCmd.Flags()},
+		},
+		{
 			name: "Preproc.GEOSChem.VegTypeGlobal",
 			usage: `
               Preproc.GEOSChem.VegTypeGlobal is the location of the GEOS-Chem vegtype.global file,
@@ -758,6 +781,9 @@ file and saves the result for use in future InMAP simulations.`,
 			Cfg.GetFloat64("Preproc.CtmGridDx"),
 			Cfg.GetFloat64("Preproc.CtmGridDy"),
 			Cfg.GetBool("Preproc.GEOSChem.Dash"),
+			Cfg.GetString("Preproc.GEOSChem.ChemRecordInterval"),
+			Cfg.GetString("Preproc.GEOSChem.ChemFileInterval"),
+			Cfg.GetBool("Preproc.GEOSChem.NoChemHourIndex"),
 		)
 	},
 	DisableAutoGenTag: true,
