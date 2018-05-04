@@ -27,7 +27,7 @@ import (
 )
 
 func TestCreateGrid(t *testing.T) {
-	Cfg.Set("config", "../inmap/configExample.toml")
+	Cfg.Set("config", "../cmd/inmap/configExample.toml")
 	Root.SetArgs([]string{"grid"})
 	if err := Root.Execute(); err != nil {
 		t.Fatal(err)
@@ -38,7 +38,7 @@ func TestInMAPStaticCreateGrid(t *testing.T) {
 	Cfg.Set("static", true)
 	Cfg.Set("createGrid", true)
 	os.Setenv("InMAPRunType", "static")
-	Cfg.Set("config", "../inmap/configExample.toml")
+	Cfg.Set("config", "../cmd/inmap/configExample.toml")
 	Root.SetArgs([]string{"run", "steady"})
 	if err := Root.Execute(); err != nil {
 		t.Fatal(err)
@@ -49,7 +49,7 @@ func TestInMAPStaticLoadGrid(t *testing.T) {
 	Cfg.Set("static", true)
 	Cfg.Set("createGrid", false)
 	os.Setenv("InMAPRunType", "staticLoadGrid")
-	Cfg.Set("config", "../inmap/configExample.toml")
+	Cfg.Set("config", "../cmd/inmap/configExample.toml")
 	Root.SetArgs([]string{"run", "steady"})
 	if err := Root.Execute(); err != nil {
 		t.Fatal(err)
@@ -60,7 +60,7 @@ func TestInMAPDynamic(t *testing.T) {
 	Cfg.Set("static", false)
 	Cfg.Set("createGrid", false) // this isn't used for the dynamic grid
 	os.Setenv("InMAPRunType", "dynamic")
-	Cfg.Set("config", "../inmap/configExample.toml")
+	Cfg.Set("config", "../cmd/inmap/configExample.toml")
 	Root.SetArgs([]string{"run", "steady"})
 	if err := Root.Execute(); err != nil {
 		t.Fatal(err)
@@ -75,7 +75,7 @@ func TestInMAPDynamicRemote(t *testing.T) {
 	Cfg.Set("static", false)
 	Cfg.Set("createGrid", false) // this isn't used for the dynamic grid
 	os.Setenv("InMAPRunType", "dynamic")
-	Cfg.Set("config", "../inmap/configExampleRemote.toml")
+	Cfg.Set("config", "../cmd/inmap/configExampleRemote.toml")
 	Root.SetArgs([]string{"run", "steady"})
 	if err := Root.Execute(); err != nil {
 		t.Fatal(err)

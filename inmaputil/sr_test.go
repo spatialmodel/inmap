@@ -28,7 +28,7 @@ func TestSR(t *testing.T) {
 	Cfg.Set("begin", 8)
 	Cfg.Set("end", 9)
 	Cfg.Set("layers", []int{0})
-	Cfg.Set("config", "../inmap/configExample.toml")
+	Cfg.Set("config", "../cmd/inmap/configExample.toml")
 	defer os.Remove(Cfg.GetString("SR.OutputFile"))
 	Root.SetArgs([]string{"sr"})
 	if err := Root.Execute(); err != nil {
@@ -37,7 +37,7 @@ func TestSR(t *testing.T) {
 }
 
 func TestWorkerInit(t *testing.T) {
-	Cfg.Set("config", "../inmap/configExample.toml")
+	Cfg.Set("config", "../cmd/inmap/configExample.toml")
 	if err := Root.PersistentPreRunE(nil, nil); err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +63,7 @@ func TestSRPredict(t *testing.T) {
 	Cfg.Set("OutputFile", "../cmd/inmap/testdata/output_SRPredict.shp")
 	Cfg.Set("EmissionsShapefiles", []string{"../cmd/inmap/testdata/testEmisSR.shp"})
 
-	Cfg.Set("config", "../inmap/configExample.toml")
+	Cfg.Set("config", "../cmd/inmap/configExample.toml")
 	Root.SetArgs([]string{"sr", "predict"})
 	if err := Root.Execute(); err != nil {
 		t.Fatal(err)
@@ -71,7 +71,7 @@ func TestSRPredict(t *testing.T) {
 }
 
 func TestSRPredictAboveTop(t *testing.T) {
-	Cfg.Set("config", "../inmap/configExample.toml")
+	Cfg.Set("config", "../cmd/inmap/configExample.toml")
 	Cfg.Set("SR.OutputFile", "../cmd/inmap/testdata/testSR.ncf")
 	Cfg.Set("OutputFile", "../cmd/inmap/testdata/output_SRPredict.shp")
 	Cfg.Set("EmissionsShapefiles", []string{"../cmd/inmap/testdata/testEmis.shp"})

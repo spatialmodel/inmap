@@ -26,9 +26,9 @@ import (
 	"sync"
 
 	"github.com/BurntSushi/toml"
-	"github.com/ctessum/aep"
 	"github.com/ctessum/requestcache"
 	"github.com/spatialmodel/inmap"
+	"github.com/spatialmodel/inmap/emissions/aep"
 	"gonum.org/v1/gonum/mat"
 
 	"github.com/spatialmodel/inmap/emissions/slca"

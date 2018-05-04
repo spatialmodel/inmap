@@ -58,7 +58,6 @@ import (
 	"gonum.org/v1/plot/vg/vgimg"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/testdata"
 
 	"github.com/spatialmodel/inmap/emissions/slca"
 	"github.com/spatialmodel/inmap/emissions/slca/bea"
@@ -111,7 +110,7 @@ func NewServer() (*Server, error) {
 		Log:     logrus.StandardLogger(),
 	}
 
-	creds, err := credentials.NewServerTLSFromFile(testdata.Path("server1.pem"), testdata.Path("server1.key"))
+	creds, err := credentials.NewServerTLSFromFile("test_data/cert.pem", "test_data/key.pem")
 	if err != nil {
 		return nil, err
 	}
