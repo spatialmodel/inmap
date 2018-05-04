@@ -38,7 +38,8 @@ func TestEmissions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := 4.9888857564566237e+08
+
+	want := 4.9888857564566237e+08 // ug/s; ~= 17342.6039028 ton/year *  17342.6039028 ug/s / (ton/year)
 	have := mat.Sum(emis)
 	if want != have {
 		t.Errorf("have %g, want %g", have, want)

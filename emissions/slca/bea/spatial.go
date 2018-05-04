@@ -26,6 +26,7 @@ import (
 	"sync"
 
 	"github.com/BurntSushi/toml"
+	"github.com/ctessum/aep"
 	"github.com/ctessum/requestcache"
 	"github.com/spatialmodel/inmap"
 	"gonum.org/v1/gonum/mat"
@@ -53,6 +54,8 @@ type SpatialEIO struct {
 	// SpatialRefs are a list of spatial references
 	// corresponding to the SCCs.
 	SpatialRefs []slca.SpatialRef
+
+	sccDescriptions map[string]string
 
 	totalRequirementsSCC    map[Year]*mat.Dense
 	domesticRequirementsSCC map[Year]*mat.Dense
@@ -83,7 +86,8 @@ type polYear struct {
 // SpatialConfig holds configuration information for performing
 // spatial EIO LCA.
 type SpatialConfig struct {
-	SCCMapFile string
+	SCCMapFile         string
+	SCCDescriptionFile string
 
 	Config     Config
 	SpatialEIO SpatialEIO
@@ -128,6 +132,17 @@ func NewSpatial(r io.Reader) (*SpatialEIO, error) {
 		imports.Sub(s.totalRequirementsSCC[year], s.domesticRequirementsSCC[year])
 		s.importRequirementsSCC[year] = imports
 	}
+
+	f, err := os.Open(c.SCCDescriptionFile)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	s.sccDescriptions, err = aep.SCCDescription(f)
+	if err != nil {
+		return nil, err
+	}
+
 	return s, nil
 }
 

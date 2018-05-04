@@ -48,7 +48,6 @@ import (
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"github.com/sirupsen/logrus"
 	"github.com/spatialmodel/epi"
-	"github.com/spatialmodel/inmap/emissions/aep"
 	"gonum.org/v1/gonum/mat"
 	"gonum.org/v1/plot"
 	"gonum.org/v1/plot/palette"
@@ -80,8 +79,6 @@ type Server struct {
 	spatial *bea.SpatialEIO
 	agg     *bea.Aggregator
 
-	sccDescriptions map[string]string
-
 	geomCache, areaCache         *requestcache.Cache
 	geomCacheOnce, areaCacheOnce sync.Once
 
@@ -108,21 +105,10 @@ func NewServer() (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	r, err := os.Open(os.ExpandEnv("${GOPATH}/src/github.com/spatialmodel/inmap/emissions/aep/data/nei2014/sccdesc_2014platform_09sep2016_v0.txt"))
-	if err != nil {
-		return nil, err
-	}
-	sccDescriptions, err := aep.SCCDescription(r)
-	if err != nil {
-		return nil, err
-	}
-
 	model := &Server{
-		agg:             a,
-		spatial:         s,
-		Log:             logrus.StandardLogger(),
-		sccDescriptions: sccDescriptions,
+		agg:     a,
+		spatial: s,
+		Log:     logrus.StandardLogger(),
 	}
 
 	creds, err := credentials.NewServerTLSFromFile(testdata.Path("server1.pem"), testdata.Path("server1.key"))
@@ -529,42 +515,6 @@ func (s *Server) ProdSectors(ctx context.Context, in *eiopb.Selection) (*eiopb.S
 		"DemandType":       in.DemandType,
 	}).Info("eioserve finished generating ProdSectors")
 	return out, nil
-}
-
-func (s *Server) SCCs(in *eiopb.Selection, stream eiopb.EIOServe_SCCsServer) error {
-	s.Log.WithFields(logrus.Fields{
-		"ProductionSector": in.ProductionSector,
-	}).Info("eioserve generating SCCs")
-	if in.ProductionSector == eiopb.All {
-		return nil
-	}
-	spatialRefs, ok := s.spatial.SpatialRefs[year]
-	if !ok {
-		return fmt.Errorf("SCCs: mission SpatialRefs for year %d", year)
-	}
-	i, err := s.spatial.EIO.IndustryIndex(in.ProductionSector)
-	if err != nil {
-		return err
-	}
-	spatialRef := spatialRefs[i]
-	for i, scc := range spatialRef.SCCs {
-		desc, ok := s.sccDescriptions[string(scc)]
-		if !ok {
-			return fmt.Errorf("missing description for SCC %s", scc)
-		}
-		err := stream.Send(&eiopb.SCCInfo{
-			SCC:  string(scc),
-			Frac: float32(spatialRef.SCCFractions[i]),
-			Desc: desc,
-		})
-		if err != nil {
-			return err
-		}
-	}
-	s.Log.WithFields(logrus.Fields{
-		"ProductionSector": in.ProductionSector,
-	}).Info("eioserve finished generating SCCs")
-	return nil
 }
 
 // MapInfo returns the grid cell colors and a legend for the given selection.

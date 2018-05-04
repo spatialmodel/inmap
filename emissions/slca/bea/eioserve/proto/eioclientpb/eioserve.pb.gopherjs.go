@@ -9,7 +9,6 @@
 
 	It has these top-level messages:
 		Selectors
-		SCCInfo
 		Selection
 		Point
 		Rectangle
@@ -96,99 +95,6 @@ func (m *Selectors) UnmarshalFromReader(reader jspb.Reader) *Selectors {
 
 // Unmarshal unmarshals a Selectors from a slice of bytes.
 func (m *Selectors) Unmarshal(rawBytes []byte) (*Selectors, error) {
-	reader := jspb.NewReader(rawBytes)
-
-	m = m.UnmarshalFromReader(reader)
-
-	if err := reader.Err(); err != nil {
-		return nil, err
-	}
-
-	return m, nil
-}
-
-type SCCInfo struct {
-	SCC  string
-	Desc string
-	Frac float32
-}
-
-// GetSCC gets the SCC of the SCCInfo.
-func (m *SCCInfo) GetSCC() (x string) {
-	if m == nil {
-		return x
-	}
-	return m.SCC
-}
-
-// GetDesc gets the Desc of the SCCInfo.
-func (m *SCCInfo) GetDesc() (x string) {
-	if m == nil {
-		return x
-	}
-	return m.Desc
-}
-
-// GetFrac gets the Frac of the SCCInfo.
-func (m *SCCInfo) GetFrac() (x float32) {
-	if m == nil {
-		return x
-	}
-	return m.Frac
-}
-
-// MarshalToWriter marshals SCCInfo to the provided writer.
-func (m *SCCInfo) MarshalToWriter(writer jspb.Writer) {
-	if m == nil {
-		return
-	}
-
-	if len(m.SCC) > 0 {
-		writer.WriteString(1, m.SCC)
-	}
-
-	if len(m.Desc) > 0 {
-		writer.WriteString(2, m.Desc)
-	}
-
-	if m.Frac != 0 {
-		writer.WriteFloat32(3, m.Frac)
-	}
-
-	return
-}
-
-// Marshal marshals SCCInfo to a slice of bytes.
-func (m *SCCInfo) Marshal() []byte {
-	writer := jspb.NewWriter()
-	m.MarshalToWriter(writer)
-	return writer.GetResult()
-}
-
-// UnmarshalFromReader unmarshals a SCCInfo from the provided reader.
-func (m *SCCInfo) UnmarshalFromReader(reader jspb.Reader) *SCCInfo {
-	for reader.Next() {
-		if m == nil {
-			m = &SCCInfo{}
-		}
-
-		switch reader.GetFieldNumber() {
-		case 1:
-			m.SCC = reader.ReadString()
-		case 2:
-			m.Desc = reader.ReadString()
-		case 3:
-			m.Frac = reader.ReadFloat32()
-		default:
-			reader.SkipField()
-		}
-	}
-
-	return m
-}
-
-// Unmarshal unmarshals a SCCInfo from a slice of bytes.
-func (m *SCCInfo) Unmarshal(rawBytes []byte) (*SCCInfo, error) {
 	reader := jspb.NewReader(rawBytes)
 
 	m = m.UnmarshalFromReader(reader)
@@ -633,7 +539,6 @@ type EIOServeClient interface {
 	DemandSectors(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Selectors, error)
 	ProdGroups(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Selectors, error)
 	ProdSectors(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Selectors, error)
-	SCCs(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (EIOServe_SCCsClient, error)
 	MapInfo(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*ColorInfo, error)
 	Geometry(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (EIOServe_GeometryClient, error)
 }
@@ -683,38 +588,6 @@ func (c *eIOServeClient) ProdSectors(ctx context.Context, in *Selection, opts ..
 	}
 
 	return new(Selectors).Unmarshal(resp)
-}
-
-func (c *eIOServeClient) SCCs(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (EIOServe_SCCsClient, error) {
-	srv, err := c.client.NewClientStream(ctx, false, true, "SCCs", opts...)
-	if err != nil {
-		return nil, err
-	}
-
-	err = srv.SendMsg(in.Marshal())
-	if err != nil {
-		return nil, err
-	}
-
-	return &eIOServeSCCsClient{srv}, nil
-}
-
-type EIOServe_SCCsClient interface {
-	Recv() (*SCCInfo, error)
-	grpcweb.ClientStream
-}
-
-type eIOServeSCCsClient struct {
-	grpcweb.ClientStream
-}
-
-func (x *eIOServeSCCsClient) Recv() (*SCCInfo, error) {
-	resp, err := x.RecvMsg()
-	if err != nil {
-		return nil, err
-	}
-
-	return new(SCCInfo).Unmarshal(resp)
 }
 
 func (c *eIOServeClient) MapInfo(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*ColorInfo, error) {

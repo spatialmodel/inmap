@@ -76,3 +76,14 @@ func (s *SpatialEIO) requirementsSCC(ioR *mat.Dense) (*mat.Dense, error) {
 	}
 	return m, nil
 }
+
+// SCCDescription returns the description of the SCC code at index
+// i of the emitting sectors.
+func (s *SpatialEIO) SCCDescription(i int) (string, error) {
+	SCC := s.SCCs[i]
+	desc, ok := s.sccDescriptions[string(SCC)]
+	if !ok {
+		return "", fmt.Errorf("missing description for SCC %s at index %d", SCC, i)
+	}
+	return desc, nil
+}

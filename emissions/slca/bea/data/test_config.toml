@@ -1,4 +1,6 @@
 SCCMapFile = "data/scc-io_small_test.xlsx"
+SCCDescriptionFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/aep/data/nei2014/sccdesc_2014platform_09sep2016_v0.txt"
+
 
 [Config]
   Years = [2007, 2011]

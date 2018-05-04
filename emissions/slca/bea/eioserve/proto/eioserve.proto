@@ -24,8 +24,6 @@ service EIOServe {
   rpc ProdGroups(Selection) returns (Selectors) {}
   rpc ProdSectors(Selection) returns (Selectors) {}
 
-  rpc SCCs(Selection) returns(stream SCCInfo) {}
-
   rpc MapInfo(Selection) returns (ColorInfo) {}
 
   rpc Geometry(Selection) returns (stream Rectangle) {}
@@ -34,12 +32,6 @@ service EIOServe {
 message Selectors {
   repeated string Names = 1;
   repeated float Values = 2;
-}
-
-message SCCInfo {
-  string SCC = 1;
-  string Desc = 2;
-  float Frac = 3;
 }
 
 message Selection {

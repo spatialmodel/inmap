@@ -180,7 +180,7 @@ func (c *CSTConfig) neiEmisSrg(spatialRef *SpatialRef) ([]*inmap.EmisRecord, err
 		c.emis = make(map[int]map[string][]aep.Record)
 	})
 	if _, ok := c.emis[spatialRef.EmisYear]; !ok {
-		fmt.Println("Filtering out New York State commercial cooking emissions.")
+		fmt.Println("Filtering out New York State commercial cooking emissions, dog waste emissions, and human perspiration.")
 		c.InventoryConfig.FilterFunc = func(r aep.Record) bool {
 			switch r.GetSCC() {
 			case "2302002000", "2302002100", "2302002200", "2302003000", "2302003100", "2302003200":
@@ -189,6 +189,8 @@ func (c *CSTConfig) neiEmisSrg(spatialRef *SpatialRef) ([]*inmap.EmisRecord, err
 				if fips[0:2] == "36" { // New York State
 					return false
 				}
+			case "2806015000", "2810010000": // Dog waste and human perspiration
+				return false
 			}
 			return true
 		}
