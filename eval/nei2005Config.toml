@@ -120,7 +120,7 @@ PopThreshold= 40000.0
 PopConcThreshold= 0.000000001
 
 # CensusFile is the path to the shapefile holding population information.
-CensusFile= "${evaldata}/census2015blckgrp.shp"
+CensusFile= "${evaldata}/census2013blckgrp.shp"
 
 # CensusPopColumns is a list of the data fields in CensusFile that should
 # be included as population estimates in the model. They can be population

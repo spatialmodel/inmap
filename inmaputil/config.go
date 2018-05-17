@@ -55,6 +55,18 @@ func expandStringSlice(s []string) []string {
 	return s
 }
 
+// removeShpSupportFiles deletes from the list of files any that do not
+// end in `.shp`.
+func removeShpSupportFiles(files []string) []string {
+	var o []string
+	for _, s := range files {
+		if strings.HasSuffix(s, ".shp") {
+			o = append(o, s)
+		}
+	}
+	return o
+}
+
 // checkOutputFile makes sure that the output file is specified and its
 // directory exists, and expand any environment variables.
 func checkOutputFile(f string) (string, error) {
@@ -107,13 +119,21 @@ func spatialRef(config *inmap.VarGridConfig) (*proj.SR, error) {
 
 // VarGridConfig unmarshals a viper configuration for a variable grid.
 func VarGridConfig(cfg *viper.Viper) (*inmap.VarGridConfig, error) {
+	xNests, err := toIntSliceE(cfg.Get("VarGrid.Xnests"))
+	if err != nil {
+		return nil, fmt.Errorf("VarGrid.Xnests: %v", err)
+	}
+	yNests, err := toIntSliceE(cfg.Get("VarGrid.Ynests"))
+	if err != nil {
+		return nil, fmt.Errorf("VarGrid.Ynests: %v", err)
+	}
 	c := inmap.VarGridConfig{
 		VariableGridXo:       cfg.GetFloat64("VarGrid.VariableGridXo"),
 		VariableGridYo:       cfg.GetFloat64("VarGrid.VariableGridYo"),
 		VariableGridDx:       cfg.GetFloat64("VarGrid.VariableGridDx"),
 		VariableGridDy:       cfg.GetFloat64("VarGrid.VariableGridDy"),
-		Xnests:               cast.ToIntSlice(cfg.Get("VarGrid.Xnests")),
-		Ynests:               cast.ToIntSlice(cfg.Get("VarGrid.Ynests")),
+		Xnests:               xNests,
+		Ynests:               yNests,
 		HiResLayers:          cfg.GetInt("VarGrid.HiResLayers"),
 		PopDensityThreshold:  cfg.GetFloat64("VarGrid.PopDensityThreshold"),
 		PopThreshold:         cfg.GetFloat64("VarGrid.PopThreshold"),
@@ -147,6 +167,21 @@ func VarGridConfig(cfg *viper.Viper) (*inmap.VarGridConfig, error) {
 	}
 
 	return &c, nil
+}
+
+func toIntSliceE(s interface{}) ([]int, error) {
+	if v, ok := s.([]interface{}); ok {
+		o := make([]int, len(v))
+		for i, val := range v {
+			o[i] = int(val.(int64))
+		}
+		return o, nil
+	}
+	var o []int
+	if err := json.Unmarshal([]byte(s.(string)), &o); err != nil {
+		return nil, err
+	}
+	return o, nil
 }
 
 // GetStringMapString returns a map[string]string from a viper configuration,
