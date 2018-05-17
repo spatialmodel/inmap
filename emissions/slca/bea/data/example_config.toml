@@ -205,8 +205,6 @@ SCCDescriptionFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/aep/
   		SpecType="VOC"
   	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.DIESEL-PM25]
   		SpecType="PM2.5"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.EC]
-  		SpecType="PM2.5"
   	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.ETHANOL]
   		SpecType="VOC"
   	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.HONO]
@@ -219,10 +217,6 @@ SCCDescriptionFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/aep/
   		SpecType="NOx"
   	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.NO2]
   		SpecType="NOx"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.NO3]
-  		SpecType="NOx"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.OC]
-  		SpecType="PM2.5"
   	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PAL]
   		SpecType="PM2.5"
   	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PCA]
@@ -234,8 +228,6 @@ SCCDescriptionFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/aep/
   	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PFE]
   		SpecType="PM2.5"
   	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PK]
-  		SpecType="PM2.5"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PMFINE]
   		SpecType="PM2.5"
   	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PMG]
   		SpecType="PM2.5"
@@ -255,8 +247,6 @@ SCCDescriptionFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/aep/
   		SpecType="PM2.5"
   	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PTI]
   		SpecType="PM2.5"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.SO4.SpecNames]
-      Names= ["SOx"]
   	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.VOC_INV]
   		SpecType="VOC"
 
@@ -451,8 +441,6 @@ SCCDescriptionFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/aep/
       		SpecType="VOC"
       	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.DIESEL-PM25]
       		SpecType="PM2.5"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.EC]
-      		SpecType="PM2.5"
       	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.ETHANOL]
       		SpecType="VOC"
       	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.HONO]
@@ -465,10 +453,6 @@ SCCDescriptionFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/aep/
       		SpecType="NOx"
       	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.NO2]
       		SpecType="NOx"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.NO3]
-      		SpecType="NOx"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.OC]
-      		SpecType="PM2.5"
       	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PAL]
       		SpecType="PM2.5"
       	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PCA]
@@ -480,8 +464,6 @@ SCCDescriptionFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/aep/
       	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PFE]
       		SpecType="PM2.5"
       	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PK]
-      		SpecType="PM2.5"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PMFINE]
       		SpecType="PM2.5"
       	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PMG]
       		SpecType="PM2.5"
@@ -501,7 +483,5 @@ SCCDescriptionFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/aep/
       		SpecType="PM2.5"
       	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PTI]
       		SpecType="PM2.5"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.SO4.SpecNames]
-          Names= ["SOx"]
       	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.VOC_INV]
       		SpecType="VOC"
