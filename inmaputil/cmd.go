@@ -125,7 +125,7 @@ func init() {
 			usage: `
               VarGrid.VariableGridXo specifies the X coordinate of the
               lower-left corner of the InMAP grid.`,
-			defaultVal: -2736000.0,
+			defaultVal: -4000.0,
 			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
 		},
 		{
@@ -133,7 +133,7 @@ func init() {
 			usage: `
               VarGrid.VariableGridYo specifies the Y coordinate of the
               lower-left corner of the InMAP grid.`,
-			defaultVal: -2088000.0,
+			defaultVal: -4000.0,
 			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
 		},
 		{
@@ -143,7 +143,7 @@ func init() {
               cells in the outermost nest, in the units of the grid model
               spatial projection--typically meters or degrees latitude
               and longitude.`,
-			defaultVal: 288000.0,
+			defaultVal: 4000.0,
 			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
 		},
 		{
@@ -153,21 +153,21 @@ func init() {
               cells in the outermost nest, in the units of the grid model
               spatial projection--typically meters or degrees latitude
               and longitude.`,
-			defaultVal: 288000.0,
+			defaultVal: 4000.0,
 			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
 		},
 		{
 			name: "VarGrid.Xnests",
 			usage: `
               Xnests specifies nesting multiples in the X direction.`,
-			defaultVal: []int{18, 3, 2, 2, 2, 3, 2, 2},
+			defaultVal: []int{2, 2, 2},
 			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
 		},
 		{
 			name: "VarGrid.Ynests",
 			usage: `
               Ynests specifies nesting multiples in the Y direction.`,
-			defaultVal: []int{14, 3, 2, 2, 2, 3, 2, 2},
+			defaultVal: []int{2, 2, 2},
 			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
 		},
 		{
@@ -183,7 +183,7 @@ func init() {
               HiResLayers is the number of layers, starting at ground level, to do
               nesting in. Layers above this will have all grid cells in the lowest
               spatial resolution. This option is only used with static grids.`,
-			defaultVal: 8,
+			defaultVal: 1,
 			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
 		},
 		{
@@ -345,7 +345,7 @@ func init() {
               output file. It can include environment variables.`,
 			defaultVal: map[string]string{
 				"TotalPM25": "PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA",
-				"TotalPopD": "(exp(log(1.078)/10 * TotalPM25) - 1) * TotalPop * allcause / 100000",
+				"TotalPopD": "(exp(log(1.078)/10 * TotalPM25) - 1) * TotalPop * AllCause / 100000",
 			},
 			flagsets: []*pflag.FlagSet{runCmd.PersistentFlags(), workerCmd.Flags()},
 		},
