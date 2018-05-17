@@ -41,10 +41,13 @@ import (
 // Cfg holds configuration information.
 var Cfg *viper.Viper
 
+var uploadableOptions []string
+
 var options []struct {
 	name, usage, shorthand string
 	defaultVal             interface{}
 	flagsets               []*pflag.FlagSet
+	isFile                 bool // Does the option represent an input file name?
 }
 
 func init() {
@@ -53,12 +56,14 @@ func init() {
 		name, usage, shorthand string
 		defaultVal             interface{}
 		flagsets               []*pflag.FlagSet
+		isFile                 bool // Does the option represent an input file name?
 	}{
 		{
 			name: "config",
 			usage: `
               config specifies the configuration file location.`,
 			defaultVal: "",
+			isFile:     true,
 			flagsets:   []*pflag.FlagSet{Root.PersistentFlags()},
 		},
 		{
@@ -217,6 +222,7 @@ func init() {
 			usage: `
               VarGrid.CensusFile is the path to the shapefile holding population information.`,
 			defaultVal: "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testPopulation.shp",
+			isFile:     true,
 			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
 		},
 		{
@@ -244,6 +250,7 @@ func init() {
               VarGrid.MortalityRateFile is the path to the shapefile containing baseline
               mortality rate data.`,
 			defaultVal: "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testMortalityRate.shp",
+			isFile:     true,
 			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
 		},
 		{
@@ -270,6 +277,7 @@ func init() {
               InMAPData is the path to location of baseline meteorology and pollutant data.
               The path can include environment variables.`,
 			defaultVal: "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testInMAPInputData.ncf",
+			isFile:     true,
 			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags(), preprocCmd.Flags()},
 		},
 		{
@@ -279,6 +287,7 @@ func init() {
               InMAP data, or the location where it should be created if it doesn't already
               exist. The path can include environment variables.`,
 			defaultVal: "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/inmapVarGrid.gob",
+			isFile:     true,
 			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
 		},
 		{
@@ -293,6 +302,7 @@ func init() {
               shapefile must be the same as the projection InMAP uses.
               Can include environment variables.`,
 			defaultVal: []string{"${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/testEmis.shp"},
+			isFile:     true,
 			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags()},
 		},
 		{
@@ -448,6 +458,7 @@ func init() {
               which is described here:
               http://wiki.seas.harvard.edu/geos-chem/index.php/Olson_land_map#Structure_of_the_vegtype.global_file`,
 			defaultVal: "${GOPATH}/src/github.com/spatialmodel/inmap/inmap/testdata/preproc/vegtype.global.txt",
+			isFile:     true,
 			flagsets:   []*pflag.FlagSet{preprocCmd.Flags()},
 		},
 		{
@@ -511,6 +522,9 @@ func init() {
 	Cfg.SetEnvPrefix("INMAP")
 
 	for _, option := range options {
+		if option.isFile {
+			uploadableOptions = append(uploadableOptions, option.name)
+		}
 		for i, set := range option.flagsets {
 			if i != 0 { // We don't want to create the same flag twice.
 				set.AddFlag(option.flagsets[0].Lookup(option.name))
@@ -670,7 +684,7 @@ concentrations with no temporal variability.`,
 			return err
 		}
 
-		shapeFiles := expandStringSlice(Cfg.GetStringSlice("EmissionsShapefiles"))
+		shapeFiles := removeShpSupportFiles(expandStringSlice(Cfg.GetStringSlice("EmissionsShapefiles")))
 		// This goes over each shapeFile and downloads it.
 		for i, _ := range shapeFiles {
 			shapeFiles[i] = maybeDownload(shapeFiles[i], outChan)
@@ -970,12 +984,39 @@ configInput.addEventListener("input", e => {
 			console.log("Error fetching /setConfig", err)
 		})
 })
+let configFileInput = allFlags.filter(x => x.dataset.name == "config")[0].children[1];
+configFileInput.addEventListener("change", e => {
+	let formData = new FormData();
+	let flagName = configFileInput.parentElement.dataset.name;
+	formData.append("data", configFileInput.files[0]);
+
+	fetch("/upload", {
+		method: "POST",
+		body: formData
+	})
+	.catch(err => {
+		alert("Failed uploading: " + err + "\n");
+	})
+	.then(res => res.json())
+	.then(res => {
+		configInput.value = res.path;
+		configInput.disabled = false;
+		configFileInput.value = '';
+		var event = document.createEvent('Event');
+		event.initEvent('input', true, true);
+		configInput.dispatchEvent(event);
+	})
+	.catch(err => {
+		return Promise.reject("Failed processing file: " + err + "\n");
+	})
+})
 </script>
 </body>
 </html>`
 
 	output := template.Must(template.New("").Parse(tmpl))
 	server := gobra.Server{Root: Root, ServerAddress: address, AllowCORS: false, HTML: output}
+	server.MakeFlagUploadable(uploadableOptions...)
 	log.Println("Server starting... ")
 	open.Run("http://" + address)
 	fmt.Println("If not opened automatically, please visit http://localhost:7171")
