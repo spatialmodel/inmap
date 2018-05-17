@@ -19,7 +19,8 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package inmaputil
 
 import (
-	"context"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"reflect"
 	"testing"
@@ -67,7 +68,9 @@ func TestInMAPDynamic(t *testing.T) {
 }
 
 func TestInMAPDynamicRemote(t *testing.T) {
-	srv := fileServer(t)
+	srv := httptest.NewServer(http.FileServer(http.Dir("../inmap/testdata/")))
+	defer srv.Close()
+	os.Setenv("TEST_URL", srv.URL)
 
 	Cfg.Set("static", false)
 	Cfg.Set("createGrid", false) // this isn't used for the dynamic grid
@@ -76,10 +79,6 @@ func TestInMAPDynamicRemote(t *testing.T) {
 	Root.SetArgs([]string{"run", "steady"})
 	if err := Root.Execute(); err != nil {
 		t.Fatal(err)
-	}
-
-	if err := srv.Shutdown(context.Background()); err != nil {
-		t.Error("Failed shutting down testing server")
 	}
 }
 

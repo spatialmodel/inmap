@@ -1,8 +1,8 @@
 package inmaputil
 
 import (
-	"context"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 )
@@ -16,21 +16,6 @@ func helperLog(t *testing.T) chan string {
 		}
 	}()
 	return outChan
-}
-
-func fileServer(t *testing.T) *http.Server {
-	srv := &http.Server{
-		Addr:    ":7777",
-		Handler: http.FileServer(http.Dir("../inmap/testdata/")),
-	}
-
-	go func() {
-		if err := srv.ListenAndServe(); err != nil {
-			t.Logf("Httpserver: ListenAndServe error: %s", err)
-		}
-	}()
-
-	return srv
 }
 
 func TestMaybeDownloadLocal(t *testing.T) {
@@ -52,37 +37,29 @@ func TestMaybeDownloadRemoteFail(t *testing.T) {
 }
 
 func TestMaybeDownloadRemote(t *testing.T) {
-	srv := fileServer(t)
-	if k := maybeDownload("http://localhost:7777/testEmis.shp", helperLog(t)); !strings.HasSuffix(k, "testEmis.shp") {
+	srv := httptest.NewServer(http.FileServer(http.Dir("../inmap/testdata/")))
+	defer srv.Close()
+	if k := maybeDownload(srv.URL+"/testEmis.shp", helperLog(t)); !strings.HasSuffix(k, "testEmis.shp") {
 		t.Error("Expected tempDir/testEmis.shp, got ", k)
-	}
-	if err := srv.Shutdown(context.Background()); err != nil {
-		t.Error("Failed shutting down testing server")
 	}
 }
 
 func TestMaybeDownloadRemoteDecompress(t *testing.T) {
-	srv := fileServer(t)
+	srv := httptest.NewServer(http.FileServer(http.Dir("../inmap/testdata/")))
+	defer srv.Close()
 	k := ""
-	if k = maybeDownload("http://localhost:7777/testEmis.zip", helperLog(t)); !strings.HasSuffix(k, "testEmis/testEmis.shp") {
+	if k = maybeDownload(srv.URL+"/testEmis.zip", helperLog(t)); !strings.HasSuffix(k, "testEmis/testEmis.shp") {
 		t.Error("Expected tempDir/testEmis/testEmis.shp, got ", k)
 	}
 	t.Logf(k)
-
-	if err := srv.Shutdown(context.Background()); err != nil {
-		t.Error("Failed shutting down testing server")
-	}
 }
 
 func TestMaybeDownloadRemoteNestedDecompress(t *testing.T) {
-	srv := fileServer(t)
+	srv := httptest.NewServer(http.FileServer(http.Dir("../inmap/testdata/")))
+	defer srv.Close()
 	k := ""
-	if k = maybeDownload("http://localhost:7777/nestedTestEmis.zip", helperLog(t)); !strings.HasSuffix(k, "nestedTestEmis/inside/testEmis.shp") {
+	if k = maybeDownload(srv.URL+"/nestedTestEmis.zip", helperLog(t)); !strings.HasSuffix(k, "nestedTestEmis/inside/testEmis.shp") {
 		t.Error("Expected tempDir/nestedTestEmis/inside/testEmis.shp, got ", k)
 	}
 	t.Logf(k)
-
-	if err := srv.Shutdown(context.Background()); err != nil {
-		t.Error("Failed shutting down testing server")
-	}
 }

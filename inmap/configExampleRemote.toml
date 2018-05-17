@@ -1,11 +1,11 @@
 # InMAPData is the path to location of baseline meteorology and pollutant data.
 # The path can include environment variables.
-InMAPData = "http://localhost:7777/testInMAPInputData.ncf"
+InMAPData = "${TEST_URL}/testInMAPInputData.ncf"
 
 # VariableGridData is the path to the location of the variable-resolution gridded
 # InMAP data, or the location where it should be created if it doesn't already
 # exist. The path can include environment variables.
-VariableGridData = "http://localhost:7777/inmapVarGrid.gob"
+VariableGridData = "${TEST_URL}/inmapVarGrid.gob"
 
 # EmissionsShapefiles are the paths to any emissions shapefiles.
 # Can be elevated or ground level; elevated files need to have columns
@@ -16,7 +16,7 @@ VariableGridData = "http://localhost:7777/inmapVarGrid.gob"
 # shapefile must be the same as the projection InMAP uses.
 # Can include environment variables.
 EmissionsShapefiles = [
-	"http://localhost:7777/nestedTestEmis.zip"
+	"${TEST_URL}/nestedTestEmis.zip"
 ]
 
 # EmissionUnits gives the units that the input emissions are in.
@@ -119,7 +119,7 @@ PopThreshold= 25000.0
 PopConcThreshold= 0.00000000001
 
 # CensusFile is the path to the shapefile holding population information.
-CensusFile= "http://localhost:7777/testPopulation.zip"
+CensusFile= "${TEST_URL}/testPopulation.zip"
 
 # CensusPopColumns is a list of the data fields in CensusFile that should
 # be included as population estimates in the model. They can be population
@@ -134,7 +134,7 @@ PopGridColumn= "TotalPop"
 
 # MortalityRateFile is the path to the shapefile containing baseline
 # mortality rate data.
-MortalityRateFile= "http://localhost:7777/testMortalityRate.zip"
+MortalityRateFile= "${TEST_URL}/testMortalityRate.zip"
 
 # MortalityRateColumns maps the names of each input population group to the name
 # of the field in MortalityRateFile that contains its respective baseline
