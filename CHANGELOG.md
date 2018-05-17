@@ -1,3 +1,9 @@
+# Release 1.4.2 (2018-5-16)
+* Fixed configuration bugs
+* Removed default health impact function to clarify calculations
+* Improved (still experimental) graphical user interface
+* Fixed bug in preprocessor (which did not effect existing evaluation data)
+
 # Release 1.4.1 (2018-1-10)
 * Configuration and GUI bug fixes
 
