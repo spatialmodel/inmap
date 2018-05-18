@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sort"
 	"strings"
 
 	"bitbucket.org/ctessum/cdf"
@@ -194,6 +195,17 @@ var outputVars = map[string]string{"SOA": "SOA",
 	"pNO3":        "pNO3",
 }
 
+func sortKeys(m map[string]string) []string {
+	o := make([]string, len(m))
+	var i int
+	for k := range m {
+		o[i] = k
+		i++
+	}
+	sort.Strings(o)
+	return o
+}
+
 func (sr *SR) writeResults(outfile string, layers []int, requestChan chan resulter, errChan chan error) {
 	nGridCells, err := sr.layerGridCells(layers)
 	if err != nil {
@@ -234,14 +246,16 @@ func (sr *SR) writeResults(outfile string, layers []int, requestChan chan result
 		h.AddVariable("layers", []string{"layers"}, []int32{0})
 		h.AddAttribute("layers", "description", "Layer indices for which the SR calculation was performed")
 
-		for _, vs := range outputVars {
+		for _, k := range sortKeys(outputVars) {
+			vs := outputVars[k]
 			h.AddVariable(vs, []string{"layer", "source", "receptor"},
 				[]float32{0})
 			h.AddAttribute(vs, "description", fmt.Sprintf("%s source-receptor relationships", vs))
 			h.AddAttribute(vs, "units", "μg m-3 concentration at receptor location per μg s-1 emissions at source location")
 		}
 		// InMAP data.
-		for i, v := range inmapVars {
+		for _, i := range sortKeys(inmapVars) {
+			v := inmapVars[i]
 			h.AddVariable(v, []string{"allcells"}, []float64{0.})
 			h.AddAttribute(v, "description", inmapDescriptions[i])
 			h.AddAttribute(v, "units", inmapUnits[i])
