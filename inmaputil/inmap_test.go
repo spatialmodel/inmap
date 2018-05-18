@@ -68,7 +68,7 @@ func TestInMAPDynamic(t *testing.T) {
 }
 
 func TestInMAPDynamicRemote(t *testing.T) {
-	srv := httptest.NewServer(http.FileServer(http.Dir("../inmap/testdata/")))
+	srv := httptest.NewServer(http.FileServer(http.Dir("../cmd/inmap/testdata/")))
 	defer srv.Close()
 	os.Setenv("TEST_URL", srv.URL)
 

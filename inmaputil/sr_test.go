@@ -29,7 +29,9 @@ func TestSR(t *testing.T) {
 	Cfg.Set("end", 9)
 	Cfg.Set("layers", []int{0})
 	Cfg.Set("config", "../cmd/inmap/configExample.toml")
+	os.MkdirAll(Cfg.GetString("SR.LogDir"), os.ModePerm)
 	defer os.Remove(Cfg.GetString("SR.OutputFile"))
+	defer os.RemoveAll("SR.LogDir")
 	Root.SetArgs([]string{"sr"})
 	if err := Root.Execute(); err != nil {
 		t.Fatal(err)

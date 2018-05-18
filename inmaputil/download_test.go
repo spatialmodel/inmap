@@ -37,7 +37,7 @@ func TestMaybeDownloadRemoteFail(t *testing.T) {
 }
 
 func TestMaybeDownloadRemote(t *testing.T) {
-	srv := httptest.NewServer(http.FileServer(http.Dir("../inmap/testdata/")))
+	srv := httptest.NewServer(http.FileServer(http.Dir("../cmd/inmap/testdata/")))
 	defer srv.Close()
 	if k := maybeDownload(srv.URL+"/testEmis.shp", helperLog(t)); !strings.HasSuffix(k, "testEmis.shp") {
 		t.Error("Expected tempDir/testEmis.shp, got ", k)
@@ -45,7 +45,7 @@ func TestMaybeDownloadRemote(t *testing.T) {
 }
 
 func TestMaybeDownloadRemoteDecompress(t *testing.T) {
-	srv := httptest.NewServer(http.FileServer(http.Dir("../inmap/testdata/")))
+	srv := httptest.NewServer(http.FileServer(http.Dir("../cmd/inmap/testdata/")))
 	defer srv.Close()
 	k := ""
 	if k = maybeDownload(srv.URL+"/testEmis.zip", helperLog(t)); !strings.HasSuffix(k, "testEmis/testEmis.shp") {
@@ -55,7 +55,7 @@ func TestMaybeDownloadRemoteDecompress(t *testing.T) {
 }
 
 func TestMaybeDownloadRemoteNestedDecompress(t *testing.T) {
-	srv := httptest.NewServer(http.FileServer(http.Dir("../inmap/testdata/")))
+	srv := httptest.NewServer(http.FileServer(http.Dir("../cmd/inmap/testdata/")))
 	defer srv.Close()
 	k := ""
 	if k = maybeDownload(srv.URL+"/nestedTestEmis.zip", helperLog(t)); !strings.HasSuffix(k, "nestedTestEmis/inside/testEmis.shp") {
