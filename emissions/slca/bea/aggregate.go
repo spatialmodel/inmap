@@ -58,7 +58,7 @@ func (e *EIO) NewIOAggregator(fileName string) (*Aggregator, error) {
 		aggregateAbbrevCol    = 9
 		startRow              = 1
 		endRow                = 390
-		aggregateEndRow       = 12
+		aggregateEndRow       = 8
 		sheet                 = "bea"
 	)
 	// Check industries.
@@ -134,7 +134,7 @@ func (e *SpatialEIO) NewSCCAggregator(fileName string) (*Aggregator, error) {
 		aggregateAbbrevCol = 4
 		startRow           = 1
 		endRow             = 5436
-		aggregateEndRow    = 29
+		aggregateEndRow    = 17
 		sheet              = "scc"
 	)
 	// Check SCCs.
