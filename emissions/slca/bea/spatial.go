@@ -43,6 +43,10 @@ type SpatialEIO struct {
 	// cache spatial information.
 	SpatialCache string
 
+	// MemCacheSize is the size of the memory cache for emissions, concentration,
+	// and health spatial results.
+	MemCacheSize int
+
 	// SCCs are the source codes for emissions sources in the model.
 	SCCs []slca.SCC
 
@@ -61,9 +65,15 @@ type SpatialEIO struct {
 	domesticRequirementsSCC map[Year]*mat.Dense
 	importRequirementsSCC   map[Year]*mat.Dense
 
+	loadEmissionsOnce        sync.Once
+	loadConcentrationsOnce   sync.Once
+	loadHealthOnce           sync.Once
 	loadEFOnce               sync.Once
 	loadConcOnce             sync.Once
-	loadHealthOnce           sync.Once
+	loadHealthFactorsOnce    sync.Once
+	emissionsCache           *requestcache.Cache
+	concentrationsCache      *requestcache.Cache
+	healthCache              *requestcache.Cache
 	emissionFactorCache      *requestcache.Cache
 	concentrationFactorCache *requestcache.Cache
 	healthFactorCache        *requestcache.Cache
@@ -207,6 +217,21 @@ func matrixMarshal(data interface{}) ([]byte, error) {
 // matrixMarshal converts a byte array to a matrix after storing it in a cache.
 func matrixUnmarshal(b []byte) (interface{}, error) {
 	m := mat.NewDense(0, 0, nil)
+	err := m.UnmarshalBinary(b)
+	return m, err
+}
+
+// matrixMarshal converts a matrix to a byte array for storing in a cache.
+func vectorMarshal(data interface{}) ([]byte, error) {
+	i := data.(*interface{})
+	m := (*i).(*mat.VecDense)
+	return m.MarshalBinary()
+}
+
+// matrixMarshal converts a byte array to a matrix after storing it in a cache.
+func vectorUnmarshal(b []byte) (interface{}, error) {
+	m := mat.NewVecDense(0, nil)
+	m.Reset()
 	err := m.UnmarshalBinary(b)
 	return m, err
 }

@@ -37,6 +37,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -116,7 +117,8 @@ func NewServer() (*Server, error) {
 		Log:     logrus.StandardLogger(),
 	}
 
-	creds, err := credentials.NewServerTLSFromFile("test_data/cert.pem", "test_data/key.pem")
+	pemDir := os.ExpandEnv("$GOPATH/src/github.com/spatialmodel/inmap/emissions/slca/bea/eioserve/test_data")
+	creds, err := credentials.NewServerTLSFromFile(filepath.Join(pemDir, "cert.pem"), filepath.Join(pemDir, "key.pem"))
 	if err != nil {
 		return nil, err
 	}
@@ -669,6 +671,7 @@ func roundInt(x float64) int {
 
 func init() {
 	gob.Register([]*eiopb.Rectangle{})
+	gob.Register(geom.Polygon{})
 }
 
 func (s *Server) getGeometry(ctx context.Context, _ interface{}) (interface{}, error) {
