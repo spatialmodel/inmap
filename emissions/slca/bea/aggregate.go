@@ -46,9 +46,9 @@ func (a *Aggregator) Abbreviation(name string) (string, error) {
 	return abbrev, nil
 }
 
-// NewAggregator initializes a new Aggregator from the information in the
-// provided file.
-func (e *EIO) NewAggregator(fileName string) (*Aggregator, error) {
+// NewIOAggregator initializes a new Aggregator of Input-Output categories
+// from the information in the provided file.
+func (e *EIO) NewIOAggregator(fileName string) (*Aggregator, error) {
 	const (
 		industryCol           = 1
 		industryAggregateCol  = 2
@@ -59,7 +59,7 @@ func (e *EIO) NewAggregator(fileName string) (*Aggregator, error) {
 		startRow              = 1
 		endRow                = 390
 		aggregateEndRow       = 12
-		sheet                 = "Sheet1"
+		sheet                 = "bea"
 	)
 	// Check industries.
 	industries, err := e.textColumnFromExcel(fileName, sheet, industryCol, startRow, endRow)
@@ -67,11 +67,11 @@ func (e *EIO) NewAggregator(fileName string) (*Aggregator, error) {
 		return nil, err
 	}
 	if len(industries) != len(e.Industries) {
-		return nil, fmt.Errorf("bea.NewAggregator: incorrect number of industries: %d != %d", len(industries), len(e.Industries))
+		return nil, fmt.Errorf("bea.NewIOAggregator: incorrect number of industries: %d != %d", len(industries), len(e.Industries))
 	}
 	for i, ind := range e.Industries {
 		if industries[i] != ind {
-			return nil, fmt.Errorf("bea.NewAggregator: industries don't match: %s != %s", industries[i], ind)
+			return nil, fmt.Errorf("bea.NewIOAggregator: industries don't match: %s != %s", industries[i], ind)
 		}
 	}
 	// Check commodities.
@@ -80,11 +80,11 @@ func (e *EIO) NewAggregator(fileName string) (*Aggregator, error) {
 		return nil, err
 	}
 	if len(commodities) != len(e.Commodities) {
-		return nil, fmt.Errorf("bea.NewAggregator: incorrect number of commodities: %d != %d", len(commodities), len(e.Commodities))
+		return nil, fmt.Errorf("bea.NewIOAggregator: incorrect number of commodities: %d != %d", len(commodities), len(e.Commodities))
 	}
 	for i, com := range e.Commodities {
 		if commodities[i] != com {
-			return nil, fmt.Errorf("bea.NewAggregator: commodities don't match: %s != %s", commodities[i], com)
+			return nil, fmt.Errorf("bea.NewIOAggregator: commodities don't match: %s != %s", commodities[i], com)
 		}
 	}
 
@@ -117,8 +117,77 @@ func (e *EIO) NewAggregator(fileName string) (*Aggregator, error) {
 	for _, abbrevs := range [][]string{a.IndustryAggregates, a.CommodityAggregates} {
 		for _, abbrev := range abbrevs {
 			if _, ok := abbrevNames[abbrev]; !ok {
-				return nil, fmt.Errorf("bea.NewAggregator: invalid aggregation category %s", abbrev)
+				return nil, fmt.Errorf("bea.NewIOAggregator: invalid aggregation category %s", abbrev)
 			}
+		}
+	}
+	return a, nil
+}
+
+// NewSCCAggregator initializes a new Aggregator of Source Classification Codes
+// from the information in the provided file.
+func (e *SpatialEIO) NewSCCAggregator(fileName string) (*Aggregator, error) {
+	const (
+		sccCol             = 6
+		sccAggregateCol    = 7
+		aggregateNameCol   = 3
+		aggregateAbbrevCol = 4
+		startRow           = 1
+		endRow             = 5436
+		aggregateEndRow    = 29
+		sheet              = "scc"
+	)
+	// Check SCCs.
+	sccs, err := e.textColumnFromExcel(fileName, sheet, sccCol, startRow, endRow)
+	if err != nil {
+		return nil, err
+	}
+	for i, scc := range sccs {
+		if scc == "" {
+			sccs = sccs[0:i]
+			break
+		}
+	}
+	if len(sccs) != len(e.SCCs) {
+		return nil, fmt.Errorf("bea.NewSCCAggregator: incorrect number of SCCs: %d != %d", len(sccs), len(e.SCCs))
+	}
+	for i, scc := range e.SCCs {
+		if sccs[i] != string(scc) {
+			return nil, fmt.Errorf("bea.NewSCCAggregator: SCCs don't match: %s != %s", sccs[i], scc)
+		}
+	}
+
+	a := new(Aggregator)
+
+	a.aggregateNames, err = e.textColumnFromExcel(fileName, sheet, aggregateNameCol, startRow, aggregateEndRow)
+	if err != nil {
+		return nil, err
+	}
+	a.aggregateAbbrevs, err = e.textColumnFromExcel(fileName, sheet, aggregateAbbrevCol, startRow, aggregateEndRow)
+	if err != nil {
+		return nil, err
+	}
+	a.IndustryAggregates, err = e.textColumnFromExcel(fileName, sheet, sccAggregateCol, startRow, endRow)
+	if err != nil {
+		return nil, err
+	}
+	for i, v := range a.IndustryAggregates {
+		if v == "" {
+			a.IndustryAggregates = a.IndustryAggregates[0:i]
+			break
+		}
+	}
+
+	a.aggregates = make(map[string]string)
+	abbrevNames := make(map[string]struct{})
+	for i, n := range a.aggregateNames {
+		a.aggregates[n] = a.aggregateAbbrevs[i]
+		abbrevNames[a.aggregateAbbrevs[i]] = struct{}{}
+	}
+
+	for _, abbrev := range a.IndustryAggregates {
+		if _, ok := abbrevNames[abbrev]; !ok {
+			return nil, fmt.Errorf("bea.NewSCCAggregator: invalid aggregation category '%s'", abbrev)
 		}
 	}
 	return a, nil
