@@ -76,7 +76,8 @@ const year = 2014
 // Server is a server for EIO LCA model simulation data.
 type Server struct {
 	spatial *bea.SpatialEIO
-	agg     *bea.Aggregator
+	ioAgg   *bea.Aggregator
+	sccAgg  *bea.Aggregator
 
 	geomCache, areaCache         *requestcache.Cache
 	geomCacheOnce, areaCacheOnce sync.Once
@@ -100,12 +101,17 @@ func NewServer() (*Server, error) {
 	}
 	f.Close()
 
-	a, err := s.EIO.NewAggregator(os.ExpandEnv("${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/aggregates.xlsx"))
+	ioa, err := s.EIO.NewIOAggregator(os.ExpandEnv("${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/aggregates.xlsx"))
+	if err != nil {
+		return nil, err
+	}
+	scca, err := s.NewSCCAggregator(os.ExpandEnv("${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/aggregates.xlsx"))
 	if err != nil {
 		return nil, err
 	}
 	model := &Server{
-		agg:     a,
+		ioAgg:   ioa,
+		sccAgg:  scca,
 		spatial: s,
 		Log:     logrus.StandardLogger(),
 	}
@@ -253,8 +259,8 @@ func (s *Server) DemandGroups(ctx context.Context, in *eiopb.Selection) (*eiopb.
 	}).Info("eioserve generating DemandGroups")
 
 	out := &eiopb.Selectors{
-		Names:  make([]string, len(s.agg.Names())+1),
-		Values: make([]float32, len(s.agg.Names())+1),
+		Names:  make([]string, len(s.ioAgg.Names())+1),
+		Values: make([]float32, len(s.ioAgg.Names())+1),
 	}
 	out.Names[0] = eiopb.All
 	// impacts produced by all sectors owing to all sectors.
@@ -264,7 +270,7 @@ func (s *Server) DemandGroups(ctx context.Context, in *eiopb.Selection) (*eiopb.
 	}
 	out.Values[0] = float32(mat.Sum(impacts))
 	i := 1
-	for _, g := range s.agg.Names() {
+	for _, g := range s.ioAgg.Names() {
 		out.Names[i] = g
 
 		// impacts produced by all sectors owing to consumption in this group
@@ -379,11 +385,11 @@ func (s *Server) demandMask(demandGroup, demandSector string) (*bea.Mask, error)
 		return nil, nil
 	} else if demandSector == eiopb.All {
 		// demand from a group of sectors.
-		abbrev, err := s.agg.Abbreviation(demandGroup)
+		abbrev, err := s.ioAgg.Abbreviation(demandGroup)
 		if err != nil {
 			return nil, err
 		}
-		return s.agg.CommodityMask(abbrev), nil
+		return s.ioAgg.CommodityMask(abbrev), nil
 	}
 	// demand from a single sector.
 	return s.spatial.EIO.CommodityMask(demandSector)
@@ -396,11 +402,11 @@ func (s *Server) productionMask(productionGroup, productionSector string) (*bea.
 		return nil, nil
 	} else if productionSector == eiopb.All {
 		// demand from a group of sectors.
-		abbrev, err := s.agg.Abbreviation(productionGroup)
+		abbrev, err := s.sccAgg.Abbreviation(productionGroup)
 		if err != nil {
 			return nil, err
 		}
-		return s.agg.IndustryMask(abbrev), nil
+		return s.sccAgg.IndustryMask(abbrev), nil
 	}
 	// demand from a single sector.
 	return s.spatial.EIO.IndustryMask(productionSector)
@@ -421,8 +427,8 @@ func (s *Server) ProdGroups(ctx context.Context, in *eiopb.Selection) (*eiopb.Se
 		return nil, err
 	}
 	out := &eiopb.Selectors{
-		Names:  make([]string, len(s.agg.Names())+1),
-		Values: make([]float32, len(s.agg.Names())+1),
+		Names:  make([]string, len(s.sccAgg.Names())+1),
+		Values: make([]float32, len(s.sccAgg.Names())+1),
 	}
 	out.Names[0] = eiopb.All
 	v, err := s.impactsMenu(ctx, in, demandMask, nil)
@@ -431,7 +437,7 @@ func (s *Server) ProdGroups(ctx context.Context, in *eiopb.Selection) (*eiopb.Se
 	}
 	out.Values[0] = float32(mat.Sum(v))
 	i := 1
-	for _, g := range s.agg.Names() {
+	for _, g := range s.sccAgg.Names() {
 		out.Names[i] = g
 		mask, err := s.productionMask(g, eiopb.All)
 		if err != nil {
