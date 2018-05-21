@@ -32,24 +32,24 @@ func TestAggregator_io(t *testing.T) {
 	}
 
 	t.Run("names", func(t *testing.T) {
-		if len(a.Names()) != 11 {
-			t.Errorf("have %d names, want 11", len(a.Names()))
+		if len(a.Names()) != 7 {
+			t.Errorf("have %d names, want 7", len(a.Names()))
 		}
 	})
 
 	t.Run("abbreviations", func(t *testing.T) {
-		if len(a.Abbreviations()) != 11 {
-			t.Errorf("have %d abbreviations, want 11", len(a.Abbreviations()))
+		if len(a.Abbreviations()) != 7 {
+			t.Errorf("have %d abbreviations, want 7", len(a.Abbreviations()))
 		}
 	})
 
 	t.Run("abbreviation", func(t *testing.T) {
-		abbrev, err := a.Abbreviation("Animal Production")
+		abbrev, err := a.Abbreviation("Services")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if abbrev != "Anml." {
-			t.Errorf("have %s, want 'Anml.'", abbrev)
+		if abbrev != "Svc." {
+			t.Errorf("have %s, want 'Svc.'", abbrev)
 		}
 	})
 
@@ -121,14 +121,14 @@ func TestAggregator_scc(t *testing.T) {
 	}
 
 	t.Run("names", func(t *testing.T) {
-		if len(a.Names()) != 28 {
-			t.Errorf("have %d names, want 28", len(a.Names()))
+		if len(a.Names()) != 16 {
+			t.Errorf("have %d names, want 16", len(a.Names()))
 		}
 	})
 
 	t.Run("abbreviations", func(t *testing.T) {
-		if len(a.Abbreviations()) != 28 {
-			t.Errorf("have %d abbreviations, want 28", len(a.Abbreviations()))
+		if len(a.Abbreviations()) != 16 {
+			t.Errorf("have %d abbreviations, want 16", len(a.Abbreviations()))
 		}
 	})
 

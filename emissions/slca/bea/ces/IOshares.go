@@ -349,6 +349,7 @@ var ignoreSectors = map[string]struct{}{
 	"Industrial gas manufacturing":                                    struct{}{},
 	"Support activities for agriculture and forestry":                 struct{}{},
 	"Religious organizations":                                         struct{}{},
+	"Pipeline transportation":                                         struct{}{},
 }
 
 // WhiteOtherDemand returns the domestic personal consumption final demand by white non-Latino
