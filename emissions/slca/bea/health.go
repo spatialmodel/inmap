@@ -19,7 +19,9 @@ package bea
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
+	"strconv"
 
 	"bitbucket.org/ctessum/sparse"
 
@@ -27,12 +29,75 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
+type healthRequest struct {
+	demand     *mat.VecDense
+	industries *Mask
+	pol        Pollutant
+	pop        string
+	year       Year
+	loc        Location
+	hr         epi.HRer
+}
+
+func (er *healthRequest) Key() string {
+	b, err := er.demand.MarshalBinary()
+	if err != nil {
+		panic(err)
+	}
+	var b2 []byte
+	if er.industries != nil {
+		b2, err = (*mat.VecDense)(er.industries).MarshalBinary()
+		if err != nil {
+			panic(err)
+		}
+	}
+	b3 := []byte(strconv.Itoa((int)(er.pol)))
+	b4 := []byte(strconv.Itoa((int)(er.year)))
+	b5 := []byte(strconv.Itoa((int)(er.loc)))
+	bAll := append(append(append(append(append(append(b, b2...), b3...), []byte(er.pop)...), b4...), b5...), []byte(er.hr.Name())...)
+	bytes := sha256.Sum256(bAll)
+	return fmt.Sprintf("health_%x", bytes[0:sha256.Size])
+}
+
 // Health returns spatially-explicit pollutant air quality-related health impacts caused by the
 // specified economic demand.  industries
 // specify the industries emissions should be calculated for.
 // If industries == nil, combined emissions for all industries are calculated.
 // pop must be one of the population types defined in the configuration file.
 func (e *SpatialEIO) Health(ctx context.Context, demand *mat.VecDense, industries *Mask, pol Pollutant, pop string, year Year, loc Location, HR epi.HRer) (*mat.VecDense, error) {
+	e.loadHealthOnce.Do(func() {
+		var c string
+		if e.SpatialCache != "" {
+			c = e.SpatialCache + "/individual"
+		}
+		e.healthCache = loadCacheOnce(func(ctx context.Context, request interface{}) (interface{}, error) {
+			r := request.(*healthRequest)
+			return e.health(ctx, r.demand, r.industries, r.pol, r.pop, r.year, r.loc, r.hr) // Actually calculate the health impacts.
+		}, 1, e.MemCacheSize, c, vectorMarshal, vectorUnmarshal)
+	})
+	req := &healthRequest{
+		demand:     demand,
+		industries: industries,
+		pol:        pol,
+		pop:        pop,
+		year:       year,
+		loc:        loc,
+		hr:         HR,
+	}
+	rr := e.healthCache.NewRequest(ctx, req, req.Key())
+	resultI, err := rr.Result()
+	if err != nil {
+		return nil, err
+	}
+	return resultI.(*mat.VecDense), nil
+}
+
+// health returns spatially-explicit pollutant air quality-related health impacts caused by the
+// specified economic demand.  industries
+// specify the industries emissions should be calculated for.
+// If industries == nil, combined emissions for all industries are calculated.
+// pop must be one of the population types defined in the configuration file.
+func (e *SpatialEIO) health(ctx context.Context, demand *mat.VecDense, industries *Mask, pol Pollutant, pop string, year Year, loc Location, HR epi.HRer) (*mat.VecDense, error) {
 	hf, err := e.healthFactors(ctx, pol, pop, year, HR)
 	if err != nil {
 		return nil, err
@@ -88,7 +153,7 @@ type concPolPopYearHR struct {
 // production for each industry. In the result matrix, the rows represent
 // air quality model grid cells and the columns represent industries.
 func (e *SpatialEIO) healthFactors(ctx context.Context, pol Pollutant, pop string, year Year, HR epi.HRer) (*mat.Dense, error) {
-	e.loadHealthOnce.Do(func() {
+	e.loadHealthFactorsOnce.Do(func() {
 		e.healthFactorCache = loadCacheOnce(e.healthFactorsWorker, 1, 1, e.SpatialCache, matrixMarshal, matrixUnmarshal)
 	})
 	rr := e.healthFactorCache.NewRequest(ctx, concPolPopYearHR{pol: pol, year: year, pop: pop, hr: HR}, fmt.Sprintf("healthFactors_%v_%v_%d_%s", pol, pop, year, HR.Name()))
