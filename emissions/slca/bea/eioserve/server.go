@@ -311,6 +311,21 @@ func commodityGroup(e *bea.EIO, m *bea.Mask) []string {
 	return o
 }
 
+func sccGroup(s *bea.SpatialEIO, m *bea.Mask) (codes, descriptions []string) {
+	v := (mat.VecDense)(*m)
+	for i, c := range s.SCCs {
+		if v.At(i, 0) != 0 {
+			d, err := s.SCCDescription(i)
+			if err != nil {
+				panic(err)
+			}
+			descriptions = append(descriptions, d)
+			codes = append(codes, string(c))
+		}
+	}
+	return
+}
+
 func industryGroup(e *bea.EIO, m *bea.Mask) []string {
 	var o []string
 	v := (mat.VecDense)(*m)
@@ -411,7 +426,7 @@ func (s *Server) productionMask(productionGroup, productionSector string) (*bea.
 		return s.sccAgg.IndustryMask(abbrev), nil
 	}
 	// demand from a single sector.
-	return s.spatial.EIO.IndustryMask(productionSector)
+	return s.spatial.SCCMask(slca.SCC(productionSector))
 }
 
 // ProdGroups returns the available production groups.
@@ -479,7 +494,7 @@ func (s *Server) ProdSectors(ctx context.Context, in *eiopb.Selection) (*eiopb.S
 		return nil, err
 	}
 
-	out := &eiopb.Selectors{Names: []string{eiopb.All}}
+	out := &eiopb.Selectors{Names: []string{eiopb.All}, Codes: []string{eiopb.All}}
 	if in.ProductionGroup == eiopb.All {
 		v, err2 := s.impactsMenu(ctx, in, demandMask, nil)
 		if err2 != nil {
@@ -497,8 +512,9 @@ func (s *Server) ProdSectors(ctx context.Context, in *eiopb.Selection) (*eiopb.S
 		return nil, err
 	}
 	out.Values = []float32{float32(mat.Sum(v))}
-	sectors := industryGroup(&s.spatial.EIO, mask)
-	out.Names = append(out.Names, sectors...)
+	sectors, descriptions := sccGroup(s.spatial, mask)
+	out.Names = append(out.Names, descriptions...)
+	out.Codes = append(out.Codes, sectors...)
 	temp := make([]float32, len(sectors))
 	out.Values = append(out.Values, temp...)
 	for i, sector := range sectors {

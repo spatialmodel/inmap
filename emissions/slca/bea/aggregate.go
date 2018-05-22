@@ -20,6 +20,7 @@ package bea
 import (
 	"fmt"
 
+	"github.com/spatialmodel/inmap/emissions/slca"
 	"gonum.org/v1/gonum/mat"
 )
 
@@ -219,6 +220,18 @@ func mask(abbrev string, aggs []string) *Mask {
 	}
 	mm := Mask(*m)
 	return &mm
+}
+
+// SCCMask returns a mask to single out the given SCC code.
+func (e *SpatialEIO) SCCMask(code slca.SCC) (*Mask, error) {
+	i, ok := e.sccIndex[code]
+	if !ok {
+		return nil, fmt.Errorf("bea: missing SCC code %s", code)
+	}
+	m := mat.NewVecDense(len(e.SCCs), nil)
+	m.SetVec(i, 1)
+	mm := Mask(*m)
+	return &mm, nil
 }
 
 // IndustryMask returns a mask to single out the given industry.

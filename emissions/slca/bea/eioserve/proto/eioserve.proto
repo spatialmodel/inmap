@@ -30,8 +30,9 @@ service EIOServe {
 }
 
 message Selectors {
-  repeated string Names = 1;
-  repeated float Values = 2;
+  repeated string Codes = 1;
+  repeated string Names = 2;
+  repeated float Values = 3;
 }
 
 message Selection {

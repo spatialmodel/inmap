@@ -50,6 +50,9 @@ type SpatialEIO struct {
 	// SCCs are the source codes for emissions sources in the model.
 	SCCs []slca.SCC
 
+	// sccIndex maps SCC codes to indices in the SCCs list.
+	sccIndex map[slca.SCC]int
+
 	// sccMap provides a mapping between the SCC codes ('SCCs' above)
 	// and IO industries, where the outer index is the SCC code  and the
 	// inner index is the IO industry.
