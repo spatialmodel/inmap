@@ -148,7 +148,11 @@ func (c *client) updateSelect(e *dom.HTMLSelectElement, selection string, s *eio
 			continue
 		}
 		o := c.doc.CreateElement("option").(*dom.HTMLOptionElement)
-		o.SetAttribute("value", name)
+		if len(s.Codes) != 0 {
+			o.SetAttribute("value", s.Codes[i])
+		} else {
+			o.SetAttribute("value", name)
+		}
 		if name == selection {
 			o.Selected = true
 			switch c.selection.ImpactType {

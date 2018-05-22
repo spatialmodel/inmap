@@ -29,8 +29,17 @@ import (
 const _ = jspb.JspbPackageIsVersion2
 
 type Selectors struct {
+	Codes  []string
 	Names  []string
 	Values []float32
+}
+
+// GetCodes gets the Codes of the Selectors.
+func (m *Selectors) GetCodes() (x []string) {
+	if m == nil {
+		return x
+	}
+	return m.Codes
 }
 
 // GetNames gets the Names of the Selectors.
@@ -55,12 +64,16 @@ func (m *Selectors) MarshalToWriter(writer jspb.Writer) {
 		return
 	}
 
-	for _, val := range m.Names {
+	for _, val := range m.Codes {
 		writer.WriteString(1, val)
 	}
 
+	for _, val := range m.Names {
+		writer.WriteString(2, val)
+	}
+
 	if len(m.Values) > 0 {
-		writer.WriteFloat32Slice(2, m.Values)
+		writer.WriteFloat32Slice(3, m.Values)
 	}
 
 	return
@@ -82,8 +95,10 @@ func (m *Selectors) UnmarshalFromReader(reader jspb.Reader) *Selectors {
 
 		switch reader.GetFieldNumber() {
 		case 1:
-			m.Names = append(m.Names, reader.ReadString())
+			m.Codes = append(m.Codes, reader.ReadString())
 		case 2:
+			m.Names = append(m.Names, reader.ReadString())
+		case 3:
 			m.Values = reader.ReadFloat32Slice()
 		default:
 			reader.SkipField()

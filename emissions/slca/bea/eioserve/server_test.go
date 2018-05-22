@@ -19,9 +19,13 @@ package eioserve
 
 import (
 	"bytes"
+	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	eioservepb "github.com/spatialmodel/inmap/emissions/slca/bea/eioserve/proto/eioservepb"
 )
 
 func TestServer_grpc(t *testing.T) {
@@ -58,12 +62,10 @@ func TestServer_grpc(t *testing.T) {
 		}
 	})
 
-	/*c := eioclientpb.NewEIOServeClient("https://" + eioservepb.Address)
-
 	ctx := context.Background()
 
 	t.Run("DemandGroups", func(t *testing.T) {
-		r, err := c.DemandGroups(ctx, &eioclientpb.Selection{
+		r, err := s.DemandGroups(ctx, &eioservepb.Selection{
 			DemandGroup:      eioservepb.All,
 			DemandSector:     eioservepb.All,
 			ProductionGroup:  eioservepb.All,
@@ -75,5 +77,5 @@ func TestServer_grpc(t *testing.T) {
 			t.Error(err)
 		}
 		fmt.Println(r)
-	})*/
+	})
 }
