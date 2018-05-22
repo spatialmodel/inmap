@@ -21,6 +21,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -163,6 +164,17 @@ func loadCacheOnce(f requestcache.ProcessFunc, workers, memCacheSize int, cacheL
 	} else if strings.HasPrefix(cacheLoc, "http") {
 		return requestcache.NewCache(f, workers, requestcache.Deduplicate(),
 			requestcache.Memory(memCacheSize), requestcache.HTTP(cacheLoc, unmarshal))
+	} else if strings.HasPrefix(cacheLoc, "gs://") {
+		loc, err := url.Parse(cacheLoc)
+		if err != nil {
+			panic(err)
+		}
+		cf, err := requestcache.GoogleCloudStorage(context.TODO(), loc.Host, strings.TrimLeft(loc.Path, "/"), marshal, unmarshal)
+		if err != nil {
+			panic(err)
+		}
+		return requestcache.NewCache(f, workers, requestcache.Deduplicate(),
+			requestcache.Memory(memCacheSize), cf)
 	}
 	return requestcache.NewCache(f, workers, requestcache.Deduplicate(),
 		requestcache.Memory(memCacheSize), requestcache.Disk(cacheLoc, marshal, unmarshal))
