@@ -26,6 +26,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -133,9 +134,22 @@ func (sp *SpatialProcessor) load() {
 		sp.cache = requestcache.NewCache(sp.createSurrogate, runtime.GOMAXPROCS(-1),
 			requestcache.Deduplicate(), requestcache.Memory(sp.MemCacheSize))
 	} else {
-		sp.cache = requestcache.NewCache(sp.createSurrogate, runtime.GOMAXPROCS(-1),
-			requestcache.Deduplicate(), requestcache.Memory(sp.MemCacheSize),
-			requestcache.Disk(sp.DiskCachePath, marshalGob, unmarshalGob))
+		if strings.HasPrefix(sp.DiskCachePath, "gs://") {
+			loc, err := url.Parse(sp.DiskCachePath)
+			if err != nil {
+				panic(err)
+			}
+			cf, err := requestcache.GoogleCloudStorage(context.TODO(), loc.Host, strings.TrimLeft(loc.Path, "/"), marshalGob, unmarshalGob)
+			if err != nil {
+				panic(err)
+			}
+			sp.cache = requestcache.NewCache(sp.createSurrogate, runtime.GOMAXPROCS(-1), requestcache.Deduplicate(),
+				requestcache.Memory(sp.MemCacheSize), cf)
+		} else {
+			sp.cache = requestcache.NewCache(sp.createSurrogate, runtime.GOMAXPROCS(-1),
+				requestcache.Deduplicate(), requestcache.Memory(sp.MemCacheSize),
+				requestcache.Disk(sp.DiskCachePath, marshalGob, unmarshalGob))
+		}
 	}
 }
 
