@@ -39,7 +39,7 @@ func (f *InventoryFile) readHeaderORL(inputConverter func(float64) *unit.Unit) e
 
 	firstLine, err := r.Read()
 	if err != nil {
-		return fmt.Errorf("aep: in file %s: %v", f.Name, err)
+		return fmt.Errorf("aep: in file %s: %v", f.Name(), err)
 	}
 
 	var recFunc func([]string, Country, time.Time, time.Time,

@@ -93,17 +93,17 @@ func (f *InventoryFile) readHeaderIDA(inputConverter func(float64) *unit.Unit) e
 		}
 	}
 	if err = buf.Err(); err != nil {
-		return fmt.Errorf("aep: in file %s: %v", f.Name, err)
+		return fmt.Errorf("aep: in file %s: %v", f.Name(), err)
 	}
 
 	if len(polids) >= 10 {
 		// If there are more than 10 pollutants, there are situations where
 		// it can be ambiguous about which file type we are dealing with based
 		// on the line length.
-		return fmt.Errorf("aep: in file %s: too many pollutants (must be less than 10)", f.Name)
+		return fmt.Errorf("aep: in file %s: too many pollutants (must be less than 10)", f.Name())
 	}
 	if err = buf.Err(); err != nil {
-		return fmt.Errorf("aep: in file %s: %v", f.Name, err)
+		return fmt.Errorf("aep: in file %s: %v", f.Name(), err)
 	}
 
 	var recFunc func(string, []string, Country, time.Time, time.Time, func(float64) *unit.Unit) (Record, error)

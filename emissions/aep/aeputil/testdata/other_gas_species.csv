@@ -1,0 +1,5 @@
+ID,SPECIES_ID,P_NUMBER,ANLYMETHOD,PHASE,WEIGHT_PER,SPECIES EMISSION RATE,UNCERTAINT,UNC_METHOD,PM EMISSION RATE,VOC EMISSION RATE,OTHER EMISSION RATE,EMISSION RATE UNIT
+298,2605,"HONO","Tunable Infrared Laser Differential Absorption Spectrometer (TILDAS)","Gas",9e+01,,,,,,,
+299,2606,"HONO","Tunable Infrared Laser Differential Absorption Spectrometer (TILDAS)","Gas",15e+00,,,,,,,
+300,2605,"6181","Tunable Infrared Laser Differential Absorption Spectrometer (TILDAS)","Gas",1.6888888888888889e+01,,,,,,,
+301,2606,"6181","Tunable Infrared Laser Differential Absorption Spectrometer (TILDAS)","Gas",8.3111111111111114e+01,,,,,,,

@@ -58,3 +58,18 @@
       SpecType ="VOC"
     [Inventory.PolsToKeep.ETH]
       SpecType ="VOC"
+
+[Speciate]
+  SpecRef = "testdata/specref.txt"
+  SpecRefCombo = "testdata/specref_combo.txt"
+  SpeciesProperties = "testdata/species_properties.csv"
+  GasProfile = "testdata/gas_profile.csv"
+  GasSpecies = "testdata/gas_species.csv"
+  OtherGasSpecies = "testdata/other_gas_species.csv"
+  PMSpecies = "testdata/pm_species.csv"
+  MechAssignment = "testdata/mech_assignment.csv"
+  MolarWeight = "testdata/mech_mw.csv"
+  SpeciesInfo = "testdata/mech_species_info.csv"
+  ChemicalMechanism = "SAPRC99"
+  MassSpeciation = false
+  SCCExactMatch = true

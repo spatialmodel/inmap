@@ -50,14 +50,35 @@ func (s statuses) Len() int           { return len(s) }
 func (s statuses) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 func (s statuses) Less(i, j int) bool { return s[i].Name < s[j].Name }
 
-// An InventoryReport report holds information about raw inventory data.
+// Totaler is an interface for types than can return emissions totals
+// and dropped emissions totals.
+type Totaler interface {
+	Totals() map[Pollutant]*unit.Unit
+	DroppedTotals() map[Pollutant]*unit.Unit
+
+	// Group returns the group that the receiver belongs to.
+	Group() string
+
+	// Name returns the name of the receiver.
+	Name() string
+}
+
+func getTotals(t Totaler) map[Pollutant]*unit.Unit {
+	return t.Totals()
+}
+
+func getDroppedTotals(t Totaler) map[Pollutant]*unit.Unit {
+	return t.DroppedTotals()
+}
+
+// An InventoryReport report holds information about inventory data.
 type InventoryReport struct {
-	Files []*InventoryFile
+	Data []Totaler
 }
 
 // AddData adds file(s) to the report.
-func (ir *InventoryReport) AddData(files ...*InventoryFile) {
-	ir.Files = append(ir.Files, files...)
+func (ir *InventoryReport) AddData(data ...Totaler) {
+	ir.Data = append(ir.Data, data...)
 }
 
 // TotalsTable returns a table of the total emissions in this report, where
@@ -74,13 +95,13 @@ func (ir *InventoryReport) DroppedTotalsTable() Table {
 	return ir.table(getDroppedTotals)
 }
 
-func (ir *InventoryReport) table(df func(*InventoryFile) map[Pollutant]*unit.Unit) Table {
-	t := make([][]string, len(ir.Files)+1)
+func (ir *InventoryReport) table(df func(Totaler) map[Pollutant]*unit.Unit) Table {
+	t := make([][]string, len(ir.Data)+1)
 
 	// get pollutants
 	pols := make(map[string]int)
 	dims := make(map[string]unit.Dimensions)
-	for _, f := range ir.Files {
+	for _, f := range ir.Data {
 		for pol, val := range df(f) {
 			pols[pol.Name] = 0
 			if d, ok := dims[pol.Name]; !ok {
@@ -105,14 +126,13 @@ func (ir *InventoryReport) table(df func(*InventoryFile) map[Pollutant]*unit.Uni
 			t[0][i] += fmt.Sprintf(" (%s)", dims[pol].String())
 		}
 	}
-	for i, f := range ir.Files {
+	for i, f := range ir.Data {
 		t[i+1] = make([]string, len(pols))
-		t[i+1][0], t[i+1][1] = f.Group, f.Name
+		t[i+1][0], t[i+1][1] = f.Group(), f.Name()
 		for pol, val := range df(f) {
 			t[i+1][pols[pol.Name]] = fmt.Sprintf("%g", val.Value())
 		}
 	}
-
 	return t
 }
 

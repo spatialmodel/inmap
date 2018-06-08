@@ -89,7 +89,7 @@ func (c *InventoryConfig) ReadEmissions() (map[string][]aep.Record, *aep.Invento
 		for _, f := range files { // Close files.
 			f.ReadSeeker.(*os.File).Close()
 		}
-		inventoryReport.AddData(sectorReport.Files...)
+		inventoryReport.AddData(sectorReport.Data...)
 
 		for _, rec := range recs {
 			records[sector] = append(records[sector], rec)

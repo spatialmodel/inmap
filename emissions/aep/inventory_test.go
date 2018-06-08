@@ -1319,7 +1319,7 @@ country_cd,region_cd,tribal_code,facility_id,unit_id,rel_point_id,process_id,agy
 			t.Errorf("%s: %v", test.name, err)
 			continue
 		}
-		overallReport.Files = append(overallReport.Files, report.Files...)
+		overallReport.Data = append(overallReport.Data, report.Data...)
 	}
 	reportTable := overallReport.TotalsTable()
 	wantReportTable := Table{

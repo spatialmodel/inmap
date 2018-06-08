@@ -1,0 +1,20 @@
+#EXPORT_DATE=Tue Dec 22 11:25:43 EST 2015
+#EXPORT_VERSION_NAME=add RFL__BENZENE
+#EXPORT_VERSION_NUMBER=2
+#REV_HISTORY v1(02/08/2009)  Madeleine Strum.   removed all but integrate HAPs  need xrefs for integrate HAPs when running non-multi-pol version of CMAQ-- CMAQ4.7  N1a
+#REV_HISTORY v2(02/10/2009)  Madeleine Strum.   added RFL__BENZENE  in nonroad and we will be integrating it
+/POINT DEFN/ 4 4
+10100202;"95014";"SO2";;;;;;;
+10100200;"95015";"SO2";;;;;;;
+2280003100;"HONO";"EXH__NOX";;;;;;;! Added for a new invtable with mode-specific NOX
+2280003010;"HONO";"NOX";;;;;;;! Added for a new invtable with mode-specific NOX
+2280003030;"HONO";"NOX";;;;;;;! Added for a new invtable with mode-specific NOX
+30532003;"91112";"PM2_5";;;;;;;! Profile name: Sand & Gravel - Simplified; Assignment basis: EPA recommendation from Pechan 5jun2006 x-walk
+2280003010;"91112";"PM2_5";;;;;;;! Profile name: Sand & Gravel - Simplified; Assignment basis: EPA recommendation from Pechan 5jun2006 x-walk
+2280003030;"91112";"PM2_5";;;;;;;! Profile name: Sand & Gravel - Simplified; Assignment basis: EPA recommendation from Pechan 5jun2006 x-walk
+2310011503;"2487";"VOC";48033;;;;;;
+2280003010;"2487";"VOC";48033;;;;;;
+2280003030;"2487";"VOC";48033;;;;;;
+2202420000;"8774";"EXH__VOC";211000;;;;;;! Added for Mexico othon 2008
+2201001000;"COMBO";"VOC";;;;;;;! Profile name: Combination of base exhaust and evap; Assignment basis: Canada/Mexico SCC set to similar U.S. SCC
+2260002009;"COMBO";"EVP__VOC";;;;;;;! Profile name: Uses gspro_combo file; Assignment basis: OTAQ recommendation, v3.1 platform

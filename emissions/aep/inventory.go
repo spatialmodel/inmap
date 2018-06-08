@@ -63,11 +63,6 @@ type Record interface {
 	// the times begin and end.
 	PeriodTotals(begin, end time.Time) map[Pollutant]*unit.Unit
 
-	// DropPols removes the pollutants that are not in polsToKeep
-	// and returns the total emissions removed, in units of grams.
-	// If polsToKeep is nil, all pollutants are kept.
-	DropPols(polsToKeep Speciation) map[Pollutant]*unit.Unit
-
 	// Spatialize takes a spatial processor (sp) and a grid index number (gi) and
 	// returns a gridded spatial surrogate (gridSrg) for an emissions source,
 	// as well as whether the emissions source is completely covered by the grid
@@ -253,7 +248,7 @@ func (e *EmissionsReader) OpenFilesFromTemplate(filetemplate string) ([]*Invento
 			if err != nil {
 				return nil, err
 			}
-			files[i].Group = e.Group
+			files[i].group = e.Group
 		}
 		return files, nil
 	}
@@ -267,7 +262,7 @@ func (e *EmissionsReader) OpenFilesFromTemplate(filetemplate string) ([]*Invento
 		if err != nil {
 			return nil, err
 		}
-		invF.Group = e.Group
+		invF.group = e.Group
 		return []*InventoryFile{invF}, nil
 	}
 	panic(fmt.Errorf("unsupported inventory frequency '%v'", e.freq))
@@ -357,7 +352,7 @@ func (f *InventoryFile) parseLines(e *EmissionsReader, filter RecFilter, recordC
 			if err == io.EOF {
 				break
 			}
-			err = fmt.Errorf("aep.InventoryFile.parseLines: file: %s\nerr: %v", f.Name, err)
+			err = fmt.Errorf("aep.InventoryFile.parseLines: file: %s\nerr: %v", f.Name(), err)
 			recordChan <- recordErr{rec: nil, err: err}
 			return
 		}
@@ -371,20 +366,20 @@ func (f *InventoryFile) parseLines(e *EmissionsReader, filter RecFilter, recordC
 		}
 
 		// add emissions to totals for report
-		droppedTotals := record.DropPols(e.polsToKeep)
+		droppedTotals := record.GetEmissions().DropPols(e.polsToKeep)
 		for pol, val := range droppedTotals {
-			if _, ok := f.DroppedTotals[pol]; !ok {
-				f.DroppedTotals[pol] = val
+			if _, ok := f.droppedTotals[pol]; !ok {
+				f.droppedTotals[pol] = val
 			} else {
-				f.DroppedTotals[pol].Add(val)
+				f.droppedTotals[pol].Add(val)
 			}
 		}
 		totals := record.Totals()
 		for pol, val := range totals {
-			if _, ok := f.Totals[pol]; !ok {
-				f.Totals[pol] = val
+			if _, ok := f.totals[pol]; !ok {
+				f.totals[pol] = val
 			} else {
-				f.Totals[pol].Add(val)
+				f.totals[pol].Add(val)
 			}
 		}
 		recordChan <- recordErr{rec: record, err: nil}

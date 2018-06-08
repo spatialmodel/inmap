@@ -32,10 +32,10 @@ type InventoryFile struct {
 	io.ReadSeeker
 
 	// Name is the name of this file. It can be the path to the file or something else.
-	Name string
+	name string
 
 	// Group is a label for the group of files this is part of. It is used for reporting.
-	Group string
+	group string
 
 	// Period is the time period that the emissions in this file apply to.
 	Period
@@ -44,12 +44,22 @@ type InventoryFile struct {
 	// the error will be io.EOF.
 	parseLine func() (Record, error)
 
-	// Totals holds the total emissions in this file, disaggregated by pollutant.
-	Totals map[Pollutant]*unit.Unit
+	// totals holds the total emissions in this file, disaggregated by pollutant.
+	totals map[Pollutant]*unit.Unit
 
-	// DroppedTotals holds the total emissions in this file that are not being
+	// droppedTotals holds the total emissions in this file that are not being
 	// kept for analysis.
-	DroppedTotals map[Pollutant]*unit.Unit
+	droppedTotals map[Pollutant]*unit.Unit
+}
+
+// Name is the name of this file. It can be the path to the file or something else.
+func (f *InventoryFile) Name() string {
+	return f.name
+}
+
+// Group is a label for the group of files this is part of. It is used for reporting.
+func (f *InventoryFile) Group() string {
+	return f.group
 }
 
 // NewInventoryFile sets up a new InventoryFile with name name and reader
@@ -57,12 +67,12 @@ type InventoryFile struct {
 // inputConverter is a function to convert the input data to SI units.
 func NewInventoryFile(name string, r io.ReadSeeker, p Period, inputConverter func(float64) *unit.Unit) (*InventoryFile, error) {
 	f := new(InventoryFile)
-	f.Name = name
+	f.name = name
 	f.ReadSeeker = r
 	f.Period = p
 
-	f.Totals = make(map[Pollutant]*unit.Unit)
-	f.DroppedTotals = make(map[Pollutant]*unit.Unit)
+	f.totals = make(map[Pollutant]*unit.Unit)
+	f.droppedTotals = make(map[Pollutant]*unit.Unit)
 
 	if err := f.readHeader(inputConverter); err != nil {
 		return nil, err
@@ -71,12 +81,15 @@ func NewInventoryFile(name string, r io.ReadSeeker, p Period, inputConverter fun
 	return f, nil
 }
 
-func getTotals(f *InventoryFile) map[Pollutant]*unit.Unit {
-	return f.Totals
+// Totals returns the total emissions in this file, disaggregated by pollutant.
+func (f *InventoryFile) Totals() map[Pollutant]*unit.Unit {
+	return f.totals
 }
 
-func getDroppedTotals(f *InventoryFile) map[Pollutant]*unit.Unit {
-	return f.DroppedTotals
+// DroppedTotals returns the total emissions in this file that are not being
+// kept for analysis.
+func (f *InventoryFile) DroppedTotals() map[Pollutant]*unit.Unit {
+	return f.droppedTotals
 }
 
 // readHeader extracts header information from the file and sets up a function
@@ -110,7 +123,7 @@ func (f *InventoryFile) readHeader(inputConverter func(float64) *unit.Unit) erro
 	if strings.Index(firstRec, "FF10_ONROAD") >= 0 {
 		return f.readHeaderFF10Onroad(inputConverter)
 	}
-	return fmt.Errorf("aep.InventoryFile.readHeader: unknown file type for: '%s'", f.Name)
+	return fmt.Errorf("aep.InventoryFile.readHeader: unknown file type for: '%s'", f.Name())
 }
 
 func (f *InventoryFile) readHeaderGeneral() (year string, country Country, err error) {
@@ -120,7 +133,7 @@ func (f *InventoryFile) readHeaderGeneral() (year string, country Country, err e
 	for buf.Scan() {
 		record = buf.Text()
 		if err = buf.Err(); err != nil {
-			err = fmt.Errorf("aep.InventoryFile.readHeaderGeneral: in file %s: %v", f.Name, err)
+			err = fmt.Errorf("aep.InventoryFile.readHeaderGeneral: in file %s: %v", f.Name(), err)
 			return
 		}
 		if len(record) > 0 && record[0] != commentRune {
@@ -129,7 +142,7 @@ func (f *InventoryFile) readHeaderGeneral() (year string, country Country, err e
 		if len(record) > 8 && record[1:8] == "COUNTRY" {
 			country, err = countryFromName(strings.Trim(record[8:], "\n ="))
 			if err != nil {
-				err = fmt.Errorf("aep.InventoryFile.readHeaderGeneral: in file %s: %v", f.Name, err)
+				err = fmt.Errorf("aep.InventoryFile.readHeaderGeneral: in file %s: %v", f.Name(), err)
 				return
 			}
 		}
