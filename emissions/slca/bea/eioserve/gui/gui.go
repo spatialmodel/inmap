@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 
 	leaflet "github.com/ctessum/go-leaflet"
 	"github.com/gopherjs/gopherjs/js"
@@ -51,7 +52,6 @@ type client struct {
 	prodSector        *dom.HTMLSelectElement
 	impactType        *dom.HTMLSelectElement
 	demandType        *dom.HTMLSelectElement
-	sccModalTitle     dom.Element
 
 	selection eioclientpb.Selection
 
@@ -73,7 +73,6 @@ func newClient() (*client, error) {
 	c.prodSector = c.doc.GetElementByID("prodSector").(*dom.HTMLSelectElement)
 	c.impactType = c.doc.GetElementByID("resultType").(*dom.HTMLSelectElement)
 	c.demandType = c.doc.GetElementByID("demandType").(*dom.HTMLSelectElement)
-	c.sccModalTitle = c.doc.GetElementByID("sccModalTitle")
 
 	go func() {
 		c.addSelectListener(c.demandSectorGroup)
@@ -125,6 +124,8 @@ func (c *client) updateSelection() {
 		c.DemandGroups, c.DemandSectors, c.ProdGroups, c.ProdSectors}
 	selections := []string{c.selection.DemandGroup, c.selection.DemandSector, c.selection.ProductionGroup, c.selection.ProductionSector}
 	objects := []*dom.HTMLSelectElement{c.demandSectorGroup, c.demandSector, c.prodSectorGroup, c.prodSector}
+	var wg sync.WaitGroup
+	wg.Add(len(funcs) + 1)
 	for i, f := range funcs {
 		go func(i int, f func(context.Context, *eioclientpb.Selection, ...grpcweb.CallOption) (*eioclientpb.Selectors, error)) {
 			sectors, err := f(context.Background(), &c.selection)
@@ -132,13 +133,16 @@ func (c *client) updateSelection() {
 				dom.GetWindow().Alert(err.Error())
 			}
 			c.updateSelect(objects[i], selections[i], sectors)
+			wg.Done()
 		}(i, f)
 	}
 	go func() {
 		if err := c.SetMapColors(); err != nil {
 			dom.GetWindow().Alert(err.Error())
 		}
+		wg.Done()
 	}()
+	wg.Wait()
 }
 
 func (c *client) updateSelect(e *dom.HTMLSelectElement, selection string, s *eioclientpb.Selectors) {
