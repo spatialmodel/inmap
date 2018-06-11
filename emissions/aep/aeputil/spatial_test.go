@@ -99,4 +99,23 @@ func TestSpatial(t *testing.T) {
 			t.Errorf("units for %v: have %v but want %v", pol, wantUnits[pol], units)
 		}
 	}
+	report := iter.Report()
+
+	t.Run("totals", func(t *testing.T) {
+		totals := report.TotalsTable()
+		totalsWant := aep.Table{
+			[]string{"Group", "File", "NH3 (kg)", "NOX (kg)", "PM2_5 (kg)", "SO2 (kg)", "VOC (kg)"},
+			[]string{"", "Spatial", "34.056105917699995", "1.9697839276290547e+07", "1.3253413523899838e+06", "1.5806320939220862e+07", "650426.9504917137"},
+		}
+		compareTables(totals, totalsWant, 1.0e-14, t)
+	})
+	t.Run("totals", func(t *testing.T) {
+		droppedTotals := report.DroppedTotalsTable()
+		droppedTotalsWant := aep.Table{
+			[]string{"Group", "File", "NH3 (kg)", "NOX (kg)", "PM2_5 (kg)", "SO2 (kg)", "VOC (kg)"},
+			[]string{"", "Spatial", "0", "0", "0", "0", "0"},
+		}
+		compareTables(droppedTotals, droppedTotalsWant, 1.0e-14, t)
+	})
+
 }

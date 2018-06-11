@@ -78,6 +78,8 @@ type SpatialConfig struct {
 	sp       *aep.SpatialProcessor
 }
 
+var _ Iterator = &SpatialIterator{} // Ensure that SpatialIterator fulfills the Iterator interface.
+
 // Iterator creates a SpatialIterator from the given parent iterator
 // for the given gridIndex.
 func (c *SpatialConfig) Iterator(parent Iterator, gridIndex int) *SpatialIterator {
@@ -91,8 +93,9 @@ type SpatialIterator struct {
 	c         *SpatialConfig
 	gridIndex int
 
-	emis  map[aep.Pollutant]*sparse.SparseArray
-	units map[aep.Pollutant]unit.Dimensions
+	emis      map[aep.Pollutant]*sparse.SparseArray // Gridded emissions
+	units     map[aep.Pollutant]unit.Dimensions
+	ungridded map[aep.Pollutant]*unit.Unit // Emissions before gridding
 }
 
 // Next spatializes a record from the
@@ -101,6 +104,7 @@ func (si *SpatialIterator) Next() (aep.Record, error) {
 	si.c.loadOnce.Do(func() {
 		si.emis = make(map[aep.Pollutant]*sparse.SparseArray)
 		si.units = make(map[aep.Pollutant]unit.Dimensions)
+		si.ungridded = make(map[aep.Pollutant]*unit.Unit)
 		si.c.sp, err = si.c.setupSpatialProcessor()
 	})
 	if err != nil {
@@ -122,6 +126,7 @@ func (si *SpatialIterator) Next() (aep.Record, error) {
 	for p, totalEmis := range t {
 		spatialEmis := srg.ScaleCopy(totalEmis.Value())
 		if _, ok := si.emis[p]; !ok {
+			si.ungridded[p] = totalEmis.Clone()
 			si.emis[p] = spatialEmis
 			si.units[p] = totalEmis.Dimensions()
 		} else {
@@ -130,6 +135,7 @@ func (si *SpatialIterator) Next() (aep.Record, error) {
 				return nil, fmt.Errorf("aeputil.SpatialIterator: inconsistent units for pollutant %v: %v != %v",
 					p, si.units[p], totalEmis.Dimensions())
 			}
+			si.ungridded[p].Add(totalEmis)
 		}
 	}
 	return rec, nil
@@ -211,4 +217,37 @@ func (c *SpatialConfig) setupSpatialProcessor() (*aep.SpatialProcessor, error) {
 	sp.DiskCachePath = c.SpatialCache
 	sp.SimplifyTolerance = c.SimplifyTolerance
 	return sp, nil
+}
+
+type spatialReport struct {
+	si *SpatialIterator
+}
+
+func (sr *spatialReport) Totals() map[aep.Pollutant]*unit.Unit {
+	emis, units := sr.si.SpatialTotals()
+	o := make(map[aep.Pollutant]*unit.Unit)
+	for p, e := range emis {
+		o[p] = unit.New(e.Sum(), units[p])
+	}
+	return o
+}
+func (sr *spatialReport) DroppedTotals() map[aep.Pollutant]*unit.Unit {
+	griddedTotals := sr.Totals()
+	o := make(map[aep.Pollutant]*unit.Unit)
+	for p, v := range sr.si.ungridded {
+		if v2, ok := griddedTotals[p]; ok {
+			o[p] = unit.Sub(v, v2)
+		} else {
+			o[p] = v.Clone()
+		}
+	}
+	return o
+}
+func (sr *spatialReport) Group() string { return "" }
+func (sr *spatialReport) Name() string  { return "Spatial" }
+
+// Report returns an emissions report on the records that have been
+// processed by this iterator.
+func (si *SpatialIterator) Report() *aep.InventoryReport {
+	return &aep.InventoryReport{Data: []aep.Totaler{&spatialReport{si: si}}}
 }
