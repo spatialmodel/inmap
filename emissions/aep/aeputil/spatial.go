@@ -25,10 +25,10 @@ import (
 
 	"bitbucket.org/ctessum/sparse"
 
-	"github.com/spatialmodel/inmap/emissions/aep"
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/proj"
 	"github.com/ctessum/unit"
+	"github.com/spatialmodel/inmap/emissions/aep"
 )
 
 // SpatialConfig holds emissions spatialization configuration information.
@@ -78,45 +78,67 @@ type SpatialConfig struct {
 	sp       *aep.SpatialProcessor
 }
 
-// SpatializeTotal returns spatial arrays of the total emissions in recs.
-// for each pollutant and each of the spatial grids. The returned values are
-// the emissions and their units.
-func (c *SpatialConfig) SpatializeTotal(recs ...aep.Record) (map[aep.Pollutant][]*sparse.SparseArray, map[aep.Pollutant]unit.Dimensions, error) {
+// Iterator creates a SpatialIterator from the given parent iterator
+// for the given gridIndex.
+func (c *SpatialConfig) Iterator(parent Iterator, gridIndex int) *SpatialIterator {
+	return &SpatialIterator{parent: parent, c: c, gridIndex: gridIndex}
+}
+
+// SpatialIterator is an Iterator that spatializes the records that it
+// processes.
+type SpatialIterator struct {
+	parent    Iterator
+	c         *SpatialConfig
+	gridIndex int
+
+	emis  map[aep.Pollutant]*sparse.SparseArray
+	units map[aep.Pollutant]unit.Dimensions
+}
+
+// Next spatializes a record from the
+func (si *SpatialIterator) Next() (aep.Record, error) {
 	var err error
-	c.loadOnce.Do(func() {
-		c.sp, err = c.setupSpatialProcessor()
+	si.c.loadOnce.Do(func() {
+		si.emis = make(map[aep.Pollutant]*sparse.SparseArray)
+		si.units = make(map[aep.Pollutant]unit.Dimensions)
+		si.c.sp, err = si.c.setupSpatialProcessor()
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	const gi = 0 // Currently, we're only setting things up for one grid.
-	emis := make(map[aep.Pollutant][]*sparse.SparseArray)
-	units := make(map[aep.Pollutant]unit.Dimensions)
-	for _, rec := range recs {
-		srg, _, inGrid, err := rec.Spatialize(c.sp, gi)
-		if err != nil {
-			return nil, nil, err
-		}
-		if !inGrid {
-			continue
-		}
-		t := rec.Totals()
-		for p, totalEmis := range t {
-			spatialEmis := srg.ScaleCopy(totalEmis.Value())
-			if _, ok := emis[p]; !ok {
-				emis[p] = []*sparse.SparseArray{spatialEmis}
-				units[p] = totalEmis.Dimensions()
-			} else {
-				emis[p][0].AddSparse(spatialEmis)
-				if !units[p].Matches(totalEmis.Dimensions()) {
-					return nil, nil, fmt.Errorf("aeputil.SpatializeTotal: inconsistent units for pollutant %v: %v != %v",
-						p, units[p], totalEmis.Dimensions())
-				}
+	rec, err := si.parent.Next()
+	if err != nil {
+		return nil, err
+	}
+	srg, _, inGrid, err := rec.Spatialize(si.c.sp, si.gridIndex)
+	if err != nil {
+		return nil, err
+	}
+	if !inGrid {
+		return rec, nil
+	}
+	t := rec.Totals()
+	for p, totalEmis := range t {
+		spatialEmis := srg.ScaleCopy(totalEmis.Value())
+		if _, ok := si.emis[p]; !ok {
+			si.emis[p] = spatialEmis
+			si.units[p] = totalEmis.Dimensions()
+		} else {
+			si.emis[p].AddSparse(spatialEmis)
+			if !si.units[p].Matches(totalEmis.Dimensions()) {
+				return nil, fmt.Errorf("aeputil.SpatialIterator: inconsistent units for pollutant %v: %v != %v",
+					p, si.units[p], totalEmis.Dimensions())
 			}
 		}
 	}
-	return emis, units, nil
+	return rec, nil
+}
+
+// SpatialTotals returns spatial arrays of the total emissions
+// for each pollutant, as well as their units.
+func (si *SpatialIterator) SpatialTotals() (emissions map[aep.Pollutant]*sparse.SparseArray, units map[aep.Pollutant]unit.Dimensions) {
+	return si.emis, si.units
 }
 
 // SpatialProcessor returns the spatial processor associated with the

@@ -19,6 +19,7 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package aeputil
 
 import (
+	"io"
 	"os"
 	"testing"
 
@@ -30,9 +31,6 @@ import (
 )
 
 func TestSpatial(t *testing.T) {
-	if testing.Short() {
-		return
-	}
 	type config struct {
 		Inventory InventoryConfig
 		Spatial   SpatialConfig
@@ -65,39 +63,40 @@ func TestSpatial(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wantEmis := map[string]map[aep.Pollutant]float64{
-		"othar": map[aep.Pollutant]float64{
-			aep.Pollutant{Name: "NOX"}:   1.9694509976996027e+07 + 3329.29929452133,
-			aep.Pollutant{Name: "VOC"}:   650426.9504917137,
-			aep.Pollutant{Name: "PM2_5"}: 1.3251549508572659e+06 + 186.401532717915,
-			aep.Pollutant{Name: "SO2"}:   1.5804381260919824e+07 + 1939.6783010388299,
-			aep.Pollutant{Name: "NH3"}:   34.056105917699995,
-		},
+	wantEmis := map[aep.Pollutant]float64{
+		aep.Pollutant{Name: "NOX"}:   1.9694509976996027e+07 + 3329.29929452133,
+		aep.Pollutant{Name: "VOC"}:   650426.9504917137,
+		aep.Pollutant{Name: "PM2_5"}: 1.3251549508572659e+06 + 186.401532717915,
+		aep.Pollutant{Name: "SO2"}:   1.5804381260919824e+07 + 1939.6783010388299,
+		aep.Pollutant{Name: "NH3"}:   34.056105917699995,
 	}
 
-	wantUnits := map[string]map[aep.Pollutant]unit.Dimensions{
-		"othar": map[aep.Pollutant]unit.Dimensions{
-			aep.Pollutant{Name: "PM2_5"}: unit.Dimensions{4: 1},
-			aep.Pollutant{Name: "NH3"}:   unit.Dimensions{4: 1},
-			aep.Pollutant{Name: "SO2"}:   unit.Dimensions{4: 1},
-			aep.Pollutant{Name: "NOX"}:   unit.Dimensions{4: 1},
-			aep.Pollutant{Name: "VOC"}:   unit.Dimensions{4: 1},
-		},
+	wantUnits := map[aep.Pollutant]unit.Dimensions{
+		aep.Pollutant{Name: "PM2_5"}: unit.Dimensions{4: 1},
+		aep.Pollutant{Name: "NH3"}:   unit.Dimensions{4: 1},
+		aep.Pollutant{Name: "SO2"}:   unit.Dimensions{4: 1},
+		aep.Pollutant{Name: "NOX"}:   unit.Dimensions{4: 1},
+		aep.Pollutant{Name: "VOC"}:   unit.Dimensions{4: 1},
 	}
-	for sector, recs := range records {
-		emis, units, err := c.Spatial.SpatializeTotal(recs...)
+	iter := c.Spatial.Iterator(IteratorFromMap(records), 0)
+	for {
+		_, err := iter.Next()
 		if err != nil {
+			if err == io.EOF {
+				break
+			}
 			t.Fatal(err)
 		}
-		for pol, grid := range emis {
-			if grid[0].Sum() != wantEmis[sector][pol] {
-				t.Errorf("emissions for %v %v, have %g but want %g", sector, pol, grid[0].Sum(), wantEmis[sector][pol])
-			}
+	}
+	emis, units := iter.SpatialTotals()
+	for pol, grid := range emis {
+		if grid.Sum() != wantEmis[pol] {
+			t.Errorf("emissions for %v: have %g but want %g", pol, grid.Sum(), wantEmis[pol])
 		}
-		for pol, u := range units {
-			if !u.Matches(wantUnits[sector][pol]) {
-				t.Errorf("units for %v %v: have %v but want %v", sector, pol, wantUnits[sector][pol], units)
-			}
+	}
+	for pol, u := range units {
+		if !u.Matches(wantUnits[pol]) {
+			t.Errorf("units for %v: have %v but want %v", pol, wantUnits[pol], units)
 		}
 	}
 }

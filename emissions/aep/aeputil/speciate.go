@@ -126,10 +126,10 @@ func (c *SpeciateConfig) lazyLoadSpeciator() error {
 
 // Iterator creates a new iterator that consumes records from the
 // given iterators and chemically speciates them.
-func (c *SpeciateConfig) Iterator(iter Iterator) Iterator {
+func (c *SpeciateConfig) Iterator(parent Iterator) Iterator {
 	return &speciateIterator{
 		c:             c,
-		parent:        iter,
+		parent:        parent,
 		totals:        make(map[aep.Pollutant]*unit.Unit),
 		droppedTotals: make(map[aep.Pollutant]*unit.Unit),
 	}
