@@ -41,6 +41,11 @@ var (
 2260002009;"COMBO";"EVP__VOC";;;;;;;! Profile name: Uses gspro_combo file; Assignment basis: OTAQ recommendation, v3.1 platform
 `
 
+	specRefCommaExample = `#REV_HISTORY v2(12/11/2012)  Chris Allen.   added profiles for EXT and APU modes  new for ABS SMOKE-MOVES runs
+"2310011000","1011","VOC","01003",,,,,,,,,0.999099999999999988,
+"2310011000","1011","VOC","01023",,,,,,,,,0.999099999999999988,
+`
+
 	specRefComboExample = `#EXPORT_VERSION_NAME=Initial Version
 #EXPORT_VERSION_NUMBER=0
 "EVP__NONHAPVOC";01001;0;2;8869;0.1256;8870;0.8744;1
@@ -189,6 +194,51 @@ func TestSpecRef_Codes(t *testing.T) {
 			FIPS:         "01003",
 			partialMatch: true,
 			result:       map[string]float64{"8870": 0.8744, "8869": 0.1256},
+		},
+	}
+	for _, test := range tests {
+		profiles, err := ref.Codes(test.SCC, test.pol, test.start, test.end, test.c, test.FIPS, test.partialMatch)
+		if err != nil {
+			t.Error(err)
+		}
+		if mapDifferent(test.result, profiles) {
+			t.Errorf("test %+v: want %v, got %v", test, test.result, profiles)
+		}
+	}
+}
+
+func TestSpecRef_Codes_comma(t *testing.T) {
+	specRef := bytes.NewBuffer([]byte(specRefCommaExample))
+	specRefCombo := bytes.NewBuffer([]byte(specRefComboExample))
+
+	ref, err := NewSpecRef(specRef, specRefCombo)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	start, end, err := Annual.TimeInterval("2011")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		SCC          string
+		pol          Pollutant
+		start, end   time.Time
+		c            Country
+		FIPS         string
+		partialMatch bool
+		result       map[string]float64
+	}{
+		{
+			SCC:          "2310011000",
+			pol:          Pollutant{Name: "VOC"},
+			start:        start,
+			end:          end,
+			c:            USA,
+			FIPS:         "01003",
+			partialMatch: false,
+			result:       map[string]float64{"1011": 1},
 		},
 	}
 	for _, test := range tests {

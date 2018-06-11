@@ -162,8 +162,17 @@ func specRef(fid io.Reader) (map[string]map[string]interface{}, error) {
 		}
 
 		if record[0] != '#' && record[0] != '/' && record[0] != '\n' {
+			record = strings.TrimSpace(record)
+			splitChar := ";"
+			if !strings.Contains(record, splitChar) {
+				if strings.Contains(record, ",") { // Use commas instead.
+					splitChar = ","
+				} else {
+					return nil, fmt.Errorf("aep: SpecRef record %v doesn't have any semicolons or commas for splitting", record)
+				}
+			}
 			// for point sources, only match to SCC code.
-			splitLine := strings.Split(record, ";")
+			splitLine := strings.Split(record, splitChar)
 			SCC := strings.Trim(splitLine[0], "\"")
 			if len(SCC) == 8 {
 				SCC = "00" + SCC
