@@ -93,7 +93,7 @@ func TestSpatialAdjustRecord(t *testing.T) {
 			Emissions:       *emis,
 		},
 	} {
-		if i == 0 && testing.Short() {
+		if i == 0 {
 			continue // Skip surrogate creation for polygon record.
 		}
 		recAdj := &SpatialAdjustRecord{Record: rec, SpatialAdjuster: &adj}

@@ -164,9 +164,6 @@ func TestNewGridRegular(t *testing.T) {
 }
 
 func TestCreateSurrogates(t *testing.T) {
-	if testing.Short() {
-		return
-	}
 	inputSR, err := proj.Parse("+proj=longlat")
 	if err != nil {
 		t.Error(err)
@@ -340,10 +337,6 @@ func TestSpatializeRecord(t *testing.T) {
 					Emissions:       *emis,
 				},
 			} {
-				if i == 0 && testing.Short() {
-					continue // Skip surrogate creation for polygon record.
-				}
-
 				emis, _, err := GriddedEmissions(rec, begin, end, sp, 0)
 				if err != nil {
 					t.Fatalf("scc: %s, fips: %s, i: %d, err: %v", scc, fips, i, err)
