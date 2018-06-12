@@ -47,7 +47,22 @@ After running the ```download.go``` script, some additional changes need to be m
 ```
 * Delete the line starting with ```COUNTRY_CD``` from ```SmokeFlatFile_ONROAD_20160910.csv```.
 
-* Delete the leading "1" from each record in the ```PRUID``` attribute column of the shapefile ```/home/chris/data/2014_nei_data/Canada_2010_surrogate_v1/Non_NAESI/SHAPEFILE/pr2001ca_regions_simplify.shp```. So ```159000``` should become ```59000```.
+* Delete the leading "1" from each record in the ```PRUID``` attribute column of the shapefile ```$nei2014Dir/Canada_2010_surrogate_v1/Non_NAESI/SHAPEFILE/pr2001ca_regions_simplify.shp```. So ```159000``` should become ```59000```.
 
 
 * The Canadian census division file that comes with the data (```Canada_2010_surrogate_v1/NAESI/SHAPEFILE/gisnodat.shp```) is unnecessarily large (making it unnecessarily difficult to create surrogates) and the ID codes have the same problem as listed above. To fix this, the download script will download an alternative shapefile: ```lcd_000b16a_e.shp```. Before this shapefile can be used however, you need to add an additional attribute column called ```FIPS``` that consists of the first two characters of the attribute ```CDUID```, then a zero, then the final two characters of ```CDUID```. In QGIS, this can be done in the "field calculator" with the expression: ```concat(substr(CDUID,1,2),'0',substr(CDUID,3,2))```.
+
+* In the directory `$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs`, run the command `find . -type f -name "*" -print0 | xargs -0 sed -i '' -e 's/PM25-PRI/PM2_5/g'`. This will replace all instances of `PM25-PRI` with `PM2_5`. This is necessary because there are no speciation profiles for `PM25-PRI`.
+
+* Download the SPECIATE database from [here](https://www.epa.gov/air-emissions-modeling/speciate-version-45-through-40) and save the `GAS_PROFILE`, `GAS_SPECIES`, `OTHER_GASES_SPECIES`, `PM_SPECIES`, and `SPECIES_PROPERTIES` tables as CSV files in the `$nei2014Dir/speciation` directory.
+
+* Download [this file](http://www.cert.ucr.edu/~carter/emitdb/SpecDB.zip) from http://www.cert.ucr.edu/~carter/emitdb/ and copy the files `MechAsn.csv` and `SpeciesTable.csv` from the `SpTool` directory of the downloaded file to `$nei2014Dir/speciation`. There is also a file called `MechMW.csv` that lists the molar weights of the chemical mechanism species. This file is required but I am currently unsure of where it can be downloaded from.
+
+* Add the following lines to the end of `$nei2014Dir/speciation/OTHER_GASES_SPECIES.csv`:
+```
+6755,2606,HONO,,Gas,0.092,,,,,,,
+6756,2605,HONO,,Gas,0.9,,,,,,,
+6757,2607,HONO,,Gas,0.008,,,,,,,
+6758,2606,NHONO,,Gas,0.1,,,,,,,
+6759,2605,NHONO,,Gas,0.9,,,,,,,
+```
