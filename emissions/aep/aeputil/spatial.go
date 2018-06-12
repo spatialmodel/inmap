@@ -83,7 +83,14 @@ var _ Iterator = &SpatialIterator{} // Ensure that SpatialIterator fulfills the 
 // Iterator creates a SpatialIterator from the given parent iterator
 // for the given gridIndex.
 func (c *SpatialConfig) Iterator(parent Iterator, gridIndex int) *SpatialIterator {
-	return &SpatialIterator{parent: parent, c: c, gridIndex: gridIndex}
+	return &SpatialIterator{
+		parent:    parent,
+		c:         c,
+		gridIndex: gridIndex,
+		emis:      make(map[aep.Pollutant]*sparse.SparseArray),
+		units:     make(map[aep.Pollutant]unit.Dimensions),
+		ungridded: make(map[aep.Pollutant]*unit.Unit),
+	}
 }
 
 // SpatialIterator is an Iterator that spatializes the records that it
@@ -102,9 +109,6 @@ type SpatialIterator struct {
 func (si *SpatialIterator) Next() (aep.Record, error) {
 	var err error
 	si.c.loadOnce.Do(func() {
-		si.emis = make(map[aep.Pollutant]*sparse.SparseArray)
-		si.units = make(map[aep.Pollutant]unit.Dimensions)
-		si.ungridded = make(map[aep.Pollutant]*unit.Unit)
 		si.c.sp, err = si.c.setupSpatialProcessor()
 	})
 	if err != nil {
