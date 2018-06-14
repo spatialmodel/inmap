@@ -10,6 +10,7 @@
 	It has these top-level messages:
 		Selectors
 		Selection
+		Year
 		Point
 		Rectangle
 		ColorInfo
@@ -128,6 +129,9 @@ type Selection struct {
 	ProductionSector string
 	ImpactType       string
 	DemandType       string
+	Year             int32
+	Population       string
+	Pollutant        int32
 }
 
 // GetDemandGroup gets the DemandGroup of the Selection.
@@ -178,6 +182,30 @@ func (m *Selection) GetDemandType() (x string) {
 	return m.DemandType
 }
 
+// GetYear gets the Year of the Selection.
+func (m *Selection) GetYear() (x int32) {
+	if m == nil {
+		return x
+	}
+	return m.Year
+}
+
+// GetPopulation gets the Population of the Selection.
+func (m *Selection) GetPopulation() (x string) {
+	if m == nil {
+		return x
+	}
+	return m.Population
+}
+
+// GetPollutant gets the Pollutant of the Selection.
+func (m *Selection) GetPollutant() (x int32) {
+	if m == nil {
+		return x
+	}
+	return m.Pollutant
+}
+
 // MarshalToWriter marshals Selection to the provided writer.
 func (m *Selection) MarshalToWriter(writer jspb.Writer) {
 	if m == nil {
@@ -206,6 +234,18 @@ func (m *Selection) MarshalToWriter(writer jspb.Writer) {
 
 	if len(m.DemandType) > 0 {
 		writer.WriteString(6, m.DemandType)
+	}
+
+	if m.Year != 0 {
+		writer.WriteInt32(7, m.Year)
+	}
+
+	if len(m.Population) > 0 {
+		writer.WriteString(8, m.Population)
+	}
+
+	if m.Pollutant != 0 {
+		writer.WriteInt32(9, m.Pollutant)
 	}
 
 	return
@@ -238,6 +278,12 @@ func (m *Selection) UnmarshalFromReader(reader jspb.Reader) *Selection {
 			m.ImpactType = reader.ReadString()
 		case 6:
 			m.DemandType = reader.ReadString()
+		case 7:
+			m.Year = reader.ReadInt32()
+		case 8:
+			m.Population = reader.ReadString()
+		case 9:
+			m.Pollutant = reader.ReadInt32()
 		default:
 			reader.SkipField()
 		}
@@ -248,6 +294,69 @@ func (m *Selection) UnmarshalFromReader(reader jspb.Reader) *Selection {
 
 // Unmarshal unmarshals a Selection from a slice of bytes.
 func (m *Selection) Unmarshal(rawBytes []byte) (*Selection, error) {
+	reader := jspb.NewReader(rawBytes)
+
+	m = m.UnmarshalFromReader(reader)
+
+	if err := reader.Err(); err != nil {
+		return nil, err
+	}
+
+	return m, nil
+}
+
+type Year struct {
+	Years []int32
+}
+
+// GetYears gets the Years of the Year.
+func (m *Year) GetYears() (x []int32) {
+	if m == nil {
+		return x
+	}
+	return m.Years
+}
+
+// MarshalToWriter marshals Year to the provided writer.
+func (m *Year) MarshalToWriter(writer jspb.Writer) {
+	if m == nil {
+		return
+	}
+
+	if len(m.Years) > 0 {
+		writer.WriteInt32Slice(1, m.Years)
+	}
+
+	return
+}
+
+// Marshal marshals Year to a slice of bytes.
+func (m *Year) Marshal() []byte {
+	writer := jspb.NewWriter()
+	m.MarshalToWriter(writer)
+	return writer.GetResult()
+}
+
+// UnmarshalFromReader unmarshals a Year from the provided reader.
+func (m *Year) UnmarshalFromReader(reader jspb.Reader) *Year {
+	for reader.Next() {
+		if m == nil {
+			m = &Year{}
+		}
+
+		switch reader.GetFieldNumber() {
+		case 1:
+			m.Years = reader.ReadInt32Slice()
+		default:
+			reader.SkipField()
+		}
+	}
+
+	return m
+}
+
+// Unmarshal unmarshals a Year from a slice of bytes.
+func (m *Year) Unmarshal(rawBytes []byte) (*Year, error) {
 	reader := jspb.NewReader(rawBytes)
 
 	m = m.UnmarshalFromReader(reader)
@@ -554,6 +663,9 @@ type EIOServeClient interface {
 	DemandSectors(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Selectors, error)
 	ProdGroups(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Selectors, error)
 	ProdSectors(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Selectors, error)
+	Years(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Year, error)
+	DefaultSelection(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Selection, error)
+	Populations(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Selectors, error)
 	MapInfo(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*ColorInfo, error)
 	Geometry(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (EIOServe_GeometryClient, error)
 }
@@ -598,6 +710,33 @@ func (c *eIOServeClient) ProdGroups(ctx context.Context, in *Selection, opts ...
 
 func (c *eIOServeClient) ProdSectors(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Selectors, error) {
 	resp, err := c.client.RPCCall(ctx, "ProdSectors", in.Marshal(), opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return new(Selectors).Unmarshal(resp)
+}
+
+func (c *eIOServeClient) Years(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Year, error) {
+	resp, err := c.client.RPCCall(ctx, "Years", in.Marshal(), opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return new(Year).Unmarshal(resp)
+}
+
+func (c *eIOServeClient) DefaultSelection(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Selection, error) {
+	resp, err := c.client.RPCCall(ctx, "DefaultSelection", in.Marshal(), opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return new(Selection).Unmarshal(resp)
+}
+
+func (c *eIOServeClient) Populations(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Selectors, error) {
+	resp, err := c.client.RPCCall(ctx, "Populations", in.Marshal(), opts...)
 	if err != nil {
 		return nil, err
 	}

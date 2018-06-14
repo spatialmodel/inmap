@@ -20,12 +20,10 @@ package bea
 import (
 	"bytes"
 	"encoding/gob"
-	"io"
 	"os"
 	"reflect"
 	"sync"
 
-	"github.com/BurntSushi/toml"
 	"github.com/ctessum/requestcache"
 	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/emissions/aep"
@@ -107,11 +105,7 @@ type SpatialConfig struct {
 }
 
 // NewSpatial creates a new SpatialEIO variable.
-func NewSpatial(r io.Reader) (*SpatialEIO, error) {
-	c := new(SpatialConfig)
-	if _, err := toml.DecodeReader(r, c); err != nil {
-		return nil, err
-	}
+func NewSpatial(c *SpatialConfig) (*SpatialEIO, error) {
 	if err := c.SpatialEIO.CSTConfig.Setup(); err != nil {
 		return nil, err
 	}

@@ -23,6 +23,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/BurntSushi/toml"
 	"gonum.org/v1/gonum/mat"
 )
 
@@ -36,7 +37,11 @@ func loadSpatial(t *testing.T) *SpatialEIO {
 		if err != nil {
 			t.Fatal(err)
 		}
-		s, err = NewSpatial(f)
+		c := new(SpatialConfig)
+		if _, err := toml.DecodeReader(f, c); err != nil {
+			t.Fatal(err)
+		}
+		s, err = NewSpatial(c)
 		if err != nil {
 			t.Fatal(err)
 		}

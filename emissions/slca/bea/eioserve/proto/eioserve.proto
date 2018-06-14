@@ -24,6 +24,10 @@ service EIOServe {
   rpc ProdGroups(Selection) returns (Selectors) {}
   rpc ProdSectors(Selection) returns (Selectors) {}
 
+  rpc Years(Selection) returns (Year) {}
+  rpc DefaultSelection(Selection) returns (Selection) {}
+  rpc Populations(Selection) returns (Selectors) {}
+
   rpc MapInfo(Selection) returns (ColorInfo) {}
 
   rpc Geometry(Selection) returns (stream Rectangle) {}
@@ -42,6 +46,13 @@ message Selection {
 	string ProductionSector = 4;
 	string ImpactType = 5;
 	string DemandType = 6;
+  int32  Year = 7;
+  string Population = 8;
+  int32 Pollutant = 9;
+}
+
+message Year {
+  repeated int32 Years = 1;
 }
 
 message Point {
