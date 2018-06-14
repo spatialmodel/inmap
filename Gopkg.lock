@@ -52,10 +52,22 @@
   version = "v3.0.0"
 
 [[projects]]
+  name = "github.com/PuerkitoBio/goquery"
+  packages = ["."]
+  revision = "dc2ec5c7ca4d9aae063b79b9f581dd3ea6afd2b2"
+  version = "v1.4.1"
+
+[[projects]]
   branch = "master"
   name = "github.com/ajstarks/svgo"
   packages = ["."]
   revision = "fec71ff44529c89ddb4211a62f3d672f31e50bc5"
+
+[[projects]]
+  name = "github.com/andybalholm/cascadia"
+  packages = ["."]
+  revision = "901648c87902174f774fac311d7f176f8647bdaa"
+  version = "v1.0.0"
 
 [[projects]]
   name = "github.com/cavaliercoder/grab"
@@ -114,6 +126,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/ctessum/plotextra"
+  packages = ["."]
+  revision = "74d77084c3dc40351794192c9d1167cf3bcf4a16"
+
+[[projects]]
+  branch = "master"
   name = "github.com/ctessum/polyclip-go"
   packages = ["."]
   revision = "47eae489f8c995257bc9ac294011c1e3822f981d"
@@ -151,6 +169,18 @@
   packages = ["."]
   revision = "629574ca2a5df945712d3079857300b5e4da0236"
   version = "v1.4.2"
+
+[[projects]]
+  name = "github.com/go-humble/detect"
+  packages = ["."]
+  revision = "598738a25c53a255f34b9e67b68d34d284e8b27a"
+  version = "v0.1.2"
+
+[[projects]]
+  name = "github.com/go-humble/router"
+  packages = ["."]
+  revision = "79b5b8fa588a29a5e5dfccf0f3aa795feb6768a0"
+  version = "v0.5.0"
 
 [[projects]]
   branch = "master"
@@ -204,6 +234,17 @@
   name = "github.com/gopherjs/gopherjs"
   packages = ["js"]
   revision = "8dffc02ea1cb8398bb73f30424697c60fcf8d4c5"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/gopherjs/vecty"
+  packages = [
+    ".",
+    "elem",
+    "event",
+    "prop"
+  ]
+  revision = "a3bd138280bfe93b8474e3326fbea2038e3dbc8a"
 
 [[projects]]
   name = "github.com/gorilla/websocket"
@@ -373,13 +414,13 @@
   version = "v1.2.0"
 
 [[projects]]
+  branch = "master"
   name = "github.com/spf13/cobra"
   packages = [
     ".",
     "doc"
   ]
-  revision = "ef82de70bb3f60c65fb8eebacbb2d122ef517385"
-  version = "v0.0.3"
+  revision = "1e58aa3361fd650121dceeedc399e7189c05674a"
 
 [[projects]]
   branch = "master"
@@ -454,6 +495,8 @@
   packages = [
     "context",
     "context/ctxhttp",
+    "html",
+    "html/atom",
     "http2",
     "http2/hpack",
     "idna",
@@ -634,6 +677,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "06b72ebf75f3eda0601613e5cb1313c0fdaf4bfb7325b9109b72de0f66d958a4"
+  inputs-digest = "bca5e193b7dd2ca06f77adfe2884c030dcfd1dc41334ca29681295f8addd9a3c"
   solver-name = "gps-cdcl"
   solver-version = 1

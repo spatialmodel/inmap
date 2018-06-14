@@ -1,23 +1,29 @@
-SCCMapFile = "data/scc-io_small_test.xlsx"
+SCCMapFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/scc-io_small_test.xlsx"
 SCCDescriptionFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/aep/data/nei2014/sccdesc_2014platform_09sep2016_v0.txt"
 MemCacheSize = 1000
+
+IOAggregatorFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/aggregates.xlsx"
+SCCAggregatorFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/aggregates_small_test.xlsx"
+PEMDir = "$GOPATH/src/github.com/spatialmodel/inmap/emissions/slca/bea/eioserve/test_data"
+StaticDir = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/eioserve"
+DefaultYear = 2011
 
 [Config]
   Years = [2007, 2011]
   DetailYear = 2007
-  UseSummary = "data/IOUse_Before_Redefinitions_PRO_1997-2015_Summary.xlsx"
-  UseDetail = "data/IOUse_Before_Redefinitions_PRO_2007_Detail.xlsx"
-  ImportsSummary = "data/ImportMatrices_Before_Redefinitions_SUM_1997-2016.xlsx"
-  ImportsDetail = "data/ImportMatrices_Before_Redefinitions_DET_2007.xlsx"
-  TotalRequirementsSummary = "data/IxC_TR_1997-2015_Summary.xlsx"
-  TotalRequirementsDetail =     "data/IxC_TR_2007_Detail.xlsx"
-  DomesticRequirementsSummary = "data/IxC_Domestic_1997-2015_Summary.xlsx"
-  DomesticRequirementsDetail =  "data/IxC_Domestic_2007_Detail.xlsx"
+  UseSummary = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/IOUse_Before_Redefinitions_PRO_1997-2015_Summary.xlsx"
+  UseDetail = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/IOUse_Before_Redefinitions_PRO_2007_Detail.xlsx"
+  ImportsSummary = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/ImportMatrices_Before_Redefinitions_SUM_1997-2016.xlsx"
+  ImportsDetail = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/ImportMatrices_Before_Redefinitions_DET_2007.xlsx"
+  TotalRequirementsSummary = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/IxC_TR_1997-2015_Summary.xlsx"
+  TotalRequirementsDetail =     "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/IxC_TR_2007_Detail.xlsx"
+  DomesticRequirementsSummary = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/IxC_Domestic_1997-2015_Summary.xlsx"
+  DomesticRequirementsDetail =  "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/IxC_Domestic_2007_Detail.xlsx"
 
 [SpatialEIO]
   SpatialCache = ""
 [SpatialEIO.CSTConfig]
-  SRFile = "../testdata/testSR.ncf"
+  SRFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/testdata/testSR.ncf"
 
   NEIBaseYear = 2014
   NEITrends = "$GOPATH/src/github.com/spatialmodel/inmap/emissions/aep/aeputil/testdata/state_tier1_90-16.xlsx"
@@ -29,7 +35,7 @@ MemCacheSize = 1000
   DefaultFIPS = "00000"
 
   FugitiveDustSectors = ["test_adj"]
-  FugitiveDustAdjustment = "../testdata/fugitive_dust_adj.csv"
+  FugitiveDustAdjustment = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/testdata/fugitive_dust_adj.csv"
 
   CensusPopColumns = ["TotalPop", "WhiteNoLat", "Black", "Native", "Asian", "Latino"]
 
@@ -76,7 +82,7 @@ MemCacheSize = 1000
 
   [SpatialEIO.CSTConfig.InventoryConfig.NEIFiles]
     test = [
-      "data/testemis.csv",
+      "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/testemis.csv",
     ]
 
 
@@ -127,7 +133,7 @@ MemCacheSize = 1000
 
     [SpatialEIO.CSTConfig.EvaluationInventoryConfig.NEIFiles]
       test = [
-        "data/testemis.csv",
+        "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/testemis.csv",
       ]
 
     [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep]

@@ -28,10 +28,27 @@ import (
 	leaflet "github.com/ctessum/go-leaflet"
 	"github.com/ctessum/go-leaflet/plugin/glify"
 	"github.com/gopherjs/gopherjs/js"
+	"github.com/gopherjs/vecty"
+	"github.com/gopherjs/vecty/elem"
+	"github.com/gopherjs/vecty/prop"
 	"github.com/spatialmodel/inmap/emissions/slca/bea/eioserve/proto/eioclientpb"
 )
 
-func (c *client) LoadMap(div string) error {
+type Map struct {
+	vecty.Core
+	reRender bool // reRender is true if this is not the first time rendering.
+}
+
+func (m *Map) Render() vecty.ComponentOrHTML {
+	m.reRender = true
+	return elem.Div(vecty.Markup(prop.ID("eiomap")))
+}
+
+func (m *Map) SkipRender(prev vecty.Component) bool {
+	return m.reRender
+}
+
+func (c *GUI) LoadMap(div string) error {
 	c.setCSS()
 	dom.GetWindow().AddEventListener("resize", false, func(arg3 dom.Event) {
 		c.setCSS()
@@ -63,7 +80,7 @@ type gridCell struct {
 	i int
 }
 
-func (c *client) LoadGeometry() error {
+func (c *GUI) LoadGeometry() error {
 	geomClient, err := c.Geometry(context.Background(), &c.selection)
 	if err != nil {
 		return err
@@ -88,8 +105,7 @@ func (c *client) LoadGeometry() error {
 	return nil
 }
 
-func (c *client) SetMapColors() error {
-
+func (c *GUI) SetMapColors() error {
 	colorInfo, err := c.MapInfo(context.Background(), &c.selection)
 	if err != nil {
 		return err
@@ -114,12 +130,12 @@ func (c *client) SetMapColors() error {
 	return nil
 }
 
-func (c *client) setCSS() {
+func (c *GUI) setCSS() {
 	c.setLegendCSS()
 	c.setEIOMapCSS()
 }
 
-func (c *client) setLegendCSS() {
+func (c *GUI) setLegendCSS() {
 	img := c.doc.GetElementByID("legendimg")
 	if img != nil {
 		rect := c.doc.GetElementByID("eiolegend").GetBoundingClientRect()
@@ -128,11 +144,10 @@ func (c *client) setLegendCSS() {
 	}
 }
 
-func (c *client) setEIOMapCSS() {
+func (c *GUI) setEIOMapCSS() {
 	const mapMargin = 50 // This is the height of the nav bar.
 	height := dom.GetWindow().InnerHeight()
 	eiomap := c.doc.GetElementByID("eiomap").(*dom.HTMLDivElement)
 	eiomap.Style().SetProperty("background-color", "black", "")
 	eiomap.Style().SetProperty("height", fmt.Sprintf("%dpx", height-mapMargin), "")
-
 }

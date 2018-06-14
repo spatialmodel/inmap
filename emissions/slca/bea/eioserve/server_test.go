@@ -20,16 +20,31 @@ package eioserve
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"reflect"
 	"testing"
 
+	"github.com/BurntSushi/toml"
+	"github.com/spatialmodel/inmap/emissions/slca"
+	"github.com/spatialmodel/inmap/emissions/slca/bea"
 	eioservepb "github.com/spatialmodel/inmap/emissions/slca/bea/eioserve/proto/eioservepb"
 )
 
 func TestServer_grpc(t *testing.T) {
-	s, err := NewServer()
+	f, err := os.Open("../data/test_config.toml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	var c ServerConfig
+	_, err = toml.DecodeReader(f, &c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s, err := NewServer(&c)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -62,20 +77,316 @@ func TestServer_grpc(t *testing.T) {
 		}
 	})
 
-	ctx := context.Background()
+	tests := []struct {
+		name      string
+		f         func(ctx context.Context, in *eioservepb.Selection) (*eioservepb.Selectors, error)
+		selection *eioservepb.Selection
+		selectors *eioservepb.Selectors
+	}{
+		{
+			name: "DemandGroups",
+			f:    s.DemandGroups,
+			selection: &eioservepb.Selection{
+				DemandGroup:      eioservepb.All,
+				DemandSector:     eioservepb.All,
+				ProductionGroup:  eioservepb.All,
+				ProductionSector: eioservepb.All,
+				ImpactType:       "health",
+				Population:       "TotalPop",
+				DemandType:       "All",
+				Year:             2011,
+				Pollutant:        int32(bea.TotalPM25),
+			},
+			selectors: &eioservepb.Selectors{
+				Names:  []string{"All", "Food", "Goods", "Transportation", "Services", "Shelter", "Information and Entertainment", "Electricity"},
+				Values: []float32{0.14021207, 0.03833588, 0.033024218, 0.024204414, 0.021419436, 0.018391857, 0.0038095121, 0.001026755},
+			},
+		},
+		{
+			name: "DemandSectors_1",
+			f:    s.DemandSectors,
+			selection: &eioservepb.Selection{
+				DemandGroup:      eioservepb.All,
+				DemandSector:     eioservepb.All,
+				ProductionGroup:  eioservepb.All,
+				ProductionSector: eioservepb.All,
+				ImpactType:       "conc",
+				Population:       "TotalPop",
+				DemandType:       "All",
+				Year:             2011,
+				Pollutant:        int32(bea.TotalPM25),
+			},
+			selectors: &eioservepb.Selectors{
+				Names:  []string{"All"},
+				Values: []float32{0.14021207},
+			},
+		},
+		{
+			name: "DemandSectors_2",
+			f:    s.DemandSectors,
+			selection: &eioservepb.Selection{
+				DemandGroup:      "Electricity",
+				DemandSector:     eioservepb.All,
+				ProductionGroup:  eioservepb.All,
+				ProductionSector: eioservepb.All,
+				ImpactType:       "conc",
+				Population:       "TotalPop",
+				DemandType:       "All",
+				Year:             2011,
+				Pollutant:        int32(bea.TotalPM25),
+			},
+			selectors: &eioservepb.Selectors{
+				Names:  []string{"All", "Electric power generation, transmission, and distribution"},
+				Values: []float32{0.001026755, 0.001026755},
+			},
+		},
+		{
+			name: "ProdGroups",
+			f:    s.ProdGroups,
+			selection: &eioservepb.Selection{
+				DemandGroup:      eioservepb.All,
+				DemandSector:     eioservepb.All,
+				ProductionGroup:  eioservepb.All,
+				ProductionSector: eioservepb.All,
+				ImpactType:       "emis",
+				DemandType:       "All",
+				Year:             2011,
+				Pollutant:        int32(slca.PM25),
+			},
+			selectors: &eioservepb.Selectors{
+				Names:  []string{"All", "Other Industrial Processes", "Industrial Fuel Comb.", "Highway Veh., Light Duty, Gas", "Consumer Solvents", "Industrial Solvents", "Metals Processing", "Petroleum Prod. Production", "Mining & Mineral Processing", "Ag. Livestock", "Ag. Crops", "Fertilizer Application", "Elec. Util., Other", "Elec. Util., Coal", "Food Prod. & Comm. Cooking", "Construction", "Highway Veh., Heavy Duty, Diesel"},
+				Values: []float32{4.9888858e+08, 1.8044906e+08, 1.8044906e+08, 1.3799046e+08, 4.2458604e+07, 4.2458604e+07, 4.2458604e+07, 3.980494e+07, 3.1843952e+07, 1.0614651e+07, 1.0614651e+07, 5.3073255e+06, 5.3073255e+06, 5.3073255e+06, 2.6536628e+06, 0, 0},
+			},
+		},
+		{
+			name: "ProdSectors_1",
+			f:    s.ProdSectors,
+			selection: &eioservepb.Selection{
+				DemandGroup:      eioservepb.All,
+				DemandSector:     eioservepb.All,
+				ProductionGroup:  eioservepb.All,
+				ProductionSector: eioservepb.All,
+				ImpactType:       "emis",
+				DemandType:       "All",
+				Year:             2011,
+				Pollutant:        int32(slca.PM25),
+			},
+			selectors: &eioservepb.Selectors{
+				Codes:  []string{"All"},
+				Names:  []string{"All"},
+				Values: []float32{4.9888858e+08},
+			},
+		},
+		{
+			name: "ProdSectors_2",
+			f:    s.ProdSectors,
+			selection: &eioservepb.Selection{
+				DemandGroup:      eioservepb.All,
+				DemandSector:     eioservepb.All,
+				ProductionGroup:  "Mining & Mineral Processing",
+				ProductionSector: eioservepb.All,
+				ImpactType:       "emis",
+				DemandType:       "All",
+				Year:             2011,
+				Pollutant:        int32(slca.PM25),
+			},
+			selectors: &eioservepb.Selectors{
+				Codes: []string{"All", "0030500310", "0030500505", "0030500622", "0030501062", "0030501207",
+					"0030501403", "0030502006", "0030502601", "0030503704", "0030504034", "0030504099", "0030504142"},
+				Names: []string{"All", "Industrial Processes;Mineral Products;Glass Manufacture;Flat Glass: Melting Furnace",
+					"Industrial Processes;Mineral Products;Castable Refractory;Molding and Shakeout", "Industrial Processes;Mineral Products;Cement Manufacturing (Dry Process);Preheater Kiln",
+					"Industrial Processes;Mineral Products;Coal Mining, Cleaning, and Material Handling;Surface Mining Operations: Screening",
+					"Industrial Processes;Mineral Products;Fiberglass Manufacturing;Unit Melter Furnace (Wool-type Fiber)",
+					"Industrial Processes;Mineral Products;Brick Manufacture;Curing and Firing: Sawdust Fired Tunnel Kilns",
+					"Industrial Processes;Mineral Products;Stone Quarrying - Processing (See also 305320);Miscellaneous Operations: Screen/Convey/Handling",
+					"Industrial Processes;Mineral Products;Diatomaceous Earth;Handling", "Industrial Processes;Mineral Products;Coated Abrasives Manufacturing;Drying",
+					"Industrial Processes;Mineral Products;Mining and Quarrying of Nonmetallic Minerals;Screening", "Industrial Processes;Mineral Products;Mining and Quarrying of Nonmetallic Minerals;Other Not Classified",
+					"Industrial Processes;Mineral Products;Clay processing: Kaolin;Calcining, flash calciner"},
+				Values: []float32{3.1843952e+07, 2.6536628e+06, 2.6536628e+06, 2.6536628e+06, 2.6536628e+06, 2.6536628e+06, 2.6536628e+06, 2.6536628e+06, 2.6536628e+06, 2.6536628e+06, 2.6536628e+06, 2.6536628e+06, 2.6536628e+06},
+			},
+		},
+	}
 
-	t.Run("DemandGroups", func(t *testing.T) {
-		r, err := s.DemandGroups(ctx, &eioservepb.Selection{
-			DemandGroup:      eioservepb.All,
-			DemandSector:     eioservepb.All,
-			ProductionGroup:  eioservepb.All,
-			ProductionSector: eioservepb.All,
-			ImpactType:       "health_total",
-			DemandType:       "All",
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			r, err := test.f(context.Background(), test.selection)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(r, test.selectors) {
+				t.Errorf("%#v != %#v", r, test.selectors)
+			}
 		})
+	}
+
+	t.Run("Geometry", func(t *testing.T) {
+		r, err := s.getGeometry(context.Background(), nil)
 		if err != nil {
-			t.Error(err)
+			t.Fatal(err)
 		}
-		fmt.Println(r)
+		want := []*eioservepb.Rectangle{
+			&eioservepb.Rectangle{
+				LL: &eioservepb.Point{X: -97.04719, Y: 39.963825},
+				LR: &eioservepb.Point{X: -97.03539, Y: 39.96383},
+				UL: &eioservepb.Point{X: -97.047195, Y: 39.972866},
+				UR: &eioservepb.Point{X: -97.03539, Y: 39.97287},
+			},
+			&eioservepb.Rectangle{
+				LL: &eioservepb.Point{X: -97.047195, Y: 39.972866},
+				LR: &eioservepb.Point{X: -97.03539, Y: 39.97287},
+				UL: &eioservepb.Point{X: -97.0472, Y: 39.981907},
+				UR: &eioservepb.Point{X: -97.0354, Y: 39.98191},
+			},
+			&eioservepb.Rectangle{
+				LL: &eioservepb.Point{X: -97.0472, Y: 39.981907},
+				LR: &eioservepb.Point{X: -97.0236, Y: 39.981915},
+				UL: &eioservepb.Point{X: -97.04721, Y: 39.999992},
+				UR: &eioservepb.Point{X: -97.023605, Y: 39.999996},
+			},
+			&eioservepb.Rectangle{
+				LL: &eioservepb.Point{X: -97.03539, Y: 39.96383},
+				LR: &eioservepb.Point{X: -97.02359, Y: 39.96383},
+				UL: &eioservepb.Point{X: -97.03539, Y: 39.97287},
+				UR: &eioservepb.Point{X: -97.0236, Y: 39.972874},
+			},
+			&eioservepb.Rectangle{
+				LL: &eioservepb.Point{X: -97.03539, Y: 39.97287},
+				LR: &eioservepb.Point{X: -97.0236, Y: 39.972874},
+				UL: &eioservepb.Point{X: -97.0354, Y: 39.98191},
+				UR: &eioservepb.Point{X: -97.0236, Y: 39.981915},
+			},
+			&eioservepb.Rectangle{
+				LL: &eioservepb.Point{X: -97.04721, Y: 39.999992},
+				LR: &eioservepb.Point{X: -97, Y: 40},
+				UL: &eioservepb.Point{X: -97.04723, Y: 40.036156},
+				UR: &eioservepb.Point{X: -97, Y: 40.036167},
+			},
+			&eioservepb.Rectangle{
+				LL: &eioservepb.Point{X: -97.02359, Y: 39.96383},
+				LR: &eioservepb.Point{X: -97, Y: 39.963833},
+				UL: &eioservepb.Point{X: -97.0236, Y: 39.981915},
+				UR: &eioservepb.Point{X: -97, Y: 39.98192},
+			},
+			&eioservepb.Rectangle{
+				LL: &eioservepb.Point{X: -97.0236, Y: 39.981915},
+				LR: &eioservepb.Point{X: -97, Y: 39.98192},
+				UL: &eioservepb.Point{X: -97.023605, Y: 39.999996},
+				UR: &eioservepb.Point{X: -97, Y: 40},
+			},
+			&eioservepb.Rectangle{
+				LL: &eioservepb.Point{X: -97, Y: 39.963833},
+				LR: &eioservepb.Point{X: -96.95281, Y: 39.963825},
+				UL: &eioservepb.Point{X: -97, Y: 40},
+				UR: &eioservepb.Point{X: -96.95279, Y: 39.999992},
+			},
+			&eioservepb.Rectangle{
+				LL: &eioservepb.Point{X: -97, Y: 40},
+				LR: &eioservepb.Point{X: -96.95279, Y: 39.999992},
+				UL: &eioservepb.Point{X: -97, Y: 40.036167},
+				UR: &eioservepb.Point{X: -96.95277, Y: 40.036156},
+			},
+		}
+
+		if !reflect.DeepEqual(r, want) {
+			t.Fatal("rectangles not equal")
+		}
 	})
+
+	t.Run("MapInfo", func(t *testing.T) {
+		for _, test := range []struct {
+			impactType string
+			pollutant  int32
+			colors     [][]uint8
+		}{
+			{
+				impactType: "health",
+				pollutant:  int32(bea.TotalPM25),
+				colors: [][]uint8{[]uint8{0xff, 0xff, 0xff}, []uint8{0x0, 0x0, 0x0}, []uint8{0x0, 0x0, 0x0}, []uint8{0x0, 0x0, 0x0},
+					[]uint8{0x0, 0x0, 0x0}, []uint8{0x0, 0x0, 0x0}, []uint8{0x0, 0x0, 0x0}, []uint8{0x0, 0x0, 0x0}, []uint8{0x0, 0x0, 0x0},
+					[]uint8{0x0, 0x0, 0x0}},
+			},
+			{
+				impactType: "conc",
+				pollutant:  int32(bea.TotalPM25),
+				colors: [][]uint8{[]uint8{0x15, 0xd, 0x2d}, []uint8{0x8f, 0x0, 0xc3}, []uint8{0xfd, 0x8f, 0x33},
+					[]uint8{0x3e, 0x12, 0xc6}, []uint8{0xf5, 0x5e, 0x3a}, []uint8{0x4, 0x17, 0xa9}, []uint8{0xee, 0x4f, 0x3b},
+					[]uint8{0xff, 0xff, 0xff}, []uint8{0x8, 0x17, 0x9f}, []uint8{0x0, 0x0, 0x0}},
+			},
+			{
+				impactType: "emis",
+				pollutant:  int32(slca.PM25),
+				colors: [][]uint8{[]uint8{0x0, 0x0, 0x0}, []uint8{0x0, 0x0, 0x0}, []uint8{0x0, 0x0, 0x0},
+					[]uint8{0x0, 0x0, 0x0}, []uint8{0x0, 0x0, 0x0}, []uint8{0xff, 0xff, 0xff}, []uint8{0x0, 0x0, 0x0},
+					[]uint8{0x0, 0x0, 0x0}, []uint8{0x0, 0x0, 0x0}, []uint8{0x0, 0x0, 0x0}},
+			},
+		} {
+			t.Run(test.impactType, func(t *testing.T) {
+				mapInfo, err := s.MapInfo(context.Background(), &eioservepb.Selection{
+					DemandGroup:      eioservepb.All,
+					DemandSector:     eioservepb.All,
+					ProductionGroup:  eioservepb.All,
+					ProductionSector: eioservepb.All,
+					ImpactType:       test.impactType,
+					DemandType:       "All",
+					Year:             2011,
+					Pollutant:        test.pollutant,
+					Population:       "TotalPop",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !reflect.DeepEqual(mapInfo.RGB, test.colors) {
+					t.Errorf("%v != %v", mapInfo.RGB, test.colors)
+				}
+			})
+		}
+	})
+
+	t.Run("DefaultSelection", func(t *testing.T) {
+		ds, err := s.DefaultSelection(context.Background(), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := &eioservepb.Selection{
+			DemandGroup:      "All",
+			DemandSector:     "All",
+			ProductionGroup:  "All",
+			ProductionSector: "All",
+			ImpactType:       "conc",
+			DemandType:       "All",
+			Year:             2011,
+			Population:       "TotalPop",
+			Pollutant:        int32(bea.TotalPM25),
+		}
+		if !reflect.DeepEqual(ds, want) {
+			t.Errorf("%+v != %+v", ds, want)
+		}
+	})
+
+	t.Run("Populations", func(t *testing.T) {
+		p, err := s.Populations(context.Background(), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := &eioservepb.Selectors{
+			Names: []string{"TotalPop", "WhiteNoLat", "Black", "Native", "Asian", "Latino"},
+		}
+		if !reflect.DeepEqual(p, want) {
+			t.Errorf("%+v != %+v", p, want)
+		}
+	})
+
+	t.Run("Years", func(t *testing.T) {
+		y, err := s.Years(context.Background(), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := &eioservepb.Year{
+			Years: []int32{2007, 2011},
+		}
+		if !reflect.DeepEqual(y, want) {
+			t.Errorf("%+v != %+v", y, want)
+		}
+	})
+
 }
