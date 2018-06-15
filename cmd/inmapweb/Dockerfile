@@ -17,7 +17,7 @@ RUN go install
 # This step is so we can find the test certificates.
 RUN go get google.golang.org/grpc/testdata
 
-ENV SLCASpatialCache https://storage.googleapis.com/inmapweb/spatialeio
+ENV SLCASpatialCache gs://inmapweb/slca_cache
 
 ENTRYPOINT /go/bin/inmapweb
 

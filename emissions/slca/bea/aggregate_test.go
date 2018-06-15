@@ -23,33 +23,33 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
-func TestAggregator(t *testing.T) {
+func TestAggregator_io(t *testing.T) {
 	e := loadSpatial(t).EIO
 
-	a, err := e.NewAggregator("data/aggregates.xlsx")
+	a, err := e.NewIOAggregator("data/aggregates.xlsx")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	t.Run("names", func(t *testing.T) {
-		if len(a.Names()) != 11 {
-			t.Errorf("have %d names, want 11", len(a.Names()))
+		if len(a.Names()) != 7 {
+			t.Errorf("have %d names, want 7", len(a.Names()))
 		}
 	})
 
 	t.Run("abbreviations", func(t *testing.T) {
-		if len(a.Abbreviations()) != 11 {
-			t.Errorf("have %d abbreviations, want 11", len(a.Abbreviations()))
+		if len(a.Abbreviations()) != 7 {
+			t.Errorf("have %d abbreviations, want 7", len(a.Abbreviations()))
 		}
 	})
 
 	t.Run("abbreviation", func(t *testing.T) {
-		abbrev, err := a.Abbreviation("Animal Production")
+		abbrev, err := a.Abbreviation("Services")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if abbrev != "Anml." {
-			t.Errorf("have %s, want 'Anml.'", abbrev)
+		if abbrev != "Svc." {
+			t.Errorf("have %s, want 'Svc.'", abbrev)
 		}
 	})
 
@@ -108,6 +108,52 @@ func TestAggregator(t *testing.T) {
 		}
 		if mat.Sum(&v) != 1 {
 			t.Errorf("wrong mask sum")
+		}
+	})
+}
+
+func TestAggregator_scc(t *testing.T) {
+	e := loadSpatial(t)
+
+	a, err := e.NewSCCAggregator("data/aggregates_small_test.xlsx")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("names", func(t *testing.T) {
+		if len(a.Names()) != 16 {
+			t.Errorf("have %d names, want 16", len(a.Names()))
+		}
+	})
+
+	t.Run("abbreviations", func(t *testing.T) {
+		if len(a.Abbreviations()) != 16 {
+			t.Errorf("have %d abbreviations, want 16", len(a.Abbreviations()))
+		}
+	})
+
+	t.Run("abbreviation", func(t *testing.T) {
+		abbrev, err := a.Abbreviation("Industrial Solvents")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if abbrev != "Solvents" {
+			t.Errorf("have %s, want 'Solvents'", abbrev)
+		}
+	})
+
+	t.Run("SCC mask", func(t *testing.T) {
+		mask := a.IndustryMask("Elec.")
+		r := len(e.SCCs)
+		v := mat.NewVecDense(r, nil)
+		for i := 0; i < r; i++ {
+			v.SetVec(i, float64(i))
+		}
+		mask.Mask(v)
+		sum := mat.Sum(v)
+		const sumWant float64 = 14 + 15
+		if sum != sumWant {
+			t.Errorf("sum: want %g, have %g", sumWant, sum)
 		}
 	})
 }

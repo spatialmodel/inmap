@@ -20,12 +20,10 @@ package bea
 import (
 	"bytes"
 	"encoding/gob"
-	"io"
 	"os"
 	"reflect"
 	"sync"
 
-	"github.com/BurntSushi/toml"
 	"github.com/ctessum/requestcache"
 	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/emissions/aep"
@@ -43,8 +41,15 @@ type SpatialEIO struct {
 	// cache spatial information.
 	SpatialCache string
 
+	// MemCacheSize is the size of the memory cache for emissions, concentration,
+	// and health spatial results.
+	MemCacheSize int
+
 	// SCCs are the source codes for emissions sources in the model.
 	SCCs []slca.SCC
+
+	// sccIndex maps SCC codes to indices in the SCCs list.
+	sccIndex map[slca.SCC]int
 
 	// sccMap provides a mapping between the SCC codes ('SCCs' above)
 	// and IO industries, where the outer index is the SCC code  and the
@@ -61,9 +66,15 @@ type SpatialEIO struct {
 	domesticRequirementsSCC map[Year]*mat.Dense
 	importRequirementsSCC   map[Year]*mat.Dense
 
+	loadEmissionsOnce        sync.Once
+	loadConcentrationsOnce   sync.Once
+	loadHealthOnce           sync.Once
 	loadEFOnce               sync.Once
 	loadConcOnce             sync.Once
-	loadHealthOnce           sync.Once
+	loadHealthFactorsOnce    sync.Once
+	emissionsCache           *requestcache.Cache
+	concentrationsCache      *requestcache.Cache
+	healthCache              *requestcache.Cache
 	emissionFactorCache      *requestcache.Cache
 	concentrationFactorCache *requestcache.Cache
 	healthFactorCache        *requestcache.Cache
@@ -94,11 +105,7 @@ type SpatialConfig struct {
 }
 
 // NewSpatial creates a new SpatialEIO variable.
-func NewSpatial(r io.Reader) (*SpatialEIO, error) {
-	c := new(SpatialConfig)
-	if _, err := toml.DecodeReader(r, c); err != nil {
-		return nil, err
-	}
+func NewSpatial(c *SpatialConfig) (*SpatialEIO, error) {
 	if err := c.SpatialEIO.CSTConfig.Setup(); err != nil {
 		return nil, err
 	}
@@ -207,6 +214,21 @@ func matrixMarshal(data interface{}) ([]byte, error) {
 // matrixMarshal converts a byte array to a matrix after storing it in a cache.
 func matrixUnmarshal(b []byte) (interface{}, error) {
 	m := mat.NewDense(0, 0, nil)
+	err := m.UnmarshalBinary(b)
+	return m, err
+}
+
+// matrixMarshal converts a matrix to a byte array for storing in a cache.
+func vectorMarshal(data interface{}) ([]byte, error) {
+	i := data.(*interface{})
+	m := (*i).(*mat.VecDense)
+	return m.MarshalBinary()
+}
+
+// matrixMarshal converts a byte array to a matrix after storing it in a cache.
+func vectorUnmarshal(b []byte) (interface{}, error) {
+	m := mat.NewVecDense(0, nil)
+	m.Reset()
 	err := m.UnmarshalBinary(b)
 	return m, err
 }

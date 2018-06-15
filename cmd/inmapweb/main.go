@@ -21,9 +21,13 @@ package main
 
 import (
 	"crypto/tls"
+	"flag"
+	"log"
 	"net/http"
+	"os"
 	"time"
 
+	"github.com/BurntSushi/toml"
 	"github.com/sirupsen/logrus"
 	"github.com/spatialmodel/inmap/emissions/slca/bea/eioserve"
 
@@ -48,9 +52,24 @@ func init() {
 	grpclog.SetLoggerV2(grpclog.NewLoggerV2(logger.Out, logger.Out, logger.Out))
 }
 
+var config = flag.String("config", "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/example_config.toml", "Path to the configuration file")
+
 func main() {
+	flag.Parse()
+
+	f, err := os.Open(os.ExpandEnv(*config))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+	var c eioserve.ServerConfig
+	_, err = toml.DecodeReader(f, &c)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	logger.Info("setting up...")
-	s, err := eioserve.NewServer()
+	s, err := eioserve.NewServer(&c)
 	if err != nil {
 		logger.WithError(err).Fatal("failed to create server")
 	}

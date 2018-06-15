@@ -20,6 +20,20 @@
   revision = "1c63dc69751bc45441c2ce1f56b631c55294b4d5"
 
 [[projects]]
+  name = "cloud.google.com/go"
+  packages = [
+    "compute/metadata",
+    "iam",
+    "internal",
+    "internal/optional",
+    "internal/trace",
+    "internal/version",
+    "storage"
+  ]
+  revision = "0fd7230b2a7505833d5f69b75cbd6c9582401479"
+  version = "v0.23.0"
+
+[[projects]]
   name = "github.com/BurntSushi/toml"
   packages = ["."]
   revision = "b26d9c308763d68093482582cea63d69be07a0f0"
@@ -38,10 +52,22 @@
   version = "v3.0.0"
 
 [[projects]]
+  name = "github.com/PuerkitoBio/goquery"
+  packages = ["."]
+  revision = "dc2ec5c7ca4d9aae063b79b9f581dd3ea6afd2b2"
+  version = "v1.4.1"
+
+[[projects]]
   branch = "master"
   name = "github.com/ajstarks/svgo"
   packages = ["."]
   revision = "fec71ff44529c89ddb4211a62f3d672f31e50bc5"
+
+[[projects]]
+  name = "github.com/andybalholm/cascadia"
+  packages = ["."]
+  revision = "901648c87902174f774fac311d7f176f8647bdaa"
+  version = "v1.0.0"
 
 [[projects]]
   name = "github.com/cavaliercoder/grab"
@@ -100,6 +126,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/ctessum/plotextra"
+  packages = ["."]
+  revision = "74d77084c3dc40351794192c9d1167cf3bcf4a16"
+
+[[projects]]
+  branch = "master"
   name = "github.com/ctessum/polyclip-go"
   packages = ["."]
   revision = "47eae489f8c995257bc9ac294011c1e3822f981d"
@@ -108,7 +140,7 @@
   branch = "master"
   name = "github.com/ctessum/requestcache"
   packages = ["."]
-  revision = "1462fad4c316d8d600cf359fa5484ca49c2d4960"
+  revision = "500f1126aa694735a1e45ecf611c2346121cbf34"
 
 [[projects]]
   branch = "master"
@@ -139,6 +171,18 @@
   version = "v1.4.2"
 
 [[projects]]
+  name = "github.com/go-humble/detect"
+  packages = ["."]
+  revision = "598738a25c53a255f34b9e67b68d34d284e8b27a"
+  version = "v0.1.2"
+
+[[projects]]
+  name = "github.com/go-humble/router"
+  packages = ["."]
+  revision = "79b5b8fa588a29a5e5dfccf0f3aa795feb6768a0"
+  version = "v0.5.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/golang/freetype"
   packages = [
@@ -158,13 +202,14 @@
   name = "github.com/golang/protobuf"
   packages = [
     "proto",
+    "protoc-gen-go/descriptor",
     "ptypes",
     "ptypes/any",
     "ptypes/duration",
     "ptypes/timestamp"
   ]
-  revision = "925541529c1fa6821df4e44ce2723319eb2be768"
-  version = "v1.0.0"
+  revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
+  version = "v1.1.0"
 
 [[projects]]
   branch = "master"
@@ -179,10 +224,27 @@
   revision = "e57e4534cf9b3b00ef6c0175f59d8d2d34f60914"
 
 [[projects]]
+  name = "github.com/googleapis/gax-go"
+  packages = ["."]
+  revision = "317e0006254c44a0ac427cc52a0e083ff0b9622f"
+  version = "v2.0.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/gopherjs/gopherjs"
   packages = ["js"]
   revision = "8dffc02ea1cb8398bb73f30424697c60fcf8d4c5"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/gopherjs/vecty"
+  packages = [
+    ".",
+    "elem",
+    "event",
+    "prop"
+  ]
+  revision = "a3bd138280bfe93b8474e3326fbea2038e3dbc8a"
 
 [[projects]]
   name = "github.com/gorilla/websocket"
@@ -352,13 +414,13 @@
   version = "v1.2.0"
 
 [[projects]]
+  branch = "master"
   name = "github.com/spf13/cobra"
   packages = [
     ".",
     "doc"
   ]
-  revision = "ef82de70bb3f60c65fb8eebacbb2d122ef517385"
-  version = "v0.0.3"
+  revision = "1e58aa3361fd650121dceeedc399e7189c05674a"
 
 [[projects]]
   branch = "master"
@@ -390,6 +452,25 @@
   version = "v0.5.4"
 
 [[projects]]
+  name = "go.opencensus.io"
+  packages = [
+    "exporter/stackdriver/propagation",
+    "internal",
+    "internal/tagencoding",
+    "plugin/ochttp",
+    "plugin/ochttp/propagation/b3",
+    "stats",
+    "stats/internal",
+    "stats/view",
+    "tag",
+    "trace",
+    "trace/internal",
+    "trace/propagation"
+  ]
+  revision = "f7730ab009c252771b19074bd05217d054c0c93f"
+  version = "v0.10.0"
+
+[[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
@@ -413,6 +494,9 @@
   name = "golang.org/x/net"
   packages = [
     "context",
+    "context/ctxhttp",
+    "html",
+    "html/atom",
     "http2",
     "http2/hpack",
     "idna",
@@ -422,6 +506,18 @@
     "websocket"
   ]
   revision = "cd69bc3fc700721b709c3a59e16e24c67b58f6ff"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/oauth2"
+  packages = [
+    ".",
+    "google",
+    "internal",
+    "jws",
+    "jwt"
+  ]
+  revision = "dd5f5d8e78ce062a4aa881dff95a94f2a0fd405a"
 
 [[projects]]
   branch = "master"
@@ -493,8 +589,46 @@
 
 [[projects]]
   branch = "master"
+  name = "google.golang.org/api"
+  packages = [
+    "gensupport",
+    "googleapi",
+    "googleapi/internal/uritemplates",
+    "googleapi/transport",
+    "internal",
+    "iterator",
+    "option",
+    "storage/v1",
+    "transport/http"
+  ]
+  revision = "4f7dd2b006a4ffd9fd683c1c734d2fe91ca0ea1c"
+
+[[projects]]
+  name = "google.golang.org/appengine"
+  packages = [
+    ".",
+    "internal",
+    "internal/app_identity",
+    "internal/base",
+    "internal/datastore",
+    "internal/log",
+    "internal/modules",
+    "internal/remote_api",
+    "internal/urlfetch",
+    "urlfetch"
+  ]
+  revision = "150dc57a1b433e64154302bdc40b6bb8aefa313a"
+  version = "v1.0.0"
+
+[[projects]]
+  branch = "master"
   name = "google.golang.org/genproto"
-  packages = ["googleapis/rpc/status"]
+  packages = [
+    "googleapis/api/annotations",
+    "googleapis/iam/v1",
+    "googleapis/rpc/code",
+    "googleapis/rpc/status"
+  ]
   revision = "7fd901a49ba6a7f87732eb344f6e3c5b19d1b200"
 
 [[projects]]
@@ -543,6 +677,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "06b72ebf75f3eda0601613e5cb1313c0fdaf4bfb7325b9109b72de0f66d958a4"
+  inputs-digest = "bca5e193b7dd2ca06f77adfe2884c030dcfd1dc41334ca29681295f8addd9a3c"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -19,18 +19,79 @@ package bea
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
+	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/ctessum/requestcache"
 	"gonum.org/v1/gonum/mat"
 )
 
+type concRequest struct {
+	demand     *mat.VecDense
+	industries *Mask
+	pol        Pollutant
+	year       Year
+	loc        Location
+}
+
+func (er *concRequest) Key() string {
+	b, err := er.demand.MarshalBinary()
+	if err != nil {
+		panic(err)
+	}
+	var b2 []byte
+	if er.industries != nil {
+		b2, err = (*mat.VecDense)(er.industries).MarshalBinary()
+		if err != nil {
+			panic(err)
+		}
+	}
+	b3 := []byte(strconv.Itoa((int)(er.pol)))
+	b4 := []byte(strconv.Itoa((int)(er.year)))
+	b5 := []byte(strconv.Itoa((int)(er.loc)))
+	bAll := append(append(append(append(b, b2...), b3...), b4...), b5...)
+	bytes := sha256.Sum256(bAll)
+	return fmt.Sprintf("conc_%x", bytes[0:sha256.Size])
+}
+
 // Concentrations returns spatially-explicit pollutant concentrations caused by the
+// specified economic demand. industries
+// specifies the industries concentrations should be calculated for.
+// If industries == nil, combined concentrations for all industries are calculated.
+func (e *SpatialEIO) Concentrations(ctx context.Context, demand *mat.VecDense, industries *Mask, pol Pollutant, year Year, loc Location) (*mat.VecDense, error) {
+	e.loadConcentrationsOnce.Do(func() {
+		var c string
+		if e.SpatialCache != "" {
+			c = e.SpatialCache + "/individual"
+		}
+		e.concentrationsCache = loadCacheOnce(func(ctx context.Context, request interface{}) (interface{}, error) {
+			r := request.(*concRequest)
+			return e.concentrations(ctx, r.demand, r.industries, r.pol, r.year, r.loc) // Actually calculate the concentrations.
+		}, 1, e.MemCacheSize, c, vectorMarshal, vectorUnmarshal)
+	})
+	req := &concRequest{
+		demand:     demand,
+		industries: industries,
+		pol:        pol,
+		year:       year,
+		loc:        loc,
+	}
+	rr := e.concentrationsCache.NewRequest(ctx, req, req.Key())
+	resultI, err := rr.Result()
+	if err != nil {
+		return nil, err
+	}
+	return resultI.(*mat.VecDense), nil
+}
+
+// concentrations returns spatially-explicit pollutant concentrations caused by the
 // specified economic demand. industries
 // specifies the industries emissions should be calculated for.
 // If industries == nil, combined emissions for all industries are calculated.
-func (e *SpatialEIO) Concentrations(ctx context.Context, demand *mat.VecDense, industries *Mask, pol Pollutant, year Year, loc Location) (*mat.VecDense, error) {
+func (e *SpatialEIO) concentrations(ctx context.Context, demand *mat.VecDense, industries *Mask, pol Pollutant, year Year, loc Location) (*mat.VecDense, error) {
 	cf, err := e.concentrationFactors(ctx, pol, year)
 	if err != nil {
 		return nil, err
@@ -103,6 +164,17 @@ func loadCacheOnce(f requestcache.ProcessFunc, workers, memCacheSize int, cacheL
 	} else if strings.HasPrefix(cacheLoc, "http") {
 		return requestcache.NewCache(f, workers, requestcache.Deduplicate(),
 			requestcache.Memory(memCacheSize), requestcache.HTTP(cacheLoc, unmarshal))
+	} else if strings.HasPrefix(cacheLoc, "gs://") {
+		loc, err := url.Parse(cacheLoc)
+		if err != nil {
+			panic(err)
+		}
+		cf, err := requestcache.GoogleCloudStorage(context.TODO(), loc.Host, strings.TrimLeft(loc.Path, "/"), marshal, unmarshal)
+		if err != nil {
+			panic(err)
+		}
+		return requestcache.NewCache(f, workers, requestcache.Deduplicate(),
+			requestcache.Memory(memCacheSize), cf)
 	}
 	return requestcache.NewCache(f, workers, requestcache.Deduplicate(),
 		requestcache.Memory(memCacheSize), requestcache.Disk(cacheLoc, marshal, unmarshal))

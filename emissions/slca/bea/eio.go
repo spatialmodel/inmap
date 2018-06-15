@@ -105,12 +105,15 @@ type EIO struct {
 	// to avoid reading the same file multiple times.
 	excelCache         *requestcache.Cache
 	loadExcelCacheOnce sync.Once
+
+	years []Year
 }
 
 // New initializes a new EIO object based on the given
 // configuration.
 func New(cfg *Config) (*EIO, error) {
 	eio := new(EIO)
+	eio.years = cfg.Years
 	eio.totalRequirements = make(map[Year]*mat.Dense)
 	eio.domesticRequirements = make(map[Year]*mat.Dense)
 	eio.importRequirements = make(map[Year]*mat.Dense)
@@ -219,6 +222,9 @@ func New(cfg *Config) (*EIO, error) {
 
 	return eio, err
 }
+
+// Years returns the years represented by the receiver.
+func (e *EIO) Years() []Year { return e.years }
 
 //go:generate stringer -type=Location
 

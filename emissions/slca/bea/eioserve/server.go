@@ -18,8 +18,8 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.*/
 package eioserve
 
 // Install the code generation dependencies.
-// go get github.com/golang/protobuf/protoc-gen-go
-// go get github.com/johanbrandhorst/protobuf/protoc-gen-gopherjs
+// go get -u github.com/golang/protobuf/protoc-gen-go
+// go get -u github.com/johanbrandhorst/protobuf/protoc-gen-gopherjs
 
 // Generate the gRPC client/server code. (Information at https://grpc.io/docs/quickstart/go.html)
 //go:generate protoc -I proto/ eioserve.proto --go_out=plugins=grpc:proto/eioservepb --gopherjs_out=plugins=grpc:proto/eioclientpb
@@ -36,29 +36,30 @@ import (
 	"image/color"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
 
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/proj"
+	"github.com/ctessum/plotextra"
 	"github.com/ctessum/requestcache"
 	"github.com/gorilla/websocket"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"github.com/sirupsen/logrus"
-	"github.com/spatialmodel/epi"
 	"gonum.org/v1/gonum/mat"
 	"gonum.org/v1/plot"
-	"gonum.org/v1/plot/palette"
 	"gonum.org/v1/plot/palette/moreland"
 	"gonum.org/v1/plot/plotter"
-	"gonum.org/v1/plot/vg"
 	"gonum.org/v1/plot/vg/draw"
 	"gonum.org/v1/plot/vg/vgimg"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
+	"github.com/spatialmodel/epi"
 	"github.com/spatialmodel/inmap/emissions/slca"
 	"github.com/spatialmodel/inmap/emissions/slca/bea"
 	"github.com/spatialmodel/inmap/emissions/slca/bea/eioserve/proto/eioservepb"
@@ -69,14 +70,16 @@ type config struct {
 	slca.CSTConfig
 	AggregatorFile string
 	SpatialRefFile string
+	DefaultYear    bea.Year
 }
-
-const year = 2014
 
 // Server is a server for EIO LCA model simulation data.
 type Server struct {
 	spatial *bea.SpatialEIO
-	agg     *bea.Aggregator
+	ioAgg   *bea.Aggregator
+	sccAgg  *bea.Aggregator
+
+	defaultYear bea.Year
 
 	geomCache, areaCache         *requestcache.Cache
 	geomCacheOnce, areaCacheOnce sync.Once
@@ -87,30 +90,53 @@ type Server struct {
 	Log logrus.FieldLogger
 }
 
+type ServerConfig struct {
+	bea.SpatialConfig
+
+	// IOAggregatorFile is the path to the xlsx file containing IO sector
+	// aggregation information.
+	IOAggregatorFile string
+
+	// SCCAggregatorFile is the path to the xlsx file containing SCC
+	// aggregation information.
+	SCCAggregatorFile string
+
+	// PEMDir is the path to the director containing SSL information.
+	PEMDir string
+
+	// StaticDir is the path to the directory containing the static
+	// assets for the website.
+	StaticDir string
+
+	// DefaultYear specifies the default analysis year.
+	DefaultYear bea.Year
+}
+
 // NewServer creates a new EIO-LCA server.
-func NewServer() (*Server, error) {
-	f, err := os.Open(os.ExpandEnv("${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/eioserve/config.toml"))
+func NewServer(c *ServerConfig) (*Server, error) {
+	s, err := bea.NewSpatial(&c.SpatialConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	s, err := bea.NewSpatial(f)
+	ioa, err := s.EIO.NewIOAggregator(os.ExpandEnv(c.IOAggregatorFile))
 	if err != nil {
 		return nil, err
 	}
-	f.Close()
-
-	a, err := s.EIO.NewAggregator(os.ExpandEnv("${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/aggregates.xlsx"))
+	scca, err := s.NewSCCAggregator(os.ExpandEnv(c.SCCAggregatorFile))
 	if err != nil {
 		return nil, err
 	}
 	model := &Server{
-		agg:     a,
-		spatial: s,
-		Log:     logrus.StandardLogger(),
+		ioAgg:       ioa,
+		sccAgg:      scca,
+		spatial:     s,
+		defaultYear: c.DefaultYear,
+		Log:         logrus.StandardLogger(),
 	}
 
-	creds, err := credentials.NewServerTLSFromFile("test_data/cert.pem", "test_data/key.pem")
+	pemDir := os.ExpandEnv(c.PEMDir)
+	creds, err := credentials.NewServerTLSFromFile(filepath.Join(pemDir, "cert.pem"), filepath.Join(pemDir, "key.pem"))
 	if err != nil {
 		return nil, err
 	}
@@ -120,9 +146,25 @@ func NewServer() (*Server, error) {
 
 	model.grpcServer = grpcweb.WrapServer(grpcServer, grpcweb.WithWebsockets(true))
 
-	model.staticServer = http.FileServer(http.Dir(os.ExpandEnv("${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/eioserve")))
+	model.staticServer = http.FileServer(http.Dir(os.ExpandEnv(c.StaticDir)))
 
 	return model, nil
+}
+
+func isStatic(u *url.URL) bool {
+	staticExtentions := map[string]struct{}{
+		".js":     struct{}{},
+		".css":    struct{}{},
+		".png":    struct{}{},
+		".gif":    struct{}{},
+		".jpg":    struct{}{},
+		".jpeg":   struct{}{},
+		".js.map": struct{}{},
+		".map":    struct{}{},
+	}
+	fmt.Println(strings.ToLower(filepath.Ext(u.Path)))
+	_, ok := staticExtentions[strings.ToLower(filepath.Ext(u.Path))]
+	return ok
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -132,98 +174,69 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			"addr": r.RemoteAddr,
 		}).Info("eioserve grpc request")
 		s.grpcServer.ServeHTTP(w, r)
-	} else {
+	} else if isStatic(r.URL) {
 		s.Log.WithFields(logrus.Fields{
 			"url":  r.URL.String(),
 			"addr": r.RemoteAddr,
 		}).Info("eioserve static request")
 		s.staticServer.ServeHTTP(w, r)
+	} else {
+		fmt.Fprint(w, `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+
+  <link href="css/gui.css" rel="stylesheet">
+  <link href="node_modules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="node_modules/leaflet/dist/leaflet.css" />
+
+  <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+  <![endif]-->
+</head>
+<body>
+  <script src="node_modules/jquery/dist/jquery.min.js"></script>
+  <script src="node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
+  <script src="node_modules/leaflet/dist/leaflet.js"></script>
+  <script src="glify.js"></script>
+  <script src="gui.js"></script>
+</body>
+</html>`)
 	}
 }
 
 func (s *Server) impactsMenu(ctx context.Context, selection *eiopb.Selection, commodityMask, industryMask *bea.Mask) (*mat.VecDense, error) {
-	demand, err := s.spatial.EIO.FinalDemand(bea.FinalDemand(selection.DemandType), commodityMask, year, bea.Domestic)
+	demand, err := s.spatial.EIO.FinalDemand(bea.FinalDemand(selection.DemandType), commodityMask, bea.Year(selection.Year), bea.Domestic)
 	if err != nil {
 		return nil, err
 	}
 	switch selection.ImpactType {
-	case "health_total", "conc_totalPM25":
-		return s.spatial.Health(ctx, demand, industryMask, bea.TotalPM25, "all", year, bea.Domestic, epi.NasariACS)
-	case "health_white":
-		return s.spatial.Health(ctx, demand, industryMask, bea.TotalPM25, "white", year, bea.Domestic, epi.NasariACS)
-	case "health_black":
-		return s.spatial.Health(ctx, demand, industryMask, bea.TotalPM25, "black", year, bea.Domestic, epi.NasariACS)
-	case "health_native":
-		return s.spatial.Health(ctx, demand, industryMask, bea.TotalPM25, "native", year, bea.Domestic, epi.NasariACS)
-	case "health_asian":
-		return s.spatial.Health(ctx, demand, industryMask, bea.TotalPM25, "asian", year, bea.Domestic, epi.NasariACS)
-	case "health_latino":
-		return s.spatial.Health(ctx, demand, industryMask, bea.TotalPM25, "latino", year, bea.Domestic, epi.NasariACS)
-	case "conc_PNH4":
-		return s.spatial.Health(ctx, demand, industryMask, bea.PNH4, "all", year, bea.Domestic, epi.NasariACS)
-	case "conc_PNO3":
-		return s.spatial.Health(ctx, demand, industryMask, bea.PNO3, "all", year, bea.Domestic, epi.NasariACS)
-	case "conc_PSO4":
-		return s.spatial.Health(ctx, demand, industryMask, bea.PSO4, "all", year, bea.Domestic, epi.NasariACS)
-	case "conc_SOA":
-		return s.spatial.Health(ctx, demand, industryMask, bea.SOA, "all", year, bea.Domestic, epi.NasariACS)
-	case "conc_PrimaryPM25":
-		return s.spatial.Health(ctx, demand, industryMask, bea.PrimaryPM25, "all", year, bea.Domestic, epi.NasariACS)
-	case "emis_PM25":
-		return s.spatial.Emissions(ctx, demand, industryMask, slca.PM25, year, bea.Domestic)
-	case "emis_NH3":
-		return s.spatial.Emissions(ctx, demand, industryMask, slca.NH3, year, bea.Domestic)
-	case "emis_NOx":
-		return s.spatial.Emissions(ctx, demand, industryMask, slca.NOx, year, bea.Domestic)
-	case "emis_SOx":
-		return s.spatial.Emissions(ctx, demand, industryMask, slca.SOx, year, bea.Domestic)
-	case "emis_VOC":
-		return s.spatial.Emissions(ctx, demand, industryMask, slca.VOC, year, bea.Domestic)
+	case "health", "conc":
+		return s.spatial.Health(ctx, demand, industryMask, bea.Pollutant(selection.Pollutant), selection.Population, bea.Year(selection.Year), bea.Domestic, epi.NasariACS)
+	case "emis":
+		return s.spatial.Emissions(ctx, demand, industryMask, slca.Pollutant(selection.Pollutant), bea.Year(selection.Year), bea.Domestic)
 	default:
 		return nil, fmt.Errorf("invalid impact type request: %s", selection.ImpactType)
 	}
 }
 
 func (s *Server) impactsMap(ctx context.Context, selection *eiopb.Selection, commodityMask, industryMask *bea.Mask) (*mat.VecDense, error) {
-	demand, err := s.spatial.EIO.FinalDemand(bea.FinalDemand(selection.DemandType), commodityMask, year, bea.Domestic)
+	demand, err := s.spatial.EIO.FinalDemand(bea.FinalDemand(selection.DemandType), commodityMask, bea.Year(selection.Year), bea.Domestic)
 	if err != nil {
 		return nil, err
 	}
 	switch selection.ImpactType {
-	case "health_total":
-		return s.perArea(s.spatial.Health(ctx, demand, industryMask, bea.TotalPM25, "all", year, bea.Domestic, epi.NasariACS))
-	case "health_white":
-		return s.perArea(s.spatial.Health(ctx, demand, industryMask, bea.TotalPM25, "white", year, bea.Domestic, epi.NasariACS))
-	case "health_black":
-		return s.perArea(s.spatial.Health(ctx, demand, industryMask, bea.TotalPM25, "black", year, bea.Domestic, epi.NasariACS))
-	case "health_native":
-		return s.perArea(s.spatial.Health(ctx, demand, industryMask, bea.TotalPM25, "native", year, bea.Domestic, epi.NasariACS))
-	case "health_asian":
-		return s.perArea(s.spatial.Health(ctx, demand, industryMask, bea.TotalPM25, "asian", year, bea.Domestic, epi.NasariACS))
-	case "health_latino":
-		return s.perArea(s.spatial.Health(ctx, demand, industryMask, bea.TotalPM25, "latino", year, bea.Domestic, epi.NasariACS))
-	case "conc_totalPM25":
-		return s.spatial.Concentrations(ctx, demand, industryMask, bea.TotalPM25, year, bea.Domestic)
-	case "conc_PNH4":
-		return s.spatial.Concentrations(ctx, demand, industryMask, bea.PNH4, year, bea.Domestic)
-	case "conc_PNO3":
-		return s.spatial.Concentrations(ctx, demand, industryMask, bea.PNO3, year, bea.Domestic)
-	case "conc_PSO4":
-		return s.spatial.Concentrations(ctx, demand, industryMask, bea.PSO4, year, bea.Domestic)
-	case "conc_SOA":
-		return s.spatial.Concentrations(ctx, demand, industryMask, bea.SOA, year, bea.Domestic)
-	case "conc_PrimaryPM25":
-		return s.spatial.Concentrations(ctx, demand, industryMask, bea.PrimaryPM25, year, bea.Domestic)
-	case "emis_PM25":
-		return s.perArea(s.spatial.Emissions(ctx, demand, industryMask, slca.PM25, year, bea.Domestic))
-	case "emis_NH3":
-		return s.perArea(s.spatial.Emissions(ctx, demand, industryMask, slca.NH3, year, bea.Domestic))
-	case "emis_NOx":
-		return s.perArea(s.spatial.Emissions(ctx, demand, industryMask, slca.NOx, year, bea.Domestic))
-	case "emis_SOx":
-		return s.perArea(s.spatial.Emissions(ctx, demand, industryMask, slca.SOx, year, bea.Domestic))
-	case "emis_VOC":
-		return s.perArea(s.spatial.Emissions(ctx, demand, industryMask, slca.VOC, year, bea.Domestic))
+	case "health":
+		return s.perArea(s.spatial.Health(ctx, demand, industryMask, bea.Pollutant(selection.Pollutant), selection.Population, bea.Year(selection.Year), bea.Domestic, epi.NasariACS))
+	case "conc":
+		return s.spatial.Concentrations(ctx, demand, industryMask, bea.Pollutant(selection.Pollutant), bea.Year(selection.Year), bea.Domestic)
+	case "emis":
+		return s.perArea(s.spatial.Emissions(ctx, demand, industryMask, slca.Pollutant(selection.Pollutant), bea.Year(selection.Year), bea.Domestic))
 	default:
 		return nil, fmt.Errorf("invalid impact type request: %s", selection.ImpactType)
 	}
@@ -253,8 +266,8 @@ func (s *Server) DemandGroups(ctx context.Context, in *eiopb.Selection) (*eiopb.
 	}).Info("eioserve generating DemandGroups")
 
 	out := &eiopb.Selectors{
-		Names:  make([]string, len(s.agg.Names())+1),
-		Values: make([]float32, len(s.agg.Names())+1),
+		Names:  make([]string, len(s.ioAgg.Names())+1),
+		Values: make([]float32, len(s.ioAgg.Names())+1),
 	}
 	out.Names[0] = eiopb.All
 	// impacts produced by all sectors owing to all sectors.
@@ -264,7 +277,7 @@ func (s *Server) DemandGroups(ctx context.Context, in *eiopb.Selection) (*eiopb.
 	}
 	out.Values[0] = float32(mat.Sum(impacts))
 	i := 1
-	for _, g := range s.agg.Names() {
+	for _, g := range s.ioAgg.Names() {
 		out.Names[i] = g
 
 		// impacts produced by all sectors owing to consumption in this group
@@ -303,15 +316,19 @@ func commodityGroup(e *bea.EIO, m *bea.Mask) []string {
 	return o
 }
 
-func industryGroup(e *bea.EIO, m *bea.Mask) []string {
-	var o []string
+func sccGroup(s *bea.SpatialEIO, m *bea.Mask) (codes, descriptions []string) {
 	v := (mat.VecDense)(*m)
-	for i, c := range e.Industries {
+	for i, c := range s.SCCs {
 		if v.At(i, 0) != 0 {
-			o = append(o, c)
+			d, err := s.SCCDescription(i)
+			if err != nil {
+				panic(err)
+			}
+			descriptions = append(descriptions, d)
+			codes = append(codes, string(c))
 		}
 	}
-	return o
+	return
 }
 
 // DemandSectors returns the available demand sectors.
@@ -379,11 +396,11 @@ func (s *Server) demandMask(demandGroup, demandSector string) (*bea.Mask, error)
 		return nil, nil
 	} else if demandSector == eiopb.All {
 		// demand from a group of sectors.
-		abbrev, err := s.agg.Abbreviation(demandGroup)
+		abbrev, err := s.ioAgg.Abbreviation(demandGroup)
 		if err != nil {
 			return nil, err
 		}
-		return s.agg.CommodityMask(abbrev), nil
+		return s.ioAgg.CommodityMask(abbrev), nil
 	}
 	// demand from a single sector.
 	return s.spatial.EIO.CommodityMask(demandSector)
@@ -396,14 +413,14 @@ func (s *Server) productionMask(productionGroup, productionSector string) (*bea.
 		return nil, nil
 	} else if productionSector == eiopb.All {
 		// demand from a group of sectors.
-		abbrev, err := s.agg.Abbreviation(productionGroup)
+		abbrev, err := s.sccAgg.Abbreviation(productionGroup)
 		if err != nil {
 			return nil, err
 		}
-		return s.agg.IndustryMask(abbrev), nil
+		return s.sccAgg.IndustryMask(abbrev), nil
 	}
 	// demand from a single sector.
-	return s.spatial.EIO.IndustryMask(productionSector)
+	return s.spatial.SCCMask(slca.SCC(productionSector))
 }
 
 // ProdGroups returns the available production groups.
@@ -421,8 +438,8 @@ func (s *Server) ProdGroups(ctx context.Context, in *eiopb.Selection) (*eiopb.Se
 		return nil, err
 	}
 	out := &eiopb.Selectors{
-		Names:  make([]string, len(s.agg.Names())+1),
-		Values: make([]float32, len(s.agg.Names())+1),
+		Names:  make([]string, len(s.sccAgg.Names())+1),
+		Values: make([]float32, len(s.sccAgg.Names())+1),
 	}
 	out.Names[0] = eiopb.All
 	v, err := s.impactsMenu(ctx, in, demandMask, nil)
@@ -431,7 +448,7 @@ func (s *Server) ProdGroups(ctx context.Context, in *eiopb.Selection) (*eiopb.Se
 	}
 	out.Values[0] = float32(mat.Sum(v))
 	i := 1
-	for _, g := range s.agg.Names() {
+	for _, g := range s.sccAgg.Names() {
 		out.Names[i] = g
 		mask, err := s.productionMask(g, eiopb.All)
 		if err != nil {
@@ -471,7 +488,7 @@ func (s *Server) ProdSectors(ctx context.Context, in *eiopb.Selection) (*eiopb.S
 		return nil, err
 	}
 
-	out := &eiopb.Selectors{Names: []string{eiopb.All}}
+	out := &eiopb.Selectors{Names: []string{eiopb.All}, Codes: []string{eiopb.All}}
 	if in.ProductionGroup == eiopb.All {
 		v, err2 := s.impactsMenu(ctx, in, demandMask, nil)
 		if err2 != nil {
@@ -489,8 +506,9 @@ func (s *Server) ProdSectors(ctx context.Context, in *eiopb.Selection) (*eiopb.S
 		return nil, err
 	}
 	out.Values = []float32{float32(mat.Sum(v))}
-	sectors := industryGroup(&s.spatial.EIO, mask)
-	out.Names = append(out.Names, sectors...)
+	sectors, descriptions := sccGroup(s.spatial, mask)
+	out.Names = append(out.Names, descriptions...)
+	out.Codes = append(out.Codes, sectors...)
 	temp := make([]float32, len(sectors))
 	out.Values = append(out.Values, temp...)
 	for i, sector := range sectors {
@@ -540,13 +558,7 @@ func (s *Server) MapInfo(ctx context.Context, in *eiopb.Selection) (*eiopb.Color
 		return nil, err
 	}
 
-	cm := moreland.ExtendedBlackBody()
-	min := mat.Min(impacts)
-	max := mat.Max(impacts)
-	cutpt := percentile(impacts, 0.999)
-	cm.SetMin(min)
-	cm.SetMax(cutpt)
-
+	cm1 := moreland.ExtendedBlackBody()
 	cm2, err := moreland.NewLuminance([]color.Color{
 		color.NRGBA{G: 176, A: 255},
 		color.NRGBA{G: 255, A: 255},
@@ -554,8 +566,14 @@ func (s *Server) MapInfo(ctx context.Context, in *eiopb.Selection) (*eiopb.Color
 	if err != nil {
 		log.Panic(err)
 	}
-	cm2.SetMin(cutpt)
-	cm2.SetMax(max)
+	cm := &plotextra.BrokenColorMap{
+		Base:     cm1,
+		OverFlow: cm2,
+	}
+	cm.SetMin(mat.Min(impacts))
+	cm.SetMax(mat.Max(impacts))
+	cutpt := percentile(impacts, 0.999)
+	cm.SetHighCut(cutpt)
 
 	rows, _ := impacts.Dims()
 	out.RGB = make([][]byte, rows)
@@ -563,19 +581,12 @@ func (s *Server) MapInfo(ctx context.Context, in *eiopb.Selection) (*eiopb.Color
 		v := impacts.At(i, 0)
 		c, err := cm.At(v)
 		if err != nil {
-			if err == palette.ErrOverflow {
-				c, err = cm2.At(v)
-				if err != nil {
-					panic(err)
-				}
-			} else {
-				panic(err)
-			}
+			return nil, fmt.Errorf("eioserve: creating map legend: %v", err)
 		}
 		col := color.NRGBAModel.Convert(c).(color.NRGBA)
 		out.RGB[i] = []byte{col.R, col.G, col.B}
 	}
-	out.Legend = legend(cm, cm2, cutpt, max)
+	out.Legend = legend(cm, cutpt)
 	s.Log.WithFields(logrus.Fields{
 		"DemandGroup":      in.DemandGroup,
 		"DemandSector":     in.DemandSector,
@@ -587,7 +598,7 @@ func (s *Server) MapInfo(ctx context.Context, in *eiopb.Selection) (*eiopb.Color
 	return out, nil
 }
 
-func legend(cm, cm2 palette.ColorMap, cutpt, max float64) string {
+func legend(cm *plotextra.BrokenColorMap, highcut float64) string {
 	p, err := plot.New()
 	if err != nil {
 		log.Panic(err)
@@ -595,54 +606,26 @@ func legend(cm, cm2 palette.ColorMap, cutpt, max float64) string {
 	l := &plotter.ColorBar{
 		ColorMap: cm,
 	}
+	p.X.Scale = plotextra.BrokenScale{
+		HighCut:         highcut,
+		HighCutFraction: 0.9,
+	}
+	p.X.Tick.Marker = plotextra.BrokenTicks{
+		HighCut: highcut,
+	}
 	p.Add(l)
 	p.HideY()
 	p.X.Padding = 0
 
-	p2, err := plot.New()
-	if err != nil {
-		log.Panic(err)
-	}
-	l2 := &plotter.ColorBar{
-		ColorMap: cm2,
-	}
-	p2.Add(l2)
-	p2.HideY()
-	p2.X.Tick.Marker = minMax{}
-
-	p2.X.Padding = 0
-
 	img := vgimg.New(300, 40)
 	dc := draw.New(img)
-	dc1, dc2 := splitHorizontal(dc, vg.Points(265))
-	p.Draw(dc1)
-	p2.Draw(dc2)
+	p.Draw(dc)
 	b := new(bytes.Buffer)
 	png := vgimg.PngCanvas{Canvas: img}
 	if _, err := png.WriteTo(b); err != nil {
 		panic(err)
 	}
 	return base64.StdEncoding.EncodeToString(b.Bytes())
-}
-
-type minMax struct{}
-
-func (m minMax) Ticks(min, max float64) []plot.Tick {
-	return []plot.Tick{
-		plot.Tick{
-			Value: min,
-			Label: fmt.Sprintf("%.3g", min),
-		},
-		plot.Tick{
-			Value: max,
-			Label: fmt.Sprintf("%.3g", max),
-		},
-	}
-}
-
-// splitHorizontal splits c at x
-func splitHorizontal(c draw.Canvas, x vg.Length) (left, right draw.Canvas) {
-	return draw.Crop(c, 0, c.Min.X-c.Max.X+x, 0, 0), draw.Crop(c, x, 0, 0, 0)
 }
 
 // percentile returns percentile p (range [0,1]) of the given data.
@@ -663,6 +646,7 @@ func roundInt(x float64) int {
 
 func init() {
 	gob.Register([]*eiopb.Rectangle{})
+	gob.Register(geom.Polygon{})
 }
 
 func (s *Server) getGeometry(ctx context.Context, _ interface{}) (interface{}, error) {
@@ -712,6 +696,17 @@ func loadCacheOnce(f requestcache.ProcessFunc, workers, memCacheSize int, cacheL
 	} else if strings.HasPrefix(cacheLoc, "http") {
 		return requestcache.NewCache(f, workers, requestcache.Deduplicate(),
 			requestcache.Memory(memCacheSize), requestcache.HTTP(cacheLoc, unmarshal))
+	} else if strings.HasPrefix(cacheLoc, "gs://") {
+		loc, err := url.Parse(cacheLoc)
+		if err != nil {
+			panic(err)
+		}
+		cf, err := requestcache.GoogleCloudStorage(context.TODO(), loc.Host, strings.TrimLeft(loc.Path, "/"), marshal, unmarshal)
+		if err != nil {
+			panic(err)
+		}
+		return requestcache.NewCache(f, workers, requestcache.Deduplicate(),
+			requestcache.Memory(memCacheSize), cf)
 	}
 	return requestcache.NewCache(f, workers, requestcache.Deduplicate(),
 		requestcache.Memory(memCacheSize), requestcache.Disk(cacheLoc, marshal, unmarshal))
@@ -764,6 +759,32 @@ func (s *Server) inverseArea() (*mat.VecDense, error) {
 		return nil, err
 	}
 	return iface.(*mat.VecDense), nil
+}
+
+func (s *Server) DefaultSelection(ctx context.Context, in *eiopb.Selection) (*eiopb.Selection, error) {
+	return &eiopb.Selection{
+		DemandGroup:      eiopb.All,
+		DemandSector:     eiopb.All,
+		ProductionGroup:  eiopb.All,
+		ProductionSector: eiopb.All,
+		ImpactType:       "conc",
+		DemandType:       eiopb.All,
+		Year:             int32(s.defaultYear),
+		Population:       s.spatial.CSTConfig.CensusPopColumns[0],
+		Pollutant:        int32(bea.TotalPM25),
+	}, nil
+}
+
+func (s *Server) Populations(ctx context.Context, _ *eiopb.Selection) (*eiopb.Selectors, error) {
+	return &eiopb.Selectors{Names: s.spatial.CSTConfig.CensusPopColumns}, nil
+}
+
+func (s *Server) Years(ctx context.Context, _ *eiopb.Selection) (*eiopb.Year, error) {
+	o := &eiopb.Year{Years: make([]int32, len(s.spatial.EIO.Years()))}
+	for i, y := range s.spatial.EIO.Years() {
+		o.Years[i] = int32(y)
+	}
+	return o, nil
 }
 
 // vectorMarshal converts a vector to a byte array for storing in a cache.

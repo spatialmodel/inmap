@@ -1,9 +1,14 @@
 SCCMapFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/scc-io.xlsx"
 SCCDescriptionFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/aep/data/nei2014/sccdesc_2014platform_09sep2016_v0.txt"
 
+IOAggregatorFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/aggregates.xlsx"
+SCCAggregatorFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/aggregates.xlsx"
+PEMDir = "$GOPATH/src/github.com/spatialmodel/inmap/emissions/slca/bea/eioserve/test_data"
+StaticDir = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/eioserve"
+DefaultYear = 2014
 
 [Config]
-  Years = [2007, 2014]
+  Years = [1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015]
   DetailYear = 2007
   UseSummary = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/IOUse_Before_Redefinitions_PRO_1997-2015_Summary.xlsx"
   UseDetail = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/IOUse_Before_Redefinitions_PRO_2007_Detail.xlsx"
@@ -20,7 +25,7 @@ SCCDescriptionFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/aep/
   SRFile = "${ISRM}"
   SRCacheSize = 480000 # This will take about 100GB of RAM. Reduce the number to decrease RAM requirements.
 
-  CensusPopColumns = ["TotalPop", "WhiteNoLat", "Black", "Native", "Asian", "Latino"]
+  CensusPopColumns = ["all", "white", "latino", "native", "asian", "black"]
 
   NEIBaseYear = 2014
   NEITrends = "$GOPATH/src/github.com/spatialmodel/inmap/emissions/aep/aeputil/testdata/state_tier1_90-16.xlsx"
@@ -39,19 +44,43 @@ SCCDescriptionFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/aep/
   ]
 
 [SpatialEIO.CSTConfig.CensusFile]
-  2014 = "${evaldata}/census2013blckgrp.shp"
+  2000 = "${POP_MORT_DATA}/pop/pop_2000.shp"
+  2007 = "${POP_MORT_DATA}/pop/pop_2007.shp"
+  2008 = "${POP_MORT_DATA}/pop/pop_2008.shp"
+  2009 = "${POP_MORT_DATA}/pop/pop_2009.shp"
+  2010 = "${POP_MORT_DATA}/pop/pop_2010.shp"
+  #2011 = "${POP_MORT_DATA}/pop/pop_2011.shp"
+  2012 = "${POP_MORT_DATA}/pop/pop_2012.shp"
+  2013 = "${POP_MORT_DATA}/pop/pop_2013.shp"
+  2014 = "${POP_MORT_DATA}/pop/pop_2014.shp"
 
 [SpatialEIO.CSTConfig.MortalityRateFile]
-  2014 = "${evaldata}/mortalityRates2013.shp"
+  1999 = "${POP_MORT_DATA}/mort/mort_AllCause_1999.shp"
+  2000 = "${POP_MORT_DATA}/mort/mort_AllCause_2000.shp"
+  2001 = "${POP_MORT_DATA}/mort/mort_AllCause_2001.shp"
+  2002 = "${POP_MORT_DATA}/mort/mort_AllCause_2002.shp"
+  2003 = "${POP_MORT_DATA}/mort/mort_AllCause_2003.shp"
+  2004 = "${POP_MORT_DATA}/mort/mort_AllCause_2004.shp"
+  2005 = "${POP_MORT_DATA}/mort/mort_AllCause_2005.shp"
+  2006 = "${POP_MORT_DATA}/mort/mort_AllCause_2006.shp"
+  2007 = "${POP_MORT_DATA}/mort/mort_AllCause_2007.shp"
+  2008 = "${POP_MORT_DATA}/mort/mort_AllCause_2008.shp"
+  2009 = "${POP_MORT_DATA}/mort/mort_AllCause_2009.shp"
+  2010 = "${POP_MORT_DATA}/mort/mort_AllCause_2010.shp"
+  2011 = "${POP_MORT_DATA}/mort/mort_AllCause_2011.shp"
+  2012 = "${POP_MORT_DATA}/mort/mort_AllCause_2012.shp"
+  2013 = "${POP_MORT_DATA}/mort/mort_AllCause_2013.shp"
+  2014 = "${POP_MORT_DATA}/mort/mort_AllCause_2014.shp"
+  2015 = "${POP_MORT_DATA}/mort/mort_AllCause_2015.shp"
+  2016 = "${POP_MORT_DATA}/mort/mort_AllCause_2016.shp"
 
 [SpatialEIO.CSTConfig.MortalityRateColumns]
-  AllCause = "TotalPop"
-  WhNoLMort = "WhiteNoLat"
-  BlackMort = "Black"
-  AsianMort = "Native"
-  NativeMort = "Asian"
-  LatinoMort = "Latino"
-
+  all = "all"
+  white = "white"
+  latino = "latino"
+  black = "black"
+  asian = "asian"
+  native = "native"
 
 [SpatialEIO.CSTConfig.SpatialConfig]
   SrgSpec = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/aep/data/nei2014/surrogate_specification_2014.csv"

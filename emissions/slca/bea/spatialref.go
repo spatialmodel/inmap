@@ -32,12 +32,15 @@ func (s *SpatialEIO) loadSCCMap(sccMapFile string) error {
 	}
 	sheet := f.Sheets[0]
 
+	s.sccIndex = make(map[slca.SCC]int)
 	s.SCCs = make([]slca.SCC, len(sheet.Rows)-1)
 	s.sccMap = make([][]int, len(s.SCCs))
 	s.SpatialRefs = make([]slca.SpatialRef, len(s.SCCs))
 	for i := 0; i < len(s.SCCs); i++ {
 		r := sheet.Rows[i+1]
-		s.SCCs[i] = slca.SCC(r.Cells[0].String())
+		scc := slca.SCC(r.Cells[0].String())
+		s.SCCs[i] = scc
+		s.sccIndex[scc] = i
 
 		s.SpatialRefs[i] = slca.SpatialRef{
 			SCCs:            []slca.SCC{s.SCCs[i]},

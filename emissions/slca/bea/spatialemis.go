@@ -19,18 +19,78 @@ package bea
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
+	"strconv"
 
 	"github.com/spatialmodel/inmap/emissions/slca"
 
 	"gonum.org/v1/gonum/mat"
 )
 
+type emissionsRequest struct {
+	demand     *mat.VecDense
+	industries *Mask
+	pol        slca.Pollutant
+	year       Year
+	loc        Location
+}
+
+func (er *emissionsRequest) Key() string {
+	b, err := er.demand.MarshalBinary()
+	if err != nil {
+		panic(err)
+	}
+	var b2 []byte
+	if er.industries != nil {
+		b2, err = (*mat.VecDense)(er.industries).MarshalBinary()
+		if err != nil {
+			panic(err)
+		}
+	}
+	b3 := []byte(strconv.Itoa((int)(er.pol)))
+	b4 := []byte(strconv.Itoa((int)(er.year)))
+	b5 := []byte(strconv.Itoa((int)(er.loc)))
+	bAll := append(append(append(append(b, b2...), b3...), b4...), b5...)
+	bytes := sha256.Sum256(bAll)
+	return fmt.Sprintf("emis_%x", bytes[0:sha256.Size])
+}
+
 // Emissions returns spatially-explicit emissions caused by the
 // specified economic demand. industries
 // specifies the industries emissions should be calculated for.
 // If industries == nil, combined emissions for all industries are calculated.
 func (e *SpatialEIO) Emissions(ctx context.Context, demand *mat.VecDense, industries *Mask, pol slca.Pollutant, year Year, loc Location) (*mat.VecDense, error) {
+	e.loadEmissionsOnce.Do(func() {
+		var c string
+		if e.SpatialCache != "" {
+			c = e.SpatialCache + "/individual"
+		}
+		e.emissionsCache = loadCacheOnce(func(ctx context.Context, request interface{}) (interface{}, error) {
+			r := request.(*emissionsRequest)
+			return e.emissions(ctx, r.demand, r.industries, r.pol, r.year, r.loc) // Actually calculate the emissions.
+		}, 1, e.MemCacheSize, c, vectorMarshal, vectorUnmarshal)
+	})
+	req := &emissionsRequest{
+		demand:     demand,
+		industries: industries,
+		pol:        pol,
+		year:       year,
+		loc:        loc,
+	}
+	rr := e.emissionsCache.NewRequest(ctx, req, req.Key())
+	resultI, err := rr.Result()
+	if err != nil {
+		return nil, err
+	}
+	return resultI.(*mat.VecDense), nil
+}
+
+// emissions returns spatially-explicit emissions caused by the
+// specified economic demand. industries
+// specifies the industries emissions should be calculated for.
+// If industries == nil, combined emissions for all industries are calculated.
+func (e *SpatialEIO) emissions(ctx context.Context, demand *mat.VecDense, industries *Mask, pol slca.Pollutant, year Year, loc Location) (*mat.VecDense, error) {
 	// Calculate emission factors. matrix dimension: [# grid cells, # industries]
 	ef, err := e.emissionFactors(ctx, pol, year)
 	if err != nil {
