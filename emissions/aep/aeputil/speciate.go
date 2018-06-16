@@ -23,6 +23,7 @@ import (
 	"io"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/ctessum/unit"
 	"github.com/spatialmodel/inmap/emissions/aep"
@@ -68,6 +69,19 @@ type SpeciatedRecord struct {
 func (r *SpeciatedRecord) GetEmissions() *aep.Emissions {
 	return r.emis
 }
+
+// Totals returns emissions totals.
+func (r *SpeciatedRecord) Totals() map[aep.Pollutant]*unit.Unit {
+	return r.emis.Totals()
+}
+
+// PeriodTotals returns total emissions for the given time period.
+func (r *SpeciatedRecord) PeriodTotals(begin, end time.Time) map[aep.Pollutant]*unit.Unit {
+	return r.emis.PeriodTotals(begin, end)
+}
+
+// CombineEmissions combines emissions from r2 with the receiver.
+func (r *SpeciatedRecord) CombineEmissions(r2 aep.Record) { r.emis.CombineEmissions(r2) }
 
 // DroppedEmissions returns emissions that were dropped from
 // the analysis during speciation to avoid double counting.
