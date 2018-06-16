@@ -41,6 +41,9 @@ func (s *Selectors) Less(i, j int) bool {
 func (s *Selectors) Swap(i, j int) {
 	s.Names[i], s.Names[j] = s.Names[j], s.Names[i]
 	s.Values[i], s.Values[j] = s.Values[j], s.Values[i]
+	if len(s.Codes) == len(s.Names) {
+		s.Codes[i], s.Codes[j] = s.Codes[j], s.Codes[i]
+	}
 }
 
 // Empty is an empty struct.

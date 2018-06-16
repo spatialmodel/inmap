@@ -161,8 +161,8 @@ func isStatic(u *url.URL) bool {
 		".jpeg":   struct{}{},
 		".js.map": struct{}{},
 		".map":    struct{}{},
+		".ico":    struct{}{},
 	}
-	fmt.Println(strings.ToLower(filepath.Ext(u.Path)))
 	_, ok := staticExtentions[strings.ToLower(filepath.Ext(u.Path))]
 	return ok
 }
