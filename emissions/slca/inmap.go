@@ -314,7 +314,7 @@ func (c *CSTConfig) evaluationEmissions(ctx context.Context, yearI interface{}) 
 			if fips[0:2] == "36" { // New York State
 				return false
 			}
-		case "2806015000", "2810010000": // Dog waste and human perspiration
+		case "2806015000", "2810010000", "2610000500": // Dog waste, human perspiration, and construction open burning
 			return false
 		}
 		return true

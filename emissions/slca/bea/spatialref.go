@@ -33,22 +33,26 @@ func (s *SpatialEIO) loadSCCMap(sccMapFile string) error {
 	sheet := f.Sheets[0]
 
 	s.sccIndex = make(map[slca.SCC]int)
-	s.SCCs = make([]slca.SCC, len(sheet.Rows)-1)
-	s.sccMap = make([][]int, len(s.SCCs))
-	s.SpatialRefs = make([]slca.SpatialRef, len(s.SCCs))
-	for i := 0; i < len(s.SCCs); i++ {
+	s.SCCs = make([]slca.SCC, 0, len(sheet.Rows)-1)
+	s.sccMap = make([][]int, 0, len(sheet.Rows)-1)
+	s.SpatialRefs = make([]slca.SpatialRef, 0, len(sheet.Rows)-1)
+	for i := 0; i < len(sheet.Rows)-1; i++ {
 		r := sheet.Rows[i+1]
+		if len(r.Cells) == 0 {
+			continue
+		}
 		scc := slca.SCC(r.Cells[0].String())
-		s.SCCs[i] = scc
+		s.SCCs = append(s.SCCs, scc)
 		s.sccIndex[scc] = i
 
-		s.SpatialRefs[i] = slca.SpatialRef{
+		s.SpatialRefs = append(s.SpatialRefs, slca.SpatialRef{
 			SCCs:            []slca.SCC{s.SCCs[i]},
 			EmisYear:        -9,
 			Type:            slca.Stationary,
 			NoNormalization: true,
-		}
+		})
 
+		s.sccMap = append(s.sccMap, []int{})
 		for j := 2; j < len(r.Cells); j++ { // Skip first two columns.
 			industry := r.Cells[j].String()
 			ioRow, err := s.IndustryIndex(industry)
