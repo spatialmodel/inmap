@@ -77,8 +77,8 @@ func NewGridRegular(Name string, Nx, Ny int, Dx, Dy, X0, Y0 float64,
 	// Create geometry
 	grid.Cells = make([]*GridCell, grid.Nx*grid.Ny)
 	i := 0
-	for ix := 0; ix < grid.Nx; ix++ {
-		for iy := 0; iy < grid.Ny; iy++ {
+	for iy := 0; iy < grid.Ny; iy++ {
+		for ix := 0; ix < grid.Nx; ix++ {
 			cell := new(GridCell)
 			x := grid.X0 + float64(ix)*grid.Dx
 			y := grid.Y0 + float64(iy)*grid.Dy
