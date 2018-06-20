@@ -57,7 +57,6 @@ import (
 	"gonum.org/v1/plot/vg/draw"
 	"gonum.org/v1/plot/vg/vgimg"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 
 	"github.com/spatialmodel/epi"
 	"github.com/spatialmodel/inmap/emissions/slca"
@@ -101,9 +100,6 @@ type ServerConfig struct {
 	// aggregation information.
 	SCCAggregatorFile string
 
-	// PEMDir is the path to the director containing SSL information.
-	PEMDir string
-
 	// StaticDir is the path to the directory containing the static
 	// assets for the website.
 	StaticDir string
@@ -135,13 +131,7 @@ func NewServer(c *ServerConfig) (*Server, error) {
 		Log:         logrus.StandardLogger(),
 	}
 
-	pemDir := os.ExpandEnv(c.PEMDir)
-	creds, err := credentials.NewServerTLSFromFile(filepath.Join(pemDir, "cert.pem"), filepath.Join(pemDir, "key.pem"))
-	if err != nil {
-		return nil, err
-	}
-	opt := grpc.Creds(creds)
-	grpcServer := grpc.NewServer(opt)
+	grpcServer := grpc.NewServer()
 	eiopb.RegisterEIOServeServer(grpcServer, model)
 
 	model.grpcServer = grpcweb.WrapServer(grpcServer, grpcweb.WithWebsockets(true))

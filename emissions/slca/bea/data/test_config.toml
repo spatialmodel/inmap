@@ -4,7 +4,6 @@ MemCacheSize = 1000
 
 IOAggregatorFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/aggregates.xlsx"
 SCCAggregatorFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/aggregates_small_test.xlsx"
-PEMDir = "$GOPATH/src/github.com/spatialmodel/inmap/emissions/slca/bea/eioserve/test_data"
 StaticDir = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/eioserve"
 DefaultYear = 2011
 

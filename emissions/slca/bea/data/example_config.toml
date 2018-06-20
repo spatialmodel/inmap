@@ -3,7 +3,6 @@ SCCDescriptionFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/aep/
 
 IOAggregatorFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/aggregates.xlsx"
 SCCAggregatorFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/aggregates.xlsx"
-PEMDir = "$GOPATH/src/github.com/spatialmodel/inmap/emissions/slca/bea/eioserve/test_data"
 StaticDir = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/eioserve"
 DefaultYear = 2014
 
