@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"sync"
 
 	leaflet "github.com/ctessum/go-leaflet"
 	"github.com/go-humble/router"
@@ -52,6 +53,8 @@ type GUI struct {
 
 	selection eioclientpb.Selection
 
+	selectionCallbacks []func()
+
 	Map      *leaflet.Map
 	Polygons *js.Object
 }
@@ -66,19 +69,15 @@ func NewGUI() (*GUI, error) {
 
 	c.EIOServeClient = eioclientpb.NewEIOServeClient(fmt.Sprintf("%s://%s", url.Scheme, url.Host))
 
-	c.router = router.New()
-	c.router.HandleFunc("/{query}", func(ctx *router.Context) {
-		go func() { c.update(ctx.Params["query"]) }()
-	})
-	c.router.InterceptLinks()
-	c.router.Start()
-
-	c.router.Navigate(url.RawQuery)
+	c.selectionCallbacks = []func(){}
+	vecty.RenderBody(c)
 
 	return c, nil
 }
 
 func (c *GUI) update(query string) {
+	c.startLoading()
+	defer c.stopLoading()
 	if query == "" {
 		sel, err := c.DefaultSelection(context.Background(), nil)
 		check(err)
@@ -86,13 +85,23 @@ func (c *GUI) update(query string) {
 	} else {
 		c.selection = selectionFromQuery(query)
 	}
-	vecty.RenderBody(c)
-	check(c.LoadMap("eiomap"))
-	go func() { check(c.SetMapColors()) }()
+	var wg sync.WaitGroup
+	wg.Add(len(c.selectionCallbacks) + 1)
+	go func() {
+		check(c.SetMapColors())
+		wg.Done()
+	}()
+	for i := range c.selectionCallbacks {
+		go func(i int) {
+			c.selectionCallbacks[i]()
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
 }
 
 // queryFromSelection creates a URL query from s.
-func queryFromSelection(s eioclientpb.Selection) string {
+func queryFromSelection(s eioclientpb.Selection) url.Values {
 	v := url.Values{}
 	v.Set("dg", s.DemandGroup)
 	v.Set("ds", s.DemandSector)
@@ -103,7 +112,7 @@ func queryFromSelection(s eioclientpb.Selection) string {
 	v.Set("y", fmt.Sprint(s.Year))
 	v.Set("pop", s.Population)
 	v.Set("pol", fmt.Sprintf("%d", s.Pollutant))
-	return v.Encode()
+	return v
 }
 
 // selectionFromQuery parses a URL query to populate a
@@ -162,13 +171,13 @@ func (c *GUI) Render() vecty.ComponentOrHTML {
 							&selector{c: c, id: "y", label: "Year", options: c.yearOptions()},
 							&selector{c: c, id: "dt", label: "User", options: c.userOptions()},
 							&selector{c: c, id: "dg", label: "Use group",
-								options: c.impactOptions(c.DemandGroups, c.selection.DemandGroup)},
+								options: c.impactOptions(c.DemandGroups, "dg")},
 							&selector{c: c, id: "ds", label: "Specific use",
-								options: c.impactOptions(c.DemandSectors, c.selection.DemandSector)},
+								options: c.impactOptions(c.DemandSectors, "ds")},
 							&selector{c: c, id: "pg", label: "Emitter group",
-								options: c.impactOptions(c.ProdGroups, c.selection.ProductionGroup)},
+								options: c.impactOptions(c.ProdGroups, "pg")},
 							&selector{c: c, id: "ps", label: "Specific emitter",
-								options: c.impactOptions(c.ProdSectors, c.selection.ProductionSector)},
+								options: c.impactOptions(c.ProdSectors, "ps")},
 							&selector{c: c, id: "it", label: "Impact type", options: c.impactTypeOptions()},
 							&selector{c: c, id: "pop", label: "Impacted population", options: c.populationOptions()},
 							&selector{c: c, id: "pol", label: "Pollutant", options: c.pollutantOptions()},
@@ -180,94 +189,114 @@ func (c *GUI) Render() vecty.ComponentOrHTML {
 					),
 				),
 				elem.Div(vecty.Markup(vecty.Class("col-xs-12", "col-md-9")),
-					&Map{},
+					elem.Div(vecty.Markup(prop.ID("eiomap"))),
 				),
 			),
 		),
-		//elem.Div(vecty.Markup(vecty.Class("loading"), prop.ID("loading"))),
+		elem.Div(vecty.Markup(vecty.Class("loading"), prop.ID("loading"))),
 	)
+}
+
+// Mount loads other components after the page has been rendered.
+func (c *GUI) Mount() {
+	go func() {
+		check(c.LoadMap("eiomap"))
+		c.router = router.New()
+		c.router.HandleFunc("/{query}", func(ctx *router.Context) {
+			go func() { c.update(ctx.Params["query"]) }()
+		})
+		c.router.InterceptLinks()
+		c.router.Start()
+
+		url, err := url.Parse(c.doc.BaseURI())
+		check(err)
+
+		c.router.Navigate(url.RawQuery)
+	}()
 }
 
 // selector implements a selector control
 type selector struct {
 	vecty.Core
 	c       *GUI
-	options func() []vecty.MarkupOrChild
+	options func(id string) func()
 	id      string
 	label   string
 }
 
 // Render renders the view of the selector.
 func (s *selector) Render() vecty.ComponentOrHTML {
-	o := []vecty.MarkupOrChild{
-		vecty.Markup(vecty.Class("form-control"), prop.ID(s.id),
-			event.Change(func(e *vecty.Event) {
-				sel := selectionFromForm()
-				s.c.router.Navigate(fmt.Sprintf("/%s", queryFromSelection(sel)))
-			}),
-		),
-	}
-	o = append(o, s.options()...)
+	s.c.selectionCallbacks = append(s.c.selectionCallbacks, s.options(s.id))
 	return elem.Span(
 		elem.Label(vecty.Markup(prop.For(s.id)), vecty.Text(s.label)),
-		elem.Select(o...),
+		elem.Select(
+			vecty.Markup(
+				vecty.Class("form-control"),
+				prop.ID(s.id),
+				event.Change(func(e *vecty.Event) {
+					sel := selectionFromForm()
+					s.c.router.Navigate(fmt.Sprintf("/%s", queryFromSelection(sel).Encode()))
+				}),
+			),
+		),
 	)
 }
 
 type impactFunc func(context.Context, *eioclientpb.Selection, ...grpcweb.CallOption) (*eioclientpb.Selectors, error)
-type optionFunc func() []vecty.MarkupOrChild
+type optionFunc func(id string) func()
 
 // impactOptions returns a function that makes a list of the results of
 // the given function.
-func (c *GUI) impactOptions(f impactFunc, selection string) optionFunc {
-	return func() []vecty.MarkupOrChild {
-		sel, err := f(context.Background(), &c.selection)
-		check(err)
-		o := make([]vecty.MarkupOrChild, len(sel.Names))
-		for i, name := range sel.Names {
-			if sel.Values[i] == 0 {
-				continue // Skip options with zero impacts.
-			}
-			var val string
-			if len(sel.Codes) != 0 {
-				val = sel.Codes[i]
-			} else {
-				val = name
-			}
-			if val == selection {
-				var text string
-				switch c.selection.ImpactType {
-				case "health", "conc":
-					text = fmt.Sprintf("%s (%.3g deaths)", name, sel.Values[i])
-				case "emis":
-					text = fmt.Sprintf("%s (%.3g μg s<sup>-1</sup>)", name, sel.Values[i])
-				default:
-					dom.GetWindow().Alert(fmt.Sprintf("invalid impact type request: %s", c.selection.ImpactType))
+func (c *GUI) impactOptions(f impactFunc, typeID string) optionFunc {
+	return func(id string) func() {
+		return func() {
+			selection := queryFromSelection(c.selection)[typeID][0]
+			selElem := c.doc.GetElementByID(id).(*dom.HTMLSelectElement)
+			selElem.SetInnerHTML("")
+			sel, err := f(context.Background(), &c.selection)
+			check(err)
+			for i, name := range sel.Names {
+				if sel.Values[i] == 0 {
+					continue // Skip options with zero impacts.
 				}
-				o[i] = elem.Option(vecty.Markup(prop.Value(val), vecty.Attribute("selected", true)), vecty.Text(text))
-			} else {
-				text := fmt.Sprintf("%s (%.3g)", name, sel.Values[i])
-				o[i] = elem.Option(vecty.Markup(prop.Value(val)), vecty.Text(text))
+				var val string
+				if len(sel.Codes) != 0 {
+					val = sel.Codes[i]
+				} else {
+					val = name
+				}
+				if val == selection {
+					var text string
+					switch c.selection.ImpactType {
+					case "health", "conc":
+						text = fmt.Sprintf("%s (%.3g deaths)", name, sel.Values[i])
+					case "emis":
+						text = fmt.Sprintf("%s (%.3g μg s<sup>-1</sup>)", name, sel.Values[i])
+					default:
+						dom.GetWindow().Alert(fmt.Sprintf("invalid impact type request: %s", c.selection.ImpactType))
+					}
+					selElem.InsertBefore(c.createOption(text, val, true), nil)
+				} else {
+					text := fmt.Sprintf("%s (%.3g)", name, sel.Values[i])
+					selElem.InsertBefore(c.createOption(text, val, false), nil)
+				}
 			}
 		}
-		return o
 	}
 }
 
 // yearOptions returns a function that lists the available analysis years.
 func (c *GUI) yearOptions() optionFunc {
-	return func() []vecty.MarkupOrChild {
-		years, err := c.Years(context.Background(), &c.selection)
-		check(err)
-		o := make([]vecty.MarkupOrChild, len(years.Years))
-		for i, y := range years.Years {
-			if y == c.selection.Year {
-				o[i] = elem.Option(vecty.Markup(vecty.Attribute("selected", true)), vecty.Text(fmt.Sprint(y)))
-			} else {
-				o[i] = elem.Option(vecty.Text(fmt.Sprint(y)))
+	return func(id string) func() {
+		return func() {
+			sel := c.doc.GetElementByID(id).(*dom.HTMLSelectElement)
+			sel.SetInnerHTML("")
+			years, err := c.Years(context.Background(), &c.selection)
+			check(err)
+			for _, y := range years.Years {
+				sel.InsertBefore(c.createOption(fmt.Sprint(y), "", y == c.selection.Year), nil)
 			}
 		}
-		return o
 	}
 }
 
@@ -299,17 +328,25 @@ func (c *GUI) userOptions() optionFunc {
 		{val: "F10E", name: "Local Equipment"},
 		{val: "F10N", name: "Local IP"},
 	}
-	return func() []vecty.MarkupOrChild {
-		o := make([]vecty.MarkupOrChild, len(users))
-		for i, u := range users {
-			if u.val == c.selection.DemandType {
-				o[i] = elem.Option(vecty.Markup(prop.Value(u.val), vecty.Attribute("selected", true)), vecty.Text(u.name))
-			} else {
-				o[i] = elem.Option(vecty.Markup(prop.Value(u.val)), vecty.Text(u.name))
+	return func(id string) func() {
+		return func() {
+			sel := c.doc.GetElementByID(id).(*dom.HTMLSelectElement)
+			sel.SetInnerHTML("")
+			for _, u := range users {
+				sel.InsertBefore(c.createOption(u.name, u.val, u.val == c.selection.DemandType), nil)
 			}
 		}
-		return o
 	}
+}
+
+func (c *GUI) createOption(name, value string, selected bool) *dom.HTMLOptionElement {
+	o := c.doc.CreateElement("option").(*dom.HTMLOptionElement)
+	if value != "" {
+		o.SetAttribute("value", value)
+	}
+	o.Selected = selected
+	o.SetInnerHTML(name)
+	return o
 }
 
 // impactTypeOptions returns a function that lists the available impact types.
@@ -322,16 +359,14 @@ func (c *GUI) impactTypeOptions() optionFunc {
 		{val: "conc", name: "PM<sub>2.5<sub> Concentrations"},
 		{val: "emis", name: "Emissions"},
 	}
-	return func() []vecty.MarkupOrChild {
-		o := make([]vecty.MarkupOrChild, len(impacts))
-		for i, it := range impacts {
-			if it.val == c.selection.ImpactType {
-				o[i] = elem.Option(vecty.Markup(prop.Value(it.val), vecty.Attribute("selected", true)), vecty.Text(it.name))
-			} else {
-				o[i] = elem.Option(vecty.Markup(prop.Value(it.val)), vecty.Text(it.name))
+	return func(id string) func() {
+		return func() {
+			sel := c.doc.GetElementByID(id).(*dom.HTMLSelectElement)
+			sel.SetInnerHTML("")
+			for _, it := range impacts {
+				sel.InsertBefore(c.createOption(it.name, it.val, it.val == c.selection.ImpactType), nil)
 			}
 		}
-		return o
 	}
 }
 
@@ -357,46 +392,42 @@ func (c *GUI) pollutantOptions() optionFunc {
 		{val: 3, name: "SO<sub>x</sub>"},
 		{val: 4, name: "VOC"},
 	}
-	return func() []vecty.MarkupOrChild {
-		var pols []holder
-		switch c.selection.ImpactType {
-		case "health", "conc":
-			pols = concPols
-		case "emis":
-			pols = emisPols
-		default:
-			dom.GetWindow().Alert(fmt.Sprintf("invalid impact type request: %s", c.selection.ImpactType))
-		}
-		o := make([]vecty.MarkupOrChild, len(pols))
-		for i, p := range pols {
-			if p.val == c.selection.Pollutant {
-				o[i] = elem.Option(vecty.Markup(prop.Value(fmt.Sprintf("%d", p.val)), vecty.Attribute("selected", true)), vecty.Text(p.name))
-			} else {
-				o[i] = elem.Option(vecty.Markup(prop.Value(fmt.Sprintf("%d", p.val))), vecty.Text(p.name))
+	return func(id string) func() {
+		return func() {
+			var pols []holder
+			switch c.selection.ImpactType {
+			case "health", "conc":
+				pols = concPols
+			case "emis":
+				pols = emisPols
+			default:
+				dom.GetWindow().Alert(fmt.Sprintf("invalid impact type request: %s", c.selection.ImpactType))
+			}
+			sel := c.doc.GetElementByID(id).(*dom.HTMLSelectElement)
+			sel.SetInnerHTML("")
+			for _, p := range pols {
+				sel.InsertBefore(c.createOption(p.name, fmt.Sprintf("%d", p.val), p.val == c.selection.Pollutant), nil)
 			}
 		}
-		return o
 	}
 }
 
 // populationOptions returns a function that lists the available
 // exposed populations.
 func (c *GUI) populationOptions() optionFunc {
-	return func() []vecty.MarkupOrChild {
-		if c.selection.ImpactType == "emis" {
-			return []vecty.MarkupOrChild{}
-		}
-		pops, err := c.Populations(context.Background(), nil)
-		check(err)
-		o := make([]vecty.MarkupOrChild, len(pops.Names))
-		for i, p := range pops.Names {
-			if p == c.selection.Population {
-				o[i] = elem.Option(vecty.Markup(vecty.Attribute("selected", true)), vecty.Text(p))
-			} else {
-				o[i] = elem.Option(vecty.Text(p))
+	return func(id string) func() {
+		return func() {
+			sel := c.doc.GetElementByID(id).(*dom.HTMLSelectElement)
+			sel.SetInnerHTML("")
+			if c.selection.ImpactType == "emis" {
+				return
+			}
+			pops, err := c.Populations(context.Background(), nil)
+			check(err)
+			for _, p := range pops.Names {
+				sel.InsertBefore(c.createOption(p, "", p == c.selection.Population), nil)
 			}
 		}
-		return o
 	}
 }
 

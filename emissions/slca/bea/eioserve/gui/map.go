@@ -28,25 +28,8 @@ import (
 	leaflet "github.com/ctessum/go-leaflet"
 	"github.com/ctessum/go-leaflet/plugin/glify"
 	"github.com/gopherjs/gopherjs/js"
-	"github.com/gopherjs/vecty"
-	"github.com/gopherjs/vecty/elem"
-	"github.com/gopherjs/vecty/prop"
 	"github.com/spatialmodel/inmap/emissions/slca/bea/eioserve/proto/eioclientpb"
 )
-
-type Map struct {
-	vecty.Core
-	reRender bool // reRender is true if this is not the first time rendering.
-}
-
-func (m *Map) Render() vecty.ComponentOrHTML {
-	m.reRender = true
-	return elem.Div(vecty.Markup(prop.ID("eiomap")))
-}
-
-func (m *Map) SkipRender(prev vecty.Component) bool {
-	return m.reRender
-}
 
 func (c *GUI) LoadMap(div string) error {
 	c.setCSS()
