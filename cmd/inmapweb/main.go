@@ -20,8 +20,10 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -30,12 +32,19 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/sirupsen/logrus"
 	"github.com/spatialmodel/inmap/emissions/slca/bea/eioserve"
+	"golang.org/x/crypto/acme/autocert"
 
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/testdata"
 )
 
-const Address = ":10000"
+var (
+	config     = flag.String("config", "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/test_config.toml", "Path to the configuration file")
+	production = flag.Bool("production", false, "Is this a production setting?")
+	host       = flag.String("host", "", "Address to serve from")
+	tlsPort    = flag.String("tls-port", "10000", "Port to listen for encrypted requests")
+	port       = flag.String("port", "8080", "Port to listen for unencrypted requests")
+)
 
 var logger *logrus.Logger
 
@@ -52,32 +61,9 @@ func init() {
 	grpclog.SetLoggerV2(grpclog.NewLoggerV2(logger.Out, logger.Out, logger.Out))
 }
 
-var config = flag.String("config", "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/example_config.toml", "Path to the configuration file")
-
-func main() {
-	flag.Parse()
-
-	f, err := os.Open(os.ExpandEnv(*config))
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f.Close()
-	var c eioserve.ServerConfig
-	_, err = toml.DecodeReader(f, &c)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	logger.Info("setting up...")
-	s, err := eioserve.NewServer(&c)
-	if err != nil {
-		logger.WithError(err).Fatal("failed to create server")
-	}
-	s.Log = logger
-
-	srv := &http.Server{
-		Addr:              Address,
-		Handler:           s,
+func makeServerFromHandler(handler http.Handler) *http.Server {
+	return &http.Server{
+		Handler:           handler,
 		ReadHeaderTimeout: 5 * time.Second,
 		//WriteTimeout: 5 * time.Second,
 		IdleTimeout:    120 * time.Second,
@@ -90,7 +76,86 @@ func main() {
 			},
 		},
 	}
+}
 
-	logger.Infof("listening on https://%s\n", Address)
-	logger.Fatal(srv.ListenAndServeTLS(testdata.Path("server1.pem"), testdata.Path("server1.key")))
+func makeHTTPServer(handler http.Handler) *http.Server {
+	return makeServerFromHandler(handler)
+}
+
+func makeHTTPToHTTPSRedirectServer() *http.Server {
+	handleRedirect := func(w http.ResponseWriter, r *http.Request) {
+		newURI := "https://" + r.Host + r.URL.String()
+		http.Redirect(w, r, newURI, http.StatusFound)
+	}
+	mux := &http.ServeMux{}
+	mux.HandleFunc("/", handleRedirect)
+	return makeServerFromHandler(mux)
+}
+
+func main() {
+	flag.Parse()
+
+	logger.Info("setting up...")
+	f, err := os.Open(os.ExpandEnv(*config))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+	var c eioserve.ServerConfig
+	_, err = toml.DecodeReader(f, &c)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	s, err := eioserve.NewServer(&c)
+	if err != nil {
+		logger.WithError(err).Fatal("failed to create server")
+	}
+	s.Log = logger
+
+	var m *autocert.Manager
+
+	httpsSrv := makeHTTPServer(s)
+	httpsSrv.Addr = ":" + *tlsPort
+	if *production {
+		hostPolicy := func(ctx context.Context, reqHost string) error {
+			if reqHost == *host || reqHost == "www."+*host {
+				return nil
+			}
+			logger.Errorf("acme/autocert: only %s or www.%s host is allowed", *host, *host)
+			return fmt.Errorf("acme/autocert: only %s or www.%s host is allowed", *host, *host)
+		}
+
+		m = &autocert.Manager{
+			Prompt:     autocert.AcceptTOS,
+			HostPolicy: hostPolicy,
+			Cache:      autocert.DirCache("."),
+		}
+		httpsSrv.TLSConfig.GetCertificate = m.GetCertificate
+
+		go func() {
+			fmt.Printf("Starting HTTPS server on %s\n", httpsSrv.Addr)
+			if err = httpsSrv.ListenAndServeTLS("", ""); err != nil {
+				logger.Fatalf("httpsSrv.ListendAndServeTLS() failed with %s", err)
+			}
+		}()
+	} else {
+		go func() {
+			fmt.Printf("Starting HTTPS server on %s\n", httpsSrv.Addr)
+			logger.Fatal(httpsSrv.ListenAndServeTLS(testdata.Path("server1.pem"), testdata.Path("server1.key")))
+		}()
+	}
+
+	httpSrv := makeHTTPToHTTPSRedirectServer()
+	// allow autocert handle Let's Encrypt callbacks over http
+	if m != nil {
+		httpSrv.Handler = m.HTTPHandler(httpSrv.Handler)
+	}
+
+	httpSrv.Addr = ":" + *port
+	fmt.Printf("Starting HTTP server on %s\n", httpSrv.Addr)
+	err = httpSrv.ListenAndServe()
+	if err != nil {
+		log.Fatalf("httpSrv.ListenAndServe() failed with %s", err)
+	}
 }
