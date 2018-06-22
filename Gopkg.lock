@@ -570,7 +570,7 @@
     "lapack/lapack64",
     "mat"
   ]
-  revision = "ce73cefcda434183888c40895ea2fa306203906a"
+  revision = "e9e56344e335b77c52738092530a60fd12db0351"
 
 [[projects]]
   branch = "master"
