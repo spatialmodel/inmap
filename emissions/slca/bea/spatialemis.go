@@ -145,10 +145,11 @@ func (e *SpatialEIO) emissionFactors(ctx context.Context, pol slca.Pollutant, ye
 		e.emissionFactorCache = loadCacheOnce(e.emissionFactorsWorker, 1, 1, e.SpatialCache,
 			matrixMarshal, matrixUnmarshal)
 	})
-	rr := e.emissionFactorCache.NewRequest(ctx, polYear{pol: pol, year: year}, fmt.Sprintf("emissionFactors_%v_%d", pol, year))
+	key := fmt.Sprintf("emissionFactors_%v_%d", pol, year)
+	rr := e.emissionFactorCache.NewRequest(ctx, polYear{pol: pol, year: year}, key)
 	resultI, err := rr.Result()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("bea.emissionFactors: %s: %v", key, err)
 	}
 	return resultI.(*mat.Dense), nil
 }

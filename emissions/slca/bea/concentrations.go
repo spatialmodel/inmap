@@ -187,10 +187,11 @@ func (e *SpatialEIO) concentrationFactors(ctx context.Context, pol Pollutant, ye
 	e.loadConcOnce.Do(func() {
 		e.concentrationFactorCache = loadCacheOnce(e.concentrationFactorsWorker, 1, 1, e.SpatialCache, matrixMarshal, matrixUnmarshal)
 	})
-	rr := e.concentrationFactorCache.NewRequest(ctx, concPolYear{pol: pol, year: year}, fmt.Sprintf("concentrationFactors_%v_%d", pol, year))
+	key := fmt.Sprintf("concentrationFactors_%v_%d", pol, year)
+	rr := e.concentrationFactorCache.NewRequest(ctx, concPolYear{pol: pol, year: year}, key)
 	resultI, err := rr.Result()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("bea.concentrationFactors: %s, %v", key, err)
 	}
 	return resultI.(*mat.Dense), nil
 }

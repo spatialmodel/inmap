@@ -112,16 +112,16 @@ type ServerConfig struct {
 func NewServer(c *ServerConfig) (*Server, error) {
 	s, err := bea.NewSpatial(&c.SpatialConfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("eioserve: creating server: %v", err)
 	}
 
 	ioa, err := s.EIO.NewIOAggregator(os.ExpandEnv(c.IOAggregatorFile))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("eioserve: creating IO aggregator: %v", err)
 	}
 	scca, err := s.NewSCCAggregator(os.ExpandEnv(c.SCCAggregatorFile))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("eioserve: creating SCC aggregator: %v", err)
 	}
 	model := &Server{
 		ioAgg:       ioa,
@@ -204,7 +204,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (s *Server) impactsMenu(ctx context.Context, selection *eiopb.Selection, commodityMask, industryMask *bea.Mask) (*mat.VecDense, error) {
 	demand, err := s.spatial.EIO.FinalDemand(bea.FinalDemand(selection.DemandType), commodityMask, bea.Year(selection.Year), bea.Domestic)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("eioserve: calculating final demand: %v", err)
 	}
 	switch selection.ImpactType {
 	case "health", "conc":
@@ -219,7 +219,7 @@ func (s *Server) impactsMenu(ctx context.Context, selection *eiopb.Selection, co
 func (s *Server) impactsMap(ctx context.Context, selection *eiopb.Selection, commodityMask, industryMask *bea.Mask) (*mat.VecDense, error) {
 	demand, err := s.spatial.EIO.FinalDemand(bea.FinalDemand(selection.DemandType), commodityMask, bea.Year(selection.Year), bea.Domestic)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("eioserve: calculating final demand: %v", err)
 	}
 	switch selection.ImpactType {
 	case "health":
@@ -389,7 +389,7 @@ func (s *Server) demandMask(demandGroup, demandSector string) (*bea.Mask, error)
 		// demand from a group of sectors.
 		abbrev, err := s.ioAgg.Abbreviation(demandGroup)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("eioserve: getting abbreviation for demand mask: %v", err)
 		}
 		return s.ioAgg.CommodityMask(abbrev), nil
 	}
@@ -406,7 +406,7 @@ func (s *Server) productionMask(productionGroup, productionSector string) (*bea.
 		// demand from a group of sectors.
 		abbrev, err := s.sccAgg.Abbreviation(productionGroup)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("eioserve: getting abbreviation for production mask: %v", err)
 		}
 		return s.sccAgg.IndustryMask(abbrev), nil
 	}
@@ -647,26 +647,26 @@ func (s *Server) getGeometry(ctx context.Context, _ interface{}) (interface{}, e
 	)
 	inSR, err := proj.Parse(inProj)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("eioserve: getting geometry: %v", err)
 	}
 	outSR, err := proj.Parse(outProj)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("eioserve: getting geometry: %v", err)
 	}
 	ct, err := inSR.NewTransform(outSR)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("eioserve: getting geometry: %v", err)
 	}
 
 	g, err := s.spatial.CSTConfig.Geometry()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("eioserve: getting geometry: %v", err)
 	}
 	o := make([]*eiopb.Rectangle, len(g))
 	for i, gg := range g {
 		gT, err := gg.Transform(ct)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("eioserve: getting geometry: %v", err)
 		}
 		gr := gT.(geom.Polygon)[0]
 		o[i] = &eiopb.Rectangle{
