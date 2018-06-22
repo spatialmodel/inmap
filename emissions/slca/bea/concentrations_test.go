@@ -64,7 +64,7 @@ func TestConcentrations(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := 0.6092829446666378
+	want := 0.6092829446666379
 	have := mat.Sum(conc)
 	if want != have {
 		t.Errorf("have %g, want %g", have, want)
