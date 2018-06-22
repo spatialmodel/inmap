@@ -156,10 +156,11 @@ func (e *SpatialEIO) healthFactors(ctx context.Context, pol Pollutant, pop strin
 	e.loadHealthFactorsOnce.Do(func() {
 		e.healthFactorCache = loadCacheOnce(e.healthFactorsWorker, 1, 1, e.SpatialCache, matrixMarshal, matrixUnmarshal)
 	})
-	rr := e.healthFactorCache.NewRequest(ctx, concPolPopYearHR{pol: pol, year: year, pop: pop, hr: HR}, fmt.Sprintf("healthFactors_%v_%v_%d_%s", pol, pop, year, HR.Name()))
+	key := fmt.Sprintf("healthFactors_%v_%v_%d_%s", pol, pop, year, HR.Name())
+	rr := e.healthFactorCache.NewRequest(ctx, concPolPopYearHR{pol: pol, year: year, pop: pop, hr: HR}, key)
 	resultI, err := rr.Result()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("bea: healthFactors: %s: %v", key, err)
 	}
 	return resultI.(*mat.Dense), nil
 }
