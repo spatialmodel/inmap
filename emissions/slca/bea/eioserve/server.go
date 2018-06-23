@@ -52,6 +52,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"gonum.org/v1/gonum/mat"
 	"gonum.org/v1/plot"
+	"gonum.org/v1/plot/palette"
 	"gonum.org/v1/plot/palette/moreland"
 	"gonum.org/v1/plot/plotter"
 	"gonum.org/v1/plot/vg/draw"
@@ -255,14 +256,17 @@ func (s *Server) DemandGroups(ctx context.Context, in *eiopb.Selection) (*eiopb.
 		"ImpactType":       in.ImpactType,
 		"DemandType":       in.DemandType,
 	}).Info("eioserve generating DemandGroups")
-
+	productionMask, err := s.productionMask(in.ProductionGroup, in.ProductionSector)
+	if err != nil {
+		return nil, err
+	}
 	out := &eiopb.Selectors{
 		Names:  make([]string, len(s.ioAgg.Names())+1),
 		Values: make([]float32, len(s.ioAgg.Names())+1),
 	}
 	out.Names[0] = eiopb.All
-	// impacts produced by all sectors owing to all sectors.
-	impacts, err := s.impactsMenu(ctx, in, nil, nil)
+	// impacts produced by selected sectors owing to all sectors.
+	impacts, err := s.impactsMenu(ctx, in, nil, productionMask)
 	if err != nil {
 		return nil, err
 	}
@@ -270,14 +274,13 @@ func (s *Server) DemandGroups(ctx context.Context, in *eiopb.Selection) (*eiopb.
 	i := 1
 	for _, g := range s.ioAgg.Names() {
 		out.Names[i] = g
-
-		// impacts produced by all sectors owing to consumption in this group
+		// impacts produced by selected sectors owing to consumption in this group
 		// of sectors.
 		mask, err := s.demandMask(g, eiopb.All)
 		if err != nil {
 			return nil, err
 		}
-		impacts, err := s.impactsMenu(ctx, in, mask, nil)
+		impacts, err := s.impactsMenu(ctx, in, mask, productionMask)
 		if err != nil {
 			return nil, err
 		}
@@ -333,9 +336,13 @@ func (s *Server) DemandSectors(ctx context.Context, in *eiopb.Selection) (*eiopb
 		"DemandType":       in.DemandType,
 	}).Info("eioserve generating DemandSectors")
 	out := &eiopb.Selectors{Names: []string{eiopb.All}}
+	productionMask, err := s.productionMask(in.ProductionGroup, in.ProductionSector)
+	if err != nil {
+		return nil, err
+	}
 	if in.DemandGroup == eiopb.All {
 		// impacts produced by all sectors owing to all sectors.
-		impacts, err := s.impactsMenu(ctx, in, nil, nil)
+		impacts, err := s.impactsMenu(ctx, in, nil, productionMask)
 		if err != nil {
 			return nil, err
 		}
@@ -346,7 +353,7 @@ func (s *Server) DemandSectors(ctx context.Context, in *eiopb.Selection) (*eiopb
 	if err != nil {
 		return nil, err
 	}
-	impacts, err := s.impactsMenu(ctx, in, mask, nil)
+	impacts, err := s.impactsMenu(ctx, in, mask, productionMask)
 	if err != nil {
 		return nil, err
 	}
@@ -362,7 +369,7 @@ func (s *Server) DemandSectors(ctx context.Context, in *eiopb.Selection) (*eiopb
 		if err != nil {
 			return nil, err
 		}
-		impacts, err := s.impactsMenu(ctx, in, mask, nil)
+		impacts, err := s.impactsMenu(ctx, in, mask, productionMask)
 		if err != nil {
 			return nil, err
 		}
@@ -559,12 +566,13 @@ func (s *Server) MapInfo(ctx context.Context, in *eiopb.Selection) (*eiopb.Color
 	}
 	cm := &plotextra.BrokenColorMap{
 		Base:     cm1,
-		OverFlow: cm2,
+		OverFlow: palette.Reverse(cm2),
 	}
 	cm.SetMin(mat.Min(impacts))
 	cm.SetMax(mat.Max(impacts))
 	cutpt := percentile(impacts, 0.999)
 	cm.SetHighCut(cutpt)
+	out.Legend = legend(cm, cutpt)
 
 	rows, _ := impacts.Dims()
 	out.RGB = make([][]byte, rows)
@@ -577,7 +585,6 @@ func (s *Server) MapInfo(ctx context.Context, in *eiopb.Selection) (*eiopb.Color
 		col := color.NRGBAModel.Convert(c).(color.NRGBA)
 		out.RGB[i] = []byte{col.R, col.G, col.B}
 	}
-	out.Legend = legend(cm, cutpt)
 	s.Log.WithFields(logrus.Fields{
 		"DemandGroup":      in.DemandGroup,
 		"DemandSector":     in.DemandSector,

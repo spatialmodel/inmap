@@ -14,12 +14,6 @@
   revision = "b9009f0cad794ee9aae14510928b9713b073b50d"
 
 [[projects]]
-  branch = "default"
-  name = "bitbucket.org/zombiezen/gopdf"
-  packages = ["pdf"]
-  revision = "1c63dc69751bc45441c2ce1f56b631c55294b4d5"
-
-[[projects]]
   name = "cloud.google.com/go"
   packages = [
     "compute/metadata",
@@ -128,7 +122,7 @@
   branch = "master"
   name = "github.com/ctessum/plotextra"
   packages = ["."]
-  revision = "74d77084c3dc40351794192c9d1167cf3bcf4a16"
+  revision = "96488e3f1996746d2d7fc27b4fb5b230e6fa0fdf"
 
 [[projects]]
   branch = "master"
@@ -303,6 +297,12 @@
   name = "github.com/jonas-p/go-shp"
   packages = ["."]
   revision = "5b9c3047ce59fcfe1a7c6e66d606a348ca04be08"
+
+[[projects]]
+  name = "github.com/jung-kurt/gofpdf"
+  packages = ["."]
+  revision = "14c1db30737a138f8d9797cffea58783892b2fae"
+  version = "v1.0.0"
 
 [[projects]]
   branch = "master"
@@ -595,7 +595,7 @@
     "vg/vgpdf",
     "vg/vgsvg"
   ]
-  revision = "50336e281717e5f1685e3c611828dfb42c82cf66"
+  revision = "3f55ce2422a7d4de69aadc25f125abdbeaa71f1e"
 
 [[projects]]
   branch = "master"
@@ -687,6 +687,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "e25090d9a6dae28f804a5fa87a82c9d4dfd99e15b407205fcb31687dfd81e8f3"
+  inputs-digest = "b94d20534c045077c6c825ccbf4ce8ff7b783ff4e65506d2a42143b3039fa116"
   solver-name = "gps-cdcl"
   solver-version = 1
