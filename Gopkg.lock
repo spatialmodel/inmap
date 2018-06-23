@@ -184,6 +184,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/golang/build"
+  packages = ["autocertcache"]
+  revision = "767337190e5911af68ee322b08b978b344bf03bf"
+
+[[projects]]
+  branch = "master"
   name = "github.com/golang/freetype"
   packages = [
     ".",
@@ -681,6 +687,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "192029708ecc1de79c2375bb952a97ee42f148c93100b61eaf652b6e08761f76"
+  inputs-digest = "e25090d9a6dae28f804a5fa87a82c9d4dfd99e15b407205fcb31687dfd81e8f3"
   solver-name = "gps-cdcl"
   solver-version = 1

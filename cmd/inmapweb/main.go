@@ -26,10 +26,14 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
+	"strings"
 	"time"
 
+	"cloud.google.com/go/storage"
 	"github.com/BurntSushi/toml"
+	"github.com/golang/build/autocertcache"
 	"github.com/sirupsen/logrus"
 	"github.com/spatialmodel/inmap/emissions/slca/bea/eioserve"
 	"golang.org/x/crypto/acme/autocert"
@@ -126,10 +130,26 @@ func main() {
 			return fmt.Errorf("acme/autocert: only %s or www.%s host is allowed", *host, *host)
 		}
 
+		var cache autocert.Cache
+		if strings.HasPrefix(c.SpatialConfig.SpatialEIO.SpatialCache, "gs://") {
+			ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+			client, err := storage.NewClient(ctx)
+			if err != nil {
+				logger.Fatal(err)
+			}
+			loc, err := url.Parse(c.SpatialConfig.SpatialEIO.SpatialCache)
+			if err != nil {
+				logger.Fatal(err)
+			}
+			cache = autocertcache.NewGoogleCloudStorageCache(client, loc.Host)
+		} else {
+			cache = autocert.DirCache(c.SpatialConfig.SpatialEIO.SpatialCache)
+		}
+
 		m = &autocert.Manager{
 			Prompt:     autocert.AcceptTOS,
 			HostPolicy: hostPolicy,
-			Cache:      autocert.DirCache("."),
+			Cache:      cache,
 		}
 		httpsSrv.TLSConfig.GetCertificate = m.GetCertificate
 
