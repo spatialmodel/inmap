@@ -35,7 +35,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/golang/build/autocertcache"
 	"github.com/sirupsen/logrus"
-	"github.com/spatialmodel/inmap/emissions/slca/bea/eioserve"
+	"github.com/spatialmodel/inmap/emissions/slca/eieio"
 	"golang.org/x/crypto/acme/autocert"
 
 	"google.golang.org/grpc/grpclog"
@@ -43,7 +43,7 @@ import (
 )
 
 var (
-	config     = flag.String("config", "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/bea/data/test_config.toml", "Path to the configuration file")
+	config     = flag.String("config", "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/eieio/data/test_config.toml", "Path to the configuration file")
 	production = flag.Bool("production", false, "Is this a production setting?")
 	host       = flag.String("host", "", "Address to serve from")
 	tlsPort    = flag.String("tls-port", "10000", "Port to listen for encrypted requests")
@@ -105,13 +105,13 @@ func main() {
 		log.Fatal(err)
 	}
 	defer f.Close()
-	var c eioserve.ServerConfig
+	var c eieio.ServerConfig
 	_, err = toml.DecodeReader(f, &c)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	s, err := eioserve.NewServer(&c)
+	s, err := eieio.NewServer(&c)
 	if err != nil {
 		logger.WithError(err).Fatal("failed to create server")
 	}
