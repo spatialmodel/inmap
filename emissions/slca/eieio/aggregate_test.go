@@ -121,14 +121,14 @@ func TestAggregator_scc(t *testing.T) {
 	}
 
 	t.Run("names", func(t *testing.T) {
-		if len(a.Names()) != 16 {
-			t.Errorf("have %d names, want 16", len(a.Names()))
+		if len(a.Names()) != 14 {
+			t.Errorf("have %d names, want 14", len(a.Names()))
 		}
 	})
 
 	t.Run("abbreviations", func(t *testing.T) {
-		if len(a.Abbreviations()) != 16 {
-			t.Errorf("have %d abbreviations, want 16", len(a.Abbreviations()))
+		if len(a.Abbreviations()) != 14 {
+			t.Errorf("have %d abbreviations, want 14", len(a.Abbreviations()))
 		}
 	})
 

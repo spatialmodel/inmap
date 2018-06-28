@@ -135,7 +135,7 @@ func (e *SpatialEIO) NewSCCAggregator(fileName string) (*Aggregator, error) {
 		aggregateAbbrevCol = 4
 		startRow           = 1
 		endRow             = 5435
-		aggregateEndRow    = 17
+		aggregateEndRow    = 15
 		sheet              = "scc"
 	)
 	// Check SCCs.
