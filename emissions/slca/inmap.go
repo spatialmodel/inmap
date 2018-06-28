@@ -30,6 +30,7 @@ import (
 	"github.com/spatialmodel/inmap/emissions/aep/aeputil"
 	"github.com/spatialmodel/inmap/sr"
 
+	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/proj"
 	"github.com/ctessum/requestcache"
 	"github.com/spatialmodel/epi"
@@ -40,6 +41,12 @@ import (
 func init() {
 	gob.Register(sr.Concentrations{})
 	gob.Register([]*inmap.EmisRecord{})
+	gob.Register(geom.Polygon{})
+	gob.Register(geom.MultiPolygon{})
+	gob.Register(geom.Point{})
+	gob.Register(geom.MultiPoint{})
+	gob.Register(geom.LineString{})
+	gob.Register(geom.MultiLineString{})
 }
 
 // loadCacheOnce inititalizes a request cache.
