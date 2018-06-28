@@ -134,7 +134,7 @@
   branch = "master"
   name = "github.com/ctessum/requestcache"
   packages = ["."]
-  revision = "500f1126aa694735a1e45ecf611c2346121cbf34"
+  revision = "f806c589cca613cd4d403c5eea4e0f64caec4490"
 
 [[projects]]
   branch = "master"
