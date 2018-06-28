@@ -153,8 +153,12 @@ func TestServer_grpc(t *testing.T) {
 				Pollutant:        int32(slca.PM25),
 			},
 			selectors: &eieiorpc.Selectors{
-				Names:  []string{"All", "Other Industrial Processes", "Industrial Fuel Comb.", "Highway Veh., Light Duty, Gas", "Consumer Solvents", "Industrial Solvents", "Metals Processing", "Petroleum Prod. Production", "Mining & Mineral Processing", "Ag. Livestock", "Ag. Crops", "Fertilizer Application", "Elec. Util., Other", "Elec. Util., Coal", "Food Prod. & Comm. Cooking", "Construction", "Highway Veh., Heavy Duty, Diesel"},
-				Values: []float32{4.9888858e+08, 1.8044906e+08, 1.8044906e+08, 1.3799046e+08, 4.2458604e+07, 4.2458604e+07, 4.2458604e+07, 3.980494e+07, 3.1843952e+07, 1.0614651e+07, 1.0614651e+07, 5.3073255e+06, 5.3073255e+06, 5.3073255e+06, 2.6536628e+06, 0, 0},
+				Names: []string{"All", "Other Industrial Processes", "Industrial Fuel Comb.",
+					"Highway Veh., Light Duty, Gas", "Metals Processing", "Industrial Solvents", "Petroleum Prod. Production",
+					"Mining & Mineral Processing", "Ag. Crops", "Ag. Livestock", "Fertilizer Application",
+					"Elec. Util., Coal", "Food Prod. & Comm. Cooking", "Construction", "Highway Veh., Heavy Duty, Diesel"},
+				Values: []float32{4.9888858e+08, 1.8044906e+08, 1.8044906e+08, 1.3799046e+08, 4.2458604e+07, 4.2458604e+07,
+					3.980494e+07, 3.1843952e+07, 1.0614651e+07, 1.0614651e+07, 5.3073255e+06, 5.3073255e+06, 2.6536628e+06, 0, 0},
 			},
 		},
 		{
