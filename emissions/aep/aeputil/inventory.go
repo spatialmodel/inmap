@@ -77,14 +77,14 @@ func (c *InventoryConfig) ReadEmissions() (map[string][]aep.Record, *aep.Invento
 		for _, filetemplate := range fileTemplates {
 			tempFiles, err := r.OpenFilesFromTemplate(filetemplate)
 			if err != nil {
-				panic(err)
+				return nil, nil, err
 			}
 			files = append(files, tempFiles...)
 		}
 
 		recs, sectorReport, err := r.ReadFiles(files, c.FilterFunc)
 		if err != nil {
-			panic(err)
+			return nil, nil, err
 		}
 		for _, f := range files { // Close files.
 			f.ReadSeeker.(*os.File).Close()
