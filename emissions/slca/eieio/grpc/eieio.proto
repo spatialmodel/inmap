@@ -1,0 +1,200 @@
+// Copyright © 2017 the InMAP authors.
+// This file is part of InMAP.
+
+// InMAP is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// InMAP is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
+
+syntax = "proto3";
+
+package eieiorpc;
+
+service EIEIOrpc {
+  rpc DemandGroups(Selection) returns (Selectors) {}
+  rpc DemandSectors(Selection) returns (Selectors) {}
+  rpc ProdGroups(Selection) returns (Selectors) {}
+  rpc ProdSectors(Selection) returns (Selectors) {}
+
+  rpc Years(Selection) returns (Year) {}
+  rpc DefaultSelection(Selection) returns (Selection) {}
+  rpc Populations(Selection) returns (Selectors) {}
+
+  rpc MapInfo(Selection) returns (ColorInfo) {}
+
+  rpc Geometry(Selection) returns (stream Rectangle) {}
+
+  rpc Concentrations(ConcentrationInput) returns (Vector) {}
+  rpc ConcentrationMatrix(ConcentrationMatrixInput) returns (Matrix) {}
+  rpc Emissions(EmissionsInput) returns (Vector) {}
+  rpc EmissionsMatrix(EmissionsMatrixInput) returns (Matrix) {}
+  rpc Health(HealthInput) returns (Vector) {}
+  rpc HealthMatrix(HealthMatrixInput) returns (Matrix) {}
+
+  rpc EvaluationHealth(EvaluationHealthInput) returns (Vector) {}
+  rpc EvaluationConcentrations(EvaluationConcentrationsInput) returns (Vector) {}
+  rpc ConcentrationResponseAverage(ConcentrationResponseAverageInput) returns (Vector) {}
+  rpc PopulationIncidence(PopulationIncidenceInput) returns (PopulationIncidenceOutput) {}
+}
+
+message Selectors {
+  repeated string Codes = 1;
+  repeated string Names = 2;
+  repeated float Values = 3;
+}
+
+message Selection {
+	string DemandGroup = 1;
+	string DemandSector = 2;
+	string ProductionGroup = 3;
+	string ProductionSector = 4;
+	string ImpactType = 5;
+	string DemandType = 6;
+  int32  Year = 7;
+  string Population = 8;
+  oneof Pol {
+    Pollutant Pollutant = 9;
+    Emission Emission = 10;
+  }
+}
+
+message Year {
+  repeated int32 Years = 1;
+}
+
+message Point {
+  float X = 1;
+  float Y = 2;
+}
+
+message Rectangle {
+  Point LL = 1;
+  Point LR = 2;
+  Point UR = 3;
+  Point UL = 4;
+}
+
+message ColorInfo {
+  repeated bytes RGB = 1;
+  string Legend = 2;
+}
+
+enum Pollutant {
+  PNH4 = 0;
+  PNO3 = 1;
+  PSO4 = 2;
+  SOA = 3;
+  PrimaryPM25 = 4;
+  TotalPM25 = 5;
+}
+
+enum Emission {
+  PM25 = 0;
+  NH3 = 1;
+  NOx = 2;
+  SOx = 3;
+  VOC = 4;
+}
+
+enum Location {
+  Domestic = 0;
+  Imported = 1;
+  Total = 2;
+}
+
+message ConcentrationMatrixInput {
+  repeated double Demand = 1;
+  Pollutant Pollutant = 2;
+  int32 Year = 3;
+  Location Location = 4;
+}
+
+message ConcentrationInput {
+  repeated double Demand = 1;
+  repeated double Industries = 2;
+  Pollutant Pollutant = 3;
+  int32 Year = 4;
+  Location Location = 5;
+}
+
+
+message EmissionsMatrixInput {
+  repeated double Demand = 1;
+  Emission Emission = 2;
+  int32 Year = 3;
+  Location Location = 4;
+}
+
+message EmissionsInput {
+  repeated double Demand = 1;
+  repeated double Industries = 2;
+  Emission Emission = 3;
+  int32 Year = 4;
+  Location Location = 5;
+}
+
+message HealthMatrixInput {
+  repeated double Demand = 1;
+  Pollutant Pollutant = 2;
+  string Population = 3;
+  int32 Year = 4;
+  Location Location = 5;
+  string HR = 6;
+}
+
+message HealthInput {
+  repeated double Demand = 1;
+  repeated double Industries = 2;
+  Pollutant Pollutant = 3;
+  string Population = 4;
+  int32 Year = 5;
+  Location Location = 6;
+  string HR = 7;
+}
+
+message Vector {
+  repeated double Data = 1;
+}
+
+message Matrix {
+  int32 Rows = 1;
+  int32 Cols = 2;
+  repeated double Data = 3;
+}
+
+message EvaluationHealthInput {
+  int32 Year = 1;
+  Pollutant Pollutant = 2;
+  string Population = 3;
+  string HR = 4;
+}
+
+message EvaluationConcentrationsInput {
+  int32 Year = 1;
+  Pollutant Pollutant = 2;
+}
+
+message ConcentrationResponseAverageInput {
+  int32 Year = 1;
+  string Population = 2;
+  string HR = 3;
+}
+
+message PopulationIncidenceInput {
+  int32 Year = 1;
+  string Population = 2;
+  string HR = 3;
+}
+
+message PopulationIncidenceOutput {
+  repeated double Population = 1;
+  repeated double Incidence = 2;
+}

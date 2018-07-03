@@ -19,8 +19,8 @@ DefaultYear = 2014
   DomesticRequirementsDetail =  "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/eieio/data/IxC_Domestic_2007_Detail.xlsx"
 
 [SpatialEIO]
-  SpatialCache = "${SLCASpatialCache}/bea"
-[SpatialEIO.CSTConfig]
+  EIEIOCache = "${SLCASpatialCache}/bea"
+
   SRFile = "${ISRM}"
   SRCacheSize = 480000 # This will take about 100GB of RAM. Reduce the number to decrease RAM requirements.
 
@@ -42,7 +42,7 @@ DefaultYear = 2014
     "${evaldata}/2005_emissions/bioFireEmis.shp",
   ]
 
-[SpatialEIO.CSTConfig.CensusFile]
+[SpatialEIO.CensusFile]
   2000 = "${POP_MORT_DATA}/pop/pop_2000.shp"
   2007 = "${POP_MORT_DATA}/pop/pop_2007.shp"
   2008 = "${POP_MORT_DATA}/pop/pop_2008.shp"
@@ -53,7 +53,7 @@ DefaultYear = 2014
   2013 = "${POP_MORT_DATA}/pop/pop_2013.shp"
   2014 = "${POP_MORT_DATA}/pop/pop_2014.shp"
 
-[SpatialEIO.CSTConfig.MortalityRateFile]
+[SpatialEIO.MortalityRateFile]
   1999 = "${POP_MORT_DATA}/mort/mort_AllCause_1999.shp"
   2000 = "${POP_MORT_DATA}/mort/mort_AllCause_2000.shp"
   2001 = "${POP_MORT_DATA}/mort/mort_AllCause_2001.shp"
@@ -73,7 +73,7 @@ DefaultYear = 2014
   2015 = "${POP_MORT_DATA}/mort/mort_AllCause_2015.shp"
   2016 = "${POP_MORT_DATA}/mort/mort_AllCause_2016.shp"
 
-[SpatialEIO.CSTConfig.MortalityRateColumns]
+[SpatialEIO.MortalityRateColumns]
   all = "all"
   white = "white"
   latino = "latino"
@@ -81,7 +81,7 @@ DefaultYear = 2014
   asian = "asian"
   native = "native"
 
-[SpatialEIO.CSTConfig.SpatialConfig]
+[SpatialEIO.SpatialConfig]
   SrgSpec = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/aep/data/nei2014/surrogate_specification_2014.csv"
   SrgShapefileDirectory = "$nei2014Dir"
   SCCExactMatch = true
@@ -97,10 +97,10 @@ DefaultYear = 2014
    GridName = "InMAP"
 
 
-[SpatialEIO.CSTConfig.InventoryConfig]
+[SpatialEIO.InventoryConfig]
   InputUnits = "tons"
 
-  [SpatialEIO.CSTConfig.InventoryConfig.NEIFiles]
+  [SpatialEIO.InventoryConfig.NEIFiles]
     afdust = [
       "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/afdust/afdust_pm_2014NEIv1_NONPOINT_final_28oct2016_v0.csv",
     ]
@@ -158,131 +158,131 @@ DefaultYear = 2014
     ]
 
 
-  [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep]
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.VOC]
+  [SpatialEIO.InventoryConfig.PolsToKeep]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.VOC]
   		SpecType ="VOC"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PM25-PRI]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.PM25-PRI]
   		SpecType= "PM2.5"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PM2_5]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.PM2_5]
   		SpecType= "PM2.5"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.NOX]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.NOX]
   		SpecType= "NOx"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.NH3.SpecNames]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.NH3.SpecNames]
   		Names= ["NH3"]
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.SO2.SpecNames]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.SO2.SpecNames]
       Names= ["SOx"]
-    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.XYL]
+    [SpatialEIO.InventoryConfig.PolsToKeep.XYL]
       SpecType ="VOC"
-    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.TOL]
+    [SpatialEIO.InventoryConfig.PolsToKeep.TOL]
       SpecType ="VOC"
-    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.TERP]
+    [SpatialEIO.InventoryConfig.PolsToKeep.TERP]
       SpecType ="VOC"
-    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PAR]
+    [SpatialEIO.InventoryConfig.PolsToKeep.PAR]
       SpecType ="VOC"
-    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.OLE]
+    [SpatialEIO.InventoryConfig.PolsToKeep.OLE]
       SpecType ="VOC"
-    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.NVOL]
+    [SpatialEIO.InventoryConfig.PolsToKeep.NVOL]
       SpecType ="VOC"
-    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.MEOH]
+    [SpatialEIO.InventoryConfig.PolsToKeep.MEOH]
       SpecType ="VOC"
-    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.ISOP]
+    [SpatialEIO.InventoryConfig.PolsToKeep.ISOP]
       SpecType ="VOC"
-    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.IOLE]
+    [SpatialEIO.InventoryConfig.PolsToKeep.IOLE]
       SpecType ="VOC"
-    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.FORM]
+    [SpatialEIO.InventoryConfig.PolsToKeep.FORM]
       SpecType ="VOC"
-    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.ETOH]
+    [SpatialEIO.InventoryConfig.PolsToKeep.ETOH]
       SpecType ="VOC"
-    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.ETHA]
+    [SpatialEIO.InventoryConfig.PolsToKeep.ETHA]
       SpecType ="VOC"
-    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.ETH]
+    [SpatialEIO.InventoryConfig.PolsToKeep.ETH]
       SpecType ="VOC"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.ALD2]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.ALD2]
   		SpecType="VOC"
-    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.ALDX]
+    [SpatialEIO.InventoryConfig.PolsToKeep.ALDX]
       SpecType="VOC"
-    [SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.CB05_ALD2]
+    [SpatialEIO.InventoryConfig.PolsToKeep.CB05_ALD2]
   		SpecType="VOC"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.CB05_ALDX]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.CB05_ALDX]
   		SpecType="VOC"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.CB05_BENZENE]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.CB05_BENZENE]
   		SpecType="VOC"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.CB05_ETH]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.CB05_ETH]
   		SpecType="VOC"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.CB05_ETHA]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.CB05_ETHA]
   		SpecType="VOC"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.CB05_ETOH]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.CB05_ETOH]
   		SpecType="VOC"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.CB05_FORM]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.CB05_FORM]
   		SpecType="VOC"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.CB05_IOLE]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.CB05_IOLE]
   		SpecType="VOC"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.CB05_ISOP]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.CB05_ISOP]
   		SpecType="VOC"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.CB05_MEOH]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.CB05_MEOH]
   		SpecType="VOC"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.CB05_OLE]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.CB05_OLE]
   		SpecType="VOC"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.CB05_PAR]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.CB05_PAR]
   		SpecType="VOC"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.CB05_TERP]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.CB05_TERP]
   		SpecType="VOC"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.CB05_TOL]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.CB05_TOL]
   		SpecType="VOC"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.CB05_XYL]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.CB05_XYL]
   		SpecType="VOC"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.DIESEL-PM25]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.DIESEL-PM25]
   		SpecType="PM2.5"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.ETHANOL]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.ETHANOL]
   		SpecType="VOC"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.HONO]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.HONO]
   		SpecType="NOx"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.NHTOG]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.NHTOG]
   		SpecType="VOC"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.NMOG]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.NMOG]
   		SpecType="VOC"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.NO]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.NO]
   		SpecType="NOx"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.NO2]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.NO2]
   		SpecType="NOx"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PAL]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.PAL]
   		SpecType="PM2.5"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PCA]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.PCA]
   		SpecType="PM2.5"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PCL]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.PCL]
   		SpecType="PM2.5"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PEC]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.PEC]
   		SpecType="PM2.5"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PFE]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.PFE]
   		SpecType="PM2.5"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PK]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.PK]
   		SpecType="PM2.5"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PMG]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.PMG]
   		SpecType="PM2.5"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PMN]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.PMN]
   		SpecType="PM2.5"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PMOTHR]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.PMOTHR]
   		SpecType="PM2.5"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PNH4]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.PNH4]
   		SpecType="PM2.5"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PNO3]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.PNO3]
   		SpecType="PM2.5"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.POC]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.POC]
   		SpecType="PM2.5"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PSI]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.PSI]
   		SpecType="PM2.5"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PSO4]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.PSO4]
   		SpecType="PM2.5"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.PTI]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.PTI]
   		SpecType="PM2.5"
-  	[SpatialEIO.CSTConfig.InventoryConfig.PolsToKeep.VOC_INV]
+  	[SpatialEIO.InventoryConfig.PolsToKeep.VOC_INV]
   		SpecType="VOC"
 
 
-  [SpatialEIO.CSTConfig.EvaluationInventoryConfig]
+  [SpatialEIO.EvaluationInventoryConfig]
     InputUnits = "tons"
 
-    [SpatialEIO.CSTConfig.EvaluationInventoryConfig.NEIFiles]
+    [SpatialEIO.EvaluationInventoryConfig.NEIFiles]
       afdust = [
         "$nei2014Dir/2014fa_nata_cb6cmaq_14j/inputs/afdust/afdust_pm_2014NEIv1_NONPOINT_final_28oct2016_v0.csv",
       ]
@@ -394,122 +394,122 @@ DefaultYear = 2014
       ]
 
 
-      [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep]
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.VOC]
+      [SpatialEIO.EvaluationInventoryConfig.PolsToKeep]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.VOC]
       		SpecType ="VOC"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PM25-PRI]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.PM25-PRI]
       		SpecType= "PM2.5"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PM2_5]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.PM2_5]
       		SpecType= "PM2.5"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.NOX]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.NOX]
       		SpecType= "NOx"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.NH3.SpecNames]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.NH3.SpecNames]
       		Names= ["NH3"]
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.SO2.SpecNames]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.SO2.SpecNames]
           Names= ["SOx"]
-        [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.XYL]
+        [SpatialEIO.EvaluationInventoryConfig.PolsToKeep.XYL]
           SpecType ="VOC"
-        [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.TOL]
+        [SpatialEIO.EvaluationInventoryConfig.PolsToKeep.TOL]
           SpecType ="VOC"
-        [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.TERP]
+        [SpatialEIO.EvaluationInventoryConfig.PolsToKeep.TERP]
           SpecType ="VOC"
-        [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PAR]
+        [SpatialEIO.EvaluationInventoryConfig.PolsToKeep.PAR]
           SpecType ="VOC"
-        [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.OLE]
+        [SpatialEIO.EvaluationInventoryConfig.PolsToKeep.OLE]
           SpecType ="VOC"
-        [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.NVOL]
+        [SpatialEIO.EvaluationInventoryConfig.PolsToKeep.NVOL]
           SpecType ="VOC"
-        [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.MEOH]
+        [SpatialEIO.EvaluationInventoryConfig.PolsToKeep.MEOH]
           SpecType ="VOC"
-        [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.ISOP]
+        [SpatialEIO.EvaluationInventoryConfig.PolsToKeep.ISOP]
           SpecType ="VOC"
-        [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.IOLE]
+        [SpatialEIO.EvaluationInventoryConfig.PolsToKeep.IOLE]
           SpecType ="VOC"
-        [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.FORM]
+        [SpatialEIO.EvaluationInventoryConfig.PolsToKeep.FORM]
           SpecType ="VOC"
-        [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.ETOH]
+        [SpatialEIO.EvaluationInventoryConfig.PolsToKeep.ETOH]
           SpecType ="VOC"
-        [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.ETHA]
+        [SpatialEIO.EvaluationInventoryConfig.PolsToKeep.ETHA]
           SpecType ="VOC"
-        [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.ETH]
+        [SpatialEIO.EvaluationInventoryConfig.PolsToKeep.ETH]
           SpecType ="VOC"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.ALD2]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.ALD2]
       		SpecType="VOC"
-        [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.ALDX]
+        [SpatialEIO.EvaluationInventoryConfig.PolsToKeep.ALDX]
           SpecType="VOC"
-        [SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.CB05_ALD2]
+        [SpatialEIO.EvaluationInventoryConfig.PolsToKeep.CB05_ALD2]
       		SpecType="VOC"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.CB05_ALDX]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.CB05_ALDX]
       		SpecType="VOC"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.CB05_BENZENE]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.CB05_BENZENE]
       		SpecType="VOC"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.CB05_ETH]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.CB05_ETH]
       		SpecType="VOC"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.CB05_ETHA]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.CB05_ETHA]
       		SpecType="VOC"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.CB05_ETOH]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.CB05_ETOH]
       		SpecType="VOC"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.CB05_FORM]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.CB05_FORM]
       		SpecType="VOC"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.CB05_IOLE]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.CB05_IOLE]
       		SpecType="VOC"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.CB05_ISOP]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.CB05_ISOP]
       		SpecType="VOC"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.CB05_MEOH]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.CB05_MEOH]
       		SpecType="VOC"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.CB05_OLE]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.CB05_OLE]
       		SpecType="VOC"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.CB05_PAR]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.CB05_PAR]
       		SpecType="VOC"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.CB05_TERP]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.CB05_TERP]
       		SpecType="VOC"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.CB05_TOL]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.CB05_TOL]
       		SpecType="VOC"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.CB05_XYL]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.CB05_XYL]
       		SpecType="VOC"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.DIESEL-PM25]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.DIESEL-PM25]
       		SpecType="PM2.5"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.ETHANOL]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.ETHANOL]
       		SpecType="VOC"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.HONO]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.HONO]
       		SpecType="NOx"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.NHTOG]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.NHTOG]
       		SpecType="VOC"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.NMOG]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.NMOG]
       		SpecType="VOC"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.NO]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.NO]
       		SpecType="NOx"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.NO2]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.NO2]
       		SpecType="NOx"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PAL]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.PAL]
       		SpecType="PM2.5"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PCA]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.PCA]
       		SpecType="PM2.5"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PCL]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.PCL]
       		SpecType="PM2.5"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PEC]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.PEC]
       		SpecType="PM2.5"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PFE]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.PFE]
       		SpecType="PM2.5"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PK]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.PK]
       		SpecType="PM2.5"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PMG]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.PMG]
       		SpecType="PM2.5"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PMN]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.PMN]
       		SpecType="PM2.5"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PMOTHR]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.PMOTHR]
       		SpecType="PM2.5"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PNH4]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.PNH4]
       		SpecType="PM2.5"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PNO3]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.PNO3]
       		SpecType="PM2.5"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.POC]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.POC]
       		SpecType="PM2.5"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PSI]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.PSI]
       		SpecType="PM2.5"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PSO4]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.PSO4]
       		SpecType="PM2.5"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.PTI]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.PTI]
       		SpecType="PM2.5"
-      	[SpatialEIO.CSTConfig.EvaluationInventoryConfig.PolsToKeep.VOC_INV]
+      	[SpatialEIO.EvaluationInventoryConfig.PolsToKeep.VOC_INV]
       		SpecType="VOC"

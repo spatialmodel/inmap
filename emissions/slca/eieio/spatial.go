@@ -25,6 +25,7 @@ import (
 	"sync"
 
 	"github.com/ctessum/requestcache"
+	"github.com/spatialmodel/epi"
 	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/emissions/aep"
 	"gonum.org/v1/gonum/mat"
@@ -35,11 +36,11 @@ import (
 // SpatialEIO implements a spatial EIO LCA model.
 type SpatialEIO struct {
 	EIO
-	CSTConfig slca.CSTConfig
+	slca.CSTConfig
 
-	// SpatialCache specfies the path to the directory to be used to
+	// EIEIOCache specfies the path to the directory to be used to
 	// cache spatial information.
-	SpatialCache string
+	EIEIOCache string
 
 	// MemCacheSize is the size of the memory cache for emissions, concentration,
 	// and health spatial results.
@@ -78,6 +79,9 @@ type SpatialEIO struct {
 	emissionFactorCache      *requestcache.Cache
 	concentrationFactorCache *requestcache.Cache
 	healthFactorCache        *requestcache.Cache
+
+	// hr holds a registry of hazard ratio functions.
+	hr map[string]epi.HRer
 }
 
 // domesticProduction calculates total domestic economic production.
@@ -105,8 +109,8 @@ type SpatialConfig struct {
 }
 
 // NewSpatial creates a new SpatialEIO variable.
-func NewSpatial(c *SpatialConfig) (*SpatialEIO, error) {
-	if err := c.SpatialEIO.CSTConfig.Setup(); err != nil {
+func NewSpatial(c *SpatialConfig, hr ...epi.HRer) (*SpatialEIO, error) {
+	if err := c.SpatialEIO.CSTConfig.Setup(hr...); err != nil {
 		return nil, err
 	}
 	// expand environment variables.
@@ -148,6 +152,11 @@ func NewSpatial(c *SpatialConfig) (*SpatialEIO, error) {
 	s.sccDescriptions, err = aep.SCCDescription(f)
 	if err != nil {
 		return nil, err
+	}
+
+	s.hr = make(map[string]epi.HRer)
+	for _, r := range hr {
+		s.hr[r.Name()] = r
 	}
 
 	return s, nil

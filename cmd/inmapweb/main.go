@@ -35,6 +35,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/golang/build/autocertcache"
 	"github.com/sirupsen/logrus"
+	"github.com/spatialmodel/epi"
 	"github.com/spatialmodel/inmap/emissions/slca/eieio"
 	"golang.org/x/crypto/acme/autocert"
 
@@ -111,7 +112,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	s, err := eieio.NewServer(&c)
+	s, err := eieio.NewServer(&c, epi.NasariACS, epi.Krewski2009, epi.Krewski2009Ecologic, epi.Lepeule2012)
 	if err != nil {
 		logger.WithError(err).Fatal("failed to create server")
 	}
@@ -131,19 +132,19 @@ func main() {
 		}
 
 		var cache autocert.Cache
-		if strings.HasPrefix(c.SpatialConfig.SpatialEIO.SpatialCache, "gs://") {
+		if strings.HasPrefix(c.SpatialConfig.SpatialEIO.EIEIOCache, "gs://") {
 			ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 			client, err := storage.NewClient(ctx)
 			if err != nil {
 				logger.Fatal(err)
 			}
-			loc, err := url.Parse(c.SpatialConfig.SpatialEIO.SpatialCache)
+			loc, err := url.Parse(c.SpatialConfig.SpatialEIO.EIEIOCache)
 			if err != nil {
 				logger.Fatal(err)
 			}
 			cache = autocertcache.NewGoogleCloudStorageCache(client, loc.Host)
 		} else {
-			cache = autocert.DirCache(c.SpatialConfig.SpatialEIO.SpatialCache)
+			cache = autocert.DirCache(c.SpatialConfig.SpatialEIO.EIEIOCache)
 		}
 
 		m = &autocert.Manager{

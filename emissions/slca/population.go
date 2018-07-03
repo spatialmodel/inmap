@@ -34,6 +34,7 @@ import (
 	"github.com/ctessum/geom/proj"
 	"github.com/ctessum/requestcache"
 	"github.com/spatialmodel/epi"
+	eieiorpc "github.com/spatialmodel/inmap/emissions/slca/eieio/grpc/gogrpc"
 )
 
 func init() {
@@ -43,34 +44,34 @@ func init() {
 // PopulationIncidence returns gridded population counts and underlying
 // mortality incidence rates for the type specified by popType.
 // Valid population types are specified by the CensusPopColumns attribute of the
-// receiver. The returned value p is population counts and Io is underlying
+// receiver. The returned value Population is population counts and Incidence is underlying
 // incidence rates. hr specifies the function used to calculate the hazard ratio.
-func (c *CSTConfig) PopulationIncidence(ctx context.Context, year int, popType string, hr epi.HRer) (p, Io []float64, err error) {
+func (c *CSTConfig) PopulationIncidence(ctx context.Context, request *eieiorpc.PopulationIncidenceInput) (*eieiorpc.PopulationIncidenceOutput, error) {
 	c.loadPopulationOnce.Do(func() {
 		c.popRequestCache = loadCacheOnce(c.popIncidenceWorker, 1, 1, c.SpatialCache,
 			requestcache.MarshalGob, requestcache.UnmarshalGob)
 	})
-	if _, ok := c.censusFile[year]; !ok {
-		return c.interpolatePopulationIncidence(ctx, year, popType, hr)
+	if _, ok := c.censusFile[int(request.Year)]; !ok {
+		return c.interpolatePopulationIncidence(ctx, int(request.Year), request.Population, request.HR)
 	}
 	r := c.popRequestCache.NewRequest(ctx, struct {
 		year int
-		hr   epi.HRer
-	}{year: year, hr: hr}, fmt.Sprintf("populationIncidence_%d_%s", year, hr.Name()))
+		hr   string
+	}{year: int(request.Year), hr: request.HR}, fmt.Sprintf("populationIncidence_%d_%s", request.Year, request.HR))
 	resultI, err := r.Result()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	result := resultI.(popIncidence)
-	p, ok := result.P[popType]
+	p, ok := result.P[request.Population]
 	if !ok {
-		return nil, nil, fmt.Errorf("slca: invalid population type %s", popType)
+		return nil, fmt.Errorf("slca: invalid population type %s", request.Population)
 	}
-	io, ok := result.Io[popType]
+	io, ok := result.Io[request.Population]
 	if !ok {
-		return nil, nil, fmt.Errorf("slca: invalid population type %s", popType)
+		return nil, fmt.Errorf("slca: invalid population type %s", request.Population)
 	}
-	return p, io, nil
+	return &eieiorpc.PopulationIncidenceOutput{Population: p, Incidence: io}, nil
 }
 
 type popIncidence struct {
@@ -86,7 +87,7 @@ type popIncidence struct {
 func (c *CSTConfig) popIncidenceWorker(ctx context.Context, yearHRI interface{}) (interface{}, error) {
 	yearHR := yearHRI.(struct {
 		year int
-		hr   epi.HRer
+		hr   string
 	})
 	pop, popIndices, mort, mortIndices, err := c.loadPopMort(yearHR.year)
 	if err != nil {
@@ -153,14 +154,19 @@ func (c *CSTConfig) gridPopulation(pop *rtree.Rtree, popIndices map[string]int) 
 
 // regionalIncidence calculates region-averaged underlying incidence rates.
 func (c *CSTConfig) regionalIncidence(ctx context.Context, popIndex *rtree.Rtree, popIndices map[string]int,
-	mort []*mortality, mortIndices map[string]int, year int, hr epi.HRer) (*rtree.Rtree, error) {
+	mort []*mortality, mortIndices map[string]int, year int, hr string) (*rtree.Rtree, error) {
 	ncpu := runtime.GOMAXPROCS(0)
 
-	concTemp, err := c.EvaluationConcentrations(ctx, year)
+	HR, ok := c.hr[hr]
+	if !ok {
+		return nil, fmt.Errorf("slca.CSTConfig: hazard ratio `%s` has not been registered", hr)
+	}
+
+	conc, err := c.EvaluationConcentrations(ctx, &eieiorpc.EvaluationConcentrationsInput{
+		Year: int32(year), Pollutant: eieiorpc.Pollutant_TotalPM25})
 	if err != nil {
 		return nil, err
 	}
-	conc := concTemp.TotalPM25()
 	for mortType, popType := range c.MortalityRateColumns {
 		mi, ok := mortIndices[mortType]
 		if !ok {
@@ -190,10 +196,10 @@ func (c *CSTConfig) regionalIncidence(ctx context.Context, popIndex *rtree.Rtree
 						regionPop[i] = pp.PopData[pi] * isectFrac
 						for _, gI := range c.gridIndex.SearchIntersect(pp.Bounds()) {
 							g := gI.(gridIndex)
-							regionConc[i] += conc[g.i] * g.Intersection(pp).Area() / pArea
+							regionConc[i] += conc.Data[g.i] * g.Intersection(pp).Area() / pArea
 						}
 					}
-					m.Io[mi] = epi.IoRegional(regionPop, regionConc, hr, m.MortData[mi])
+					m.Io[mi] = epi.IoRegional(regionPop, regionConc, HR, m.MortData[mi])
 				}
 				wg.Done()
 			}(p, mi, pi)
@@ -445,7 +451,7 @@ func (c *CSTConfig) loadMortality(year int, sr *proj.SR) ([]*mortality, map[stri
 // For years which there exists population data for years both before and after
 // the year of interest, interpolation is used, otherwise results are assumed
 // to be constant from the endpoint year.
-func (c *CSTConfig) interpolatePopulationIncidence(ctx context.Context, year int, popType string, hr epi.HRer) (p, Io []float64, err error) {
+func (c *CSTConfig) interpolatePopulationIncidence(ctx context.Context, year int, popType string, hr string) (*eieiorpc.PopulationIncidenceOutput, error) {
 	yearBefore := math.MinInt32
 	yearAfter := math.MaxInt32
 	var beforeOK, afterOK bool
@@ -466,31 +472,35 @@ func (c *CSTConfig) interpolatePopulationIncidence(ctx context.Context, year int
 	}
 
 	if !beforeOK && !afterOK {
-		return nil, nil, fmt.Errorf("slca: no population data has been specified")
+		return nil, fmt.Errorf("slca: no population data has been specified")
 	} else if beforeOK && !afterOK {
-		return c.PopulationIncidence(ctx, yearBefore, popType, hr)
+		return c.PopulationIncidence(ctx, &eieiorpc.PopulationIncidenceInput{
+			Year: int32(yearBefore), Population: popType, HR: hr})
 	} else if afterOK && !beforeOK {
-		return c.PopulationIncidence(ctx, yearAfter, popType, hr)
+		return c.PopulationIncidence(ctx, &eieiorpc.PopulationIncidenceInput{
+			Year: int32(yearAfter), Population: popType, HR: hr})
 	}
 
-	popBefore, ioBefore, err := c.PopulationIncidence(ctx, yearBefore, popType, hr)
+	popIOBefore, err := c.PopulationIncidence(ctx, &eieiorpc.PopulationIncidenceInput{
+		Year: int32(yearBefore), Population: popType, HR: hr})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	popAfter, ioAfter, err := c.PopulationIncidence(ctx, yearAfter, popType, hr)
+	popIOAfter, err := c.PopulationIncidence(ctx, &eieiorpc.PopulationIncidenceInput{
+		Year: int32(yearAfter), Population: popType, HR: hr})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	frac := float64(year-yearBefore) / float64(yearAfter-yearBefore)
-	pop := make([]float64, len(popBefore))
-	io := make([]float64, len(ioBefore))
+	pop := make([]float64, len(popIOBefore.Population))
+	io := make([]float64, len(popIOBefore.Incidence))
 	for i := range pop {
-		pop[i] = popBefore[i]*(1-frac) + popAfter[i]*frac
+		pop[i] = popIOBefore.Population[i]*(1-frac) + popIOAfter.Population[i]*frac
 	}
 	for i := range io {
-		io[i] = ioBefore[i]*(1-frac) + ioAfter[i]*frac
+		io[i] = popIOBefore.Incidence[i]*(1-frac) + popIOAfter.Incidence[i]*frac
 	}
-	return pop, io, nil
+	return &eieiorpc.PopulationIncidenceOutput{Population: pop, Incidence: io}, nil
 }
 
 func s2f(s string) (float64, error) {

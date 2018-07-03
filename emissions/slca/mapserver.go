@@ -29,7 +29,6 @@ import (
 	"github.com/ctessum/geom/carto"
 	"github.com/ctessum/geom/proj"
 	"github.com/golang/groupcache/lru"
-	"github.com/spatialmodel/epi"
 	"gonum.org/v1/plot/vg"
 	"gonum.org/v1/plot/vg/draw"
 	"gonum.org/v1/plot/vg/vgimg"
@@ -113,7 +112,7 @@ func (db *DB) mapDataServer(resultRequestChan chan *resultRequest,
 		}
 
 		// Add the health results
-		healthData, err := spatialResults.Health(epi.NasariACS)
+		healthData, err := spatialResults.Health("NasariACS")
 		if request.handleErr(err) {
 			continue
 		}
