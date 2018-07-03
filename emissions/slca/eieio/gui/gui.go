@@ -109,7 +109,7 @@ func queryFromSelection(s eieiorpc.Selection) url.Values {
 	v.Set("dt", s.DemandType)
 	v.Set("y", fmt.Sprint(s.Year))
 	v.Set("pop", s.Population)
-	v.Set("pol", fmt.Sprintf("%d", s.Pollutant))
+	v.Set("pol", fmt.Sprintf("%d", s.GetPollutant()))
 	return v
 }
 
@@ -131,7 +131,14 @@ func selectionFromQuery(q string) eieiorpc.Selection {
 	s.Population = v.Get("pop")
 	p, err := strconv.ParseInt(v.Get("pol"), 10, 32)
 	check(err)
-	s.Pollutant = int32(p)
+	switch s.ImpactType {
+	case "health", "conc":
+		s.Pol = &eieiorpc.Selection_Pollutant{Pollutant: eieiorpc.Pollutant(p)}
+	case "emis":
+		s.Pol = &eieiorpc.Selection_Emission{Emission: eieiorpc.Emission(p)}
+	default:
+		check(fmt.Errorf("invalid impact type `%s`", s.ImpactType))
+	}
 	return s
 }
 
@@ -151,7 +158,14 @@ func selectionFromForm() eieiorpc.Selection {
 	s.Population = selected("#pop")
 	p, err := strconv.ParseInt(selected("#pol"), 10, 32)
 	check(err)
-	s.Pollutant = int32(p)
+	switch s.ImpactType {
+	case "health", "conc":
+		s.Pol = &eieiorpc.Selection_Pollutant{Pollutant: eieiorpc.Pollutant(p)}
+	case "emis":
+		s.Pol = &eieiorpc.Selection_Emission{Emission: eieiorpc.Emission(p)}
+	default:
+		check(fmt.Errorf("invalid impact type `%s`", s.ImpactType))
+	}
 	return s
 }
 
@@ -393,18 +407,30 @@ func (c *GUI) pollutantOptions() optionFunc {
 	return func(id string) func() {
 		return func() {
 			var pols []holder
+			var match bool
 			switch c.selection.ImpactType {
 			case "health", "conc":
 				pols = concPols
+				match = p.val == c.selection.GetPollutant()
 			case "emis":
 				pols = emisPols
+				match = p.val == c.selection.GetEmission()
 			default:
 				dom.GetWindow().Alert(fmt.Sprintf("invalid impact type request: %s", c.selection.ImpactType))
 			}
 			sel := c.doc.GetElementByID(id).(*dom.HTMLSelectElement)
 			sel.SetInnerHTML("")
 			for _, p := range pols {
-				sel.InsertBefore(c.createOption(p.name, fmt.Sprintf("%d", p.val), p.val == c.selection.Pollutant), nil)
+				var match bool
+				switch c.selection.ImpactType {
+				case "health", "conc":
+					match = p.val == c.selection.GetPollutant()
+				case "emis":
+					match = p.val == c.selection.GetEmission()
+				default:
+					dom.GetWindow().Alert(fmt.Sprintf("invalid impact type request: %s", c.selection.ImpactType))
+				}
+				sel.InsertBefore(c.createOption(p.name, fmt.Sprintf("%d", p.val), match), nil)
 			}
 		}
 	}

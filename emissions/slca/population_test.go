@@ -8,7 +8,9 @@ import (
 	"testing"
 
 	"github.com/BurntSushi/toml"
+
 	"github.com/spatialmodel/epi"
+	eieiorpc "github.com/spatialmodel/inmap/emissions/slca/eieio/grpc/gogrpc"
 )
 
 func TestPopulationIncidence(t *testing.T) {
@@ -20,12 +22,12 @@ func TestPopulationIncidence(t *testing.T) {
 	if _, err = toml.DecodeReader(f, c); err != nil {
 		t.Fatal(err)
 	}
-	if err = c.Setup(); err != nil {
+	if err = c.Setup(epi.NasariACS); err != nil {
 		t.Fatal(err)
 	}
 
 	tests := []struct {
-		year int
+		year int32
 		pop  []float64
 		io   []float64
 	}{
@@ -63,15 +65,16 @@ func TestPopulationIncidence(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(fmt.Sprint(test.year), func(t *testing.T) {
-			p, io, err := c.PopulationIncidence(context.Background(), test.year, "TotalPop", epi.NasariACS)
+			p, err := c.PopulationIncidence(context.Background(), &eieiorpc.PopulationIncidenceInput{
+				Year: test.year, Population: "TotalPop", HR: "NasariACS"})
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !reflect.DeepEqual(test.pop, p) {
-				t.Errorf("population: %v != %v", p, test.pop)
+			if !reflect.DeepEqual(test.pop, p.Population) {
+				t.Errorf("population: %v != %v", p.Population, test.pop)
 			}
-			if !reflect.DeepEqual(test.io, io) {
-				t.Errorf("incidence: %v != %v", io, test.io)
+			if !reflect.DeepEqual(test.io, p.Incidence) {
+				t.Errorf("incidence: %v != %v", p.Incidence, test.io)
 			}
 		})
 	}

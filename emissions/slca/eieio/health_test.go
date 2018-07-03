@@ -21,7 +21,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/spatialmodel/epi"
+	eieiorpc "github.com/spatialmodel/inmap/emissions/slca/eieio/grpc/gogrpc"
+
 	"gonum.org/v1/gonum/mat"
 )
 
@@ -33,12 +34,19 @@ func TestHealth(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := context.Background()
-	health, err := s.Health(ctx, demand, nil, TotalPM25, "TotalPop", 2011, Domestic, epi.NasariACS)
+	health, err := s.Health(ctx, &eieiorpc.HealthInput{
+		Demand:     vec2array(demand),
+		Pollutant:  eieiorpc.Pollutant_TotalPM25,
+		Population: "TotalPop",
+		Year:       2011,
+		Location:   eieiorpc.Location_Domestic,
+		HR:         "NasariACS",
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	want := 0.14021207010740525
-	have := mat.Sum(health)
+	have := mat.Sum(array2vec(health.Data))
 	if different(want, have) {
 		t.Errorf("have %g, want %g", have, want)
 	}
@@ -52,10 +60,18 @@ func TestHealthMatrix(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := context.Background()
-	health, err := s.HealthMatrix(ctx, demand, TotalPM25, "TotalPop", 2011, Domestic, epi.NasariACS)
+	healthRPC, err := s.HealthMatrix(ctx, &eieiorpc.HealthMatrixInput{
+		Demand:     vec2array(demand),
+		Pollutant:  eieiorpc.Pollutant_TotalPM25,
+		Population: "TotalPop",
+		Year:       2011,
+		Location:   eieiorpc.Location_Domestic,
+		HR:         "NasariACS",
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
+	health := rpc2mat(healthRPC)
 	r, c := health.Dims()
 	wantR, wantC := 10, 188
 	if r != wantR {

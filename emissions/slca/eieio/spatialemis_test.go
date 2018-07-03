@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/spatialmodel/inmap/emissions/slca"
+	eieiorpc "github.com/spatialmodel/inmap/emissions/slca/eieio/grpc/gogrpc"
 
 	"gonum.org/v1/gonum/mat"
 )
@@ -34,10 +35,16 @@ func TestEmissions(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := context.Background()
-	emis, err := s.Emissions(ctx, demand, nil, slca.PM25, 2011, Domestic)
+	emisRPC, err := s.Emissions(ctx, &eieiorpc.EmissionsInput{
+		Demand:   vec2array(demand),
+		Emission: eieiorpc.Emission(slca.PM25),
+		Year:     2011,
+		Location: eieiorpc.Location_Domestic,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
+	emis := array2vec(emisRPC.Data)
 
 	want := 4.9888857564566237e+08 // ug/s; ~= 17342.6039028 ton/year *  17342.6039028 ug/s / (ton/year)
 	have := mat.Sum(emis)
@@ -54,10 +61,16 @@ func TestEmissionsMatrix(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := context.Background()
-	emis, err := s.EmissionsMatrix(ctx, demand, slca.PM25, 2011, Domestic)
+	emisRPC, err := s.EmissionsMatrix(ctx, &eieiorpc.EmissionsMatrixInput{
+		Demand:   vec2array(demand),
+		Emission: eieiorpc.Emission(slca.PM25),
+		Year:     2011,
+		Location: eieiorpc.Location_Domestic,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
+	emis := rpc2mat(emisRPC)
 	r, c := emis.Dims()
 	wantR, wantC := 10, 188
 	if r != wantR {

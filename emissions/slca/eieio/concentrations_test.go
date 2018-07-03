@@ -24,6 +24,9 @@ import (
 	"testing"
 
 	"github.com/BurntSushi/toml"
+	"github.com/gonum/floats"
+	"github.com/spatialmodel/epi"
+	eieiorpc "github.com/spatialmodel/inmap/emissions/slca/eieio/grpc/gogrpc"
 	"gonum.org/v1/gonum/mat"
 )
 
@@ -41,7 +44,7 @@ func loadSpatial(t *testing.T) *SpatialEIO {
 		if _, err := toml.DecodeReader(f, c); err != nil {
 			t.Fatal(err)
 		}
-		s, err = NewSpatial(c)
+		s, err = NewSpatial(c, epi.NasariACS)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -60,12 +63,17 @@ func TestConcentrations(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := context.Background()
-	conc, err := s.Concentrations(ctx, demand, nil, TotalPM25, 2011, Domestic)
+	conc, err := s.Concentrations(ctx, &eieiorpc.ConcentrationInput{
+		Demand:    demand.RawVector().Data,
+		Pollutant: eieiorpc.Pollutant_TotalPM25,
+		Year:      2011,
+		Location:  eieiorpc.Location_Domestic,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	want := 0.6092829446666379
-	have := mat.Sum(conc)
+	have := floats.Sum(conc.Data)
 	if want != have {
 		t.Errorf("have %g, want %g", have, want)
 	}
@@ -79,10 +87,16 @@ func TestConcentrationMatrix(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := context.Background()
-	conc, err := s.ConcentrationMatrix(ctx, demand, TotalPM25, 2011, Domestic)
+	concRPC, err := s.ConcentrationMatrix(ctx, &eieiorpc.ConcentrationMatrixInput{
+		Demand:    vec2array(demand),
+		Pollutant: eieiorpc.Pollutant(TotalPM25),
+		Year:      2011,
+		Location:  eieiorpc.Location_Domestic,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
+	conc := rpc2mat(concRPC)
 	r, c := conc.Dims()
 	wantR, wantC := 10, 188
 	if r != wantR {

@@ -24,7 +24,9 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/gonum/floats"
+
 	"github.com/spatialmodel/epi"
+	eieiorpc "github.com/spatialmodel/inmap/emissions/slca/eieio/grpc/gogrpc"
 )
 
 func TestCSTConfig_EmissionsSurrogate(t *testing.T) {
@@ -276,7 +278,7 @@ func TestCSTConfig_EvaluationConcentrations(t *testing.T) {
 
 	tests := []struct {
 		name string
-		year int
+		year int32
 		sum  float64
 	}{
 		{
@@ -297,12 +299,13 @@ func TestCSTConfig_EvaluationConcentrations(t *testing.T) {
 			continue
 		}
 		t.Run(test.name, func(t *testing.T) {
-			result, err := c.EvaluationConcentrations(context.Background(), test.year)
+			result, err := c.EvaluationConcentrations(context.Background(), &eieiorpc.EvaluationConcentrationsInput{
+				Year: test.year, Pollutant: eieiorpc.Pollutant_TotalPM25})
 			if err != nil {
 				failed = true
 				t.Fatal(err)
 			}
-			sum := floats.Sum(result.TotalPM25())
+			sum := floats.Sum(result.Data)
 			if sum != test.sum {
 				t.Errorf("want %g, have %g", test.sum, sum)
 			}
@@ -319,7 +322,7 @@ func TestCSTConfig_EvaluationHealth(t *testing.T) {
 	if _, err = toml.DecodeReader(f, c); err != nil {
 		t.Fatal(err)
 	}
-	if err = c.Setup(); err != nil {
+	if err = c.Setup(epi.NasariACS); err != nil {
 		t.Fatal(err)
 	}
 
@@ -346,12 +349,13 @@ func TestCSTConfig_EvaluationHealth(t *testing.T) {
 			continue
 		}
 		t.Run(test.name, func(t *testing.T) {
-			result, err := c.EvaluationHealth(context.Background(), test.year, epi.NasariACS)
+			result, err := c.EvaluationHealth(context.Background(), &eieiorpc.EvaluationHealthInput{
+				Year: int32(test.year), HR: "NasariACS", Population: "TotalPop", Pollutant: eieiorpc.Pollutant_TotalPM25})
 			if err != nil {
 				failed = true
 				t.Fatal(err)
 			}
-			sum := result["TotalPop"][totalPM25].Sum()
+			sum := floats.Sum(result.Data)
 			if sum != test.sum {
 				t.Errorf("want %g, have %g", test.sum, sum)
 			}
@@ -368,7 +372,7 @@ func TestCSTConfig_HealthSurrogate(t *testing.T) {
 	if _, err = toml.DecodeReader(f, c); err != nil {
 		t.Fatal(err)
 	}
-	if err = c.Setup(); err != nil {
+	if err = c.Setup(epi.NasariACS); err != nil {
 		t.Fatal(err)
 	}
 
@@ -425,7 +429,7 @@ func TestCSTConfig_HealthSurrogate(t *testing.T) {
 			continue
 		}
 		t.Run(test.name, func(t *testing.T) {
-			result, err := c.HealthSurrogate(context.Background(), test.ref, epi.NasariACS)
+			result, err := c.HealthSurrogate(context.Background(), test.ref, "NasariACS")
 			if err != nil {
 				failed = true
 				t.Fatal(err)
