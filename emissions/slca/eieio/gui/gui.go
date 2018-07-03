@@ -109,7 +109,18 @@ func queryFromSelection(s eieiorpc.Selection) url.Values {
 	v.Set("dt", s.DemandType)
 	v.Set("y", fmt.Sprint(s.Year))
 	v.Set("pop", s.Population)
-	v.Set("pol", fmt.Sprintf("%d", s.GetPollutant()))
+	switch s.ImpactType {
+	case "health", "conc":
+		v.Set("pol", fmt.Sprintf("%d", s.GetPollutant()))
+	case "emis":
+		e := s.GetEmission()
+		if int32(e) == 5 {
+			e = eieiorpc.Emission_PM25
+		}
+		v.Set("pol", fmt.Sprintf("%d", e))
+	default:
+		check(fmt.Errorf("invalid impact type `%s`", s.ImpactType))
+	}
 	return v
 }
 
@@ -407,14 +418,11 @@ func (c *GUI) pollutantOptions() optionFunc {
 	return func(id string) func() {
 		return func() {
 			var pols []holder
-			var match bool
 			switch c.selection.ImpactType {
 			case "health", "conc":
 				pols = concPols
-				match = p.val == c.selection.GetPollutant()
 			case "emis":
 				pols = emisPols
-				match = p.val == c.selection.GetEmission()
 			default:
 				dom.GetWindow().Alert(fmt.Sprintf("invalid impact type request: %s", c.selection.ImpactType))
 			}
@@ -424,9 +432,9 @@ func (c *GUI) pollutantOptions() optionFunc {
 				var match bool
 				switch c.selection.ImpactType {
 				case "health", "conc":
-					match = p.val == c.selection.GetPollutant()
+					match = eieiorpc.Pollutant(p.val) == c.selection.GetPollutant()
 				case "emis":
-					match = p.val == c.selection.GetEmission()
+					match = eieiorpc.Emission(p.val) == c.selection.GetEmission()
 				default:
 					dom.GetWindow().Alert(fmt.Sprintf("invalid impact type request: %s", c.selection.ImpactType))
 				}
