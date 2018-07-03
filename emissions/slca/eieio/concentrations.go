@@ -25,6 +25,8 @@ import (
 	"strconv"
 	"strings"
 
+	eieiorpc "github.com/spatialmodel/inmap/emissions/slca/eieio/grpc/gogrpc"
+
 	"github.com/ctessum/requestcache"
 	"gonum.org/v1/gonum/mat"
 )
@@ -61,11 +63,11 @@ func (er *concRequest) Key() string {
 // specified economic demand. industries
 // specifies the industries concentrations should be calculated for.
 // If industries == nil, combined concentrations for all industries are calculated.
-func (e *SpatialEIO) Concentrations(ctx context.Context, demand *mat.VecDense, industries *Mask, pol Pollutant, year Year, loc Location) (*mat.VecDense, error) {
+func (e *SpatialEIO) Concentrations(ctx context.Context, request *eieiorpc.ConcentrationInput) (*eieiorpc.Vector, error) {
 	e.loadConcentrationsOnce.Do(func() {
 		var c string
-		if e.SpatialCache != "" {
-			c = e.SpatialCache + "/individual"
+		if e.EIEIOCache != "" {
+			c = e.EIEIOCache + "/individual"
 		}
 		e.concentrationsCache = loadCacheOnce(func(ctx context.Context, request interface{}) (interface{}, error) {
 			r := request.(*concRequest)
@@ -73,18 +75,18 @@ func (e *SpatialEIO) Concentrations(ctx context.Context, demand *mat.VecDense, i
 		}, 1, e.MemCacheSize, c, vectorMarshal, vectorUnmarshal)
 	})
 	req := &concRequest{
-		demand:     demand,
-		industries: industries,
-		pol:        pol,
-		year:       year,
-		loc:        loc,
+		demand:     array2vec(request.Demand),
+		industries: (*Mask)(array2vec(request.Industries)),
+		pol:        Pollutant(request.Pollutant),
+		year:       Year(request.Year),
+		loc:        Location(request.Location),
 	}
 	rr := e.concentrationsCache.NewRequest(ctx, req, req.Key())
 	resultI, err := rr.Result()
 	if err != nil {
 		return nil, err
 	}
-	return resultI.(*mat.VecDense), nil
+	return vec2rpc(resultI.(*mat.VecDense)), nil
 }
 
 // concentrations returns spatially-explicit pollutant concentrations caused by the
@@ -116,13 +118,13 @@ func (e *SpatialEIO) concentrations(ctx context.Context, demand *mat.VecDense, i
 // ConcentrationMatrix returns spatially- and industry-explicit pollution concentrations caused by the
 // specified economic demand. In the result matrix, the rows represent air quality
 // model grid cells and the columns represent industries.
-func (e *SpatialEIO) ConcentrationMatrix(ctx context.Context, demand *mat.VecDense, pol Pollutant, year Year, loc Location) (*mat.Dense, error) {
-	cf, err := e.concentrationFactors(ctx, pol, year) // rows = grid cells, cols = industries
+func (e *SpatialEIO) ConcentrationMatrix(ctx context.Context, request *eieiorpc.ConcentrationMatrixInput) (*eieiorpc.Matrix, error) {
+	cf, err := e.concentrationFactors(ctx, Pollutant(request.Pollutant), Year(request.Year)) // rows = grid cells, cols = industries
 	if err != nil {
 		return nil, err
 	}
 
-	activity, err := e.economicImpactsSCC(demand, year, loc) // rows = industries
+	activity, err := e.economicImpactsSCC(array2vec(request.Demand), Year(request.Year), Location(request.Location)) // rows = industries
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +135,7 @@ func (e *SpatialEIO) ConcentrationMatrix(ctx context.Context, demand *mat.VecDen
 		// Multiply each emissions factor column by the corresponding activity row.
 		return v * activity.At(j, 0)
 	}, cf)
-	return conc, nil
+	return mat2rpc(conc), nil
 }
 
 //go:generate stringer -type=Pollutant
@@ -185,7 +187,7 @@ func loadCacheOnce(f requestcache.ProcessFunc, workers, memCacheSize int, cacheL
 // air quality model grid cells and the columns represent industries.
 func (e *SpatialEIO) concentrationFactors(ctx context.Context, pol Pollutant, year Year) (*mat.Dense, error) {
 	e.loadConcOnce.Do(func() {
-		e.concentrationFactorCache = loadCacheOnce(e.concentrationFactorsWorker, 1, 1, e.SpatialCache, matrixMarshal, matrixUnmarshal)
+		e.concentrationFactorCache = loadCacheOnce(e.concentrationFactorsWorker, 1, 1, e.EIEIOCache, matrixMarshal, matrixUnmarshal)
 	})
 	key := fmt.Sprintf("concentrationFactors_%v_%d", pol, year)
 	rr := e.concentrationFactorCache.NewRequest(ctx, concPolYear{pol: pol, year: year}, key)

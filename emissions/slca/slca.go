@@ -27,6 +27,7 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/spatialmodel/epi"
 	"github.com/spatialmodel/inmap/emissions/aep"
 	"github.com/spatialmodel/inmap/emissions/aep/aeputil"
 
@@ -226,10 +227,14 @@ type CSTConfig struct {
 	sr *sr.Reader
 
 	gridIndex *rtree.Rtree
+
+	// hr holds the registered hazard ratio functions.
+	hr map[string]epi.HRer
 }
 
-// setup sets up the chemical, spatial, and temporal configuration.
-func (c *CSTConfig) Setup() error {
+// setup sets up the chemical, spatial, and temporal configuration, where
+// hr specifies the hazard ratio functions that should be included.
+func (c *CSTConfig) Setup(hr ...epi.HRer) error {
 	expandEnv(reflect.ValueOf(c).Elem())
 
 	c.censusFile = make(map[int]string)
@@ -250,6 +255,10 @@ func (c *CSTConfig) Setup() error {
 	}
 	for i, f := range c.AdditionalEmissionsShapefilesForEvaluation {
 		c.AdditionalEmissionsShapefilesForEvaluation[i] = os.ExpandEnv(f)
+	}
+	c.hr = make(map[string]epi.HRer)
+	for _, h := range hr {
+		c.hr[h.Name()] = h
 	}
 	return nil
 }

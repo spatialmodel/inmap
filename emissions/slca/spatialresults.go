@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/spatialmodel/epi"
 	"github.com/spatialmodel/inmap"
 
 	"golang.org/x/net/context"
@@ -115,7 +114,7 @@ func (sr *SpatialResults) Concentrations() (map[string]*sparse.DenseArray, error
 // Health gets the total PM2.5 health impacts caused by life cycle sr.
 // The format of the output is map[population][pollutant]impacts.
 // HR specifies the function used to calculate the hazard ratio.
-func (sr *SpatialResults) Health(HR epi.HRer) (map[string]map[string]*sparse.DenseArray, error) {
+func (sr *SpatialResults) Health(HR string) (map[string]map[string]*sparse.DenseArray, error) {
 	o := make(map[string]map[string]*sparse.DenseArray)
 	for _, e := range sr.Edges {
 		health, err := sr.EdgeHealth(e, HR)
@@ -265,7 +264,7 @@ func (sr *SpatialResults) EdgeConcentrations(e *ResultEdge) (map[SubProcess]map[
 // It calculates the number of deaths in each demographic group caused by these
 // emissions. The format of the output is map[population][pollutant]effects.
 // HR specifies the function used to calculate the hazard ratio.
-func (sr *SpatialResults) EdgeHealth(e *ResultEdge, HR epi.HRer) (map[SubProcess]map[string]map[string]*sparse.DenseArray, error) {
+func (sr *SpatialResults) EdgeHealth(e *ResultEdge, HR string) (map[SubProcess]map[string]map[string]*sparse.DenseArray, error) {
 	req, err := newRequestPayload(sr, e)
 	if err != nil {
 		return nil, err
@@ -337,7 +336,7 @@ func (sr *SpatialResults) EdgeHealth(e *ResultEdge, HR epi.HRer) (map[SubProcess
 // emissions.
 // HR specifies the function used to calculate the hazard ratio.
 // The format of the output is map[population][pollutant]total effects.
-func (sr *SpatialResults) EdgeHealthTotals(e *ResultEdge, HR epi.HRer) (map[SubProcess]map[string]map[string]float64, error) {
+func (sr *SpatialResults) EdgeHealthTotals(e *ResultEdge, HR string) (map[SubProcess]map[string]map[string]float64, error) {
 	if h, ok := sr.edgeHealthTotals[e]; ok {
 		return h, nil // Return the cached value if it exists.
 	}
@@ -423,13 +422,13 @@ func (a getNameSorter) Less(i, j int) bool { return a[i].GetName() < a[j].GetNam
 
 type spatialResultsSorter struct {
 	*SpatialResults
-	hr epi.HRer
+	hr string
 }
 
 // Table creates a table from the results, suitable for outputting to a
 // CSV file.
 // HR specifies the function used to calculate the hazard ratio.
-func (sr *SpatialResults) Table(HR epi.HRer) ([][]string, error) {
+func (sr *SpatialResults) Table(HR string) ([][]string, error) {
 	var out [][]string
 	sort.Sort(sort.Reverse(spatialResultsSorter{SpatialResults: sr, hr: HR}))
 	nonHealthTotals := sr.Sum()

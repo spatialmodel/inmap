@@ -27,7 +27,7 @@ import (
 	"testing"
 
 	"github.com/BurntSushi/toml"
-	"github.com/spatialmodel/inmap/emissions/slca"
+	"github.com/spatialmodel/epi"
 	eieiorpc "github.com/spatialmodel/inmap/emissions/slca/eieio/grpc/gogrpc"
 )
 
@@ -43,7 +43,7 @@ func TestServer_grpc(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s, err := NewServer(&c)
+	s, err := NewServer(&c, epi.NasariACS)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -94,7 +94,7 @@ func TestServer_grpc(t *testing.T) {
 				Population:       "TotalPop",
 				DemandType:       "All",
 				Year:             2011,
-				Pollutant:        int32(TotalPM25),
+				Pol:              &eieiorpc.Selection_Pollutant{eieiorpc.Pollutant_TotalPM25},
 			},
 			selectors: &eieiorpc.Selectors{
 				Names:  []string{"All", "Food", "Goods", "Transportation", "Services", "Shelter", "Information and Entertainment", "Electricity"},
@@ -113,7 +113,7 @@ func TestServer_grpc(t *testing.T) {
 				Population:       "TotalPop",
 				DemandType:       "All",
 				Year:             2011,
-				Pollutant:        int32(TotalPM25),
+				Pol:              &eieiorpc.Selection_Pollutant{eieiorpc.Pollutant_TotalPM25},
 			},
 			selectors: &eieiorpc.Selectors{
 				Names:  []string{"All"},
@@ -132,7 +132,7 @@ func TestServer_grpc(t *testing.T) {
 				Population:       "TotalPop",
 				DemandType:       "All",
 				Year:             2011,
-				Pollutant:        int32(TotalPM25),
+				Pol:              &eieiorpc.Selection_Pollutant{eieiorpc.Pollutant_TotalPM25},
 			},
 			selectors: &eieiorpc.Selectors{
 				Names:  []string{"All", "Electric power generation, transmission, and distribution"},
@@ -150,7 +150,7 @@ func TestServer_grpc(t *testing.T) {
 				ImpactType:       "emis",
 				DemandType:       "All",
 				Year:             2011,
-				Pollutant:        int32(slca.PM25),
+				Pol:              &eieiorpc.Selection_Emission{eieiorpc.Emission_PM25},
 			},
 			selectors: &eieiorpc.Selectors{
 				Names: []string{"All", "Other Industrial Processes", "Industrial Fuel Comb.",
@@ -172,7 +172,7 @@ func TestServer_grpc(t *testing.T) {
 				ImpactType:       "emis",
 				DemandType:       "All",
 				Year:             2011,
-				Pollutant:        int32(slca.PM25),
+				Pol:              &eieiorpc.Selection_Emission{eieiorpc.Emission_PM25},
 			},
 			selectors: &eieiorpc.Selectors{
 				Codes:  []string{"All"},
@@ -191,7 +191,7 @@ func TestServer_grpc(t *testing.T) {
 				ImpactType:       "emis",
 				DemandType:       "All",
 				Year:             2011,
-				Pollutant:        int32(slca.PM25),
+				Pol:              &eieiorpc.Selection_Emission{eieiorpc.Emission_PM25},
 			},
 			selectors: &eieiorpc.Selectors{
 				Codes: []string{"All", "0030501403", "0030500505", "0030500622", "0030501062", "0030501207", "0030500310",
@@ -301,26 +301,26 @@ func TestServer_grpc(t *testing.T) {
 	t.Run("MapInfo", func(t *testing.T) {
 		for _, test := range []struct {
 			impactType string
-			pollutant  int32
+			pollutant  eieiorpc.Pollutant
 			colors     [][]uint8
 		}{
 			{
 				impactType: "health",
-				pollutant:  int32(TotalPM25),
+				pollutant:  eieiorpc.Pollutant_TotalPM25,
 				colors: [][]uint8{[]uint8{0xff, 0xff, 0xff}, []uint8{0x0, 0x0, 0x0}, []uint8{0x0, 0x0, 0x0}, []uint8{0x0, 0x0, 0x0},
 					[]uint8{0x0, 0x0, 0x0}, []uint8{0x0, 0x0, 0x0}, []uint8{0x0, 0x0, 0x0}, []uint8{0x0, 0x0, 0x0}, []uint8{0x0, 0x0, 0x0},
 					[]uint8{0x0, 0x0, 0x0}},
 			},
 			{
 				impactType: "conc",
-				pollutant:  int32(TotalPM25),
+				pollutant:  eieiorpc.Pollutant_TotalPM25,
 				colors: [][]uint8{[]uint8{0x15, 0xd, 0x2d}, []uint8{0x8f, 0x0, 0xc3}, []uint8{0xfd, 0x8f, 0x33},
 					[]uint8{0x3e, 0x12, 0xc6}, []uint8{0xf5, 0x5e, 0x3a}, []uint8{0x4, 0x17, 0xa9}, []uint8{0xee, 0x4f, 0x3b},
 					[]uint8{0xff, 0xff, 0xff}, []uint8{0x8, 0x17, 0x9f}, []uint8{0x0, 0x0, 0x0}},
 			},
 			{
 				impactType: "emis",
-				pollutant:  int32(slca.PM25),
+				pollutant:  eieiorpc.Pollutant_TotalPM25,
 				colors: [][]uint8{[]uint8{0x0, 0x0, 0x0}, []uint8{0x0, 0x0, 0x0}, []uint8{0x0, 0x0, 0x0},
 					[]uint8{0x0, 0x0, 0x0}, []uint8{0x0, 0x0, 0x0}, []uint8{0xff, 0xff, 0xff}, []uint8{0x0, 0x0, 0x0},
 					[]uint8{0x0, 0x0, 0x0}, []uint8{0x0, 0x0, 0x0}, []uint8{0x0, 0x0, 0x0}},
@@ -335,7 +335,7 @@ func TestServer_grpc(t *testing.T) {
 					ImpactType:       test.impactType,
 					DemandType:       "All",
 					Year:             2011,
-					Pollutant:        test.pollutant,
+					Pol:              &eieiorpc.Selection_Pollutant{eieiorpc.Pollutant_TotalPM25},
 					Population:       "TotalPop",
 				})
 				if err != nil {
@@ -362,7 +362,7 @@ func TestServer_grpc(t *testing.T) {
 			DemandType:       "All",
 			Year:             2011,
 			Population:       "TotalPop",
-			Pollutant:        int32(TotalPM25),
+			Pol:              &eieiorpc.Selection_Pollutant{eieiorpc.Pollutant_TotalPM25},
 		}
 		if !reflect.DeepEqual(ds, want) {
 			t.Errorf("%+v != %+v", ds, want)
