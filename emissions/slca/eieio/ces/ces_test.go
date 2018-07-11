@@ -49,7 +49,7 @@ func TestCES(t *testing.T) {
 
 	t.Run("demand", func(t *testing.T) {
 		cfg := eieio.Config{
-			Years:                       []eieio.Year{2014},
+			Years:                       []eieio.Year{2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015},
 			DetailYear:                  2007,
 			UseSummary:                  "../data/IOUse_Before_Redefinitions_PRO_1997-2015_Summary.xlsx",
 			UseDetail:                   "../data/IOUse_Before_Redefinitions_PRO_2007_Detail.xlsx",
@@ -94,6 +94,13 @@ func TestCES(t *testing.T) {
 		want = 1.1514298507675266e+12
 		if have != want {
 			t.Errorf("latino = %g; want %g", have, want)
+		}
+
+		for _, year := range cfg.Years {
+			_, err = c.LatinoDemand(e, nil, year)
+			if err != nil {
+				t.Error(err)
+			}
 		}
 
 	})

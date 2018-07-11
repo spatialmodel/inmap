@@ -1,5 +1,6 @@
 Alcoholic beverages
 Audio and visual equipment and services
+Television, radios, sound equipment
 Bakery products
 Beef
 Boys, 2 to 15
@@ -56,6 +57,8 @@ Poultry
 Processed fruits
 Processed vegetables
 Public and other transportation
+Public transportation
+Publicand other transportation
 Reading
 Rented dwellings
 Small appliances, miscellaneous housewares
