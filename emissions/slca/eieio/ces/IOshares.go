@@ -158,8 +158,12 @@ func NewCES() (*CES, error) {
 			if i == 0 {
 				continue
 			}
-			key := row.Cells[0].Value
-			ioCEMap[key] = append(ioCEMap[key], row.Cells[1].Value)
+			key := row.Cells[0].Value // The key is the IO commodity
+			for j := 1; j < len(row.Cells); j++ {
+				if row.Cells[j].Value != "" {
+					ioCEMap[key] = append(ioCEMap[key], row.Cells[j].Value)
+				}
+			}
 		}
 	}
 
@@ -369,9 +373,7 @@ func (c *CES) WhiteOtherDemand(eio *eieio.EIO, commodities *eieio.Mask, year eie
 		}
 		f, err := c.whiteOtherFrac(int(year), sector)
 		if err != nil {
-			fmt.Println(err)
-			f = 0
-			//return nil, err
+			return nil, err
 		}
 		demand.SetVec(i, v*f)
 	}
@@ -396,9 +398,7 @@ func (c *CES) BlackDemand(eio *eieio.EIO, commodities *eieio.Mask, year eieio.Ye
 		}
 		f, err := c.blackFrac(int(year), sector)
 		if err != nil {
-			fmt.Println(err)
-			f = 0
-			//return nil, err
+			return nil, err
 		}
 		demand.SetVec(i, v*f)
 	}
@@ -423,9 +423,7 @@ func (c *CES) LatinoDemand(eio *eieio.EIO, commodities *eieio.Mask, year eieio.Y
 		}
 		f, err := c.latinoFrac(int(year), sector)
 		if err != nil {
-			fmt.Println(err)
-			f = 0
-			//return nil, err
+			return nil, err
 		}
 		demand.SetVec(i, v*f)
 	}
