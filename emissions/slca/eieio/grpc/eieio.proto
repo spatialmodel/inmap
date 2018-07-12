@@ -30,7 +30,7 @@ service EIEIOrpc {
 
   rpc MapInfo(Selection) returns (ColorInfo) {}
 
-  rpc Geometry(Selection) returns (stream Rectangle) {}
+  rpc Geometry(Selection) returns (Rectangles) {}
 
   rpc Concentrations(ConcentrationInput) returns (Vector) {}
   rpc ConcentrationMatrix(ConcentrationMatrixInput) returns (Matrix) {}
@@ -43,6 +43,15 @@ service EIEIOrpc {
   rpc EvaluationConcentrations(EvaluationConcentrationsInput) returns (Vector) {}
   rpc ConcentrationResponseAverage(ConcentrationResponseAverageInput) returns (Vector) {}
   rpc PopulationIncidence(PopulationIncidenceInput) returns (PopulationIncidenceOutput) {}
+
+  rpc FinalDemand(FinalDemandInput) returns (Vector) {}
+
+  rpc CommodityMask(StringInput) returns (Mask) {}
+  rpc EmitterMask(StringInput) returns (Mask) {}
+}
+
+message StringInput {
+  string String = 1;
 }
 
 message Selectors {
@@ -57,7 +66,7 @@ message Selection {
 	string ProductionGroup = 3;
 	string ProductionSector = 4;
 	string ImpactType = 5;
-	string DemandType = 6;
+	FinalDemandType FinalDemandType = 6;
   int32  Year = 7;
   string Population = 8;
   oneof Pol {
@@ -80,6 +89,10 @@ message Rectangle {
   Point LR = 2;
   Point UR = 3;
   Point UL = 4;
+}
+
+message Rectangles {
+  repeated Rectangle Rectangles = 1;
 }
 
 message ColorInfo {
@@ -110,16 +123,51 @@ enum Location {
   Total = 2;
 }
 
+enum FinalDemandType {
+  // This group of demand types is directly available in the spreadsheet.
+  PersonalConsumption = 0;
+  PrivateStructures = 1;
+  PrivateEquipment = 2;
+  PrivateIP = 3;
+  PrivateResidential = 4;
+  InventoryChange = 5;
+  Export = 6;
+  DefenseConsumption = 7;
+  DefenseStructures = 8;
+  DefenseEquipment = 9;
+  DefenseIP = 10;
+  NondefenseConsumption = 11;
+  NondefenseStructures = 12;
+  NondefenseEquipment = 13;
+  NondefenseIP = 14;
+  LocalConsumption = 15;
+  LocalStructures = 16;
+  LocalEquipment = 17;
+  LocalIP = 18;
+
+  // This group of demand types consists of aggregates of the
+  // above types.
+  AllDemand = 19; // All is a combination of all categories above.
+  NonExport = 20;      // NonExport is (All - Export)
+}
+
+message FinalDemandInput {
+  FinalDemandType FinalDemandType = 1;
+  Mask Commodities = 2;
+  int32 Year = 3;
+  Location Location = 4;
+}
+
 message ConcentrationMatrixInput {
-  repeated double Demand = 1;
+  Vector Demand = 1;
   Pollutant Pollutant = 2;
   int32 Year = 3;
   Location Location = 4;
 }
 
 message ConcentrationInput {
-  repeated double Demand = 1;
-  repeated double Industries = 2;
+  Vector Demand = 1;
+  Mask Emitters = 2;
   Pollutant Pollutant = 3;
   int32 Year = 4;
   Location Location = 5;
@@ -127,22 +175,22 @@ message ConcentrationInput {
 
 
 message EmissionsMatrixInput {
-  repeated double Demand = 1;
+  Vector Demand = 1;
   Emission Emission = 2;
   int32 Year = 3;
   Location Location = 4;
 }
 
 message EmissionsInput {
-  repeated double Demand = 1;
-  repeated double Industries = 2;
+  Vector Demand = 1;
+  Mask Emitters = 2;
   Emission Emission = 3;
   int32 Year = 4;
   Location Location = 5;
 }
 
 message HealthMatrixInput {
-  repeated double Demand = 1;
+  Vector Demand = 1;
   Pollutant Pollutant = 2;
   string Population = 3;
   int32 Year = 4;
@@ -151,8 +199,8 @@ message HealthMatrixInput {
 }
 
 message HealthInput {
-  repeated double Demand = 1;
-  repeated double Industries = 2;
+  Vector Demand = 1;
+  Mask Industries = 2;
   Pollutant Pollutant = 3;
   string Population = 4;
   int32 Year = 5;
@@ -161,6 +209,10 @@ message HealthInput {
 }
 
 message Vector {
+  repeated double Data = 1;
+}
+
+message Mask {
   repeated double Data = 1;
 }
 

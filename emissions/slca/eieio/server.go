@@ -202,16 +202,33 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// CommodityMask returns a mask that can be used to limit a FinalDemand vector
+// to demand for commidities in the commodity group defined by abbrev.
+func (s *Server) CommodityMask(ctx context.Context, abbrev *eieiorpc.StringInput) (*eieiorpc.Mask, error) {
+	return mask2rpc(s.ioAgg.CommodityMask(abbrev.String_)), nil
+}
+
+// EmitterMask returns a mask that can be used to limits impacts to only
+// caused by emissions from the SCC codes defined by abbrev.
+func (s *Server) EmitterMask(ctx context.Context, abbrev *eieiorpc.StringInput) (*eieiorpc.Mask, error) {
+	return mask2rpc(s.sccAgg.IndustryMask(abbrev.String_)), nil
+}
+
 func (s *Server) impactsMenu(ctx context.Context, selection *eieiorpc.Selection, commodityMask, industryMask *Mask) (*eieiorpc.Vector, error) {
-	demand, err := s.SpatialEIO.EIO.FinalDemand(FinalDemand(selection.DemandType), commodityMask, Year(selection.Year), Domestic)
+	demand, err := s.SpatialEIO.EIO.FinalDemand(ctx, &eieiorpc.FinalDemandInput{
+		FinalDemandType: selection.FinalDemandType,
+		Commodities:     mask2rpc(commodityMask),
+		Year:            selection.Year,
+		Location:        eieiorpc.Location_Domestic,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("eioserve: calculating final demand: %v", err)
 	}
 	switch selection.ImpactType {
 	case "health", "conc":
 		return s.SpatialEIO.Health(ctx, &eieiorpc.HealthInput{
-			Demand:     vec2array(demand),
-			Industries: mask2array(industryMask),
+			Demand:     demand,
+			Industries: mask2rpc(industryMask),
 			Pollutant:  selection.GetPollutant(),
 			Population: selection.Population,
 			Year:       selection.Year,
@@ -220,11 +237,11 @@ func (s *Server) impactsMenu(ctx context.Context, selection *eieiorpc.Selection,
 		})
 	case "emis":
 		return s.SpatialEIO.Emissions(ctx, &eieiorpc.EmissionsInput{
-			Demand:     vec2array(demand),
-			Industries: mask2array(industryMask),
-			Emission:   selection.GetEmission(),
-			Year:       selection.Year,
-			Location:   eieiorpc.Location_Domestic,
+			Demand:   demand,
+			Emitters: mask2rpc(industryMask),
+			Emission: selection.GetEmission(),
+			Year:     selection.Year,
+			Location: eieiorpc.Location_Domestic,
 		})
 	default:
 		return nil, fmt.Errorf("invalid impact type request: %s", selection.ImpactType)
@@ -232,15 +249,20 @@ func (s *Server) impactsMenu(ctx context.Context, selection *eieiorpc.Selection,
 }
 
 func (s *Server) impactsMap(ctx context.Context, selection *eieiorpc.Selection, commodityMask, industryMask *Mask) (*eieiorpc.Vector, error) {
-	demand, err := s.SpatialEIO.EIO.FinalDemand(FinalDemand(selection.DemandType), commodityMask, Year(selection.Year), Domestic)
+	demand, err := s.SpatialEIO.EIO.FinalDemand(ctx, &eieiorpc.FinalDemandInput{
+		FinalDemandType: selection.FinalDemandType,
+		Commodities:     mask2rpc(commodityMask),
+		Year:            selection.Year,
+		Location:        eieiorpc.Location_Domestic,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("eioserve: calculating final demand: %v", err)
 	}
 	switch selection.ImpactType {
 	case "health":
 		return s.perArea(s.SpatialEIO.Health(ctx, &eieiorpc.HealthInput{
-			Demand:     vec2array(demand),
-			Industries: mask2array(industryMask),
+			Demand:     demand,
+			Industries: mask2rpc(industryMask),
 			Pollutant:  selection.GetPollutant(),
 			Population: selection.Population,
 			Year:       selection.Year,
@@ -249,19 +271,19 @@ func (s *Server) impactsMap(ctx context.Context, selection *eieiorpc.Selection, 
 		}))
 	case "conc":
 		return s.SpatialEIO.Concentrations(ctx, &eieiorpc.ConcentrationInput{
-			Demand:     vec2array(demand),
-			Industries: mask2array(industryMask),
-			Pollutant:  selection.GetPollutant(),
-			Year:       selection.Year,
-			Location:   eieiorpc.Location(Domestic),
+			Demand:    demand,
+			Emitters:  mask2rpc(industryMask),
+			Pollutant: selection.GetPollutant(),
+			Year:      selection.Year,
+			Location:  eieiorpc.Location(Domestic),
 		})
 	case "emis":
 		return s.perArea(s.SpatialEIO.Emissions(ctx, &eieiorpc.EmissionsInput{
-			Demand:     vec2array(demand),
-			Industries: mask2array(industryMask),
-			Emission:   selection.GetEmission(),
-			Year:       selection.Year,
-			Location:   eieiorpc.Location_Domestic,
+			Demand:   demand,
+			Emitters: mask2rpc(industryMask),
+			Emission: selection.GetEmission(),
+			Year:     selection.Year,
+			Location: eieiorpc.Location_Domestic,
 		}))
 	default:
 		return nil, fmt.Errorf("invalid impact type request: %s", selection.ImpactType)
@@ -289,7 +311,7 @@ func (s *Server) DemandGroups(ctx context.Context, in *eieiorpc.Selection) (*eie
 		"ProductionGroup":  in.ProductionGroup,
 		"ProductionSector": in.ProductionSector,
 		"ImpactType":       in.ImpactType,
-		"DemandType":       in.DemandType,
+		"FinalDemandType":  in.FinalDemandType,
 	}).Info("eioserve generating DemandGroups")
 	productionMask, err := s.productionMask(in.ProductionGroup, in.ProductionSector)
 	if err != nil {
@@ -330,7 +352,7 @@ func (s *Server) DemandGroups(ctx context.Context, in *eieiorpc.Selection) (*eie
 		"ProductionGroup":  in.ProductionGroup,
 		"ProductionSector": in.ProductionSector,
 		"ImpactType":       in.ImpactType,
-		"DemandType":       in.DemandType,
+		"FinalDemandType":  in.FinalDemandType,
 	}).Info("eioserve finished generating DemandGroups")
 	return out, nil
 }
@@ -369,7 +391,7 @@ func (s *Server) DemandSectors(ctx context.Context, in *eieiorpc.Selection) (*ei
 		"ProductionGroup":  in.ProductionGroup,
 		"ProductionSector": in.ProductionSector,
 		"ImpactType":       in.ImpactType,
-		"DemandType":       in.DemandType,
+		"DemandType":       in.FinalDemandType,
 	}).Info("eioserve generating DemandSectors")
 	out := &eieiorpc.Selectors{Names: []string{All}}
 	productionMask, err := s.productionMask(in.ProductionGroup, in.ProductionSector)
@@ -419,7 +441,7 @@ func (s *Server) DemandSectors(ctx context.Context, in *eieiorpc.Selection) (*ei
 		"ProductionGroup":  in.ProductionGroup,
 		"ProductionSector": in.ProductionSector,
 		"ImpactType":       in.ImpactType,
-		"DemandType":       in.DemandType,
+		"FinalDemandType":  in.FinalDemandType,
 	}).Info("eioserve finished generating DemandSectors")
 	return out, nil
 }
@@ -466,7 +488,7 @@ func (s *Server) ProdGroups(ctx context.Context, in *eieiorpc.Selection) (*eieio
 		"ProductionGroup":  in.ProductionGroup,
 		"ProductionSector": in.ProductionSector,
 		"ImpactType":       in.ImpactType,
-		"DemandType":       in.DemandType,
+		"DemandType":       in.FinalDemandType,
 	}).Info("eioserve generating ProdGroups")
 	demandMask, err := s.demandMask(in.DemandGroup, in.DemandSector)
 	if err != nil {
@@ -504,7 +526,7 @@ func (s *Server) ProdGroups(ctx context.Context, in *eieiorpc.Selection) (*eieio
 		"ProductionGroup":  in.ProductionGroup,
 		"ProductionSector": in.ProductionSector,
 		"ImpactType":       in.ImpactType,
-		"DemandType":       in.DemandType,
+		"FinalDemandType":  in.FinalDemandType,
 	}).Info("eioserve finished generating ProdGroups")
 	return out, nil
 }
@@ -517,7 +539,7 @@ func (s *Server) ProdSectors(ctx context.Context, in *eieiorpc.Selection) (*eiei
 		"ProductionGroup":  in.ProductionGroup,
 		"ProductionSector": in.ProductionSector,
 		"ImpactType":       in.ImpactType,
-		"DemandType":       in.DemandType,
+		"FinailDemandType": in.FinalDemandType,
 	}).Info("eioserve generating ProdSectors")
 	demandMask, err := s.demandMask(in.DemandGroup, in.DemandSector)
 	if err != nil {
@@ -566,7 +588,7 @@ func (s *Server) ProdSectors(ctx context.Context, in *eieiorpc.Selection) (*eiei
 		"ProductionGroup":  in.ProductionGroup,
 		"ProductionSector": in.ProductionSector,
 		"ImpactType":       in.ImpactType,
-		"DemandType":       in.DemandType,
+		"FinalDemandType":  in.FinalDemandType,
 	}).Info("eioserve finished generating ProdSectors")
 	return out, nil
 }
@@ -579,7 +601,7 @@ func (s *Server) MapInfo(ctx context.Context, in *eieiorpc.Selection) (*eieiorpc
 		"ProductionGroup":  in.ProductionGroup,
 		"ProductionSector": in.ProductionSector,
 		"ImpactType":       in.ImpactType,
-		"DemandType":       in.DemandType,
+		"DemandType":       in.FinalDemandType,
 	}).Info("eioserve generating MapInfo")
 	out := new(eieiorpc.ColorInfo)
 	commodityMask, err := s.demandMask(in.DemandGroup, in.DemandSector)
@@ -631,7 +653,7 @@ func (s *Server) MapInfo(ctx context.Context, in *eieiorpc.Selection) (*eieiorpc
 		"ProductionGroup":  in.ProductionGroup,
 		"ProductionSector": in.ProductionSector,
 		"ImpactType":       in.ImpactType,
-		"DemandType":       in.DemandType,
+		"FinalDemandType":  in.FinalDemandType,
 	}).Info("eioserve finished generating MapInfo")
 	return out, nil
 }
@@ -727,27 +749,21 @@ func (s *Server) getGeometry(ctx context.Context, _ interface{}) (interface{}, e
 }
 
 // Geometry returns the InMAP grid geometry in the Google mercator projection.
-func (s *Server) Geometry(_ *eieiorpc.Selection, stream eieiorpc.EIEIOrpc_GeometryServer) error {
+func (s *Server) Geometry(ctx context.Context, _ *eieiorpc.Selection) (*eieiorpc.Rectangles, error) {
 	s.Log.Info("eioserve generating Geometry")
 	s.geomCacheOnce.Do(func() {
 		s.geomCache = loadCacheOnce(s.getGeometry, 1, 1, s.SpatialEIO.EIEIOCache,
 			requestcache.MarshalGob, requestcache.UnmarshalGob)
 	})
-	req := s.geomCache.NewRequest(context.Background(), struct{}{}, "geometry")
+	req := s.geomCache.NewRequest(ctx, struct{}{}, "geometry")
 	iface, err := req.Result()
 	if err != nil {
 		s.Log.WithError(err).Errorf("generating/retrieving geometry")
-		return err
+		return nil, err
 	}
 	out := iface.([]*eieiorpc.Rectangle)
-	for _, r := range out {
-		if err := stream.Send(r); err != nil {
-			s.Log.WithError(err).Errorf("sending geometry")
-			return err
-		}
-	}
 	s.Log.Info("eioserve finished generating Geometry")
-	return nil
+	return &eieiorpc.Rectangles{Rectangles: out}, nil
 }
 
 // inverseArea returns the inverse of the area of each grid cell in km^-2.
@@ -782,7 +798,7 @@ func (s *Server) DefaultSelection(ctx context.Context, in *eieiorpc.Selection) (
 		ProductionGroup:  All,
 		ProductionSector: All,
 		ImpactType:       "conc",
-		DemandType:       All,
+		FinalDemandType:  eieiorpc.FinalDemandType_AllDemand,
 		Year:             int32(s.defaultYear),
 		Population:       s.SpatialEIO.CSTConfig.CensusPopColumns[0],
 		Pol:              &eieiorpc.Selection_Pollutant{eieiorpc.Pollutant_TotalPM25},
@@ -836,6 +852,13 @@ func array2vec(d []float64) *mat.VecDense {
 	return mat.NewVecDense(len(d), d)
 }
 
+func rpc2vec(d *eieiorpc.Vector) *mat.VecDense {
+	if d == nil {
+		return nil
+	}
+	return array2vec(d.Data)
+}
+
 func vec2array(v *mat.VecDense) []float64 {
 	if v == nil {
 		return nil
@@ -843,11 +866,18 @@ func vec2array(v *mat.VecDense) []float64 {
 	return v.RawVector().Data
 }
 
-func mask2array(m *Mask) []float64 {
+func mask2rpc(m *Mask) *eieiorpc.Mask {
 	if m == nil {
 		return nil
 	}
-	return vec2array((*mat.VecDense)(m))
+	return &eieiorpc.Mask{Data: vec2array((*mat.VecDense)(m))}
+}
+
+func rpc2mask(m *eieiorpc.Mask) *Mask {
+	if m == nil {
+		return nil
+	}
+	return (*Mask)(array2vec(m.Data))
 }
 
 func vec2rpc(v *mat.VecDense) *eieiorpc.Vector {

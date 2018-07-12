@@ -20,7 +20,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"io"
 
 	"honnef.co/go/js/dom"
 
@@ -28,7 +27,6 @@ import (
 	leaflet "github.com/ctessum/go-leaflet"
 	"github.com/ctessum/go-leaflet/plugin/glify"
 	"github.com/gopherjs/gopherjs/js"
-	eieiorpc "github.com/spatialmodel/inmap/emissions/slca/eieio/grpc/gopherjsgrpc"
 )
 
 func (c *GUI) LoadMap(div string) error {
@@ -64,25 +62,13 @@ type gridCell struct {
 }
 
 func (c *GUI) LoadGeometry() error {
-	geomClient, err := c.Geometry(context.Background(), &c.selection)
+	rects, err := c.Geometry(context.Background(), &c.selection)
 	if err != nil {
 		return err
 	}
 
-	var rects []*eieiorpc.Rectangle
-	for {
-		r, err := geomClient.Recv()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return err
-		}
-		rects = append(rects, r)
-	}
-
 	o := js.Global.Get("Object").New()
-	o.Set("Features", rects)
+	o.Set("Features", rects.Rectangles)
 
 	c.Polygons = o
 	return nil

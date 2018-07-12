@@ -58,13 +58,17 @@ func loadSpatial(t *testing.T) *SpatialEIO {
 func TestConcentrations(t *testing.T) {
 	s := loadSpatial(t)
 
-	demand, err := s.EIO.FinalDemand(All, nil, 2011, Domestic)
+	demand, err := s.EIO.FinalDemand(context.Background(), &eieiorpc.FinalDemandInput{
+		FinalDemandType: eieiorpc.FinalDemandType_AllDemand,
+		Year:            2011,
+		Location:        eieiorpc.Location_Domestic,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	ctx := context.Background()
 	conc, err := s.Concentrations(ctx, &eieiorpc.ConcentrationInput{
-		Demand:    demand.RawVector().Data,
+		Demand:    demand,
 		Pollutant: eieiorpc.Pollutant_TotalPM25,
 		Year:      2011,
 		Location:  eieiorpc.Location_Domestic,
@@ -82,14 +86,18 @@ func TestConcentrations(t *testing.T) {
 func TestConcentrationMatrix(t *testing.T) {
 	s := loadSpatial(t)
 
-	demand, err := s.EIO.FinalDemand(All, nil, 2011, Domestic)
+	demand, err := s.EIO.FinalDemand(context.Background(), &eieiorpc.FinalDemandInput{
+		FinalDemandType: eieiorpc.FinalDemandType_AllDemand,
+		Year:            2011,
+		Location:        eieiorpc.Location_Domestic,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	ctx := context.Background()
 	concRPC, err := s.ConcentrationMatrix(ctx, &eieiorpc.ConcentrationMatrixInput{
-		Demand:    vec2array(demand),
-		Pollutant: eieiorpc.Pollutant(TotalPM25),
+		Demand:    demand,
+		Pollutant: eieiorpc.Pollutant_TotalPM25,
 		Year:      2011,
 		Location:  eieiorpc.Location_Domestic,
 	})

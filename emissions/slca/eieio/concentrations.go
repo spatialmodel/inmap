@@ -60,9 +60,9 @@ func (er *concRequest) Key() string {
 }
 
 // Concentrations returns spatially-explicit pollutant concentrations caused by the
-// specified economic demand. industries
-// specifies the industries concentrations should be calculated for.
-// If industries == nil, combined concentrations for all industries are calculated.
+// specified economic demand. emitters
+// specifies the emitters concentrations should be calculated for.
+// If emitters == nil, combined concentrations for all emitters are calculated.
 func (e *SpatialEIO) Concentrations(ctx context.Context, request *eieiorpc.ConcentrationInput) (*eieiorpc.Vector, error) {
 	e.loadConcentrationsOnce.Do(func() {
 		var c string
@@ -75,8 +75,8 @@ func (e *SpatialEIO) Concentrations(ctx context.Context, request *eieiorpc.Conce
 		}, 1, e.MemCacheSize, c, vectorMarshal, vectorUnmarshal)
 	})
 	req := &concRequest{
-		demand:     array2vec(request.Demand),
-		industries: (*Mask)(array2vec(request.Industries)),
+		demand:     rpc2vec(request.Demand),
+		industries: rpc2mask(request.Emitters),
 		pol:        Pollutant(request.Pollutant),
 		year:       Year(request.Year),
 		loc:        Location(request.Location),
@@ -117,14 +117,14 @@ func (e *SpatialEIO) concentrations(ctx context.Context, demand *mat.VecDense, i
 
 // ConcentrationMatrix returns spatially- and industry-explicit pollution concentrations caused by the
 // specified economic demand. In the result matrix, the rows represent air quality
-// model grid cells and the columns represent industries.
+// model grid cells and the columns represent emitters.
 func (e *SpatialEIO) ConcentrationMatrix(ctx context.Context, request *eieiorpc.ConcentrationMatrixInput) (*eieiorpc.Matrix, error) {
 	cf, err := e.concentrationFactors(ctx, Pollutant(request.Pollutant), Year(request.Year)) // rows = grid cells, cols = industries
 	if err != nil {
 		return nil, err
 	}
 
-	activity, err := e.economicImpactsSCC(array2vec(request.Demand), Year(request.Year), Location(request.Location)) // rows = industries
+	activity, err := e.economicImpactsSCC(array2vec(request.Demand.Data), Year(request.Year), Location(request.Location)) // rows = industries
 	if err != nil {
 		return nil, err
 	}

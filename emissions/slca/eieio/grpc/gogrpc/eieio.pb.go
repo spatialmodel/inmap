@@ -55,7 +55,7 @@ func (x Pollutant) String() string {
 	return proto.EnumName(Pollutant_name, int32(x))
 }
 func (Pollutant) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_eieio_ca22b9f13bcf9fc2, []int{0}
+	return fileDescriptor_eieio_b7ae4680b9110e12, []int{0}
 }
 
 type Emission int32
@@ -87,7 +87,7 @@ func (x Emission) String() string {
 	return proto.EnumName(Emission_name, int32(x))
 }
 func (Emission) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_eieio_ca22b9f13bcf9fc2, []int{1}
+	return fileDescriptor_eieio_b7ae4680b9110e12, []int{1}
 }
 
 type Location int32
@@ -113,7 +113,128 @@ func (x Location) String() string {
 	return proto.EnumName(Location_name, int32(x))
 }
 func (Location) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_eieio_ca22b9f13bcf9fc2, []int{2}
+	return fileDescriptor_eieio_b7ae4680b9110e12, []int{2}
+}
+
+type FinalDemandType int32
+
+const (
+	// This group of demand types is directly available in the spreadsheet.
+	FinalDemandType_PersonalConsumption   FinalDemandType = 0
+	FinalDemandType_PrivateStructures     FinalDemandType = 1
+	FinalDemandType_PrivateEquipment      FinalDemandType = 2
+	FinalDemandType_PrivateIP             FinalDemandType = 3
+	FinalDemandType_PrivateResidential    FinalDemandType = 4
+	FinalDemandType_InventoryChange       FinalDemandType = 5
+	FinalDemandType_Export                FinalDemandType = 6
+	FinalDemandType_DefenseConsumption    FinalDemandType = 7
+	FinalDemandType_DefenseStructures     FinalDemandType = 8
+	FinalDemandType_DefenseEquipment      FinalDemandType = 9
+	FinalDemandType_DefenseIP             FinalDemandType = 10
+	FinalDemandType_NondefenseConsumption FinalDemandType = 11
+	FinalDemandType_NondefenseStructures  FinalDemandType = 12
+	FinalDemandType_NondefenseEquipment   FinalDemandType = 13
+	FinalDemandType_NondefenseIP          FinalDemandType = 14
+	FinalDemandType_LocalConsumption      FinalDemandType = 15
+	FinalDemandType_LocalStructures       FinalDemandType = 16
+	FinalDemandType_LocalEquipment        FinalDemandType = 17
+	FinalDemandType_LocalIP               FinalDemandType = 18
+	// This group of demand types consists of aggregates of the
+	// above types.
+	FinalDemandType_AllDemand FinalDemandType = 19
+	FinalDemandType_NonExport FinalDemandType = 20
+)
+
+var FinalDemandType_name = map[int32]string{
+	0:  "PersonalConsumption",
+	1:  "PrivateStructures",
+	2:  "PrivateEquipment",
+	3:  "PrivateIP",
+	4:  "PrivateResidential",
+	5:  "InventoryChange",
+	6:  "Export",
+	7:  "DefenseConsumption",
+	8:  "DefenseStructures",
+	9:  "DefenseEquipment",
+	10: "DefenseIP",
+	11: "NondefenseConsumption",
+	12: "NondefenseStructures",
+	13: "NondefenseEquipment",
+	14: "NondefenseIP",
+	15: "LocalConsumption",
+	16: "LocalStructures",
+	17: "LocalEquipment",
+	18: "LocalIP",
+	19: "AllDemand",
+	20: "NonExport",
+}
+var FinalDemandType_value = map[string]int32{
+	"PersonalConsumption":   0,
+	"PrivateStructures":     1,
+	"PrivateEquipment":      2,
+	"PrivateIP":             3,
+	"PrivateResidential":    4,
+	"InventoryChange":       5,
+	"Export":                6,
+	"DefenseConsumption":    7,
+	"DefenseStructures":     8,
+	"DefenseEquipment":      9,
+	"DefenseIP":             10,
+	"NondefenseConsumption": 11,
+	"NondefenseStructures":  12,
+	"NondefenseEquipment":   13,
+	"NondefenseIP":          14,
+	"LocalConsumption":      15,
+	"LocalStructures":       16,
+	"LocalEquipment":        17,
+	"LocalIP":               18,
+	"AllDemand":             19,
+	"NonExport":             20,
+}
+
+func (x FinalDemandType) String() string {
+	return proto.EnumName(FinalDemandType_name, int32(x))
+}
+func (FinalDemandType) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_eieio_b7ae4680b9110e12, []int{3}
+}
+
+type StringInput struct {
+	String_              string   `protobuf:"bytes,1,opt,name=String,proto3" json:"String,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *StringInput) Reset()         { *m = StringInput{} }
+func (m *StringInput) String() string { return proto.CompactTextString(m) }
+func (*StringInput) ProtoMessage()    {}
+func (*StringInput) Descriptor() ([]byte, []int) {
+	return fileDescriptor_eieio_b7ae4680b9110e12, []int{0}
+}
+func (m *StringInput) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_StringInput.Unmarshal(m, b)
+}
+func (m *StringInput) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_StringInput.Marshal(b, m, deterministic)
+}
+func (dst *StringInput) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_StringInput.Merge(dst, src)
+}
+func (m *StringInput) XXX_Size() int {
+	return xxx_messageInfo_StringInput.Size(m)
+}
+func (m *StringInput) XXX_DiscardUnknown() {
+	xxx_messageInfo_StringInput.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_StringInput proto.InternalMessageInfo
+
+func (m *StringInput) GetString_() string {
+	if m != nil {
+		return m.String_
+	}
+	return ""
 }
 
 type Selectors struct {
@@ -129,7 +250,7 @@ func (m *Selectors) Reset()         { *m = Selectors{} }
 func (m *Selectors) String() string { return proto.CompactTextString(m) }
 func (*Selectors) ProtoMessage()    {}
 func (*Selectors) Descriptor() ([]byte, []int) {
-	return fileDescriptor_eieio_ca22b9f13bcf9fc2, []int{0}
+	return fileDescriptor_eieio_b7ae4680b9110e12, []int{1}
 }
 func (m *Selectors) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Selectors.Unmarshal(m, b)
@@ -171,14 +292,14 @@ func (m *Selectors) GetValues() []float32 {
 }
 
 type Selection struct {
-	DemandGroup      string `protobuf:"bytes,1,opt,name=DemandGroup,proto3" json:"DemandGroup,omitempty"`
-	DemandSector     string `protobuf:"bytes,2,opt,name=DemandSector,proto3" json:"DemandSector,omitempty"`
-	ProductionGroup  string `protobuf:"bytes,3,opt,name=ProductionGroup,proto3" json:"ProductionGroup,omitempty"`
-	ProductionSector string `protobuf:"bytes,4,opt,name=ProductionSector,proto3" json:"ProductionSector,omitempty"`
-	ImpactType       string `protobuf:"bytes,5,opt,name=ImpactType,proto3" json:"ImpactType,omitempty"`
-	DemandType       string `protobuf:"bytes,6,opt,name=DemandType,proto3" json:"DemandType,omitempty"`
-	Year             int32  `protobuf:"varint,7,opt,name=Year,proto3" json:"Year,omitempty"`
-	Population       string `protobuf:"bytes,8,opt,name=Population,proto3" json:"Population,omitempty"`
+	DemandGroup      string          `protobuf:"bytes,1,opt,name=DemandGroup,proto3" json:"DemandGroup,omitempty"`
+	DemandSector     string          `protobuf:"bytes,2,opt,name=DemandSector,proto3" json:"DemandSector,omitempty"`
+	ProductionGroup  string          `protobuf:"bytes,3,opt,name=ProductionGroup,proto3" json:"ProductionGroup,omitempty"`
+	ProductionSector string          `protobuf:"bytes,4,opt,name=ProductionSector,proto3" json:"ProductionSector,omitempty"`
+	ImpactType       string          `protobuf:"bytes,5,opt,name=ImpactType,proto3" json:"ImpactType,omitempty"`
+	FinalDemandType  FinalDemandType `protobuf:"varint,6,opt,name=FinalDemandType,proto3,enum=eieiorpc.FinalDemandType" json:"FinalDemandType,omitempty"`
+	Year             int32           `protobuf:"varint,7,opt,name=Year,proto3" json:"Year,omitempty"`
+	Population       string          `protobuf:"bytes,8,opt,name=Population,proto3" json:"Population,omitempty"`
 	// Types that are valid to be assigned to Pol:
 	//	*Selection_Pollutant
 	//	*Selection_Emission
@@ -192,7 +313,7 @@ func (m *Selection) Reset()         { *m = Selection{} }
 func (m *Selection) String() string { return proto.CompactTextString(m) }
 func (*Selection) ProtoMessage()    {}
 func (*Selection) Descriptor() ([]byte, []int) {
-	return fileDescriptor_eieio_ca22b9f13bcf9fc2, []int{1}
+	return fileDescriptor_eieio_b7ae4680b9110e12, []int{2}
 }
 func (m *Selection) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Selection.Unmarshal(m, b)
@@ -268,11 +389,11 @@ func (m *Selection) GetImpactType() string {
 	return ""
 }
 
-func (m *Selection) GetDemandType() string {
+func (m *Selection) GetFinalDemandType() FinalDemandType {
 	if m != nil {
-		return m.DemandType
+		return m.FinalDemandType
 	}
-	return ""
+	return FinalDemandType_PersonalConsumption
 }
 
 func (m *Selection) GetYear() int32 {
@@ -378,7 +499,7 @@ func (m *Year) Reset()         { *m = Year{} }
 func (m *Year) String() string { return proto.CompactTextString(m) }
 func (*Year) ProtoMessage()    {}
 func (*Year) Descriptor() ([]byte, []int) {
-	return fileDescriptor_eieio_ca22b9f13bcf9fc2, []int{2}
+	return fileDescriptor_eieio_b7ae4680b9110e12, []int{3}
 }
 func (m *Year) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Year.Unmarshal(m, b)
@@ -417,7 +538,7 @@ func (m *Point) Reset()         { *m = Point{} }
 func (m *Point) String() string { return proto.CompactTextString(m) }
 func (*Point) ProtoMessage()    {}
 func (*Point) Descriptor() ([]byte, []int) {
-	return fileDescriptor_eieio_ca22b9f13bcf9fc2, []int{3}
+	return fileDescriptor_eieio_b7ae4680b9110e12, []int{4}
 }
 func (m *Point) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Point.Unmarshal(m, b)
@@ -465,7 +586,7 @@ func (m *Rectangle) Reset()         { *m = Rectangle{} }
 func (m *Rectangle) String() string { return proto.CompactTextString(m) }
 func (*Rectangle) ProtoMessage()    {}
 func (*Rectangle) Descriptor() ([]byte, []int) {
-	return fileDescriptor_eieio_ca22b9f13bcf9fc2, []int{4}
+	return fileDescriptor_eieio_b7ae4680b9110e12, []int{5}
 }
 func (m *Rectangle) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Rectangle.Unmarshal(m, b)
@@ -513,6 +634,44 @@ func (m *Rectangle) GetUL() *Point {
 	return nil
 }
 
+type Rectangles struct {
+	Rectangles           []*Rectangle `protobuf:"bytes,1,rep,name=Rectangles,proto3" json:"Rectangles,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}     `json:"-"`
+	XXX_unrecognized     []byte       `json:"-"`
+	XXX_sizecache        int32        `json:"-"`
+}
+
+func (m *Rectangles) Reset()         { *m = Rectangles{} }
+func (m *Rectangles) String() string { return proto.CompactTextString(m) }
+func (*Rectangles) ProtoMessage()    {}
+func (*Rectangles) Descriptor() ([]byte, []int) {
+	return fileDescriptor_eieio_b7ae4680b9110e12, []int{6}
+}
+func (m *Rectangles) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Rectangles.Unmarshal(m, b)
+}
+func (m *Rectangles) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Rectangles.Marshal(b, m, deterministic)
+}
+func (dst *Rectangles) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Rectangles.Merge(dst, src)
+}
+func (m *Rectangles) XXX_Size() int {
+	return xxx_messageInfo_Rectangles.Size(m)
+}
+func (m *Rectangles) XXX_DiscardUnknown() {
+	xxx_messageInfo_Rectangles.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Rectangles proto.InternalMessageInfo
+
+func (m *Rectangles) GetRectangles() []*Rectangle {
+	if m != nil {
+		return m.Rectangles
+	}
+	return nil
+}
+
 type ColorInfo struct {
 	RGB                  [][]byte `protobuf:"bytes,1,rep,name=RGB,proto3" json:"RGB,omitempty"`
 	Legend               string   `protobuf:"bytes,2,opt,name=Legend,proto3" json:"Legend,omitempty"`
@@ -525,7 +684,7 @@ func (m *ColorInfo) Reset()         { *m = ColorInfo{} }
 func (m *ColorInfo) String() string { return proto.CompactTextString(m) }
 func (*ColorInfo) ProtoMessage()    {}
 func (*ColorInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_eieio_ca22b9f13bcf9fc2, []int{5}
+	return fileDescriptor_eieio_b7ae4680b9110e12, []int{7}
 }
 func (m *ColorInfo) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ColorInfo.Unmarshal(m, b)
@@ -559,8 +718,70 @@ func (m *ColorInfo) GetLegend() string {
 	return ""
 }
 
+type FinalDemandInput struct {
+	FinalDemandType      FinalDemandType `protobuf:"varint,1,opt,name=FinalDemandType,proto3,enum=eieiorpc.FinalDemandType" json:"FinalDemandType,omitempty"`
+	Commodities          *Mask           `protobuf:"bytes,2,opt,name=Commodities,proto3" json:"Commodities,omitempty"`
+	Year                 int32           `protobuf:"varint,3,opt,name=Year,proto3" json:"Year,omitempty"`
+	Location             Location        `protobuf:"varint,4,opt,name=Location,proto3,enum=eieiorpc.Location" json:"Location,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}        `json:"-"`
+	XXX_unrecognized     []byte          `json:"-"`
+	XXX_sizecache        int32           `json:"-"`
+}
+
+func (m *FinalDemandInput) Reset()         { *m = FinalDemandInput{} }
+func (m *FinalDemandInput) String() string { return proto.CompactTextString(m) }
+func (*FinalDemandInput) ProtoMessage()    {}
+func (*FinalDemandInput) Descriptor() ([]byte, []int) {
+	return fileDescriptor_eieio_b7ae4680b9110e12, []int{8}
+}
+func (m *FinalDemandInput) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_FinalDemandInput.Unmarshal(m, b)
+}
+func (m *FinalDemandInput) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_FinalDemandInput.Marshal(b, m, deterministic)
+}
+func (dst *FinalDemandInput) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_FinalDemandInput.Merge(dst, src)
+}
+func (m *FinalDemandInput) XXX_Size() int {
+	return xxx_messageInfo_FinalDemandInput.Size(m)
+}
+func (m *FinalDemandInput) XXX_DiscardUnknown() {
+	xxx_messageInfo_FinalDemandInput.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_FinalDemandInput proto.InternalMessageInfo
+
+func (m *FinalDemandInput) GetFinalDemandType() FinalDemandType {
+	if m != nil {
+		return m.FinalDemandType
+	}
+	return FinalDemandType_PersonalConsumption
+}
+
+func (m *FinalDemandInput) GetCommodities() *Mask {
+	if m != nil {
+		return m.Commodities
+	}
+	return nil
+}
+
+func (m *FinalDemandInput) GetYear() int32 {
+	if m != nil {
+		return m.Year
+	}
+	return 0
+}
+
+func (m *FinalDemandInput) GetLocation() Location {
+	if m != nil {
+		return m.Location
+	}
+	return Location_Domestic
+}
+
 type ConcentrationMatrixInput struct {
-	Demand               []float64 `protobuf:"fixed64,1,rep,packed,name=Demand,proto3" json:"Demand,omitempty"`
+	Demand               *Vector   `protobuf:"bytes,1,opt,name=Demand,proto3" json:"Demand,omitempty"`
 	Pollutant            Pollutant `protobuf:"varint,2,opt,name=Pollutant,proto3,enum=eieiorpc.Pollutant" json:"Pollutant,omitempty"`
 	Year                 int32     `protobuf:"varint,3,opt,name=Year,proto3" json:"Year,omitempty"`
 	Location             Location  `protobuf:"varint,4,opt,name=Location,proto3,enum=eieiorpc.Location" json:"Location,omitempty"`
@@ -573,7 +794,7 @@ func (m *ConcentrationMatrixInput) Reset()         { *m = ConcentrationMatrixInp
 func (m *ConcentrationMatrixInput) String() string { return proto.CompactTextString(m) }
 func (*ConcentrationMatrixInput) ProtoMessage()    {}
 func (*ConcentrationMatrixInput) Descriptor() ([]byte, []int) {
-	return fileDescriptor_eieio_ca22b9f13bcf9fc2, []int{6}
+	return fileDescriptor_eieio_b7ae4680b9110e12, []int{9}
 }
 func (m *ConcentrationMatrixInput) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ConcentrationMatrixInput.Unmarshal(m, b)
@@ -593,7 +814,7 @@ func (m *ConcentrationMatrixInput) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ConcentrationMatrixInput proto.InternalMessageInfo
 
-func (m *ConcentrationMatrixInput) GetDemand() []float64 {
+func (m *ConcentrationMatrixInput) GetDemand() *Vector {
 	if m != nil {
 		return m.Demand
 	}
@@ -622,8 +843,8 @@ func (m *ConcentrationMatrixInput) GetLocation() Location {
 }
 
 type ConcentrationInput struct {
-	Demand               []float64 `protobuf:"fixed64,1,rep,packed,name=Demand,proto3" json:"Demand,omitempty"`
-	Industries           []float64 `protobuf:"fixed64,2,rep,packed,name=Industries,proto3" json:"Industries,omitempty"`
+	Demand               *Vector   `protobuf:"bytes,1,opt,name=Demand,proto3" json:"Demand,omitempty"`
+	Emitters             *Mask     `protobuf:"bytes,2,opt,name=Emitters,proto3" json:"Emitters,omitempty"`
 	Pollutant            Pollutant `protobuf:"varint,3,opt,name=Pollutant,proto3,enum=eieiorpc.Pollutant" json:"Pollutant,omitempty"`
 	Year                 int32     `protobuf:"varint,4,opt,name=Year,proto3" json:"Year,omitempty"`
 	Location             Location  `protobuf:"varint,5,opt,name=Location,proto3,enum=eieiorpc.Location" json:"Location,omitempty"`
@@ -636,7 +857,7 @@ func (m *ConcentrationInput) Reset()         { *m = ConcentrationInput{} }
 func (m *ConcentrationInput) String() string { return proto.CompactTextString(m) }
 func (*ConcentrationInput) ProtoMessage()    {}
 func (*ConcentrationInput) Descriptor() ([]byte, []int) {
-	return fileDescriptor_eieio_ca22b9f13bcf9fc2, []int{7}
+	return fileDescriptor_eieio_b7ae4680b9110e12, []int{10}
 }
 func (m *ConcentrationInput) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ConcentrationInput.Unmarshal(m, b)
@@ -656,16 +877,16 @@ func (m *ConcentrationInput) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ConcentrationInput proto.InternalMessageInfo
 
-func (m *ConcentrationInput) GetDemand() []float64 {
+func (m *ConcentrationInput) GetDemand() *Vector {
 	if m != nil {
 		return m.Demand
 	}
 	return nil
 }
 
-func (m *ConcentrationInput) GetIndustries() []float64 {
+func (m *ConcentrationInput) GetEmitters() *Mask {
 	if m != nil {
-		return m.Industries
+		return m.Emitters
 	}
 	return nil
 }
@@ -692,20 +913,20 @@ func (m *ConcentrationInput) GetLocation() Location {
 }
 
 type EmissionsMatrixInput struct {
-	Demand               []float64 `protobuf:"fixed64,1,rep,packed,name=Demand,proto3" json:"Demand,omitempty"`
-	Emission             Emission  `protobuf:"varint,2,opt,name=Emission,proto3,enum=eieiorpc.Emission" json:"Emission,omitempty"`
-	Year                 int32     `protobuf:"varint,3,opt,name=Year,proto3" json:"Year,omitempty"`
-	Location             Location  `protobuf:"varint,4,opt,name=Location,proto3,enum=eieiorpc.Location" json:"Location,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}  `json:"-"`
-	XXX_unrecognized     []byte    `json:"-"`
-	XXX_sizecache        int32     `json:"-"`
+	Demand               *Vector  `protobuf:"bytes,1,opt,name=Demand,proto3" json:"Demand,omitempty"`
+	Emission             Emission `protobuf:"varint,2,opt,name=Emission,proto3,enum=eieiorpc.Emission" json:"Emission,omitempty"`
+	Year                 int32    `protobuf:"varint,3,opt,name=Year,proto3" json:"Year,omitempty"`
+	Location             Location `protobuf:"varint,4,opt,name=Location,proto3,enum=eieiorpc.Location" json:"Location,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
 func (m *EmissionsMatrixInput) Reset()         { *m = EmissionsMatrixInput{} }
 func (m *EmissionsMatrixInput) String() string { return proto.CompactTextString(m) }
 func (*EmissionsMatrixInput) ProtoMessage()    {}
 func (*EmissionsMatrixInput) Descriptor() ([]byte, []int) {
-	return fileDescriptor_eieio_ca22b9f13bcf9fc2, []int{8}
+	return fileDescriptor_eieio_b7ae4680b9110e12, []int{11}
 }
 func (m *EmissionsMatrixInput) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_EmissionsMatrixInput.Unmarshal(m, b)
@@ -725,7 +946,7 @@ func (m *EmissionsMatrixInput) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_EmissionsMatrixInput proto.InternalMessageInfo
 
-func (m *EmissionsMatrixInput) GetDemand() []float64 {
+func (m *EmissionsMatrixInput) GetDemand() *Vector {
 	if m != nil {
 		return m.Demand
 	}
@@ -754,21 +975,21 @@ func (m *EmissionsMatrixInput) GetLocation() Location {
 }
 
 type EmissionsInput struct {
-	Demand               []float64 `protobuf:"fixed64,1,rep,packed,name=Demand,proto3" json:"Demand,omitempty"`
-	Industries           []float64 `protobuf:"fixed64,2,rep,packed,name=Industries,proto3" json:"Industries,omitempty"`
-	Emission             Emission  `protobuf:"varint,3,opt,name=Emission,proto3,enum=eieiorpc.Emission" json:"Emission,omitempty"`
-	Year                 int32     `protobuf:"varint,4,opt,name=Year,proto3" json:"Year,omitempty"`
-	Location             Location  `protobuf:"varint,5,opt,name=Location,proto3,enum=eieiorpc.Location" json:"Location,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}  `json:"-"`
-	XXX_unrecognized     []byte    `json:"-"`
-	XXX_sizecache        int32     `json:"-"`
+	Demand               *Vector  `protobuf:"bytes,1,opt,name=Demand,proto3" json:"Demand,omitempty"`
+	Emitters             *Mask    `protobuf:"bytes,2,opt,name=Emitters,proto3" json:"Emitters,omitempty"`
+	Emission             Emission `protobuf:"varint,3,opt,name=Emission,proto3,enum=eieiorpc.Emission" json:"Emission,omitempty"`
+	Year                 int32    `protobuf:"varint,4,opt,name=Year,proto3" json:"Year,omitempty"`
+	Location             Location `protobuf:"varint,5,opt,name=Location,proto3,enum=eieiorpc.Location" json:"Location,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
 func (m *EmissionsInput) Reset()         { *m = EmissionsInput{} }
 func (m *EmissionsInput) String() string { return proto.CompactTextString(m) }
 func (*EmissionsInput) ProtoMessage()    {}
 func (*EmissionsInput) Descriptor() ([]byte, []int) {
-	return fileDescriptor_eieio_ca22b9f13bcf9fc2, []int{9}
+	return fileDescriptor_eieio_b7ae4680b9110e12, []int{12}
 }
 func (m *EmissionsInput) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_EmissionsInput.Unmarshal(m, b)
@@ -788,16 +1009,16 @@ func (m *EmissionsInput) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_EmissionsInput proto.InternalMessageInfo
 
-func (m *EmissionsInput) GetDemand() []float64 {
+func (m *EmissionsInput) GetDemand() *Vector {
 	if m != nil {
 		return m.Demand
 	}
 	return nil
 }
 
-func (m *EmissionsInput) GetIndustries() []float64 {
+func (m *EmissionsInput) GetEmitters() *Mask {
 	if m != nil {
-		return m.Industries
+		return m.Emitters
 	}
 	return nil
 }
@@ -824,7 +1045,7 @@ func (m *EmissionsInput) GetLocation() Location {
 }
 
 type HealthMatrixInput struct {
-	Demand               []float64 `protobuf:"fixed64,1,rep,packed,name=Demand,proto3" json:"Demand,omitempty"`
+	Demand               *Vector   `protobuf:"bytes,1,opt,name=Demand,proto3" json:"Demand,omitempty"`
 	Pollutant            Pollutant `protobuf:"varint,2,opt,name=Pollutant,proto3,enum=eieiorpc.Pollutant" json:"Pollutant,omitempty"`
 	Population           string    `protobuf:"bytes,3,opt,name=Population,proto3" json:"Population,omitempty"`
 	Year                 int32     `protobuf:"varint,4,opt,name=Year,proto3" json:"Year,omitempty"`
@@ -839,7 +1060,7 @@ func (m *HealthMatrixInput) Reset()         { *m = HealthMatrixInput{} }
 func (m *HealthMatrixInput) String() string { return proto.CompactTextString(m) }
 func (*HealthMatrixInput) ProtoMessage()    {}
 func (*HealthMatrixInput) Descriptor() ([]byte, []int) {
-	return fileDescriptor_eieio_ca22b9f13bcf9fc2, []int{10}
+	return fileDescriptor_eieio_b7ae4680b9110e12, []int{13}
 }
 func (m *HealthMatrixInput) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_HealthMatrixInput.Unmarshal(m, b)
@@ -859,7 +1080,7 @@ func (m *HealthMatrixInput) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_HealthMatrixInput proto.InternalMessageInfo
 
-func (m *HealthMatrixInput) GetDemand() []float64 {
+func (m *HealthMatrixInput) GetDemand() *Vector {
 	if m != nil {
 		return m.Demand
 	}
@@ -902,8 +1123,8 @@ func (m *HealthMatrixInput) GetHR() string {
 }
 
 type HealthInput struct {
-	Demand               []float64 `protobuf:"fixed64,1,rep,packed,name=Demand,proto3" json:"Demand,omitempty"`
-	Industries           []float64 `protobuf:"fixed64,2,rep,packed,name=Industries,proto3" json:"Industries,omitempty"`
+	Demand               *Vector   `protobuf:"bytes,1,opt,name=Demand,proto3" json:"Demand,omitempty"`
+	Industries           *Mask     `protobuf:"bytes,2,opt,name=Industries,proto3" json:"Industries,omitempty"`
 	Pollutant            Pollutant `protobuf:"varint,3,opt,name=Pollutant,proto3,enum=eieiorpc.Pollutant" json:"Pollutant,omitempty"`
 	Population           string    `protobuf:"bytes,4,opt,name=Population,proto3" json:"Population,omitempty"`
 	Year                 int32     `protobuf:"varint,5,opt,name=Year,proto3" json:"Year,omitempty"`
@@ -918,7 +1139,7 @@ func (m *HealthInput) Reset()         { *m = HealthInput{} }
 func (m *HealthInput) String() string { return proto.CompactTextString(m) }
 func (*HealthInput) ProtoMessage()    {}
 func (*HealthInput) Descriptor() ([]byte, []int) {
-	return fileDescriptor_eieio_ca22b9f13bcf9fc2, []int{11}
+	return fileDescriptor_eieio_b7ae4680b9110e12, []int{14}
 }
 func (m *HealthInput) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_HealthInput.Unmarshal(m, b)
@@ -938,14 +1159,14 @@ func (m *HealthInput) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_HealthInput proto.InternalMessageInfo
 
-func (m *HealthInput) GetDemand() []float64 {
+func (m *HealthInput) GetDemand() *Vector {
 	if m != nil {
 		return m.Demand
 	}
 	return nil
 }
 
-func (m *HealthInput) GetIndustries() []float64 {
+func (m *HealthInput) GetIndustries() *Mask {
 	if m != nil {
 		return m.Industries
 	}
@@ -998,7 +1219,7 @@ func (m *Vector) Reset()         { *m = Vector{} }
 func (m *Vector) String() string { return proto.CompactTextString(m) }
 func (*Vector) ProtoMessage()    {}
 func (*Vector) Descriptor() ([]byte, []int) {
-	return fileDescriptor_eieio_ca22b9f13bcf9fc2, []int{12}
+	return fileDescriptor_eieio_b7ae4680b9110e12, []int{15}
 }
 func (m *Vector) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Vector.Unmarshal(m, b)
@@ -1025,6 +1246,44 @@ func (m *Vector) GetData() []float64 {
 	return nil
 }
 
+type Mask struct {
+	Data                 []float64 `protobuf:"fixed64,1,rep,packed,name=Data,proto3" json:"Data,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}  `json:"-"`
+	XXX_unrecognized     []byte    `json:"-"`
+	XXX_sizecache        int32     `json:"-"`
+}
+
+func (m *Mask) Reset()         { *m = Mask{} }
+func (m *Mask) String() string { return proto.CompactTextString(m) }
+func (*Mask) ProtoMessage()    {}
+func (*Mask) Descriptor() ([]byte, []int) {
+	return fileDescriptor_eieio_b7ae4680b9110e12, []int{16}
+}
+func (m *Mask) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Mask.Unmarshal(m, b)
+}
+func (m *Mask) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Mask.Marshal(b, m, deterministic)
+}
+func (dst *Mask) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Mask.Merge(dst, src)
+}
+func (m *Mask) XXX_Size() int {
+	return xxx_messageInfo_Mask.Size(m)
+}
+func (m *Mask) XXX_DiscardUnknown() {
+	xxx_messageInfo_Mask.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Mask proto.InternalMessageInfo
+
+func (m *Mask) GetData() []float64 {
+	if m != nil {
+		return m.Data
+	}
+	return nil
+}
+
 type Matrix struct {
 	Rows                 int32     `protobuf:"varint,1,opt,name=Rows,proto3" json:"Rows,omitempty"`
 	Cols                 int32     `protobuf:"varint,2,opt,name=Cols,proto3" json:"Cols,omitempty"`
@@ -1038,7 +1297,7 @@ func (m *Matrix) Reset()         { *m = Matrix{} }
 func (m *Matrix) String() string { return proto.CompactTextString(m) }
 func (*Matrix) ProtoMessage()    {}
 func (*Matrix) Descriptor() ([]byte, []int) {
-	return fileDescriptor_eieio_ca22b9f13bcf9fc2, []int{13}
+	return fileDescriptor_eieio_b7ae4680b9110e12, []int{17}
 }
 func (m *Matrix) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Matrix.Unmarshal(m, b)
@@ -1093,7 +1352,7 @@ func (m *EvaluationHealthInput) Reset()         { *m = EvaluationHealthInput{} }
 func (m *EvaluationHealthInput) String() string { return proto.CompactTextString(m) }
 func (*EvaluationHealthInput) ProtoMessage()    {}
 func (*EvaluationHealthInput) Descriptor() ([]byte, []int) {
-	return fileDescriptor_eieio_ca22b9f13bcf9fc2, []int{14}
+	return fileDescriptor_eieio_b7ae4680b9110e12, []int{18}
 }
 func (m *EvaluationHealthInput) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_EvaluationHealthInput.Unmarshal(m, b)
@@ -1153,7 +1412,7 @@ func (m *EvaluationConcentrationsInput) Reset()         { *m = EvaluationConcent
 func (m *EvaluationConcentrationsInput) String() string { return proto.CompactTextString(m) }
 func (*EvaluationConcentrationsInput) ProtoMessage()    {}
 func (*EvaluationConcentrationsInput) Descriptor() ([]byte, []int) {
-	return fileDescriptor_eieio_ca22b9f13bcf9fc2, []int{15}
+	return fileDescriptor_eieio_b7ae4680b9110e12, []int{19}
 }
 func (m *EvaluationConcentrationsInput) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_EvaluationConcentrationsInput.Unmarshal(m, b)
@@ -1200,7 +1459,7 @@ func (m *ConcentrationResponseAverageInput) Reset()         { *m = Concentration
 func (m *ConcentrationResponseAverageInput) String() string { return proto.CompactTextString(m) }
 func (*ConcentrationResponseAverageInput) ProtoMessage()    {}
 func (*ConcentrationResponseAverageInput) Descriptor() ([]byte, []int) {
-	return fileDescriptor_eieio_ca22b9f13bcf9fc2, []int{16}
+	return fileDescriptor_eieio_b7ae4680b9110e12, []int{20}
 }
 func (m *ConcentrationResponseAverageInput) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ConcentrationResponseAverageInput.Unmarshal(m, b)
@@ -1254,7 +1513,7 @@ func (m *PopulationIncidenceInput) Reset()         { *m = PopulationIncidenceInp
 func (m *PopulationIncidenceInput) String() string { return proto.CompactTextString(m) }
 func (*PopulationIncidenceInput) ProtoMessage()    {}
 func (*PopulationIncidenceInput) Descriptor() ([]byte, []int) {
-	return fileDescriptor_eieio_ca22b9f13bcf9fc2, []int{17}
+	return fileDescriptor_eieio_b7ae4680b9110e12, []int{21}
 }
 func (m *PopulationIncidenceInput) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PopulationIncidenceInput.Unmarshal(m, b)
@@ -1307,7 +1566,7 @@ func (m *PopulationIncidenceOutput) Reset()         { *m = PopulationIncidenceOu
 func (m *PopulationIncidenceOutput) String() string { return proto.CompactTextString(m) }
 func (*PopulationIncidenceOutput) ProtoMessage()    {}
 func (*PopulationIncidenceOutput) Descriptor() ([]byte, []int) {
-	return fileDescriptor_eieio_ca22b9f13bcf9fc2, []int{18}
+	return fileDescriptor_eieio_b7ae4680b9110e12, []int{22}
 }
 func (m *PopulationIncidenceOutput) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PopulationIncidenceOutput.Unmarshal(m, b)
@@ -1342,12 +1601,15 @@ func (m *PopulationIncidenceOutput) GetIncidence() []float64 {
 }
 
 func init() {
+	proto.RegisterType((*StringInput)(nil), "eieiorpc.StringInput")
 	proto.RegisterType((*Selectors)(nil), "eieiorpc.Selectors")
 	proto.RegisterType((*Selection)(nil), "eieiorpc.Selection")
 	proto.RegisterType((*Year)(nil), "eieiorpc.Year")
 	proto.RegisterType((*Point)(nil), "eieiorpc.Point")
 	proto.RegisterType((*Rectangle)(nil), "eieiorpc.Rectangle")
+	proto.RegisterType((*Rectangles)(nil), "eieiorpc.Rectangles")
 	proto.RegisterType((*ColorInfo)(nil), "eieiorpc.ColorInfo")
+	proto.RegisterType((*FinalDemandInput)(nil), "eieiorpc.FinalDemandInput")
 	proto.RegisterType((*ConcentrationMatrixInput)(nil), "eieiorpc.ConcentrationMatrixInput")
 	proto.RegisterType((*ConcentrationInput)(nil), "eieiorpc.ConcentrationInput")
 	proto.RegisterType((*EmissionsMatrixInput)(nil), "eieiorpc.EmissionsMatrixInput")
@@ -1355,6 +1617,7 @@ func init() {
 	proto.RegisterType((*HealthMatrixInput)(nil), "eieiorpc.HealthMatrixInput")
 	proto.RegisterType((*HealthInput)(nil), "eieiorpc.HealthInput")
 	proto.RegisterType((*Vector)(nil), "eieiorpc.Vector")
+	proto.RegisterType((*Mask)(nil), "eieiorpc.Mask")
 	proto.RegisterType((*Matrix)(nil), "eieiorpc.Matrix")
 	proto.RegisterType((*EvaluationHealthInput)(nil), "eieiorpc.EvaluationHealthInput")
 	proto.RegisterType((*EvaluationConcentrationsInput)(nil), "eieiorpc.EvaluationConcentrationsInput")
@@ -1364,6 +1627,7 @@ func init() {
 	proto.RegisterEnum("eieiorpc.Pollutant", Pollutant_name, Pollutant_value)
 	proto.RegisterEnum("eieiorpc.Emission", Emission_name, Emission_value)
 	proto.RegisterEnum("eieiorpc.Location", Location_name, Location_value)
+	proto.RegisterEnum("eieiorpc.FinalDemandType", FinalDemandType_name, FinalDemandType_value)
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -1386,7 +1650,7 @@ type EIEIOrpcClient interface {
 	DefaultSelection(ctx context.Context, in *Selection, opts ...grpc.CallOption) (*Selection, error)
 	Populations(ctx context.Context, in *Selection, opts ...grpc.CallOption) (*Selectors, error)
 	MapInfo(ctx context.Context, in *Selection, opts ...grpc.CallOption) (*ColorInfo, error)
-	Geometry(ctx context.Context, in *Selection, opts ...grpc.CallOption) (EIEIOrpc_GeometryClient, error)
+	Geometry(ctx context.Context, in *Selection, opts ...grpc.CallOption) (*Rectangles, error)
 	Concentrations(ctx context.Context, in *ConcentrationInput, opts ...grpc.CallOption) (*Vector, error)
 	ConcentrationMatrix(ctx context.Context, in *ConcentrationMatrixInput, opts ...grpc.CallOption) (*Matrix, error)
 	Emissions(ctx context.Context, in *EmissionsInput, opts ...grpc.CallOption) (*Vector, error)
@@ -1397,6 +1661,9 @@ type EIEIOrpcClient interface {
 	EvaluationConcentrations(ctx context.Context, in *EvaluationConcentrationsInput, opts ...grpc.CallOption) (*Vector, error)
 	ConcentrationResponseAverage(ctx context.Context, in *ConcentrationResponseAverageInput, opts ...grpc.CallOption) (*Vector, error)
 	PopulationIncidence(ctx context.Context, in *PopulationIncidenceInput, opts ...grpc.CallOption) (*PopulationIncidenceOutput, error)
+	FinalDemand(ctx context.Context, in *FinalDemandInput, opts ...grpc.CallOption) (*Vector, error)
+	CommodityMask(ctx context.Context, in *StringInput, opts ...grpc.CallOption) (*Mask, error)
+	EmitterMask(ctx context.Context, in *StringInput, opts ...grpc.CallOption) (*Mask, error)
 }
 
 type eIEIOrpcClient struct {
@@ -1479,36 +1746,13 @@ func (c *eIEIOrpcClient) MapInfo(ctx context.Context, in *Selection, opts ...grp
 	return out, nil
 }
 
-func (c *eIEIOrpcClient) Geometry(ctx context.Context, in *Selection, opts ...grpc.CallOption) (EIEIOrpc_GeometryClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_EIEIOrpc_serviceDesc.Streams[0], "/eieiorpc.EIEIOrpc/Geometry", opts...)
+func (c *eIEIOrpcClient) Geometry(ctx context.Context, in *Selection, opts ...grpc.CallOption) (*Rectangles, error) {
+	out := new(Rectangles)
+	err := c.cc.Invoke(ctx, "/eieiorpc.EIEIOrpc/Geometry", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &eIEIOrpcGeometryClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
-
-type EIEIOrpc_GeometryClient interface {
-	Recv() (*Rectangle, error)
-	grpc.ClientStream
-}
-
-type eIEIOrpcGeometryClient struct {
-	grpc.ClientStream
-}
-
-func (x *eIEIOrpcGeometryClient) Recv() (*Rectangle, error) {
-	m := new(Rectangle)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
+	return out, nil
 }
 
 func (c *eIEIOrpcClient) Concentrations(ctx context.Context, in *ConcentrationInput, opts ...grpc.CallOption) (*Vector, error) {
@@ -1601,6 +1845,33 @@ func (c *eIEIOrpcClient) PopulationIncidence(ctx context.Context, in *Population
 	return out, nil
 }
 
+func (c *eIEIOrpcClient) FinalDemand(ctx context.Context, in *FinalDemandInput, opts ...grpc.CallOption) (*Vector, error) {
+	out := new(Vector)
+	err := c.cc.Invoke(ctx, "/eieiorpc.EIEIOrpc/FinalDemand", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *eIEIOrpcClient) CommodityMask(ctx context.Context, in *StringInput, opts ...grpc.CallOption) (*Mask, error) {
+	out := new(Mask)
+	err := c.cc.Invoke(ctx, "/eieiorpc.EIEIOrpc/CommodityMask", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *eIEIOrpcClient) EmitterMask(ctx context.Context, in *StringInput, opts ...grpc.CallOption) (*Mask, error) {
+	out := new(Mask)
+	err := c.cc.Invoke(ctx, "/eieiorpc.EIEIOrpc/EmitterMask", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // EIEIOrpcServer is the server API for EIEIOrpc service.
 type EIEIOrpcServer interface {
 	DemandGroups(context.Context, *Selection) (*Selectors, error)
@@ -1611,7 +1882,7 @@ type EIEIOrpcServer interface {
 	DefaultSelection(context.Context, *Selection) (*Selection, error)
 	Populations(context.Context, *Selection) (*Selectors, error)
 	MapInfo(context.Context, *Selection) (*ColorInfo, error)
-	Geometry(*Selection, EIEIOrpc_GeometryServer) error
+	Geometry(context.Context, *Selection) (*Rectangles, error)
 	Concentrations(context.Context, *ConcentrationInput) (*Vector, error)
 	ConcentrationMatrix(context.Context, *ConcentrationMatrixInput) (*Matrix, error)
 	Emissions(context.Context, *EmissionsInput) (*Vector, error)
@@ -1622,6 +1893,9 @@ type EIEIOrpcServer interface {
 	EvaluationConcentrations(context.Context, *EvaluationConcentrationsInput) (*Vector, error)
 	ConcentrationResponseAverage(context.Context, *ConcentrationResponseAverageInput) (*Vector, error)
 	PopulationIncidence(context.Context, *PopulationIncidenceInput) (*PopulationIncidenceOutput, error)
+	FinalDemand(context.Context, *FinalDemandInput) (*Vector, error)
+	CommodityMask(context.Context, *StringInput) (*Mask, error)
+	EmitterMask(context.Context, *StringInput) (*Mask, error)
 }
 
 func RegisterEIEIOrpcServer(s *grpc.Server, srv EIEIOrpcServer) {
@@ -1772,25 +2046,22 @@ func _EIEIOrpc_MapInfo_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
-func _EIEIOrpc_Geometry_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(Selection)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
+func _EIEIOrpc_Geometry_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Selection)
+	if err := dec(in); err != nil {
+		return nil, err
 	}
-	return srv.(EIEIOrpcServer).Geometry(m, &eIEIOrpcGeometryServer{stream})
-}
-
-type EIEIOrpc_GeometryServer interface {
-	Send(*Rectangle) error
-	grpc.ServerStream
-}
-
-type eIEIOrpcGeometryServer struct {
-	grpc.ServerStream
-}
-
-func (x *eIEIOrpcGeometryServer) Send(m *Rectangle) error {
-	return x.ServerStream.SendMsg(m)
+	if interceptor == nil {
+		return srv.(EIEIOrpcServer).Geometry(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/eieiorpc.EIEIOrpc/Geometry",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EIEIOrpcServer).Geometry(ctx, req.(*Selection))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _EIEIOrpc_Concentrations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -1973,6 +2244,60 @@ func _EIEIOrpc_PopulationIncidence_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _EIEIOrpc_FinalDemand_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FinalDemandInput)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EIEIOrpcServer).FinalDemand(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/eieiorpc.EIEIOrpc/FinalDemand",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EIEIOrpcServer).FinalDemand(ctx, req.(*FinalDemandInput))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EIEIOrpc_CommodityMask_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StringInput)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EIEIOrpcServer).CommodityMask(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/eieiorpc.EIEIOrpc/CommodityMask",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EIEIOrpcServer).CommodityMask(ctx, req.(*StringInput))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EIEIOrpc_EmitterMask_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StringInput)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EIEIOrpcServer).EmitterMask(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/eieiorpc.EIEIOrpc/EmitterMask",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EIEIOrpcServer).EmitterMask(ctx, req.(*StringInput))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _EIEIOrpc_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "eieiorpc.EIEIOrpc",
 	HandlerType: (*EIEIOrpcServer)(nil),
@@ -2008,6 +2333,10 @@ var _EIEIOrpc_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "MapInfo",
 			Handler:    _EIEIOrpc_MapInfo_Handler,
+		},
+		{
+			MethodName: "Geometry",
+			Handler:    _EIEIOrpc_Geometry_Handler,
 		},
 		{
 			MethodName: "Concentrations",
@@ -2049,92 +2378,120 @@ var _EIEIOrpc_serviceDesc = grpc.ServiceDesc{
 			MethodName: "PopulationIncidence",
 			Handler:    _EIEIOrpc_PopulationIncidence_Handler,
 		},
-	},
-	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "Geometry",
-			Handler:       _EIEIOrpc_Geometry_Handler,
-			ServerStreams: true,
+			MethodName: "FinalDemand",
+			Handler:    _EIEIOrpc_FinalDemand_Handler,
+		},
+		{
+			MethodName: "CommodityMask",
+			Handler:    _EIEIOrpc_CommodityMask_Handler,
+		},
+		{
+			MethodName: "EmitterMask",
+			Handler:    _EIEIOrpc_EmitterMask_Handler,
 		},
 	},
+	Streams:  []grpc.StreamDesc{},
 	Metadata: "eieio.proto",
 }
 
-func init() { proto.RegisterFile("eieio.proto", fileDescriptor_eieio_ca22b9f13bcf9fc2) }
+func init() { proto.RegisterFile("eieio.proto", fileDescriptor_eieio_b7ae4680b9110e12) }
 
-var fileDescriptor_eieio_ca22b9f13bcf9fc2 = []byte{
-	// 1155 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xbc, 0x57, 0xcd, 0x6e, 0xdb, 0x46,
-	0x10, 0xd6, 0x92, 0xa2, 0x2c, 0x8e, 0x1d, 0x9b, 0x5d, 0x27, 0x05, 0xeb, 0xba, 0x89, 0xca, 0x1c,
-	0x2a, 0xb8, 0x80, 0x90, 0xd8, 0x31, 0x90, 0xb6, 0x40, 0x8b, 0xd8, 0x16, 0x2c, 0x01, 0xb2, 0x25,
-	0xac, 0x13, 0x37, 0xbe, 0xb4, 0x65, 0xa5, 0xb5, 0x4b, 0x80, 0xe2, 0x12, 0x24, 0x95, 0xda, 0xf7,
-	0x5e, 0x7a, 0x69, 0xdf, 0xa1, 0xb7, 0xbe, 0x43, 0x6f, 0x7d, 0x83, 0x3e, 0x47, 0x1f, 0xa2, 0xd8,
-	0x5d, 0x89, 0x5c, 0xca, 0xa4, 0x7f, 0x12, 0xa7, 0x27, 0xed, 0xcc, 0xce, 0xdf, 0xb7, 0x33, 0x9c,
-	0x19, 0xc1, 0x22, 0xf5, 0xa8, 0xc7, 0x5a, 0x61, 0xc4, 0x12, 0x86, 0xeb, 0x82, 0x88, 0xc2, 0xa1,
-	0xd3, 0x07, 0xf3, 0x88, 0xfa, 0x74, 0x98, 0xb0, 0x28, 0xc6, 0xf7, 0xc1, 0xd8, 0x65, 0x23, 0x1a,
-	0xdb, 0xa8, 0xa1, 0x37, 0x4d, 0x22, 0x09, 0xce, 0x3d, 0x74, 0xc7, 0x34, 0xb6, 0x35, 0xc9, 0x15,
-	0x04, 0xfe, 0x10, 0x6a, 0xc7, 0xae, 0x3f, 0xa1, 0xb1, 0xad, 0x37, 0xf4, 0xa6, 0x46, 0xa6, 0x94,
-	0xf3, 0xab, 0x3e, 0xb3, 0xe8, 0xb1, 0x00, 0x37, 0x60, 0x71, 0x8f, 0x8e, 0xdd, 0x60, 0xb4, 0x1f,
-	0xb1, 0x49, 0x68, 0xa3, 0x06, 0x6a, 0x9a, 0x44, 0x65, 0x61, 0x07, 0x96, 0x24, 0x79, 0x24, 0x82,
-	0xb0, 0x35, 0x21, 0x92, 0xe3, 0xe1, 0x26, 0xac, 0x0c, 0x22, 0x36, 0x9a, 0x08, 0x9b, 0xd2, 0x92,
-	0x2e, 0xc4, 0xe6, 0xd9, 0x78, 0x03, 0xac, 0x8c, 0x35, 0xb5, 0x58, 0x15, 0xa2, 0x97, 0xf8, 0xf8,
-	0x21, 0x40, 0x77, 0x1c, 0xba, 0xc3, 0xe4, 0xe5, 0x45, 0x48, 0x6d, 0x43, 0x48, 0x29, 0x1c, 0x7e,
-	0x2f, 0xa3, 0x10, 0xf7, 0x35, 0x79, 0x9f, 0x71, 0x30, 0x86, 0xea, 0x09, 0x75, 0x23, 0x7b, 0xa1,
-	0x81, 0x9a, 0x06, 0x11, 0x67, 0xae, 0x33, 0x60, 0xe1, 0xc4, 0x77, 0xb9, 0x1f, 0xbb, 0x2e, 0x75,
-	0x32, 0x0e, 0xde, 0x02, 0x73, 0xc0, 0x7c, 0x7f, 0x92, 0xb8, 0x41, 0x62, 0x9b, 0x0d, 0xd4, 0x5c,
-	0xde, 0x5c, 0x6d, 0xcd, 0x92, 0xd1, 0x4a, 0xaf, 0x3a, 0x15, 0x92, 0xc9, 0xe1, 0x27, 0x50, 0x6f,
-	0x8f, 0xbd, 0x38, 0xe6, 0x26, 0x41, 0xe8, 0xe0, 0x4c, 0x67, 0x76, 0xd3, 0xa9, 0x90, 0x54, 0x6a,
-	0xc7, 0x00, 0x7d, 0xc0, 0x7c, 0x67, 0x5d, 0x46, 0xc8, 0x33, 0xc8, 0x7f, 0x65, 0x5e, 0x0d, 0x22,
-	0x09, 0xe7, 0x31, 0x18, 0x03, 0xe6, 0x05, 0x09, 0x5e, 0x02, 0xf4, 0x5a, 0xa4, 0x46, 0x23, 0xe8,
-	0x35, 0xa7, 0x4e, 0x44, 0x16, 0x34, 0x82, 0x4e, 0x9c, 0xdf, 0x11, 0x98, 0x84, 0x0e, 0x13, 0x37,
-	0x38, 0xf3, 0x29, 0x7e, 0x04, 0x5a, 0xaf, 0x27, 0x44, 0x17, 0x37, 0x57, 0xd4, 0xb8, 0xbd, 0x20,
-	0x21, 0x5a, 0xaf, 0x27, 0x04, 0x88, 0xd0, 0x2e, 0x14, 0x20, 0x5c, 0xe0, 0x15, 0x11, 0xd9, 0x2b,
-	0x12, 0x78, 0x25, 0x05, 0x7a, 0x22, 0x67, 0x85, 0x02, 0x3d, 0x67, 0x1b, 0xcc, 0x5d, 0xe6, 0xb3,
-	0xa8, 0x1b, 0x9c, 0x32, 0x6c, 0x81, 0x4e, 0xf6, 0x77, 0x04, 0xae, 0x25, 0xc2, 0x8f, 0xbc, 0x2e,
-	0x7b, 0xf4, 0x8c, 0x06, 0xa3, 0x69, 0x25, 0x4d, 0x29, 0xe7, 0x4f, 0x04, 0xf6, 0x2e, 0x0b, 0x86,
-	0x34, 0x48, 0x22, 0x91, 0x8b, 0x03, 0x37, 0x89, 0xbc, 0xf3, 0x6e, 0x10, 0x4e, 0x12, 0xae, 0x24,
-	0x13, 0x2b, 0x2c, 0x21, 0x32, 0xa5, 0xf0, 0x53, 0x35, 0x5d, 0x5a, 0x69, 0xba, 0xd4, 0x64, 0xcd,
-	0xaa, 0x42, 0x57, 0xaa, 0xa2, 0x05, 0xf5, 0x1e, 0x1b, 0xca, 0x9a, 0xa8, 0xce, 0x27, 0x70, 0x76,
-	0x43, 0x52, 0x19, 0xe7, 0x6f, 0x04, 0x38, 0x17, 0xeb, 0xd5, 0x51, 0xf2, 0x42, 0x0e, 0x46, 0x93,
-	0x38, 0x89, 0xbc, 0xe9, 0x57, 0x8a, 0x88, 0xc2, 0xc9, 0xa3, 0xd0, 0x6f, 0x85, 0xa2, 0x5a, 0x82,
-	0xc2, 0xb8, 0x01, 0x8a, 0x3f, 0x10, 0xdc, 0x9f, 0x55, 0x64, 0x7c, 0x93, 0xd7, 0x6e, 0x29, 0x75,
-	0xae, 0x95, 0xd5, 0x79, 0x56, 0xe5, 0x77, 0xf2, 0xd4, 0x7f, 0x21, 0x58, 0x4e, 0x83, 0x7c, 0xb7,
-	0x67, 0x56, 0xc3, 0xd7, 0x6f, 0x11, 0xfe, 0xbb, 0xbc, 0xf1, 0x3f, 0x08, 0x3e, 0xe8, 0x50, 0xd7,
-	0x4f, 0x7e, 0x7a, 0x4f, 0xe5, 0x9c, 0x6f, 0x68, 0xfa, 0xa5, 0x86, 0x76, 0x07, 0x20, 0xf0, 0x32,
-	0x68, 0x1d, 0x32, 0x6d, 0xb0, 0x5a, 0x87, 0x38, 0xff, 0x22, 0x58, 0x94, 0xa0, 0xfe, 0xf7, 0xba,
-	0xcf, 0xc3, 0xad, 0x96, 0xc2, 0x35, 0x4a, 0xe0, 0xd6, 0x6e, 0x0c, 0x77, 0x21, 0x85, 0xbb, 0x0e,
-	0xb5, 0x63, 0x39, 0x91, 0x30, 0x54, 0xf7, 0xdc, 0xc4, 0x9d, 0xc2, 0x14, 0x67, 0x67, 0x0f, 0x6a,
-	0x32, 0xb5, 0xfc, 0x96, 0xb0, 0x9f, 0x63, 0xd1, 0x7e, 0x0d, 0x22, 0xce, 0x9c, 0xb7, 0xcb, 0xfc,
-	0x58, 0x24, 0xd3, 0x20, 0xe2, 0x9c, 0x5a, 0xd1, 0x15, 0x2b, 0xbf, 0x21, 0x78, 0xd0, 0x7e, 0xe3,
-	0xfa, 0x13, 0x11, 0x82, 0xfa, 0xb8, 0x33, 0x44, 0x48, 0x41, 0xf4, 0x1e, 0xea, 0x44, 0x82, 0xae,
-	0xa6, 0xa0, 0x4f, 0xe1, 0x93, 0x2c, 0x9e, 0x5c, 0xaf, 0x8b, 0xef, 0x32, 0x2e, 0xe7, 0x0c, 0x3e,
-	0xcd, 0x59, 0x27, 0x34, 0x0e, 0x59, 0x10, 0xd3, 0x17, 0x6f, 0x68, 0xe4, 0x9e, 0xd1, 0x72, 0x5f,
-	0x79, 0x40, 0x5a, 0x09, 0x20, 0x3d, 0x05, 0xf4, 0x1d, 0xd8, 0xd9, 0x6d, 0x37, 0x18, 0x7a, 0x23,
-	0x1a, 0x0c, 0xef, 0xd0, 0xfe, 0x09, 0x7c, 0x54, 0x60, 0xbf, 0x3f, 0x49, 0xb8, 0x83, 0xbc, 0x31,
-	0x59, 0x3e, 0xaa, 0xb1, 0x75, 0x30, 0x53, 0x95, 0xe9, 0x87, 0x92, 0x31, 0x36, 0x88, 0xf2, 0xac,
-	0xb8, 0x0e, 0xd5, 0xc1, 0x61, 0xe7, 0x99, 0x55, 0x91, 0xa7, 0xfe, 0x96, 0x85, 0xc4, 0xe9, 0xa8,
-	0xff, 0xcc, 0xd2, 0xf0, 0x02, 0xe8, 0x47, 0xfd, 0x17, 0x96, 0x8e, 0x57, 0x60, 0x71, 0x10, 0x79,
-	0x63, 0x37, 0xba, 0x18, 0x1c, 0x6c, 0x6e, 0x5b, 0x55, 0x7c, 0x0f, 0xcc, 0x97, 0x2c, 0x71, 0x7d,
-	0x41, 0x1a, 0x1b, 0xcf, 0xb3, 0x66, 0x28, 0xd4, 0x39, 0xb7, 0xc2, 0xd5, 0x0f, 0x3b, 0xdc, 0x22,
-	0x3f, 0xf4, 0xcf, 0x67, 0x06, 0xcf, 0x2d, 0x9d, 0x1f, 0x8e, 0xfb, 0xbb, 0x56, 0x75, 0xe3, 0x69,
-	0xf6, 0x39, 0xe1, 0x25, 0xa8, 0xef, 0xb1, 0x31, 0x8d, 0x13, 0x6f, 0x68, 0x55, 0x38, 0xd5, 0x1d,
-	0x87, 0x2c, 0x4a, 0xe8, 0xc8, 0x42, 0xd8, 0x04, 0x43, 0x38, 0xb4, 0xb4, 0xcd, 0x5f, 0x00, 0xea,
-	0xed, 0x6e, 0xbb, 0xdb, 0x8f, 0xc2, 0x21, 0xfe, 0x72, 0xb6, 0x50, 0x8a, 0x8d, 0x30, 0xc6, 0x4a,
-	0x85, 0xa4, 0x7b, 0xe9, 0xda, 0x25, 0x26, 0x8b, 0x62, 0xa7, 0x82, 0xbf, 0x82, 0x7b, 0xea, 0xe2,
-	0x79, 0x3b, 0xe5, 0xe7, 0x00, 0x7c, 0xc7, 0x7c, 0x0b, 0xb7, 0x5f, 0xf0, 0xc7, 0x64, 0x6f, 0xe5,
-	0xb4, 0x35, 0x5d, 0xed, 0x8a, 0x95, 0x96, 0x33, 0x26, 0x97, 0x72, 0x2a, 0xf8, 0x6b, 0xb0, 0xf6,
-	0xe8, 0xa9, 0x3b, 0xf1, 0x93, 0x6c, 0x49, 0xbf, 0x99, 0x3f, 0x3e, 0x6e, 0x64, 0xa8, 0x69, 0x5d,
-	0xdd, 0x2e, 0xd4, 0x6d, 0x58, 0x38, 0x70, 0x43, 0xb1, 0xb6, 0x5d, 0xa7, 0x96, 0x2e, 0x78, 0xe2,
-	0x59, 0xeb, 0xfb, 0x94, 0x8d, 0x69, 0x12, 0x5d, 0x5c, 0xab, 0x97, 0x6e, 0xaa, 0x4e, 0xe5, 0x09,
-	0xc2, 0x3b, 0xb0, 0x9c, 0xef, 0x2c, 0x78, 0x5d, 0x75, 0x31, 0xbf, 0x5f, 0xad, 0x59, 0xd9, 0xad,
-	0x6c, 0xc8, 0x4e, 0x05, 0x1f, 0xc0, 0x6a, 0xc1, 0xd6, 0x88, 0x9d, 0x12, 0x43, 0xca, 0x14, 0x56,
-	0xcd, 0x49, 0xb6, 0x78, 0x3e, 0x33, 0xdd, 0x36, 0xb0, 0x7d, 0x79, 0x3d, 0x88, 0xcb, 0x23, 0x69,
-	0xc3, 0xca, 0xdc, 0x36, 0x85, 0x1f, 0x16, 0x18, 0xb8, 0x2e, 0x82, 0x2d, 0xa8, 0xc9, 0xf6, 0x8f,
-	0x1f, 0x64, 0xb7, 0xca, 0x40, 0x28, 0xf4, 0xfd, 0x0d, 0x2c, 0xa9, 0x5b, 0x06, 0xfe, 0x78, 0x5e,
-	0xf5, 0x3a, 0xaf, 0xfb, 0x60, 0xcd, 0x8f, 0x1f, 0xfc, 0x48, 0x89, 0xbe, 0x68, 0x34, 0x15, 0x46,
-	0xf2, 0x2d, 0xd8, 0x65, 0x73, 0x03, 0x7f, 0x56, 0x64, 0xb0, 0x60, 0xb6, 0x14, 0x1a, 0xfe, 0x1e,
-	0xd6, 0xaf, 0x1a, 0x14, 0xf8, 0xf3, 0x92, 0x8c, 0x17, 0x0d, 0x94, 0x42, 0x07, 0x3f, 0xc0, 0x6a,
-	0x41, 0x03, 0x57, 0x2b, 0xa9, 0x6c, 0x7e, 0xac, 0x3d, 0xbe, 0x52, 0x46, 0xce, 0x00, 0xa7, 0xf2,
-	0x63, 0x4d, 0xfc, 0xb9, 0xdf, 0xfa, 0x2f, 0x00, 0x00, 0xff, 0xff, 0xe3, 0x89, 0xa1, 0x15, 0xeb,
-	0x0f, 0x00, 0x00,
+var fileDescriptor_eieio_b7ae4680b9110e12 = []byte{
+	// 1516 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xbc, 0x58, 0xdd, 0x6e, 0xdb, 0xc6,
+	0x12, 0x16, 0x49, 0x49, 0x96, 0x46, 0xfe, 0xd9, 0x8c, 0xed, 0x1c, 0xc5, 0xc7, 0x27, 0xf1, 0x61,
+	0x70, 0x70, 0x0c, 0x17, 0x30, 0x12, 0x3b, 0x69, 0xd3, 0x16, 0x6d, 0xe1, 0xc8, 0xae, 0x2d, 0x40,
+	0xb6, 0x84, 0x75, 0x92, 0xc6, 0x37, 0x6d, 0x59, 0x69, 0xe3, 0x10, 0xa5, 0xb8, 0x2a, 0xb9, 0x72,
+	0xed, 0x97, 0x48, 0xdf, 0xa4, 0x57, 0xb9, 0x2b, 0xfa, 0x08, 0x7d, 0x81, 0xde, 0x15, 0xe8, 0x83,
+	0x14, 0xbb, 0xa4, 0xc8, 0x95, 0x4c, 0x26, 0x91, 0xeb, 0xf4, 0x4a, 0x3b, 0xb3, 0xf3, 0xf3, 0xcd,
+	0xcf, 0x72, 0x67, 0x05, 0x35, 0xe6, 0x32, 0x97, 0x6f, 0x0e, 0x02, 0x2e, 0x38, 0x56, 0x14, 0x11,
+	0x0c, 0xba, 0xf6, 0xff, 0xa0, 0x76, 0x2c, 0x02, 0xd7, 0x3f, 0x6d, 0xfa, 0x83, 0xa1, 0xc0, 0x9b,
+	0x50, 0x8e, 0xc8, 0xba, 0xb1, 0x66, 0xac, 0x57, 0x69, 0x4c, 0xd9, 0x6d, 0xa8, 0x1e, 0x33, 0x8f,
+	0x75, 0x05, 0x0f, 0x42, 0x5c, 0x82, 0x52, 0x83, 0xf7, 0x58, 0x58, 0x37, 0xd6, 0xac, 0xf5, 0x2a,
+	0x8d, 0x08, 0xc9, 0x3d, 0x72, 0xfa, 0x2c, 0xac, 0x9b, 0x11, 0x57, 0x11, 0xd2, 0xe0, 0x33, 0xc7,
+	0x1b, 0xb2, 0xb0, 0x6e, 0xad, 0x59, 0xeb, 0x26, 0x8d, 0x29, 0xfb, 0x67, 0x6b, 0x64, 0xd1, 0xe5,
+	0x3e, 0xae, 0x41, 0x6d, 0x97, 0xf5, 0x1d, 0xbf, 0xb7, 0x1f, 0xf0, 0xe1, 0x20, 0xf6, 0xad, 0xb3,
+	0xd0, 0x86, 0xd9, 0x88, 0x3c, 0x56, 0x20, 0xea, 0xa6, 0x12, 0x19, 0xe3, 0xe1, 0x3a, 0x2c, 0x74,
+	0x02, 0xde, 0x1b, 0x2a, 0x9b, 0x91, 0x25, 0x4b, 0x89, 0x4d, 0xb2, 0x71, 0x03, 0x48, 0xca, 0x8a,
+	0x2d, 0x16, 0x95, 0xe8, 0x25, 0x3e, 0xde, 0x06, 0x68, 0xf6, 0x07, 0x4e, 0x57, 0x3c, 0xb9, 0x18,
+	0xb0, 0x7a, 0x49, 0x49, 0x69, 0x1c, 0x6c, 0xc0, 0xc2, 0x97, 0xae, 0xef, 0x78, 0x11, 0x14, 0x25,
+	0x54, 0x5e, 0x33, 0xd6, 0xe7, 0xb7, 0x6e, 0x6d, 0x8e, 0xb2, 0xbc, 0x39, 0x21, 0x40, 0x27, 0x35,
+	0x10, 0xa1, 0x78, 0xc2, 0x9c, 0xa0, 0x3e, 0xb3, 0x66, 0xac, 0x97, 0xa8, 0x5a, 0x4b, 0xc7, 0x1d,
+	0x3e, 0x18, 0x7a, 0x8e, 0x04, 0x53, 0xaf, 0x44, 0x8e, 0x53, 0x0e, 0x6e, 0x43, 0xb5, 0xc3, 0x3d,
+	0x6f, 0x28, 0x1c, 0x5f, 0xd4, 0xab, 0xca, 0xe5, 0x62, 0xea, 0x32, 0xd9, 0x3a, 0x28, 0xd0, 0x54,
+	0x0e, 0xef, 0x41, 0x65, 0xaf, 0xef, 0x86, 0xa1, 0x34, 0x09, 0x4a, 0x07, 0x53, 0x9d, 0xd1, 0xce,
+	0x41, 0x81, 0x26, 0x52, 0x8f, 0x4b, 0x60, 0x75, 0xb8, 0x67, 0xaf, 0x46, 0x08, 0x65, 0x99, 0xe5,
+	0x6f, 0x54, 0xfc, 0x12, 0x8d, 0x08, 0xfb, 0x2e, 0x94, 0x3a, 0xdc, 0xf5, 0x05, 0xce, 0x82, 0xf1,
+	0x5c, 0xd5, 0xcf, 0xa4, 0xc6, 0x73, 0x49, 0x9d, 0xa8, 0x52, 0x99, 0xd4, 0x38, 0xb1, 0x7f, 0x32,
+	0xa0, 0x4a, 0x59, 0x57, 0x38, 0xfe, 0xa9, 0xc7, 0xf0, 0x0e, 0x98, 0xad, 0x96, 0x12, 0xad, 0x6d,
+	0x2d, 0xe8, 0xb8, 0x5d, 0x5f, 0x50, 0xb3, 0xd5, 0x52, 0x02, 0x54, 0x69, 0x67, 0x0a, 0x50, 0x29,
+	0xf0, 0x94, 0xaa, 0x12, 0x67, 0x09, 0x3c, 0x8d, 0x04, 0x5a, 0xaa, 0xb0, 0x99, 0x02, 0x2d, 0x7b,
+	0x07, 0x20, 0x01, 0x14, 0xe2, 0xb6, 0x4e, 0xa9, 0xf8, 0x6a, 0x7a, 0x46, 0x93, 0x3d, 0xaa, 0x89,
+	0xd9, 0x0f, 0xa1, 0xda, 0xe0, 0x1e, 0x0f, 0x9a, 0xfe, 0x0b, 0x8e, 0x04, 0x2c, 0xba, 0xff, 0x58,
+	0xa9, 0xce, 0x52, 0xb9, 0x94, 0xfd, 0xdf, 0x62, 0xa7, 0xcc, 0xef, 0xc5, 0x1d, 0x1b, 0x53, 0xf6,
+	0x6f, 0x06, 0x10, 0xad, 0x09, 0xa2, 0xd3, 0x97, 0xd1, 0x4a, 0xc6, 0xd4, 0xad, 0x74, 0x0f, 0x6a,
+	0x0d, 0xde, 0xef, 0xf3, 0x9e, 0x2b, 0x5c, 0x75, 0x1a, 0x65, 0xf4, 0xf3, 0xa9, 0x81, 0x43, 0x27,
+	0xfc, 0x9e, 0xea, 0x22, 0x49, 0xf3, 0x59, 0x5a, 0xf3, 0x6d, 0x42, 0xa5, 0xc5, 0xbb, 0x51, 0xeb,
+	0x15, 0x27, 0xfb, 0x64, 0xb4, 0x43, 0x13, 0x19, 0xfb, 0x17, 0x03, 0xea, 0x0d, 0xee, 0x77, 0x99,
+	0x2f, 0x02, 0xc5, 0x39, 0x74, 0x44, 0xe0, 0x9e, 0x47, 0x71, 0xad, 0x43, 0x39, 0x02, 0x18, 0x97,
+	0x9b, 0xa4, 0xa6, 0x9e, 0xa9, 0x43, 0x46, 0xe3, 0x7d, 0xbc, 0xaf, 0xf7, 0xb4, 0x99, 0xdb, 0xd3,
+	0x7a, 0x47, 0x5f, 0x07, 0xfa, 0x3f, 0x0c, 0xc0, 0x31, 0xf4, 0xd3, 0xe2, 0xde, 0x50, 0xc7, 0x4a,
+	0x08, 0x16, 0xe4, 0x65, 0x3c, 0xd9, 0x1f, 0x8f, 0xd1, 0x9a, 0x2a, 0xc6, 0x62, 0x4e, 0x8c, 0xa5,
+	0x77, 0x88, 0xf1, 0xb5, 0x01, 0x4b, 0xa3, 0x43, 0x1d, 0x5e, 0xad, 0x3a, 0x9b, 0xda, 0xc7, 0xc3,
+	0xcc, 0xfb, 0x78, 0xa4, 0x9f, 0x8e, 0x6b, 0x29, 0xcd, 0xef, 0x06, 0xcc, 0x27, 0xb0, 0xdf, 0x67,
+	0x59, 0xf4, 0xe0, 0xac, 0x29, 0x82, 0xfb, 0x3b, 0x35, 0xf9, 0xd3, 0x80, 0x1b, 0x07, 0xcc, 0xf1,
+	0xc4, 0xcb, 0x7f, 0xec, 0xb8, 0x8c, 0xdf, 0x2a, 0xd6, 0xa5, 0x5b, 0xe5, 0x1a, 0xc2, 0xc2, 0x79,
+	0x30, 0x0f, 0xa8, 0xba, 0x05, 0xab, 0xd4, 0x3c, 0xa0, 0xf6, 0x2b, 0x13, 0x6a, 0x51, 0x98, 0xd3,
+	0x77, 0x1c, 0x34, 0xfd, 0xde, 0x30, 0x14, 0x41, 0xfe, 0xb7, 0x4c, 0x93, 0xb8, 0xca, 0xd9, 0x1a,
+	0x4f, 0x48, 0x31, 0x37, 0x21, 0xa5, 0x9c, 0x84, 0x94, 0xdf, 0x39, 0x21, 0x33, 0x49, 0x42, 0x56,
+	0xa1, 0x1c, 0x05, 0x2a, 0xad, 0xef, 0x3a, 0xc2, 0x51, 0x57, 0x86, 0x41, 0xd5, 0xda, 0x5e, 0x81,
+	0xa2, 0x0c, 0x2c, 0x73, 0x6f, 0x17, 0xca, 0x51, 0xab, 0xc8, 0x5d, 0xca, 0x7f, 0x0c, 0x55, 0x0a,
+	0x4b, 0x54, 0xad, 0x25, 0xaf, 0xc1, 0xbd, 0x28, 0x51, 0x25, 0xaa, 0xd6, 0x89, 0x15, 0x4b, 0xb3,
+	0xf2, 0xca, 0x80, 0xe5, 0xbd, 0x33, 0xc7, 0x1b, 0x2a, 0x78, 0x7a, 0x69, 0x46, 0xd1, 0x1a, 0x5a,
+	0xb4, 0xef, 0xa1, 0xcb, 0xa2, 0x84, 0x14, 0x93, 0x84, 0xbc, 0x80, 0xff, 0xa4, 0x78, 0xc6, 0xbe,
+	0xc4, 0xe1, 0x75, 0xe2, 0xb2, 0x4f, 0xe1, 0xbf, 0x63, 0xd6, 0x29, 0x0b, 0x07, 0xdc, 0x0f, 0xd9,
+	0xce, 0x19, 0x0b, 0x9c, 0x53, 0x96, 0xef, 0x6b, 0x3c, 0x20, 0x33, 0x27, 0x20, 0x2b, 0x09, 0xe8,
+	0x6b, 0xa8, 0xa7, 0xbb, 0x4d, 0xbf, 0xeb, 0xf6, 0x98, 0xdf, 0xbd, 0x46, 0xfb, 0x27, 0x70, 0x2b,
+	0xc3, 0x7e, 0x7b, 0x28, 0xa4, 0x83, 0x71, 0x63, 0x51, 0xfb, 0xe8, 0xc6, 0x56, 0xa1, 0x9a, 0xa8,
+	0xa8, 0x71, 0xdd, 0xa0, 0x29, 0x63, 0x83, 0x6a, 0x69, 0xc5, 0x0a, 0x14, 0x3b, 0x47, 0x07, 0x0f,
+	0x48, 0x21, 0x5a, 0xb5, 0xb7, 0x89, 0xa1, 0x56, 0xc7, 0xed, 0x07, 0xc4, 0xc4, 0x19, 0xb0, 0x8e,
+	0xdb, 0x3b, 0xc4, 0xc2, 0x05, 0xa8, 0x75, 0x02, 0xb7, 0xef, 0x04, 0x17, 0x9d, 0xc3, 0xad, 0x87,
+	0xa4, 0x88, 0x73, 0x50, 0x7d, 0xc2, 0x85, 0xe3, 0x29, 0xb2, 0xb4, 0xf1, 0x28, 0xfd, 0xb8, 0x2a,
+	0x75, 0xc9, 0x2d, 0x48, 0xf5, 0xa3, 0x03, 0x69, 0x51, 0x2e, 0xda, 0xe7, 0x23, 0x83, 0xe7, 0xc4,
+	0x92, 0x8b, 0x67, 0xed, 0x06, 0x29, 0x6e, 0xdc, 0x4f, 0x8f, 0x1a, 0xce, 0x42, 0x65, 0x97, 0xf7,
+	0x59, 0x28, 0xdc, 0x2e, 0x29, 0x48, 0xaa, 0xd9, 0x1f, 0xf0, 0x40, 0xb0, 0x1e, 0x31, 0xb0, 0x0a,
+	0x25, 0xe5, 0x90, 0x98, 0x1b, 0xbf, 0x5a, 0x97, 0xe6, 0x28, 0xfc, 0x17, 0x2c, 0x76, 0x58, 0x10,
+	0x72, 0xdf, 0xf1, 0x1a, 0xdc, 0x0f, 0x87, 0xfd, 0x81, 0xb4, 0x48, 0x0a, 0xb8, 0x0c, 0x37, 0x3a,
+	0x81, 0x7b, 0xe6, 0x08, 0x76, 0x2c, 0x82, 0x61, 0x57, 0x0c, 0x03, 0x16, 0x12, 0x03, 0x97, 0xe4,
+	0x0b, 0x41, 0xb1, 0xf7, 0x7e, 0x18, 0xba, 0x83, 0x3e, 0xf3, 0x05, 0x31, 0x65, 0x54, 0x31, 0xb7,
+	0xd9, 0x21, 0x16, 0xde, 0x04, 0x8c, 0x49, 0xca, 0x42, 0x99, 0x3d, 0xe1, 0x3a, 0x1e, 0x29, 0xe2,
+	0x22, 0x2c, 0x34, 0xfd, 0x33, 0xe6, 0x0b, 0x1e, 0x5c, 0x34, 0x5e, 0x3a, 0xfe, 0x29, 0x23, 0x25,
+	0x04, 0x28, 0xef, 0x9d, 0x4b, 0xb8, 0xa4, 0x2c, 0x15, 0x77, 0xd9, 0x0b, 0xe6, 0x87, 0x4c, 0x07,
+	0x33, 0x23, 0xc1, 0xc4, 0x7c, 0x0d, 0x4c, 0x45, 0x82, 0x89, 0xd9, 0x29, 0x98, 0xaa, 0x04, 0x13,
+	0x73, 0x9b, 0x1d, 0x02, 0x78, 0x0b, 0x96, 0x8f, 0xb8, 0xdf, 0xbb, 0x6c, 0xb6, 0x86, 0x75, 0x58,
+	0x4a, 0xb7, 0x34, 0xcb, 0xb3, 0x32, 0x2d, 0xe9, 0x4e, 0x6a, 0x7c, 0x0e, 0x09, 0xcc, 0xa6, 0x1b,
+	0xcd, 0x0e, 0x99, 0x97, 0x20, 0x64, 0x21, 0xc6, 0xd2, 0xb7, 0x20, 0x43, 0x55, 0x5c, 0xcd, 0x2a,
+	0x41, 0x84, 0x79, 0xc5, 0x4c, 0x0d, 0xde, 0xc0, 0x1a, 0xcc, 0x28, 0x5e, 0xb3, 0x43, 0x50, 0x42,
+	0xdf, 0xf1, 0xe2, 0xf2, 0x90, 0x45, 0x49, 0x1e, 0x71, 0x3f, 0xce, 0xce, 0xd2, 0xd6, 0xeb, 0x1a,
+	0x54, 0xf6, 0x9a, 0x7b, 0xcd, 0x76, 0x30, 0xe8, 0xe2, 0x27, 0xa3, 0x87, 0x9f, 0x7a, 0xb9, 0x85,
+	0xa8, 0x9d, 0xf0, 0xe4, 0xfd, 0xb8, 0x72, 0x89, 0xc9, 0x83, 0xd0, 0x2e, 0xe0, 0xa7, 0x30, 0xa7,
+	0x3f, 0x10, 0xa7, 0x53, 0x7e, 0x04, 0x20, 0xdf, 0x82, 0x57, 0x70, 0xfb, 0xb1, 0x3c, 0x0c, 0xfc,
+	0x4a, 0x4e, 0x37, 0xe3, 0xd7, 0x55, 0xb6, 0x92, 0x76, 0xf3, 0x49, 0x29, 0xbb, 0x80, 0x9f, 0xab,
+	0xce, 0x70, 0x86, 0x9e, 0x48, 0x1f, 0xd3, 0xef, 0xe6, 0x4f, 0x8e, 0x1f, 0x11, 0xd4, 0xe4, 0xbb,
+	0x30, 0x1d, 0xd4, 0x87, 0x30, 0x73, 0xe8, 0x0c, 0xd4, 0xb3, 0xe7, 0x6d, 0x6a, 0xc9, 0x03, 0xc9,
+	0x2e, 0xe0, 0x47, 0x50, 0xd9, 0x67, 0xbc, 0xcf, 0x44, 0x70, 0x91, 0xad, 0xb7, 0x94, 0xf1, 0xe2,
+	0x92, 0xfe, 0x1e, 0xc3, 0xfc, 0xf8, 0xc5, 0x80, 0xab, 0xba, 0x87, 0xc9, 0xe1, 0x7d, 0xe5, 0xd2,
+	0x50, 0x61, 0x17, 0xf0, 0x10, 0x16, 0x33, 0x1e, 0x29, 0x68, 0xe7, 0x18, 0xd2, 0x86, 0x32, 0xdd,
+	0x5c, 0xc4, 0x56, 0xd9, 0xab, 0x26, 0xa3, 0x29, 0xd6, 0x2f, 0x4f, 0x8b, 0x61, 0x3e, 0x92, 0x3d,
+	0x58, 0x98, 0x18, 0xc6, 0xf1, 0x76, 0x86, 0x81, 0xb7, 0x21, 0xd8, 0x86, 0x72, 0x74, 0x7b, 0xe3,
+	0x72, 0xba, 0xab, 0xdd, 0xe7, 0x99, 0xbe, 0xbf, 0x80, 0x59, 0x7d, 0xe8, 0xc4, 0x7f, 0x4f, 0xaa,
+	0xbe, 0xcd, 0xeb, 0x3e, 0x90, 0xc9, 0xe9, 0x01, 0xef, 0x68, 0xe8, 0xb3, 0x26, 0x8b, 0x4c, 0x24,
+	0x5f, 0x41, 0x3d, 0xef, 0xda, 0xc7, 0xff, 0x67, 0x19, 0xcc, 0x18, 0x0d, 0x32, 0x0d, 0x7f, 0x03,
+	0xab, 0x6f, 0xba, 0xe7, 0xf1, 0x83, 0x9c, 0x8a, 0x67, 0xcd, 0x03, 0x99, 0x0e, 0xbe, 0x85, 0xc5,
+	0x8c, 0xfb, 0x57, 0xef, 0xa4, 0xbc, 0xeb, 0x7f, 0xe5, 0xee, 0x1b, 0x65, 0xa2, 0x2b, 0xdc, 0x2e,
+	0xe0, 0x67, 0x50, 0xd3, 0x2e, 0x31, 0x5c, 0xc9, 0xfc, 0x0b, 0x20, 0x1f, 0xe0, 0x23, 0x98, 0x1b,
+	0xbd, 0xf1, 0x2f, 0xd4, 0x34, 0xa9, 0x35, 0x88, 0xf6, 0x8f, 0xdf, 0xca, 0xc4, 0x34, 0x6d, 0x17,
+	0xf0, 0x43, 0xa8, 0xc5, 0x8f, 0xa2, 0xa9, 0xf4, 0xbe, 0x2b, 0xab, 0xff, 0x16, 0xb7, 0xff, 0x0a,
+	0x00, 0x00, 0xff, 0xff, 0x4d, 0x32, 0xcd, 0x9f, 0x6a, 0x14, 0x00, 0x00,
 }
