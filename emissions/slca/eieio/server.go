@@ -30,6 +30,7 @@ package eieio
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/gob"
 	"fmt"
@@ -709,16 +710,14 @@ func init() {
 	gob.Register(geom.Polygon{})
 }
 
-func (s *Server) getGeometry(ctx context.Context, _ interface{}) (interface{}, error) {
-	const (
-		inProj  = "+proj=lcc +lat_1=33.000000 +lat_2=45.000000 +lat_0=40.000000 +lon_0=-97.000000 +x_0=0 +y_0=0 +a=6370997.000000 +b=6370997.000000 +to_meter=1"
-		outProj = "+proj=longlat"
-	)
+func (s *Server) getGeometry(ctx context.Context, inputI interface{}) (interface{}, error) {
+	const inProj = "+proj=lcc +lat_1=33.000000 +lat_2=45.000000 +lat_0=40.000000 +lon_0=-97.000000 +x_0=0 +y_0=0 +a=6370997.000000 +b=6370997.000000 +to_meter=1"
+	input := inputI.(*eieiorpc.GeometryInput)
 	inSR, err := proj.Parse(inProj)
 	if err != nil {
 		return nil, fmt.Errorf("eioserve: getting geometry: %v", err)
 	}
-	outSR, err := proj.Parse(outProj)
+	outSR, err := proj.Parse(input.SpatialReference)
 	if err != nil {
 		return nil, fmt.Errorf("eioserve: getting geometry: %v", err)
 	}
@@ -748,14 +747,18 @@ func (s *Server) getGeometry(ctx context.Context, _ interface{}) (interface{}, e
 	return o, nil
 }
 
-// Geometry returns the InMAP grid geometry in the Google mercator projection.
-func (s *Server) Geometry(ctx context.Context, _ *eieiorpc.Selection) (*eieiorpc.Rectangles, error) {
+// Geometry returns the InMAP grid geometry, ,
+// where SpatialReference specifies the desired projection in WKT or PROJ4
+// format.
+func (s *Server) Geometry(ctx context.Context, input *eieiorpc.GeometryInput) (*eieiorpc.Rectangles, error) {
 	s.Log.Info("eioserve generating Geometry")
 	s.geomCacheOnce.Do(func() {
 		s.geomCache = loadCacheOnce(s.getGeometry, 1, 1, s.SpatialEIO.EIEIOCache,
 			requestcache.MarshalGob, requestcache.UnmarshalGob)
 	})
-	req := s.geomCache.NewRequest(ctx, struct{}{}, "geometry")
+	keyHash := sha256.Sum256([]byte(input.SpatialReference))
+	key := fmt.Sprintf("geometry_%x", keyHash[0:sha256.Size])
+	req := s.geomCache.NewRequest(ctx, input, key)
 	iface, err := req.Result()
 	if err != nil {
 		s.Log.WithError(err).Errorf("generating/retrieving geometry")

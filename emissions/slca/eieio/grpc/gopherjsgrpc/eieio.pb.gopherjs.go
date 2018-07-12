@@ -15,6 +15,7 @@
 		Point
 		Rectangle
 		Rectangles
+		GeometryInput
 		ColorInfo
 		FinalDemandInput
 		ConcentrationMatrixInput
@@ -918,6 +919,69 @@ func (m *Rectangles) UnmarshalFromReader(reader jspb.Reader) *Rectangles {
 
 // Unmarshal unmarshals a Rectangles from a slice of bytes.
 func (m *Rectangles) Unmarshal(rawBytes []byte) (*Rectangles, error) {
+	reader := jspb.NewReader(rawBytes)
+
+	m = m.UnmarshalFromReader(reader)
+
+	if err := reader.Err(); err != nil {
+		return nil, err
+	}
+
+	return m, nil
+}
+
+type GeometryInput struct {
+	SpatialReference string
+}
+
+// GetSpatialReference gets the SpatialReference of the GeometryInput.
+func (m *GeometryInput) GetSpatialReference() (x string) {
+	if m == nil {
+		return x
+	}
+	return m.SpatialReference
+}
+
+// MarshalToWriter marshals GeometryInput to the provided writer.
+func (m *GeometryInput) MarshalToWriter(writer jspb.Writer) {
+	if m == nil {
+		return
+	}
+
+	if len(m.SpatialReference) > 0 {
+		writer.WriteString(1, m.SpatialReference)
+	}
+
+	return
+}
+
+// Marshal marshals GeometryInput to a slice of bytes.
+func (m *GeometryInput) Marshal() []byte {
+	writer := jspb.NewWriter()
+	m.MarshalToWriter(writer)
+	return writer.GetResult()
+}
+
+// UnmarshalFromReader unmarshals a GeometryInput from the provided reader.
+func (m *GeometryInput) UnmarshalFromReader(reader jspb.Reader) *GeometryInput {
+	for reader.Next() {
+		if m == nil {
+			m = &GeometryInput{}
+		}
+
+		switch reader.GetFieldNumber() {
+		case 1:
+			m.SpatialReference = reader.ReadString()
+		default:
+			reader.SkipField()
+		}
+	}
+
+	return m
+}
+
+// Unmarshal unmarshals a GeometryInput from a slice of bytes.
+func (m *GeometryInput) Unmarshal(rawBytes []byte) (*GeometryInput, error) {
 	reader := jspb.NewReader(rawBytes)
 
 	m = m.UnmarshalFromReader(reader)
@@ -2596,7 +2660,7 @@ type EIEIOrpcClient interface {
 	DefaultSelection(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Selection, error)
 	Populations(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Selectors, error)
 	MapInfo(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*ColorInfo, error)
-	Geometry(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Rectangles, error)
+	Geometry(ctx context.Context, in *GeometryInput, opts ...grpcweb.CallOption) (*Rectangles, error)
 	Concentrations(ctx context.Context, in *ConcentrationInput, opts ...grpcweb.CallOption) (*Vector, error)
 	ConcentrationMatrix(ctx context.Context, in *ConcentrationMatrixInput, opts ...grpcweb.CallOption) (*Matrix, error)
 	Emissions(ctx context.Context, in *EmissionsInput, opts ...grpcweb.CallOption) (*Vector, error)
@@ -2695,7 +2759,7 @@ func (c *eIEIOrpcClient) MapInfo(ctx context.Context, in *Selection, opts ...grp
 	return new(ColorInfo).Unmarshal(resp)
 }
 
-func (c *eIEIOrpcClient) Geometry(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Rectangles, error) {
+func (c *eIEIOrpcClient) Geometry(ctx context.Context, in *GeometryInput, opts ...grpcweb.CallOption) (*Rectangles, error) {
 	resp, err := c.client.RPCCall(ctx, "Geometry", in.Marshal(), opts...)
 	if err != nil {
 		return nil, err
