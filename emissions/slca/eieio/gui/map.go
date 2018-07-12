@@ -27,6 +27,7 @@ import (
 	leaflet "github.com/ctessum/go-leaflet"
 	"github.com/ctessum/go-leaflet/plugin/glify"
 	"github.com/gopherjs/gopherjs/js"
+	eieiorpc "github.com/spatialmodel/inmap/emissions/slca/eieio/grpc/gopherjsgrpc"
 )
 
 func (c *GUI) LoadMap(div string) error {
@@ -62,7 +63,9 @@ type gridCell struct {
 }
 
 func (c *GUI) LoadGeometry() error {
-	rects, err := c.Geometry(context.Background(), &c.selection)
+	rects, err := c.Geometry(context.Background(), &eieiorpc.GeometryInput{
+		SpatialReference: "+proj=longlat",
+	})
 	if err != nil {
 		return err
 	}

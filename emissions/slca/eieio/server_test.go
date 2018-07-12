@@ -226,7 +226,9 @@ func TestServer_grpc(t *testing.T) {
 	}
 
 	t.Run("Geometry", func(t *testing.T) {
-		r, err := s.getGeometry(context.Background(), nil)
+		r, err := s.getGeometry(context.Background(), &eieiorpc.GeometryInput{
+			SpatialReference: "+proj=longlat",
+		})
 		if err != nil {
 			t.Fatal(err)
 		}

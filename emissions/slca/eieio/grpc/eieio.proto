@@ -30,7 +30,7 @@ service EIEIOrpc {
 
   rpc MapInfo(Selection) returns (ColorInfo) {}
 
-  rpc Geometry(Selection) returns (Rectangles) {}
+  rpc Geometry(GeometryInput) returns (Rectangles) {}
 
   rpc Concentrations(ConcentrationInput) returns (Vector) {}
   rpc ConcentrationMatrix(ConcentrationMatrixInput) returns (Matrix) {}
@@ -93,6 +93,10 @@ message Rectangle {
 
 message Rectangles {
   repeated Rectangle Rectangles = 1;
+}
+
+message GeometryInput {
+  string SpatialReference = 1;
 }
 
 message ColorInfo {
