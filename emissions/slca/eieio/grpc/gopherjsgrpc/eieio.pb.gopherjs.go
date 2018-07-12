@@ -8,12 +8,15 @@
 		eieio.proto
 
 	It has these top-level messages:
+		StringInput
 		Selectors
 		Selection
 		Year
 		Point
 		Rectangle
+		Rectangles
 		ColorInfo
+		FinalDemandInput
 		ConcentrationMatrixInput
 		ConcentrationInput
 		EmissionsMatrixInput
@@ -21,6 +24,7 @@
 		HealthMatrixInput
 		HealthInput
 		Vector
+		Mask
 		Matrix
 		EvaluationHealthInput
 		EvaluationConcentrationsInput
@@ -126,6 +130,149 @@ func (x Location) String() string {
 	return Location_name[int(x)]
 }
 
+type FinalDemandType int
+
+const (
+	// This group of demand types is directly available in the spreadsheet.
+	FinalDemandType_PersonalConsumption   FinalDemandType = 0
+	FinalDemandType_PrivateStructures     FinalDemandType = 1
+	FinalDemandType_PrivateEquipment      FinalDemandType = 2
+	FinalDemandType_PrivateIP             FinalDemandType = 3
+	FinalDemandType_PrivateResidential    FinalDemandType = 4
+	FinalDemandType_InventoryChange       FinalDemandType = 5
+	FinalDemandType_Export                FinalDemandType = 6
+	FinalDemandType_DefenseConsumption    FinalDemandType = 7
+	FinalDemandType_DefenseStructures     FinalDemandType = 8
+	FinalDemandType_DefenseEquipment      FinalDemandType = 9
+	FinalDemandType_DefenseIP             FinalDemandType = 10
+	FinalDemandType_NondefenseConsumption FinalDemandType = 11
+	FinalDemandType_NondefenseStructures  FinalDemandType = 12
+	FinalDemandType_NondefenseEquipment   FinalDemandType = 13
+	FinalDemandType_NondefenseIP          FinalDemandType = 14
+	FinalDemandType_LocalConsumption      FinalDemandType = 15
+	FinalDemandType_LocalStructures       FinalDemandType = 16
+	FinalDemandType_LocalEquipment        FinalDemandType = 17
+	FinalDemandType_LocalIP               FinalDemandType = 18
+	// This group of demand types consists of aggregates of the
+	// above types.
+	FinalDemandType_AllDemand FinalDemandType = 19
+	FinalDemandType_NonExport FinalDemandType = 20
+)
+
+var FinalDemandType_name = map[int]string{
+	0:  "PersonalConsumption",
+	1:  "PrivateStructures",
+	2:  "PrivateEquipment",
+	3:  "PrivateIP",
+	4:  "PrivateResidential",
+	5:  "InventoryChange",
+	6:  "Export",
+	7:  "DefenseConsumption",
+	8:  "DefenseStructures",
+	9:  "DefenseEquipment",
+	10: "DefenseIP",
+	11: "NondefenseConsumption",
+	12: "NondefenseStructures",
+	13: "NondefenseEquipment",
+	14: "NondefenseIP",
+	15: "LocalConsumption",
+	16: "LocalStructures",
+	17: "LocalEquipment",
+	18: "LocalIP",
+	19: "AllDemand",
+	20: "NonExport",
+}
+var FinalDemandType_value = map[string]int{
+	"PersonalConsumption":   0,
+	"PrivateStructures":     1,
+	"PrivateEquipment":      2,
+	"PrivateIP":             3,
+	"PrivateResidential":    4,
+	"InventoryChange":       5,
+	"Export":                6,
+	"DefenseConsumption":    7,
+	"DefenseStructures":     8,
+	"DefenseEquipment":      9,
+	"DefenseIP":             10,
+	"NondefenseConsumption": 11,
+	"NondefenseStructures":  12,
+	"NondefenseEquipment":   13,
+	"NondefenseIP":          14,
+	"LocalConsumption":      15,
+	"LocalStructures":       16,
+	"LocalEquipment":        17,
+	"LocalIP":               18,
+	"AllDemand":             19,
+	"NonExport":             20,
+}
+
+func (x FinalDemandType) String() string {
+	return FinalDemandType_name[int(x)]
+}
+
+type StringInput struct {
+	String string
+}
+
+// GetString gets the String of the StringInput.
+func (m *StringInput) GetString() (x string) {
+	if m == nil {
+		return x
+	}
+	return m.String
+}
+
+// MarshalToWriter marshals StringInput to the provided writer.
+func (m *StringInput) MarshalToWriter(writer jspb.Writer) {
+	if m == nil {
+		return
+	}
+
+	if len(m.String) > 0 {
+		writer.WriteString(1, m.String)
+	}
+
+	return
+}
+
+// Marshal marshals StringInput to a slice of bytes.
+func (m *StringInput) Marshal() []byte {
+	writer := jspb.NewWriter()
+	m.MarshalToWriter(writer)
+	return writer.GetResult()
+}
+
+// UnmarshalFromReader unmarshals a StringInput from the provided reader.
+func (m *StringInput) UnmarshalFromReader(reader jspb.Reader) *StringInput {
+	for reader.Next() {
+		if m == nil {
+			m = &StringInput{}
+		}
+
+		switch reader.GetFieldNumber() {
+		case 1:
+			m.String = reader.ReadString()
+		default:
+			reader.SkipField()
+		}
+	}
+
+	return m
+}
+
+// Unmarshal unmarshals a StringInput from a slice of bytes.
+func (m *StringInput) Unmarshal(rawBytes []byte) (*StringInput, error) {
+	reader := jspb.NewReader(rawBytes)
+
+	m = m.UnmarshalFromReader(reader)
+
+	if err := reader.Err(); err != nil {
+		return nil, err
+	}
+
+	return m, nil
+}
+
 type Selectors struct {
 	Codes  []string
 	Names  []string
@@ -225,7 +372,7 @@ type Selection struct {
 	ProductionGroup  string
 	ProductionSector string
 	ImpactType       string
-	DemandType       string
+	FinalDemandType  FinalDemandType
 	Year             int32
 	Population       string
 	// Types that are valid to be assigned to Pol:
@@ -298,12 +445,12 @@ func (m *Selection) GetImpactType() (x string) {
 	return m.ImpactType
 }
 
-// GetDemandType gets the DemandType of the Selection.
-func (m *Selection) GetDemandType() (x string) {
+// GetFinalDemandType gets the FinalDemandType of the Selection.
+func (m *Selection) GetFinalDemandType() (x FinalDemandType) {
 	if m == nil {
 		return x
 	}
-	return m.DemandType
+	return m.FinalDemandType
 }
 
 // GetYear gets the Year of the Selection.
@@ -375,8 +522,8 @@ func (m *Selection) MarshalToWriter(writer jspb.Writer) {
 		writer.WriteString(5, m.ImpactType)
 	}
 
-	if len(m.DemandType) > 0 {
-		writer.WriteString(6, m.DemandType)
+	if int(m.FinalDemandType) != 0 {
+		writer.WriteEnum(6, int(m.FinalDemandType))
 	}
 
 	if m.Year != 0 {
@@ -416,7 +563,7 @@ func (m *Selection) UnmarshalFromReader(reader jspb.Reader) *Selection {
 		case 5:
 			m.ImpactType = reader.ReadString()
 		case 6:
-			m.DemandType = reader.ReadString()
+			m.FinalDemandType = FinalDemandType(reader.ReadEnum())
 		case 7:
 			m.Year = reader.ReadInt32()
 		case 8:
@@ -715,6 +862,73 @@ func (m *Rectangle) Unmarshal(rawBytes []byte) (*Rectangle, error) {
 	return m, nil
 }
 
+type Rectangles struct {
+	Rectangles []*Rectangle
+}
+
+// GetRectangles gets the Rectangles of the Rectangles.
+func (m *Rectangles) GetRectangles() (x []*Rectangle) {
+	if m == nil {
+		return x
+	}
+	return m.Rectangles
+}
+
+// MarshalToWriter marshals Rectangles to the provided writer.
+func (m *Rectangles) MarshalToWriter(writer jspb.Writer) {
+	if m == nil {
+		return
+	}
+
+	for _, msg := range m.Rectangles {
+		writer.WriteMessage(1, func() {
+			msg.MarshalToWriter(writer)
+		})
+	}
+
+	return
+}
+
+// Marshal marshals Rectangles to a slice of bytes.
+func (m *Rectangles) Marshal() []byte {
+	writer := jspb.NewWriter()
+	m.MarshalToWriter(writer)
+	return writer.GetResult()
+}
+
+// UnmarshalFromReader unmarshals a Rectangles from the provided reader.
+func (m *Rectangles) UnmarshalFromReader(reader jspb.Reader) *Rectangles {
+	for reader.Next() {
+		if m == nil {
+			m = &Rectangles{}
+		}
+
+		switch reader.GetFieldNumber() {
+		case 1:
+			reader.ReadMessage(func() {
+				m.Rectangles = append(m.Rectangles, new(Rectangle).UnmarshalFromReader(reader))
+			})
+		default:
+			reader.SkipField()
+		}
+	}
+
+	return m
+}
+
+// Unmarshal unmarshals a Rectangles from a slice of bytes.
+func (m *Rectangles) Unmarshal(rawBytes []byte) (*Rectangles, error) {
+	reader := jspb.NewReader(rawBytes)
+
+	m = m.UnmarshalFromReader(reader)
+
+	if err := reader.Err(); err != nil {
+		return nil, err
+	}
+
+	return m, nil
+}
+
 type ColorInfo struct {
 	RGB    [][]byte
 	Legend string
@@ -793,15 +1007,127 @@ func (m *ColorInfo) Unmarshal(rawBytes []byte) (*ColorInfo, error) {
 	return m, nil
 }
 
+type FinalDemandInput struct {
+	FinalDemandType FinalDemandType
+	Commodities     *Mask
+	Year            int32
+	Location        Location
+}
+
+// GetFinalDemandType gets the FinalDemandType of the FinalDemandInput.
+func (m *FinalDemandInput) GetFinalDemandType() (x FinalDemandType) {
+	if m == nil {
+		return x
+	}
+	return m.FinalDemandType
+}
+
+// GetCommodities gets the Commodities of the FinalDemandInput.
+func (m *FinalDemandInput) GetCommodities() (x *Mask) {
+	if m == nil {
+		return x
+	}
+	return m.Commodities
+}
+
+// GetYear gets the Year of the FinalDemandInput.
+func (m *FinalDemandInput) GetYear() (x int32) {
+	if m == nil {
+		return x
+	}
+	return m.Year
+}
+
+// GetLocation gets the Location of the FinalDemandInput.
+func (m *FinalDemandInput) GetLocation() (x Location) {
+	if m == nil {
+		return x
+	}
+	return m.Location
+}
+
+// MarshalToWriter marshals FinalDemandInput to the provided writer.
+func (m *FinalDemandInput) MarshalToWriter(writer jspb.Writer) {
+	if m == nil {
+		return
+	}
+
+	if int(m.FinalDemandType) != 0 {
+		writer.WriteEnum(1, int(m.FinalDemandType))
+	}
+
+	if m.Commodities != nil {
+		writer.WriteMessage(2, func() {
+			m.Commodities.MarshalToWriter(writer)
+		})
+	}
+
+	if m.Year != 0 {
+		writer.WriteInt32(3, m.Year)
+	}
+
+	if int(m.Location) != 0 {
+		writer.WriteEnum(4, int(m.Location))
+	}
+
+	return
+}
+
+// Marshal marshals FinalDemandInput to a slice of bytes.
+func (m *FinalDemandInput) Marshal() []byte {
+	writer := jspb.NewWriter()
+	m.MarshalToWriter(writer)
+	return writer.GetResult()
+}
+
+// UnmarshalFromReader unmarshals a FinalDemandInput from the provided reader.
+func (m *FinalDemandInput) UnmarshalFromReader(reader jspb.Reader) *FinalDemandInput {
+	for reader.Next() {
+		if m == nil {
+			m = &FinalDemandInput{}
+		}
+
+		switch reader.GetFieldNumber() {
+		case 1:
+			m.FinalDemandType = FinalDemandType(reader.ReadEnum())
+		case 2:
+			reader.ReadMessage(func() {
+				m.Commodities = m.Commodities.UnmarshalFromReader(reader)
+			})
+		case 3:
+			m.Year = reader.ReadInt32()
+		case 4:
+			m.Location = Location(reader.ReadEnum())
+		default:
+			reader.SkipField()
+		}
+	}
+
+	return m
+}
+
+// Unmarshal unmarshals a FinalDemandInput from a slice of bytes.
+func (m *FinalDemandInput) Unmarshal(rawBytes []byte) (*FinalDemandInput, error) {
+	reader := jspb.NewReader(rawBytes)
+
+	m = m.UnmarshalFromReader(reader)
+
+	if err := reader.Err(); err != nil {
+		return nil, err
+	}
+
+	return m, nil
+}
+
 type ConcentrationMatrixInput struct {
-	Demand    []float64
+	Demand    *Vector
 	Pollutant Pollutant
 	Year      int32
 	Location  Location
 }
 
 // GetDemand gets the Demand of the ConcentrationMatrixInput.
-func (m *ConcentrationMatrixInput) GetDemand() (x []float64) {
+func (m *ConcentrationMatrixInput) GetDemand() (x *Vector) {
 	if m == nil {
 		return x
 	}
@@ -838,8 +1164,10 @@ func (m *ConcentrationMatrixInput) MarshalToWriter(writer jspb.Writer) {
 		return
 	}
 
-	if len(m.Demand) > 0 {
-		writer.WriteFloat64Slice(1, m.Demand)
+	if m.Demand != nil {
+		writer.WriteMessage(1, func() {
+			m.Demand.MarshalToWriter(writer)
+		})
 	}
 
 	if int(m.Pollutant) != 0 {
@@ -873,7 +1201,9 @@ func (m *ConcentrationMatrixInput) UnmarshalFromReader(reader jspb.Reader) *Conc
 
 		switch reader.GetFieldNumber() {
 		case 1:
-			m.Demand = reader.ReadFloat64Slice()
+			reader.ReadMessage(func() {
+				m.Demand = m.Demand.UnmarshalFromReader(reader)
+			})
 		case 2:
 			m.Pollutant = Pollutant(reader.ReadEnum())
 		case 3:
@@ -902,27 +1232,27 @@ func (m *ConcentrationMatrixInput) Unmarshal(rawBytes []byte) (*ConcentrationMat
 }
 
 type ConcentrationInput struct {
-	Demand     []float64
-	Industries []float64
-	Pollutant  Pollutant
-	Year       int32
-	Location   Location
+	Demand    *Vector
+	Emitters  *Mask
+	Pollutant Pollutant
+	Year      int32
+	Location  Location
 }
 
 // GetDemand gets the Demand of the ConcentrationInput.
-func (m *ConcentrationInput) GetDemand() (x []float64) {
+func (m *ConcentrationInput) GetDemand() (x *Vector) {
 	if m == nil {
 		return x
 	}
 	return m.Demand
 }
 
-// GetIndustries gets the Industries of the ConcentrationInput.
-func (m *ConcentrationInput) GetIndustries() (x []float64) {
+// GetEmitters gets the Emitters of the ConcentrationInput.
+func (m *ConcentrationInput) GetEmitters() (x *Mask) {
 	if m == nil {
 		return x
 	}
-	return m.Industries
+	return m.Emitters
 }
 
 // GetPollutant gets the Pollutant of the ConcentrationInput.
@@ -955,12 +1285,16 @@ func (m *ConcentrationInput) MarshalToWriter(writer jspb.Writer) {
 		return
 	}
 
-	if len(m.Demand) > 0 {
-		writer.WriteFloat64Slice(1, m.Demand)
+	if m.Demand != nil {
+		writer.WriteMessage(1, func() {
+			m.Demand.MarshalToWriter(writer)
+		})
 	}
 
-	if len(m.Industries) > 0 {
-		writer.WriteFloat64Slice(2, m.Industries)
+	if m.Emitters != nil {
+		writer.WriteMessage(2, func() {
+			m.Emitters.MarshalToWriter(writer)
+		})
 	}
 
 	if int(m.Pollutant) != 0 {
@@ -994,9 +1328,13 @@ func (m *ConcentrationInput) UnmarshalFromReader(reader jspb.Reader) *Concentrat
 
 		switch reader.GetFieldNumber() {
 		case 1:
-			m.Demand = reader.ReadFloat64Slice()
+			reader.ReadMessage(func() {
+				m.Demand = m.Demand.UnmarshalFromReader(reader)
+			})
 		case 2:
-			m.Industries = reader.ReadFloat64Slice()
+			reader.ReadMessage(func() {
+				m.Emitters = m.Emitters.UnmarshalFromReader(reader)
+			})
 		case 3:
 			m.Pollutant = Pollutant(reader.ReadEnum())
 		case 4:
@@ -1025,14 +1363,14 @@ func (m *ConcentrationInput) Unmarshal(rawBytes []byte) (*ConcentrationInput, er
 }
 
 type EmissionsMatrixInput struct {
-	Demand   []float64
+	Demand   *Vector
 	Emission Emission
 	Year     int32
 	Location Location
 }
 
 // GetDemand gets the Demand of the EmissionsMatrixInput.
-func (m *EmissionsMatrixInput) GetDemand() (x []float64) {
+func (m *EmissionsMatrixInput) GetDemand() (x *Vector) {
 	if m == nil {
 		return x
 	}
@@ -1069,8 +1407,10 @@ func (m *EmissionsMatrixInput) MarshalToWriter(writer jspb.Writer) {
 		return
 	}
 
-	if len(m.Demand) > 0 {
-		writer.WriteFloat64Slice(1, m.Demand)
+	if m.Demand != nil {
+		writer.WriteMessage(1, func() {
+			m.Demand.MarshalToWriter(writer)
+		})
 	}
 
 	if int(m.Emission) != 0 {
@@ -1104,7 +1444,9 @@ func (m *EmissionsMatrixInput) UnmarshalFromReader(reader jspb.Reader) *Emission
 
 		switch reader.GetFieldNumber() {
 		case 1:
-			m.Demand = reader.ReadFloat64Slice()
+			reader.ReadMessage(func() {
+				m.Demand = m.Demand.UnmarshalFromReader(reader)
+			})
 		case 2:
 			m.Emission = Emission(reader.ReadEnum())
 		case 3:
@@ -1133,27 +1475,27 @@ func (m *EmissionsMatrixInput) Unmarshal(rawBytes []byte) (*EmissionsMatrixInput
 }
 
 type EmissionsInput struct {
-	Demand     []float64
-	Industries []float64
-	Emission   Emission
-	Year       int32
-	Location   Location
+	Demand   *Vector
+	Emitters *Mask
+	Emission Emission
+	Year     int32
+	Location Location
 }
 
 // GetDemand gets the Demand of the EmissionsInput.
-func (m *EmissionsInput) GetDemand() (x []float64) {
+func (m *EmissionsInput) GetDemand() (x *Vector) {
 	if m == nil {
 		return x
 	}
 	return m.Demand
 }
 
-// GetIndustries gets the Industries of the EmissionsInput.
-func (m *EmissionsInput) GetIndustries() (x []float64) {
+// GetEmitters gets the Emitters of the EmissionsInput.
+func (m *EmissionsInput) GetEmitters() (x *Mask) {
 	if m == nil {
 		return x
 	}
-	return m.Industries
+	return m.Emitters
 }
 
 // GetEmission gets the Emission of the EmissionsInput.
@@ -1186,12 +1528,16 @@ func (m *EmissionsInput) MarshalToWriter(writer jspb.Writer) {
 		return
 	}
 
-	if len(m.Demand) > 0 {
-		writer.WriteFloat64Slice(1, m.Demand)
+	if m.Demand != nil {
+		writer.WriteMessage(1, func() {
+			m.Demand.MarshalToWriter(writer)
+		})
 	}
 
-	if len(m.Industries) > 0 {
-		writer.WriteFloat64Slice(2, m.Industries)
+	if m.Emitters != nil {
+		writer.WriteMessage(2, func() {
+			m.Emitters.MarshalToWriter(writer)
+		})
 	}
 
 	if int(m.Emission) != 0 {
@@ -1225,9 +1571,13 @@ func (m *EmissionsInput) UnmarshalFromReader(reader jspb.Reader) *EmissionsInput
 
 		switch reader.GetFieldNumber() {
 		case 1:
-			m.Demand = reader.ReadFloat64Slice()
+			reader.ReadMessage(func() {
+				m.Demand = m.Demand.UnmarshalFromReader(reader)
+			})
 		case 2:
-			m.Industries = reader.ReadFloat64Slice()
+			reader.ReadMessage(func() {
+				m.Emitters = m.Emitters.UnmarshalFromReader(reader)
+			})
 		case 3:
 			m.Emission = Emission(reader.ReadEnum())
 		case 4:
@@ -1256,7 +1606,7 @@ func (m *EmissionsInput) Unmarshal(rawBytes []byte) (*EmissionsInput, error) {
 }
 
 type HealthMatrixInput struct {
-	Demand     []float64
+	Demand     *Vector
 	Pollutant  Pollutant
 	Population string
 	Year       int32
@@ -1265,7 +1615,7 @@ type HealthMatrixInput struct {
 }
 
 // GetDemand gets the Demand of the HealthMatrixInput.
-func (m *HealthMatrixInput) GetDemand() (x []float64) {
+func (m *HealthMatrixInput) GetDemand() (x *Vector) {
 	if m == nil {
 		return x
 	}
@@ -1318,8 +1668,10 @@ func (m *HealthMatrixInput) MarshalToWriter(writer jspb.Writer) {
 		return
 	}
 
-	if len(m.Demand) > 0 {
-		writer.WriteFloat64Slice(1, m.Demand)
+	if m.Demand != nil {
+		writer.WriteMessage(1, func() {
+			m.Demand.MarshalToWriter(writer)
+		})
 	}
 
 	if int(m.Pollutant) != 0 {
@@ -1361,7 +1713,9 @@ func (m *HealthMatrixInput) UnmarshalFromReader(reader jspb.Reader) *HealthMatri
 
 		switch reader.GetFieldNumber() {
 		case 1:
-			m.Demand = reader.ReadFloat64Slice()
+			reader.ReadMessage(func() {
+				m.Demand = m.Demand.UnmarshalFromReader(reader)
+			})
 		case 2:
 			m.Pollutant = Pollutant(reader.ReadEnum())
 		case 3:
@@ -1394,8 +1748,8 @@ func (m *HealthMatrixInput) Unmarshal(rawBytes []byte) (*HealthMatrixInput, erro
 }
 
 type HealthInput struct {
-	Demand     []float64
-	Industries []float64
+	Demand     *Vector
+	Industries *Mask
 	Pollutant  Pollutant
 	Population string
 	Year       int32
@@ -1404,7 +1758,7 @@ type HealthInput struct {
 }
 
 // GetDemand gets the Demand of the HealthInput.
-func (m *HealthInput) GetDemand() (x []float64) {
+func (m *HealthInput) GetDemand() (x *Vector) {
 	if m == nil {
 		return x
 	}
@@ -1412,7 +1766,7 @@ func (m *HealthInput) GetDemand() (x []float64) {
 }
 
 // GetIndustries gets the Industries of the HealthInput.
-func (m *HealthInput) GetIndustries() (x []float64) {
+func (m *HealthInput) GetIndustries() (x *Mask) {
 	if m == nil {
 		return x
 	}
@@ -1465,12 +1819,16 @@ func (m *HealthInput) MarshalToWriter(writer jspb.Writer) {
 		return
 	}
 
-	if len(m.Demand) > 0 {
-		writer.WriteFloat64Slice(1, m.Demand)
+	if m.Demand != nil {
+		writer.WriteMessage(1, func() {
+			m.Demand.MarshalToWriter(writer)
+		})
 	}
 
-	if len(m.Industries) > 0 {
-		writer.WriteFloat64Slice(2, m.Industries)
+	if m.Industries != nil {
+		writer.WriteMessage(2, func() {
+			m.Industries.MarshalToWriter(writer)
+		})
 	}
 
 	if int(m.Pollutant) != 0 {
@@ -1512,9 +1870,13 @@ func (m *HealthInput) UnmarshalFromReader(reader jspb.Reader) *HealthInput {
 
 		switch reader.GetFieldNumber() {
 		case 1:
-			m.Demand = reader.ReadFloat64Slice()
+			reader.ReadMessage(func() {
+				m.Demand = m.Demand.UnmarshalFromReader(reader)
+			})
 		case 2:
-			m.Industries = reader.ReadFloat64Slice()
+			reader.ReadMessage(func() {
+				m.Industries = m.Industries.UnmarshalFromReader(reader)
+			})
 		case 3:
 			m.Pollutant = Pollutant(reader.ReadEnum())
 		case 4:
@@ -1598,6 +1960,69 @@ func (m *Vector) UnmarshalFromReader(reader jspb.Reader) *Vector {
 
 // Unmarshal unmarshals a Vector from a slice of bytes.
 func (m *Vector) Unmarshal(rawBytes []byte) (*Vector, error) {
+	reader := jspb.NewReader(rawBytes)
+
+	m = m.UnmarshalFromReader(reader)
+
+	if err := reader.Err(); err != nil {
+		return nil, err
+	}
+
+	return m, nil
+}
+
+type Mask struct {
+	Data []float64
+}
+
+// GetData gets the Data of the Mask.
+func (m *Mask) GetData() (x []float64) {
+	if m == nil {
+		return x
+	}
+	return m.Data
+}
+
+// MarshalToWriter marshals Mask to the provided writer.
+func (m *Mask) MarshalToWriter(writer jspb.Writer) {
+	if m == nil {
+		return
+	}
+
+	if len(m.Data) > 0 {
+		writer.WriteFloat64Slice(1, m.Data)
+	}
+
+	return
+}
+
+// Marshal marshals Mask to a slice of bytes.
+func (m *Mask) Marshal() []byte {
+	writer := jspb.NewWriter()
+	m.MarshalToWriter(writer)
+	return writer.GetResult()
+}
+
+// UnmarshalFromReader unmarshals a Mask from the provided reader.
+func (m *Mask) UnmarshalFromReader(reader jspb.Reader) *Mask {
+	for reader.Next() {
+		if m == nil {
+			m = &Mask{}
+		}
+
+		switch reader.GetFieldNumber() {
+		case 1:
+			m.Data = reader.ReadFloat64Slice()
+		default:
+			reader.SkipField()
+		}
+	}
+
+	return m
+}
+
+// Unmarshal unmarshals a Mask from a slice of bytes.
+func (m *Mask) Unmarshal(rawBytes []byte) (*Mask, error) {
 	reader := jspb.NewReader(rawBytes)
 
 	m = m.UnmarshalFromReader(reader)
@@ -2171,7 +2596,7 @@ type EIEIOrpcClient interface {
 	DefaultSelection(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Selection, error)
 	Populations(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Selectors, error)
 	MapInfo(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*ColorInfo, error)
-	Geometry(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (EIEIOrpc_GeometryClient, error)
+	Geometry(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Rectangles, error)
 	Concentrations(ctx context.Context, in *ConcentrationInput, opts ...grpcweb.CallOption) (*Vector, error)
 	ConcentrationMatrix(ctx context.Context, in *ConcentrationMatrixInput, opts ...grpcweb.CallOption) (*Matrix, error)
 	Emissions(ctx context.Context, in *EmissionsInput, opts ...grpcweb.CallOption) (*Vector, error)
@@ -2182,6 +2607,9 @@ type EIEIOrpcClient interface {
 	EvaluationConcentrations(ctx context.Context, in *EvaluationConcentrationsInput, opts ...grpcweb.CallOption) (*Vector, error)
 	ConcentrationResponseAverage(ctx context.Context, in *ConcentrationResponseAverageInput, opts ...grpcweb.CallOption) (*Vector, error)
 	PopulationIncidence(ctx context.Context, in *PopulationIncidenceInput, opts ...grpcweb.CallOption) (*PopulationIncidenceOutput, error)
+	FinalDemand(ctx context.Context, in *FinalDemandInput, opts ...grpcweb.CallOption) (*Vector, error)
+	CommodityMask(ctx context.Context, in *StringInput, opts ...grpcweb.CallOption) (*Mask, error)
+	EmitterMask(ctx context.Context, in *StringInput, opts ...grpcweb.CallOption) (*Mask, error)
 }
 
 type eIEIOrpcClient struct {
@@ -2267,36 +2695,13 @@ func (c *eIEIOrpcClient) MapInfo(ctx context.Context, in *Selection, opts ...grp
 	return new(ColorInfo).Unmarshal(resp)
 }
 
-func (c *eIEIOrpcClient) Geometry(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (EIEIOrpc_GeometryClient, error) {
-	srv, err := c.client.NewClientStream(ctx, false, true, "Geometry", opts...)
+func (c *eIEIOrpcClient) Geometry(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Rectangles, error) {
+	resp, err := c.client.RPCCall(ctx, "Geometry", in.Marshal(), opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	err = srv.SendMsg(in.Marshal())
-	if err != nil {
-		return nil, err
-	}
-
-	return &eIEIOrpcGeometryClient{srv}, nil
-}
-
-type EIEIOrpc_GeometryClient interface {
-	Recv() (*Rectangle, error)
-	grpcweb.ClientStream
-}
-
-type eIEIOrpcGeometryClient struct {
-	grpcweb.ClientStream
-}
-
-func (x *eIEIOrpcGeometryClient) Recv() (*Rectangle, error) {
-	resp, err := x.RecvMsg()
-	if err != nil {
-		return nil, err
-	}
-
-	return new(Rectangle).Unmarshal(resp)
+	return new(Rectangles).Unmarshal(resp)
 }
 
 func (c *eIEIOrpcClient) Concentrations(ctx context.Context, in *ConcentrationInput, opts ...grpcweb.CallOption) (*Vector, error) {
@@ -2387,4 +2792,31 @@ func (c *eIEIOrpcClient) PopulationIncidence(ctx context.Context, in *Population
 	}
 
 	return new(PopulationIncidenceOutput).Unmarshal(resp)
+}
+
+func (c *eIEIOrpcClient) FinalDemand(ctx context.Context, in *FinalDemandInput, opts ...grpcweb.CallOption) (*Vector, error) {
+	resp, err := c.client.RPCCall(ctx, "FinalDemand", in.Marshal(), opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return new(Vector).Unmarshal(resp)
+}
+
+func (c *eIEIOrpcClient) CommodityMask(ctx context.Context, in *StringInput, opts ...grpcweb.CallOption) (*Mask, error) {
+	resp, err := c.client.RPCCall(ctx, "CommodityMask", in.Marshal(), opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return new(Mask).Unmarshal(resp)
+}
+
+func (c *eIEIOrpcClient) EmitterMask(ctx context.Context, in *StringInput, opts ...grpcweb.CallOption) (*Mask, error) {
+	resp, err := c.client.RPCCall(ctx, "EmitterMask", in.Marshal(), opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return new(Mask).Unmarshal(resp)
 }

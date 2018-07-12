@@ -62,10 +62,10 @@ func (er *healthRequest) Key() string {
 }
 
 // Health returns spatially-explicit pollutant air quality-related health impacts caused by the
-// specified economic demand.  industries
-// specify the industries emissions should be calculated for.
-// If industries == nil, combined emissions for all industries are calculated.
-// pop must be one of the population types defined in the configuration file.
+// specified economic demand.  Emitters
+// specify the emitters health impacts should be calculated for.
+// If emitters == nil, combined health impacts for all emitters are calculated.
+// Population must be one of the population types defined in the configuration file.
 func (e *SpatialEIO) Health(ctx context.Context, request *eieiorpc.HealthInput) (*eieiorpc.Vector, error) {
 	e.loadHealthOnce.Do(func() {
 		var c string
@@ -82,8 +82,8 @@ func (e *SpatialEIO) Health(ctx context.Context, request *eieiorpc.HealthInput) 
 		return nil, fmt.Errorf("eieio: hazard ratio function `%s` is not registered", request.HR)
 	}
 	req := &healthRequest{
-		demand:     array2vec(request.Demand),
-		industries: (*Mask)(array2vec(request.Industries)),
+		demand:     array2vec(request.Demand.Data),
+		industries: rpc2mask(request.Industries),
 		pol:        Pollutant(request.Pollutant),
 		pop:        request.Population,
 		year:       Year(request.Year),
@@ -99,10 +99,10 @@ func (e *SpatialEIO) Health(ctx context.Context, request *eieiorpc.HealthInput) 
 }
 
 // health returns spatially-explicit pollutant air quality-related health impacts caused by the
-// specified economic demand.  industries
-// specify the industries emissions should be calculated for.
-// If industries == nil, combined emissions for all industries are calculated.
-// pop must be one of the population types defined in the configuration file.
+// specified economic demand. Emitters
+// specify the emitters health impacts should be calculated for.
+// If emitters == nil, combined health impacts for all emitters are calculated.
+// Population must be one of the population types defined in the configuration file.
 func (e *SpatialEIO) health(ctx context.Context, demand *mat.VecDense, industries *Mask, pol Pollutant, pop string, year Year, loc Location, HR epi.HRer) (*mat.VecDense, error) {
 	hf, err := e.healthFactors(ctx, pol, pop, year, HR)
 	if err != nil {
@@ -127,7 +127,7 @@ func (e *SpatialEIO) health(ctx context.Context, demand *mat.VecDense, industrie
 
 // HealthMatrix returns spatially- and industry-explicit air quality-related health impacts caused by the
 // specified economic demand. In the result matrix, the rows represent air quality
-// model grid cells and the columns represent industries.
+// model grid cells and the columns represent emitters.
 func (e *SpatialEIO) HealthMatrix(ctx context.Context, request *eieiorpc.HealthMatrixInput) (*eieiorpc.Matrix, error) {
 	hr, ok := e.hr[request.HR]
 	if !ok {
@@ -138,7 +138,7 @@ func (e *SpatialEIO) HealthMatrix(ctx context.Context, request *eieiorpc.HealthM
 		return nil, err
 	}
 
-	activity, err := e.economicImpactsSCC(array2vec(request.Demand), Year(request.Year), Location(request.Location)) // rows = industries
+	activity, err := e.economicImpactsSCC(array2vec(request.Demand.Data), Year(request.Year), Location(request.Location)) // rows = industries
 	if err != nil {
 		return nil, err
 	}

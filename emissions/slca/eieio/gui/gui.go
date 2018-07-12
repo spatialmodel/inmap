@@ -106,7 +106,7 @@ func queryFromSelection(s eieiorpc.Selection) url.Values {
 	v.Set("pg", s.ProductionGroup)
 	v.Set("ps", s.ProductionSector)
 	v.Set("it", s.ImpactType)
-	v.Set("dt", s.DemandType)
+	v.Set("dt", fmt.Sprintf("%d", s.FinalDemandType))
 	v.Set("y", fmt.Sprint(s.Year))
 	v.Set("pop", s.Population)
 	switch s.ImpactType {
@@ -135,7 +135,9 @@ func selectionFromQuery(q string) eieiorpc.Selection {
 	s.ProductionGroup = v.Get("pg")
 	s.ProductionSector = v.Get("ps")
 	s.ImpactType = v.Get("it")
-	s.DemandType = v.Get("dt")
+	dt, err := strconv.ParseInt(v.Get("dt"), 10, 32)
+	check(err)
+	s.FinalDemandType = eieiorpc.FinalDemandType(dt)
 	y, err := strconv.ParseInt(v.Get("y"), 10, 32)
 	check(err)
 	s.Year = int32(y)
@@ -162,7 +164,9 @@ func selectionFromForm() eieiorpc.Selection {
 	s.ProductionGroup = selected("#pg")
 	s.ProductionSector = selected("#ps")
 	s.ImpactType = selected("#it")
-	s.DemandType = selected("#dt")
+	dt, err := strconv.ParseInt(selected("#dt"), 10, 32)
+	check(err)
+	s.FinalDemandType = eieiorpc.FinalDemandType(dt)
 	y, err := strconv.ParseInt(selected("#y"), 10, 32)
 	check(err)
 	s.Year = int32(y)
@@ -326,37 +330,37 @@ func (c *GUI) yearOptions() optionFunc {
 // userOptions returns a function that list the final demand types.
 func (c *GUI) userOptions() optionFunc {
 	users := []struct {
-		val  string
+		val  eieiorpc.FinalDemandType
 		name string
 	}{
-		{val: "All", name: "All demand"},
-		{val: "NonExport", name: "Domestic (All - Export)"},
-		{val: "F010", name: "Personal Consumption"},
-		{val: "F02S", name: "Private Structures"},
-		{val: "F02E", name: "Private Equipment"},
-		{val: "F02N", name: "Private IP"},
-		{val: "F02R", name: "Private Residential"},
-		{val: "F030", name: "Inventory Change"},
-		{val: "F040", name: "Export"},
-		{val: "F06C", name: "Defense Consumption"},
-		{val: "F06S", name: "Defense Structures"},
-		{val: "F06E", name: "Defense Equipment"},
-		{val: "F06N", name: "Defense IP"},
-		{val: "F07C", name: "Nondefense Consumption"},
-		{val: "F07S", name: "Nondefense Structures"},
-		{val: "F07E", name: "Nondefense Equipment"},
-		{val: "F07N", name: "Nondefense IP"},
-		{val: "F10C", name: "Local Consumption"},
-		{val: "F10S", name: "Local Structures"},
-		{val: "F10E", name: "Local Equipment"},
-		{val: "F10N", name: "Local IP"},
+		{val: eieiorpc.FinalDemandType_AllDemand, name: "All demand"},
+		{val: eieiorpc.FinalDemandType_NonExport, name: "Domestic (All - Export)"},
+		{val: eieiorpc.FinalDemandType_PersonalConsumption, name: "Personal Consumption"},
+		{val: eieiorpc.FinalDemandType_PrivateStructures, name: "Private Structures"},
+		{val: eieiorpc.FinalDemandType_PrivateEquipment, name: "Private Equipment"},
+		{val: eieiorpc.FinalDemandType_PrivateIP, name: "Private IP"},
+		{val: eieiorpc.FinalDemandType_PrivateResidential, name: "Private Residential"},
+		{val: eieiorpc.FinalDemandType_InventoryChange, name: "Inventory Change"},
+		{val: eieiorpc.FinalDemandType_Export, name: "Export"},
+		{val: eieiorpc.FinalDemandType_DefenseConsumption, name: "Defense Consumption"},
+		{val: eieiorpc.FinalDemandType_DefenseStructures, name: "Defense Structures"},
+		{val: eieiorpc.FinalDemandType_DefenseEquipment, name: "Defense Equipment"},
+		{val: eieiorpc.FinalDemandType_DefenseIP, name: "Defense IP"},
+		{val: eieiorpc.FinalDemandType_NondefenseConsumption, name: "Non-Defense Federal Government Consumption"},
+		{val: eieiorpc.FinalDemandType_NondefenseStructures, name: "Non-Defense Federal Government Structures"},
+		{val: eieiorpc.FinalDemandType_NondefenseEquipment, name: "Non-Defense Federal Government Equipment"},
+		{val: eieiorpc.FinalDemandType_NondefenseIP, name: "Non-Defense Federal Government IP"},
+		{val: eieiorpc.FinalDemandType_LocalConsumption, name: "Local Government Consumption"},
+		{val: eieiorpc.FinalDemandType_LocalStructures, name: "Local Government Structures"},
+		{val: eieiorpc.FinalDemandType_LocalEquipment, name: "Local Government Equipment"},
+		{val: eieiorpc.FinalDemandType_LocalIP, name: "Local Government IP"},
 	}
 	return func(id string) func() {
 		return func() {
 			sel := c.doc.GetElementByID(id).(*dom.HTMLSelectElement)
 			sel.SetInnerHTML("")
 			for _, u := range users {
-				sel.InsertBefore(c.createOption(u.name, u.val, u.val == c.selection.DemandType), nil)
+				sel.InsertBefore(c.createOption(u.name, fmt.Sprintf("%d", u.val), u.val == c.selection.FinalDemandType), nil)
 			}
 		}
 	}

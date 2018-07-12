@@ -19,6 +19,7 @@ package eieio
 
 import (
 	"bytes"
+	"context"
 	"encoding/gob"
 	"os"
 	"reflect"
@@ -31,6 +32,7 @@ import (
 	"gonum.org/v1/gonum/mat"
 
 	"github.com/spatialmodel/inmap/emissions/slca"
+	eieiorpc "github.com/spatialmodel/inmap/emissions/slca/eieio/grpc/gogrpc"
 )
 
 // SpatialEIO implements a spatial EIO LCA model.
@@ -86,11 +88,15 @@ type SpatialEIO struct {
 
 // domesticProduction calculates total domestic economic production.
 func (e *SpatialEIO) domesticProductionSCC(year Year) (*mat.VecDense, error) {
-	demand, err := e.FinalDemand(All, nil, year, Domestic)
+	demand, err := e.FinalDemand(context.TODO(), &eieiorpc.FinalDemandInput{
+		FinalDemandType: eieiorpc.FinalDemandType_AllDemand,
+		Year:            int32(year),
+		Location:        eieiorpc.Location_Domestic,
+	})
 	if err != nil {
 		return nil, err
 	}
-	return e.economicImpactsSCC(demand, year, Domestic)
+	return e.economicImpactsSCC(array2vec(demand.Data), year, Domestic)
 }
 
 type polYear struct {

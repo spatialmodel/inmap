@@ -21,6 +21,8 @@ import (
 	"fmt"
 
 	"gonum.org/v1/gonum/mat"
+
+	eieiorpc "github.com/spatialmodel/inmap/emissions/slca/eieio/grpc/gogrpc"
 )
 
 // FinalDemand specifies the available types of final demand.
@@ -57,6 +59,55 @@ const (
 	AllDemand = FinalDemand(All) // All is a combination of all categories above.
 	NonExport = "NonExport"      // NonExport is (All - Export)
 )
+
+func convertFinalDemand(in eieiorpc.FinalDemandType) FinalDemand {
+	switch in {
+	case eieiorpc.FinalDemandType_PersonalConsumption:
+		return PersonalConsumption
+	case eieiorpc.FinalDemandType_PrivateStructures:
+		return PrivateStructures
+	case eieiorpc.FinalDemandType_PrivateEquipment:
+		return PrivateEquipment
+	case eieiorpc.FinalDemandType_PrivateIP:
+		return PrivateIP
+	case eieiorpc.FinalDemandType_PrivateResidential:
+		return PrivateResidential
+	case eieiorpc.FinalDemandType_InventoryChange:
+		return InventoryChange
+	case eieiorpc.FinalDemandType_Export:
+		return Export
+	case eieiorpc.FinalDemandType_DefenseConsumption:
+		return DefenseConsumption
+	case eieiorpc.FinalDemandType_DefenseStructures:
+		return DefenseStructures
+	case eieiorpc.FinalDemandType_DefenseEquipment:
+		return DefenseEquipment
+	case eieiorpc.FinalDemandType_DefenseIP:
+		return DefenseIP
+	case eieiorpc.FinalDemandType_NondefenseConsumption:
+		return NondefenseConsumption
+	case eieiorpc.FinalDemandType_NondefenseStructures:
+		return NondefenseStructures
+	case eieiorpc.FinalDemandType_NondefenseEquipment:
+		return NondefenseEquipment
+	case eieiorpc.FinalDemandType_NondefenseIP:
+		return NondefenseIP
+	case eieiorpc.FinalDemandType_LocalConsumption:
+		return LocalConsumption
+	case eieiorpc.FinalDemandType_LocalStructures:
+		return LocalStructures
+	case eieiorpc.FinalDemandType_LocalEquipment:
+		return LocalEquipment
+	case eieiorpc.FinalDemandType_LocalIP:
+		return LocalIP
+	case eieiorpc.FinalDemandType_AllDemand:
+		return AllDemand
+	case eieiorpc.FinalDemandType_NonExport:
+		return NonExport
+	default:
+		panic(fmt.Errorf("invalid demand type %v", in))
+	}
+}
 
 // loadFinalDemand reads in the available types of final demand from the
 // given Excel file, setting all negative numbers to zero. This is done

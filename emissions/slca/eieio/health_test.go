@@ -29,13 +29,17 @@ import (
 func TestHealth(t *testing.T) {
 	s := loadSpatial(t)
 
-	demand, err := s.EIO.FinalDemand(All, nil, 2011, Domestic)
+	demand, err := s.EIO.FinalDemand(context.Background(), &eieiorpc.FinalDemandInput{
+		FinalDemandType: eieiorpc.FinalDemandType_AllDemand,
+		Year:            2011,
+		Location:        eieiorpc.Location_Domestic,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	ctx := context.Background()
 	health, err := s.Health(ctx, &eieiorpc.HealthInput{
-		Demand:     vec2array(demand),
+		Demand:     demand,
 		Pollutant:  eieiorpc.Pollutant_TotalPM25,
 		Population: "TotalPop",
 		Year:       2011,
@@ -55,13 +59,17 @@ func TestHealth(t *testing.T) {
 func TestHealthMatrix(t *testing.T) {
 	s := loadSpatial(t)
 
-	demand, err := s.EIO.FinalDemand(All, nil, 2011, Domestic)
+	demand, err := s.EIO.FinalDemand(context.Background(), &eieiorpc.FinalDemandInput{
+		FinalDemandType: eieiorpc.FinalDemandType_AllDemand,
+		Year:            2011,
+		Location:        eieiorpc.Location_Domestic,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	ctx := context.Background()
 	healthRPC, err := s.HealthMatrix(ctx, &eieiorpc.HealthMatrixInput{
-		Demand:     vec2array(demand),
+		Demand:     demand,
 		Pollutant:  eieiorpc.Pollutant_TotalPM25,
 		Population: "TotalPop",
 		Year:       2011,

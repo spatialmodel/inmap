@@ -21,6 +21,7 @@ package ces
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"go/build"
 	"math"
@@ -33,6 +34,8 @@ import (
 	"gonum.org/v1/gonum/mat"
 
 	"github.com/spatialmodel/inmap/emissions/slca/eieio"
+	eieiorpc "github.com/spatialmodel/inmap/emissions/slca/eieio/grpc/gogrpc"
+
 	"github.com/tealeg/xlsx"
 )
 
@@ -311,89 +314,73 @@ func (c *CES) latinoFrac(year int, IOSector string) (float64, error) {
 	return v, nil
 }
 
-var ignoreSectors = map[string]struct{}{
-	"Noncomparable imports":                                                                  struct{}{},
-	"Other nonmetallic mineral mining and quarrying":                                         struct{}{},
-	"Iron and steel mills and ferroalloy manufacturing":                                      struct{}{},
-	"Nonferrous metal (except copper and aluminum) rolling, drawing, extruding and alloying": struct{}{},
-	"Nonferrous metal foundries":                                                             struct{}{},
-	"Crown and closure manufacturing and metal stamping":                                     struct{}{},
-	"Plate work and fabricated structural product manufacturing":                             struct{}{},
-	"Metal can, box, and other metal container (light gauge) manufacturing":                  struct{}{},
-	"Hardware manufacturing":                                                                 struct{}{},
-	"Spring and wire product manufacturing":                                                  struct{}{},
-	"Office machinery manufacturing":                                                         struct{}{},
-	"Metal cutting and forming machine tool manufacturing":                                   struct{}{},
-	"Other engine equipment manufacturing":                                                   struct{}{},
-	"Grantmaking, giving, and social advocacy organizations":                                 struct{}{},
-	"Civic, social, professional, and similar organizations":                                 struct{}{},
-	"Private households":                                                                     struct{}{},
-	"Other state and local government enterprises":                                           struct{}{},
-	"Individual and family services":                                                         struct{}{},
-	"Other support services":                                                                 struct{}{},
-	"Veterinary services":                                                                    struct{}{},
-	"Employment services":                                                                    struct{}{},
-	"Business support services":                                                              struct{}{},
-	"Travel arrangement and reservation services":                                            struct{}{},
-	"Investigation and security services":                                                    struct{}{},
-	"Commercial and industrial machinery and equipment rental and leasing":                   struct{}{},
-	"Legal services": struct{}{},
-	"Accounting, tax preparation, bookkeeping, and payroll services":  struct{}{},
-	"Specialized design services":                                     struct{}{},
-	"Scientific research and development services":                    struct{}{},
-	"Advertising, public relations, and related services":             struct{}{},
-	"Funds, trusts, and other financial vehicles":                     struct{}{},
-	"Other real estate":                                               struct{}{},
-	"Securities and commodity contracts intermediation and brokerage": struct{}{},
-	"Other financial investment activities":                           struct{}{},
-	"Couriers and messengers":                                         struct{}{},
-	"Warehousing and storage":                                         struct{}{},
-	"Wholesale trade":                                                 struct{}{},
-	"Industrial gas manufacturing":                                    struct{}{},
-	"Support activities for agriculture and forestry":                 struct{}{},
-	"Religious organizations":                                         struct{}{},
-	"Pipeline transportation":                                         struct{}{},
+func mask2rpc(m *eieio.Mask) *eieiorpc.Mask {
+	if m == nil {
+		return nil
+	}
+	return &eieiorpc.Mask{Data: vec2array((*mat.VecDense)(m))}
+}
+func vec2array(v *mat.VecDense) []float64 {
+	if v == nil {
+		return nil
+	}
+	return v.RawVector().Data
+}
+func rpc2vec(d *eieiorpc.Vector) *mat.VecDense {
+	if d == nil {
+		return nil
+	}
+	return array2vec(d.Data)
+}
+func array2vec(d []float64) *mat.VecDense {
+	if len(d) == 0 {
+		return nil
+	}
+	return mat.NewVecDense(len(d), d)
 }
 
 // WhiteOtherDemand returns the domestic personal consumption final demand by white non-Latino
 // people and people of other races besides Black and Latino.
 func (c *CES) WhiteOtherDemand(eio *eieio.EIO, commodities *eieio.Mask, year eieio.Year) (*mat.VecDense, error) {
-	demand, err := eio.FinalDemand(eieio.PersonalConsumption, commodities, year, eieio.Domestic)
+	demand, err := eio.FinalDemand(context.TODO(), &eieiorpc.FinalDemandInput{
+		FinalDemandType: eieiorpc.FinalDemandType_PersonalConsumption,
+		Commodities:     mask2rpc(commodities),
+		Year:            int32(year),
+		Location:        eieiorpc.Location_Domestic,
+	})
 	if err != nil {
 		return nil, err
 	}
 	for i, sector := range eio.Commodities {
-		v := demand.At(i, 0)
+		v := demand.Data[i]
 		if v == 0 {
-			continue
-		}
-		if _, ok := ignoreSectors[sector]; ok {
-			demand.SetVec(i, 0)
 			continue
 		}
 		f, err := c.whiteOtherFrac(int(year), sector)
 		if err != nil {
 			return nil, err
 		}
-		demand.SetVec(i, v*f)
+		demand.Data[i] = v * f
 	}
-	return demand, nil
+	return rpc2vec(demand), nil
 }
 
 // BlackDemand returns the domestic personal consumption final demand by
 // Black people.
 func (c *CES) BlackDemand(eio *eieio.EIO, commodities *eieio.Mask, year eieio.Year) (*mat.VecDense, error) {
-	demand, err := eio.FinalDemand(eieio.PersonalConsumption, commodities, year, eieio.Domestic)
+	demandRPC, err := eio.FinalDemand(context.TODO(), &eieiorpc.FinalDemandInput{
+		FinalDemandType: eieiorpc.FinalDemandType_PersonalConsumption,
+		Commodities:     mask2rpc(commodities),
+		Year:            int32(year),
+		Location:        eieiorpc.Location_Domestic,
+	})
 	if err != nil {
 		return nil, err
 	}
+	demand := rpc2vec(demandRPC)
 	for i, sector := range eio.Commodities {
 		v := demand.At(i, 0)
 		if v == 0 {
-			continue
-		}
-		if _, ok := ignoreSectors[sector]; ok {
-			demand.SetVec(i, 0)
 			continue
 		}
 		f, err := c.blackFrac(int(year), sector)
@@ -408,17 +395,19 @@ func (c *CES) BlackDemand(eio *eieio.EIO, commodities *eieio.Mask, year eieio.Ye
 // LatinoDemand returns the domestic personal consumption final demand by
 // Latino people.
 func (c *CES) LatinoDemand(eio *eieio.EIO, commodities *eieio.Mask, year eieio.Year) (*mat.VecDense, error) {
-	demand, err := eio.FinalDemand(eieio.PersonalConsumption, commodities, year, eieio.Domestic)
+	demandRPC, err := eio.FinalDemand(context.TODO(), &eieiorpc.FinalDemandInput{
+		FinalDemandType: eieiorpc.FinalDemandType_PersonalConsumption,
+		Commodities:     mask2rpc(commodities),
+		Year:            int32(year),
+		Location:        eieiorpc.Location_Domestic,
+	})
 	if err != nil {
 		return nil, err
 	}
+	demand := rpc2vec(demandRPC)
 	for i, sector := range eio.Commodities {
 		v := demand.At(i, 0)
 		if v == 0 {
-			continue
-		}
-		if _, ok := ignoreSectors[sector]; ok {
-			demand.SetVec(i, 0)
 			continue
 		}
 		f, err := c.latinoFrac(int(year), sector)

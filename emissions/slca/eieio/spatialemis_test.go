@@ -21,7 +21,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/spatialmodel/inmap/emissions/slca"
 	eieiorpc "github.com/spatialmodel/inmap/emissions/slca/eieio/grpc/gogrpc"
 
 	"gonum.org/v1/gonum/mat"
@@ -30,14 +29,18 @@ import (
 func TestEmissions(t *testing.T) {
 	s := loadSpatial(t)
 
-	demand, err := s.EIO.FinalDemand(All, nil, 2011, Domestic)
+	ctx := context.Background()
+	demand, err := s.EIO.FinalDemand(ctx, &eieiorpc.FinalDemandInput{
+		FinalDemandType: eieiorpc.FinalDemandType_AllDemand,
+		Year:            2011,
+		Location:        eieiorpc.Location_Domestic,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx := context.Background()
 	emisRPC, err := s.Emissions(ctx, &eieiorpc.EmissionsInput{
-		Demand:   vec2array(demand),
-		Emission: eieiorpc.Emission(slca.PM25),
+		Demand:   demand,
+		Emission: eieiorpc.Emission_PM25,
 		Year:     2011,
 		Location: eieiorpc.Location_Domestic,
 	})
@@ -56,14 +59,18 @@ func TestEmissions(t *testing.T) {
 func TestEmissionsMatrix(t *testing.T) {
 	s := loadSpatial(t)
 
-	demand, err := s.EIO.FinalDemand(All, nil, 2011, Domestic)
+	ctx := context.Background()
+	demand, err := s.EIO.FinalDemand(ctx, &eieiorpc.FinalDemandInput{
+		FinalDemandType: eieiorpc.FinalDemandType_AllDemand,
+		Year:            2011,
+		Location:        eieiorpc.Location_Domestic,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx := context.Background()
 	emisRPC, err := s.EmissionsMatrix(ctx, &eieiorpc.EmissionsMatrixInput{
-		Demand:   vec2array(demand),
-		Emission: eieiorpc.Emission(slca.PM25),
+		Demand:   demand,
+		Emission: eieiorpc.Emission_PM25,
 		Year:     2011,
 		Location: eieiorpc.Location_Domestic,
 	})

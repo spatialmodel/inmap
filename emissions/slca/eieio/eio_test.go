@@ -18,10 +18,13 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.*/
 package eieio
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"math"
 	"testing"
+
+	eieiorpc "github.com/spatialmodel/inmap/emissions/slca/eieio/grpc/gogrpc"
 )
 
 const tolerance = 1.e-10 // tolerance for float comparison
@@ -41,12 +44,16 @@ func TestEIO(t *testing.T) {
 
 	e := loadSpatial(t).EIO
 
-	fd2007, err := e.FinalDemand(All, nil, 2007, Total)
+	fd2007, err := s.EIO.FinalDemand(context.Background(), &eieiorpc.FinalDemandInput{
+		FinalDemandType: eieiorpc.FinalDemandType_AllDemand,
+		Year:            2007,
+		Location:        eieiorpc.Location_Total,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Impacts from total demand = total production.
-	production2007, err := e.EconomicImpacts(fd2007, 2007, Total)
+	production2007, err := e.EconomicImpacts(array2vec(fd2007.Data), 2007, Total)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,11 +72,11 @@ func TestEIO(t *testing.T) {
 		t.Errorf("oilseed production 2007: have %g, want %g", oilseedProduction2007, wantOilseedProduction2007)
 	}
 
-	domestic, err := e.EconomicImpacts(fd2007, 2007, Domestic)
+	domestic, err := e.EconomicImpacts(array2vec(fd2007.Data), 2007, Domestic)
 	if err != nil {
 		t.Fatal(err)
 	}
-	imports, err := e.EconomicImpacts(fd2007, 2007, Imported)
+	imports, err := e.EconomicImpacts(array2vec(fd2007.Data), 2007, Imported)
 	if err != nil {
 		t.Fatal(err)
 	}

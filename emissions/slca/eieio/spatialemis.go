@@ -58,9 +58,9 @@ func (er *emissionsRequest) Key() string {
 }
 
 // Emissions returns spatially-explicit emissions caused by the
-// specified economic demand. industries
-// specifies the industries emissions should be calculated for.
-// If industries == nil, combined emissions for all industries are calculated.
+// specified economic demand. Emitters
+// specifies the emitters emissions should be calculated for.
+// If emitters == nil, combined emissions for all emitters are calculated.
 func (e *SpatialEIO) Emissions(ctx context.Context, request *eieiorpc.EmissionsInput) (*eieiorpc.Vector, error) {
 	e.loadEmissionsOnce.Do(func() {
 		var c string
@@ -73,8 +73,8 @@ func (e *SpatialEIO) Emissions(ctx context.Context, request *eieiorpc.EmissionsI
 		}, 1, e.MemCacheSize, c, vectorMarshal, vectorUnmarshal)
 	})
 	req := &emissionsRequest{
-		demand:     array2vec(request.Demand),
-		industries: (*Mask)(array2vec(request.Industries)),
+		demand:     rpc2vec(request.Demand),
+		industries: rpc2mask(request.Emitters),
 		pol:        slca.Pollutant(request.Emission),
 		year:       Year(request.Year),
 		loc:        Location(request.Location),
@@ -117,14 +117,14 @@ func (e *SpatialEIO) emissions(ctx context.Context, demand *mat.VecDense, indust
 
 // EmissionsMatrix returns spatially- and industry-explicit emissions caused by the
 // specified economic demand. In the result matrix, the rows represent air quality
-// model grid cells and the columns represent industries.
+// model grid cells and the columns represent emitters.
 func (e *SpatialEIO) EmissionsMatrix(ctx context.Context, request *eieiorpc.EmissionsMatrixInput) (*eieiorpc.Matrix, error) {
 	ef, err := e.emissionFactors(ctx, slca.Pollutant(request.Emission), Year(request.Year)) // rows = grid cells, cols = industries
 	if err != nil {
 		return nil, err
 	}
 
-	activity, err := e.economicImpactsSCC(array2vec(request.Demand), Year(request.Year), Location(request.Location)) // rows = industries
+	activity, err := e.economicImpactsSCC(array2vec(request.Demand.Data), Year(request.Year), Location(request.Location)) // rows = industries
 	if err != nil {
 		return nil, err
 	}

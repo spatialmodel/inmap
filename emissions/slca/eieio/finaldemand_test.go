@@ -17,19 +17,28 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.*/
 
 package eieio
 
-import "testing"
+import (
+	"context"
+	"testing"
+
+	eieiorpc "github.com/spatialmodel/inmap/emissions/slca/eieio/grpc/gogrpc"
+)
 
 func TestLoadFinalDemand(t *testing.T) {
 	e := loadSpatial(t).EIO
-	allDemand, err := e.FinalDemand(All, nil, 2007, Domestic)
+	allDemand, err := e.FinalDemand(context.Background(), &eieiorpc.FinalDemandInput{
+		FinalDemandType: eieiorpc.FinalDemandType_AllDemand,
+		Year:            2007,
+		Location:        eieiorpc.Location_Domestic,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	r, _ := allDemand.Dims()
+	r := len(allDemand.Data)
 	if r != 389 {
 		t.Fatalf("length should be 389 but is %d", r)
 	}
-	v := allDemand.At(388, 0)
+	v := allDemand.Data[388]
 	want := 1.696e+03 * 1.0e6 // total from spreadsheet (but different because imports)
 	if different(v, want) {
 		t.Errorf("have %v but want %v", v, want)

@@ -15,18 +15,22 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with InMAP.  If not, see <http://www.gnu.org/licenses/>.*/
 
-// package eieio implements an Economic Input-Output life cycle assessment
+// package eieio implements an Extended InMAP Economic Input-Output (EIEIO)
+// life cycle assessment
 // model based on the US Bureau of Economic Analysis (BEA)
 // Annual Input-Output Accounts Data from
 // https://www.gov/industry/io_annual.htm
 package eieio
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
 	"github.com/ctessum/requestcache"
 	"gonum.org/v1/gonum/mat"
+
+	eieiorpc "github.com/spatialmodel/inmap/emissions/slca/eieio/grpc/gogrpc"
 )
 
 // Config holds simulation configuration imformation.
@@ -296,42 +300,42 @@ func (e *SpatialEIO) economicImpactsSCC(demand *mat.VecDense, year Year, loc Loc
 // specifies which commodities the demand should be calculated for.
 // loc specifies the demand location (Domestic, Imported, or Total)
 // If commodities == nil, demand for all commodities is included.
-func (e *EIO) FinalDemand(demandType FinalDemand, commodities *Mask, year Year, loc Location) (*mat.VecDense, error) {
-	td, ok := e.totalFinalDemand[year]
+func (e *EIO) FinalDemand(ctx context.Context, input *eieiorpc.FinalDemandInput) (*eieiorpc.Vector, error) {
+	td, ok := e.totalFinalDemand[Year(input.Year)]
 	if !ok {
-		return nil, fmt.Errorf("bea: invalid total demand year %d", year)
+		return nil, fmt.Errorf("bea: invalid total demand year %d", input.Year)
 	}
-	id, ok := e.importFinalDemand[year]
+	id, ok := e.importFinalDemand[Year(input.Year)]
 	if !ok {
-		return nil, fmt.Errorf("bea: invalid import demand year %d", year)
+		return nil, fmt.Errorf("bea: invalid import demand year %d", input.Year)
 	}
 
-	tvTemp, ok := td[demandType]
+	tvTemp, ok := td[convertFinalDemand(input.FinalDemandType)]
 	if !ok {
-		return nil, fmt.Errorf("bea: invalid total demand type %s", demandType)
+		return nil, fmt.Errorf("bea: invalid total demand type %s", convertFinalDemand(input.FinalDemandType))
 	}
-	ivTemp, ok := id[demandType]
+	ivTemp, ok := id[convertFinalDemand(input.FinalDemandType)]
 	if !ok {
-		return nil, fmt.Errorf("bea: invalid import demand type %s", demandType)
+		return nil, fmt.Errorf("bea: invalid import demand type %s", convertFinalDemand(input.FinalDemandType))
 	}
 
 	r, _ := tvTemp.Dims()
 	v := mat.NewVecDense(r, nil)
-	switch loc {
-	case Domestic:
+	switch input.Location {
+	case eieiorpc.Location_Domestic:
 		v.SubVec(tvTemp, ivTemp)
-	case Imported:
+	case eieiorpc.Location_Imported:
 		v.CloneVec(ivTemp)
-	case Total:
+	case eieiorpc.Location_Total:
 		v.CloneVec(tvTemp)
 	default:
-		panic(fmt.Errorf("invalid final demand location %s", loc.String()))
+		panic(fmt.Errorf("invalid final demand location %s", input.Location.String()))
 	}
-	if commodities != nil {
+	if input.Commodities != nil {
 		// Set activity in industries we're not interested in to zero.
-		commodities.Mask(v)
+		rpc2mask(input.Commodities).Mask(v)
 	}
-	return v, nil
+	return vec2rpc(v), nil
 }
 
 // FinalDemandSingle returns a final demand vector with the given amount
