@@ -303,20 +303,20 @@ func (e *SpatialEIO) economicImpactsSCC(demand *mat.VecDense, year Year, loc Loc
 func (e *EIO) FinalDemand(ctx context.Context, input *eieiorpc.FinalDemandInput) (*eieiorpc.Vector, error) {
 	td, ok := e.totalFinalDemand[Year(input.Year)]
 	if !ok {
-		return nil, fmt.Errorf("bea: invalid total demand year %d", input.Year)
+		return nil, fmt.Errorf("eieio: invalid total demand year %d", input.Year)
 	}
 	id, ok := e.importFinalDemand[Year(input.Year)]
 	if !ok {
-		return nil, fmt.Errorf("bea: invalid import demand year %d", input.Year)
+		return nil, fmt.Errorf("eieio: invalid import demand year %d", input.Year)
 	}
 
 	tvTemp, ok := td[convertFinalDemand(input.FinalDemandType)]
 	if !ok {
-		return nil, fmt.Errorf("bea: invalid total demand type %s", convertFinalDemand(input.FinalDemandType))
+		return nil, fmt.Errorf("eieio: invalid total demand type `%s`", convertFinalDemand(input.FinalDemandType))
 	}
 	ivTemp, ok := id[convertFinalDemand(input.FinalDemandType)]
 	if !ok {
-		return nil, fmt.Errorf("bea: invalid import demand type %s", convertFinalDemand(input.FinalDemandType))
+		return nil, fmt.Errorf("eieio: invalid import demand type `%s`", convertFinalDemand(input.FinalDemandType))
 	}
 
 	r, _ := tvTemp.Dims()
