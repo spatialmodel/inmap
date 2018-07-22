@@ -29,6 +29,7 @@ import (
 	"github.com/ctessum/geom/op"
 	"github.com/ctessum/geom/proj"
 	"github.com/ctessum/unit"
+	"github.com/gonum/floats"
 	"github.com/kr/pretty"
 )
 
@@ -230,7 +231,7 @@ func TestCreateSurrogates(t *testing.T) {
 					t.Errorf("surrogate %s should sum to 1 for fips %s but "+
 						"instead sums to %f", code, fips, sum)
 				}
-			} else if sum > 1. {
+			} else if sum > 1.00001 {
 				t.Errorf("surrogate %s should sum to less than 1 for fips %s but "+
 					"instead sums to %f", code, fips, sum)
 			}
@@ -251,11 +252,11 @@ func TestCreateSurrogates(t *testing.T) {
 			}
 			sum = gridded.Sum()
 			if covered {
-				if math.Abs(sum-1) > 0.000001 {
+				if !floats.EqualWithinAbsOrRel(sum, 1, 0.000001, 0.000001) {
 					t.Errorf("gridded surrogate %s should sum to 1 for fips %s but "+
 						"instead sums to %f", code, fips, sum)
 				}
-			} else if sum > 1. {
+			} else if sum > 1.0000001 {
 				t.Errorf("gridded surrogate %s should sum to less than 1 for fips %s but "+
 					"instead sums to %f", code, fips, sum)
 			}
@@ -350,7 +351,7 @@ func TestSpatializeRecord(t *testing.T) {
 							t.Errorf("%d area gridded emissions should sum to 1 for scc %s and fips %s but "+
 								"instead sums to %f", i, scc, fips, sum)
 						}
-					} else if sum > 1 || sum <= 0 {
+					} else if sum > 1.00001 || sum <= 0 {
 						t.Errorf("%d area gridded emissions should sum to between 0 and 1 for scc %s "+
 							"and fips %s but instead sums to %f", i, scc, fips, sum)
 					}
