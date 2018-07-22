@@ -643,12 +643,7 @@ func intersection(g geom.Geom, poly geom.Polygonal) geom.Geom {
 	case geom.Polygonal:
 		intersection = g.(geom.Polygonal).Intersection(poly)
 	case geom.Linear:
-		var err error
-		intersection, err = op.Construct(g,
-			poly, op.INTERSECTION)
-		if err != nil {
-			log.Println("error intersecting shapes; continuing without this shape.") // error:", err2)
-		}
+		intersection = g.(geom.Linear).Clip(poly)
 	default:
 		panic(fmt.Errorf("unsupported intersection geometry type %#v", g))
 	}

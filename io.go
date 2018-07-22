@@ -34,7 +34,6 @@ import (
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/encoding/shp"
 	"github.com/ctessum/geom/index/rtree"
-	"github.com/ctessum/geom/op"
 	"github.com/ctessum/geom/proj"
 	"github.com/ctessum/unit"
 	goshp "github.com/jonas-p/go-shp"
@@ -357,11 +356,7 @@ func calcWeightFactor(e geom.Geom, c *Cell) float64 {
 		}
 		weightFactor = intersection.Area() / poly.Area()
 	case geom.Linear:
-		var err error
-		intersection, err := op.Construct(e, c.Polygonal, op.INTERSECTION)
-		if err != nil {
-			log.Fatalf("while allocating emissions to grid: %v", err)
-		}
+		intersection := e.(geom.Linear).Clip(c.Polygonal)
 		if intersection == nil {
 			return 0.
 		}

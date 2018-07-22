@@ -19,7 +19,6 @@ import (
 	"github.com/ctessum/geom/carto"
 	"github.com/ctessum/geom/encoding/shp"
 	"github.com/ctessum/geom/index/rtree"
-	"github.com/ctessum/geom/op"
 
 	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/inmaputil"
@@ -545,11 +544,8 @@ func gridPop(pop *rtree.Rtree, g []geom.Polygon) []float64 {
 				pp := 0.
 				for _, ppp := range pop.SearchIntersect(gg.Bounds()) {
 					pppp := ppp.(*popHolder)
-					g2, err := op.Construct(pppp.Geom, gg, op.INTERSECTION)
-					if err != nil {
-						panic(err)
-					}
-					f := op.Area(g2) / op.Area(pppp.Geom)
+					g2 := pppp.Geom.(geom.Polygonal).Intersection(gg)
+					f := g2.Area() / pppp.Geom.(geom.Polygonal).Area()
 					pp += pppp.TotalPop * f
 				}
 				popOut[i] = pp

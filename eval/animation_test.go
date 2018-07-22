@@ -13,7 +13,6 @@ import (
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/carto"
 	"github.com/ctessum/geom/encoding/shp"
-	"github.com/ctessum/geom/op"
 	"github.com/ctessum/geom/proj"
 
 	"github.com/spatialmodel/inmap"
@@ -465,10 +464,7 @@ func createImageWithInsets(data []geomConc, cmap *carto.ColorMap, states []geom.
 
 		// Draw states
 		for _, g := range states {
-			gg, err := op.Construct(g, rect, op.INTERSECTION)
-			if err != nil {
-				return err
-			}
+			gg := g.Intersection(rect)
 			if gg != nil {
 				mapCanvas.DrawVector(gg, clearFill, stateLineStyle, vgdraw.GlyphStyle{})
 			}
