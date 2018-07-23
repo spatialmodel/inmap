@@ -77,7 +77,7 @@ func TestGEOSChemToInMAPGlobal(t *testing.T) {
 		"cmd/inmap/testdata/preproc/GlobalTestData/GEOSFP.[DATE].A3mstE.2x25.nc",
 		"cmd/inmap/testdata/preproc/GlobalTestData/GEOSFP.ApBp.nc",
 		"cmd/inmap/testdata/preproc/GlobalTestData/ts.[DATE].nc",
-		"cmd/inmap/testdata/preproc/vegtype.global.txt",
+		"cmd/inmap/testdata/preproc/GlobalTestData/vegtype.global.txt",
 		"20150102",
 		"20150103",
 		false,
@@ -93,7 +93,6 @@ func TestGEOSChemToInMAPGlobal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	/*
 		f, err := os.Create("cmd/inmap/testdata/preproc/GlobalTestData/inmapData_GEOSChem_global_goldenfile.nc")
 		if err != nil {
