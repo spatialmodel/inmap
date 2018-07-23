@@ -151,9 +151,9 @@ func NewGEOSChem(GEOSA1, GEOSA3Cld, GEOSA3Dyn, GEOSI3, GEOSA3MstE, GEOSApBp, GEO
 			"IJ" + d + "AVG" + d + "S__BENZ": ppbcToUgKg(78.11, 6),
 			"IJ" + d + "AVG" + d + "S__TOLU": ppbcToUgKg(92.14, 7),
 			"IJ" + d + "AVG" + d + "S__XYLE": ppbcToUgKg(106.16, 8),
-			"IJ" + d + "AVG" + d + "S__NAP":  ppbcToUgKg(128.1705, 10),
-			"IJ" + d + "AVG" + d + "S__POG1": ppbvToUgKg(12),
-			"IJ" + d + "AVG" + d + "S__POG2": ppbvToUgKg(12),
+			//			"IJ" + d + "AVG" + d + "S__NAP":  ppbcToUgKg(128.1705, 10),
+			//			"IJ" + d + "AVG" + d + "S__POG1": ppbvToUgKg(12),
+			//			"IJ" + d + "AVG" + d + "S__POG2": ppbvToUgKg(12),
 		},
 		bVOC: map[string]float64{
 			"IJ" + d + "AVG" + d + "S__ISOP": ppbcToUgKg(68.12, 5),

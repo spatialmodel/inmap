@@ -65,6 +65,57 @@ func BenchmarkWRFChemToInMAP(b *testing.B) {
 	}
 }
 
+func TestGEOSChemToInMAPGlobal(t *testing.T) {
+
+	const tolerance = 1.0e-6
+
+	gc, err := NewGEOSChem(
+		"cmd/inmap/testdata/preproc/GlobalTestData/GEOSFP.[DATE].A1.2x25.nc",
+		"cmd/inmap/testdata/preproc/GlobalTestData/GEOSFP.[DATE].A3cld.2x25.nc",
+		"cmd/inmap/testdata/preproc/GlobalTestData/GEOSFP.[DATE].A3dyn.2x25.nc",
+		"cmd/inmap/testdata/preproc/GlobalTestData/GEOSFP.[DATE].I3.2x25.nc",
+		"cmd/inmap/testdata/preproc/GlobalTestData/GEOSFP.[DATE].A3mstE.2x25.nc",
+		"cmd/inmap/testdata/preproc/GlobalTestData/GEOSFP.ApBp.nc",
+		"cmd/inmap/testdata/preproc/GlobalTestData/ts.[DATE].nc",
+		"cmd/inmap/testdata/preproc/GlobalTestData/vegtype.global.txt",
+		"20150102",
+		"20150103",
+		false,
+		"3h",
+		"24h",
+		true,
+		nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	newData, err := Preprocess(gc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	/*
+		f, err := os.Create("cmd/inmap/testdata/preproc/GlobalTestData/inmapData_GEOSChem_global_goldenfile.nc")
+		if err != nil {
+			panic(err)
+		}
+		err = newData.Write(f, -2.5, 50, 2.5, 2)
+		if err != nil {
+			panic(err)
+		}
+	*/
+	cfg := VarGridConfig{}
+	f2, err := os.Open("cmd/inmap/testdata/preproc/GlobalTestData/inmapData_GEOSChem_global_goldenfile.nc")
+	if err != nil {
+		t.Fatalf("opening golden file: %v", err)
+	}
+	goldenData, err := cfg.LoadCTMData(f2)
+	if err != nil {
+		t.Fatalf("reading golden file: %v", err)
+	}
+	compareCTMData(goldenData, newData, tolerance, t)
+}
+
+/*
 func TestGEOSChemToInMAP(t *testing.T) {
 	const tolerance = 1.0e-6
 
@@ -93,6 +144,15 @@ func TestGEOSChemToInMAP(t *testing.T) {
 		t.Fatal(err)
 	}
 
+
+	f, err := os.Create("cmd/inmap/testdata/preproc/wrong_goldenfile.nc")
+	if err != nil {
+		panic(err)
+	}
+	err = newData.Write(f, -2.5, 50, 2.5, 2)
+	if err != nil {
+		panic(err)
+	}
 	cfg := VarGridConfig{}
 	f2, err := os.Open("cmd/inmap/testdata/preproc/inmapData_GEOSChem_golden.ncf")
 	if err != nil {
@@ -104,6 +164,7 @@ func TestGEOSChemToInMAP(t *testing.T) {
 	}
 	compareCTMData(goldenData, newData, tolerance, t)
 }
+*/
 
 func BenchmarkGEOSChemToInMAP(b *testing.B) {
 	gc, err := NewGEOSChem(
