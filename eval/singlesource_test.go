@@ -15,7 +15,6 @@ import (
 	"github.com/ctessum/geom/carto"
 	"github.com/ctessum/geom/encoding/shp"
 	"github.com/ctessum/geom/index/rtree"
-	"github.com/ctessum/geom/op"
 	"github.com/ctessum/geom/proj"
 
 	"github.com/spatialmodel/inmap/emissions/aep"
@@ -92,10 +91,9 @@ func TestSingleSource(t *testing.T) {
 		for j, g := range wrfGrid {
 			for _, iCell := range tempInmap.SearchIntersect(g.Bounds()) {
 				c := iCell.(*inmapData)
-				isect, err := op.Construct(g, c.Geom, op.INTERSECTION)
-				handle(err)
-				ga := op.Area(g)
-				ia := op.Area(isect)
+				isect := g.Intersection(c.Geom.(geom.Polygonal))
+				ga := g.Area()
+				ia := isect.Area()
 				frac := ia / ga
 				inmapConc[j] += c.TotalPM25 * frac
 			}
@@ -161,10 +159,8 @@ func TestSingleSource(t *testing.T) {
 				{X: d.W, Y: d.S}},
 			}
 			for _, g := range states.SearchIntersect(b.Bounds()) {
-				gg, err := op.Simplify(g, 1000)
-				handle(err)
-				gg, err = op.Construct(gg, b, op.INTERSECTION)
-				handle(err)
+				gg := g.(geom.Polygonal).Simplify(1000).(geom.Polygonal)
+				gg = gg.Intersection(b)
 				cc.DrawVector(gg, clearFill, stateLineStyle, draw.GlyphStyle{})
 			}
 		}
@@ -310,10 +306,9 @@ func (d *dataHolder) popWeight(pop *rtree.Rtree) (wrf, inmap, totalPop []float64
 	for i, g := range d.wrfGrid {
 		for _, gPg := range pop.SearchIntersect(g.Bounds()) {
 			p := gPg.(popHolder)
-			isect, err := op.Construct(p.Geom, g, op.INTERSECTION)
-			handle(err)
-			aI := op.Area(isect)
-			aP := op.Area(p.Geom)
+			isect := p.Geom.(geom.Polygonal).Intersection(g)
+			aI := isect.Area()
+			aP := p.Geom.(geom.Polygonal).Area()
 			totalPop[i] += p.TotalPop * aI / aP
 		}
 	}

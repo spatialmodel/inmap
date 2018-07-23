@@ -128,7 +128,7 @@
   branch = "master"
   name = "github.com/ctessum/polyclip-go"
   packages = ["."]
-  revision = "47eae489f8c995257bc9ac294011c1e3822f981d"
+  revision = "a8ef493cdf2e6d7dd9ad4947c4a580ece44d6001"
 
 [[projects]]
   branch = "master"
