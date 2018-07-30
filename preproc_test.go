@@ -20,6 +20,7 @@ package inmap
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"io"
 	"math"
@@ -29,6 +30,25 @@ import (
 
 	"bitbucket.org/ctessum/sparse"
 )
+
+var regenGoldenFiles bool
+
+func init() {
+	// regen_golden_files is a command line flag that, if invoked as in
+	// `go test -regen_golden_files`, will regenerate the golden files
+	// based on the current output.
+	flag.BoolVar(&regenGoldenFiles, "regen_golden_files", false, "regenerate golden files for preprocessor testing")
+	flag.Parse()
+}
+
+// regenGoldenFile writes out the given data to the given FilePath.
+func regenGoldenFile(data *CTMData, filePath string, x0, y0, dx, dy float64) error {
+	f, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	return data.Write(f, x0, y0, dx, dy)
+}
 
 func TestWRFChemToInMAP(t *testing.T) {
 	const tolerance = 1.0e-6
@@ -42,8 +62,17 @@ func TestWRFChemToInMAP(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	goldenFileName := "cmd/inmap/testdata/preproc/inmapData_WRFChem_golden.ncf"
+
+	if regenGoldenFiles {
+		err := regenGoldenFile(newData, goldenFileName, -2004000, -540000, 12000, 12000)
+		if err != nil {
+			t.Errorf("regenerating golden file: %v", err)
+		}
+	}
+
 	cfg := VarGridConfig{}
-	f2, err := os.Open("cmd/inmap/testdata/preproc/inmapData_WRFChem_golden.ncf")
+	f2, err := os.Open(goldenFileName)
 	if err != nil {
 		t.Fatalf("opening golden file: %v", err)
 	}
@@ -93,8 +122,17 @@ func TestGEOSChemToInMAP(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	goldenFileName := "cmd/inmap/testdata/preproc/inmapData_GEOSChem_golden.ncf"
+
+	if regenGoldenFiles {
+		err := regenGoldenFile(newData, goldenFileName, -2.5, 50, 2.5, 2)
+		if err != nil {
+			t.Errorf("regenerating golden file: %v", err)
+		}
+	}
+
 	cfg := VarGridConfig{}
-	f2, err := os.Open("cmd/inmap/testdata/preproc/inmapData_GEOSChem_golden.ncf")
+	f2, err := os.Open(goldenFileName)
 	if err != nil {
 		t.Fatalf("opening golden file: %v", err)
 	}
@@ -130,6 +168,55 @@ func BenchmarkGEOSChemToInMAP(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
+}
+
+func TestGEOSChemToInMAP_new(t *testing.T) {
+	const tolerance = 1.0e-6
+
+	gc, err := NewGEOSChem(
+		"cmd/inmap/testdata/preproc/geoschem-new/GEOSFP.[DATE].A1.2x25.nc",
+		"cmd/inmap/testdata/preproc/geoschem-new/GEOSFP.[DATE].A3cld.2x25.nc",
+		"cmd/inmap/testdata/preproc/geoschem-new/GEOSFP.[DATE].A3dyn.2x25.nc",
+		"cmd/inmap/testdata/preproc/geoschem-new/GEOSFP.[DATE].I3.2x25.nc",
+		"cmd/inmap/testdata/preproc/geoschem-new/GEOSFP.[DATE].A3mstE.2x25.nc",
+		"cmd/inmap/testdata/preproc/geoschem-new/GEOSFP.ApBp.nc",
+		"cmd/inmap/testdata/preproc/geoschem-new/ts.[DATE].nc",
+		"cmd/inmap/testdata/preproc/geoschem-new/vegtype.global",
+		"20150102",
+		"20150103",
+		false,
+		"3h",
+		"24h",
+		false,
+		nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	newData, err := Preprocess(gc)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	goldenFileName := "cmd/inmap/testdata/preproc/geoschem-new/inmapData_GEOSChem_golden.ncf"
+
+	if regenGoldenFiles {
+		err := regenGoldenFile(newData, goldenFileName, -2.5, 50, 2.5, 2)
+		if err != nil {
+			t.Errorf("regenerating golden file: %v", err)
+		}
+	}
+
+	cfg := VarGridConfig{}
+	f2, err := os.Open(goldenFileName)
+	if err != nil {
+		t.Fatalf("opening golden file: %v", err)
+	}
+	goldenData, err := cfg.LoadCTMData(f2)
+	if err != nil {
+		t.Fatalf("reading golden file: %v", err)
+	}
+	compareCTMData(goldenData, newData, tolerance, t)
 }
 
 func compareCTMData(goldenData, newData *CTMData, tolerance float64, t *testing.T) {
