@@ -488,7 +488,7 @@ func NewOutputter(fileName string, allLayers bool, outputVariables map[string]st
 			if len(arg) != 2 {
 				return nil, fmt.Errorf("inmap: got %d arguments for function 'isinf', but need 2", len(arg))
 			}
-			return math.IsInf(arg[0].(float64), arg[1].(float64)), nil
+			return math.IsInf(arg[0].(float64), arg[1].(int)), nil
 		},
 	}
 
