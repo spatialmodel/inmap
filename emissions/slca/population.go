@@ -33,8 +33,8 @@ import (
 	"github.com/ctessum/geom/index/rtree"
 	"github.com/ctessum/geom/proj"
 	"github.com/ctessum/requestcache"
-	"github.com/spatialmodel/inmap/epi"
 	eieiorpc "github.com/spatialmodel/inmap/emissions/slca/eieio/grpc/gogrpc"
+	"github.com/spatialmodel/inmap/epi"
 )
 
 func init() {
@@ -155,6 +155,9 @@ func (c *CSTConfig) gridPopulation(pop *rtree.Rtree, popIndices map[string]int) 
 // regionalIncidence calculates region-averaged underlying incidence rates.
 func (c *CSTConfig) regionalIncidence(ctx context.Context, popIndex *rtree.Rtree, popIndices map[string]int,
 	mort []*mortality, mortIndices map[string]int, year int, hr string) (*rtree.Rtree, error) {
+	if err := c.lazyLoadSR(); err != nil {
+		return nil, err
+	}
 	ncpu := runtime.GOMAXPROCS(0)
 
 	HR, ok := c.hr[hr]
