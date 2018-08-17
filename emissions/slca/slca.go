@@ -27,7 +27,7 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/spatialmodel/epi"
+	"github.com/spatialmodel/inmap/epi"
 	"github.com/spatialmodel/inmap/emissions/aep"
 	"github.com/spatialmodel/inmap/emissions/aep/aeputil"
 

@@ -25,7 +25,7 @@ import (
 
 	"bitbucket.org/ctessum/sparse"
 
-	"github.com/spatialmodel/epi"
+	"github.com/spatialmodel/inmap/epi"
 	eieiorpc "github.com/spatialmodel/inmap/emissions/slca/eieio/grpc/gogrpc"
 
 	"gonum.org/v1/gonum/mat"

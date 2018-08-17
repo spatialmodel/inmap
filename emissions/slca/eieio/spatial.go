@@ -26,7 +26,7 @@ import (
 	"sync"
 
 	"github.com/ctessum/requestcache"
-	"github.com/spatialmodel/epi"
+	"github.com/spatialmodel/inmap/epi"
 	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/emissions/aep"
 	"gonum.org/v1/gonum/mat"

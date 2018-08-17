@@ -35,7 +35,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/golang/build/autocertcache"
 	"github.com/sirupsen/logrus"
-	"github.com/spatialmodel/epi"
+	"github.com/spatialmodel/inmap/epi"
 	"github.com/spatialmodel/inmap/emissions/slca/eieio"
 	"golang.org/x/crypto/acme/autocert"
 

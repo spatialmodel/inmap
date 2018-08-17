@@ -34,7 +34,7 @@ import (
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/proj"
 	"github.com/ctessum/requestcache"
-	"github.com/spatialmodel/epi"
+	"github.com/spatialmodel/inmap/epi"
 
 	"bitbucket.org/ctessum/sparse"
 )

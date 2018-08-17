@@ -33,7 +33,7 @@ import (
 	"github.com/ctessum/geom/index/rtree"
 	"github.com/ctessum/geom/proj"
 	"github.com/ctessum/requestcache"
-	"github.com/spatialmodel/epi"
+	"github.com/spatialmodel/inmap/epi"
 	eieiorpc "github.com/spatialmodel/inmap/emissions/slca/eieio/grpc/gogrpc"
 )
 

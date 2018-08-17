@@ -60,7 +60,7 @@ import (
 	"gonum.org/v1/plot/vg/vgimg"
 	"google.golang.org/grpc"
 
-	"github.com/spatialmodel/epi"
+	"github.com/spatialmodel/inmap/epi"
 	"github.com/spatialmodel/inmap/emissions/slca"
 	eieiorpc "github.com/spatialmodel/inmap/emissions/slca/eieio/grpc/gogrpc"
 )

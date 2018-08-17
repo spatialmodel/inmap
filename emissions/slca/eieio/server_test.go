@@ -27,7 +27,7 @@ import (
 	"testing"
 
 	"github.com/BurntSushi/toml"
-	"github.com/spatialmodel/epi"
+	"github.com/spatialmodel/inmap/epi"
 	eieiorpc "github.com/spatialmodel/inmap/emissions/slca/eieio/grpc/gogrpc"
 )
 
