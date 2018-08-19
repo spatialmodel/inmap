@@ -1,0 +1,78 @@
+// Copyright © 2018 the InMAP authors.
+// This file is part of InMAP.
+
+// InMAP is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// InMAP is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
+
+syntax = "proto3";
+
+package cloudrpc;
+
+service CloudRPC {
+  // RunJob performs an InMAP simulation and returns the paths to the
+  // output file(s).
+  rpc RunJob(JobSpec) returns (JobStatus) {}
+
+  // OutputAddresses returns status and the addresses the output file(s) of the
+  // requested simulation name.
+  rpc Status(JobName) returns(JobStatus) {}
+
+  // Output returns the output file(s) of the
+  // requested simulation name.
+  rpc Output(JobName) returns(JobOutput) {}
+
+}
+
+// JobSpec is the input for the RunJob service.
+message JobSpec {
+  // Version is the required InMAP version.
+  string Version = 1;
+
+  // Name is a user-specified name for the job.
+  string Name = 2;
+
+  // Cmd is the command to be run, e.g., [inmap run steady]
+  repeated string Cmd = 3;
+
+  // Args are the command line arguments, e.g., [--Layers, 2, --steady, true]
+  repeated string Args = 4;
+
+  // MemoryGB specifies the required gigabytes of RAM memory for the
+  // simulation.
+  int32 MemoryGB = 5;
+
+  // StorageGB specifies the required gigabytes of hard-disk storage for the
+  // simulation.
+  int32 StorageGB = 6;
+
+  // FileData holds the contents of any local files referred to by Args
+  map<string,bytes> FileData = 7;
+}
+
+message JobStatus {
+  // Status holds the current status of the job.
+  string Status = 1;
+}
+
+message JobOutput {
+  // Files holds the contents of each output file.
+  map<string,bytes> Files = 1;
+}
+
+message JobName {
+    // Version is the required InMAP version.
+    string Version = 1;
+
+    // Name is a user-specified name for the job.
+    string Name = 2;
+}

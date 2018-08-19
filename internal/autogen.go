@@ -35,7 +35,7 @@ import (
 func main() {
 
 	// Generate documentation for the available commands.
-	doc.GenMarkdownTree(inmaputil.Root, "./inmap/doc/")
+	doc.GenMarkdownTree(inmaputil.Root, "./cmd/inmap/doc/")
 
 	writeOutputOptions()
 }
@@ -75,7 +75,7 @@ func loadConfig(file string) (*config, error) {
 // writeOutputOptions creates a list of output options in markdown format.
 func writeOutputOptions() {
 
-	cfg, err := loadConfig("inmap/configExample.toml")
+	cfg, err := loadConfig("cmd/inmap/configExample.toml")
 	if err != nil {
 		log.Fatal(err)
 	}

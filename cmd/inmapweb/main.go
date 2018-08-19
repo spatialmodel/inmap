@@ -35,9 +35,13 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/golang/build/autocertcache"
 	"github.com/sirupsen/logrus"
-	"github.com/spatialmodel/inmap/epi"
+
+	"github.com/spatialmodel/inmap/cloud"
 	"github.com/spatialmodel/inmap/emissions/slca/eieio"
+	"github.com/spatialmodel/inmap/epi"
 	"golang.org/x/crypto/acme/autocert"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/testdata"
@@ -49,6 +53,8 @@ var (
 	host       = flag.String("host", "", "Address to serve from")
 	tlsPort    = flag.String("tls-port", "10000", "Port to listen for encrypted requests")
 	port       = flag.String("port", "8080", "Port to listen for unencrypted requests")
+	bucket     = flag.String("bucket", "file://test", "Name of bucket for saving data")
+	kubeCfg    = flag.String("kube_cfg", "$HOME/.kube/config", "Location of kubernetes configuration file.")
 )
 
 var logger *logrus.Logger
@@ -118,9 +124,35 @@ func main() {
 	}
 	s.Log = logger
 
+	var inmapServer *cloud.Client
+	if *production {
+		config, err := clientcmd.BuildConfigFromFlags("", os.ExpandEnv(*kubeCfg))
+		if err != nil {
+			logger.WithError(err).Fatal("failed to read Kubernetes configuration")
+		}
+		clientset, err := kubernetes.NewForConfig(config)
+		if err != nil {
+			logger.WithError(err).Fatal("failed to initialize Kubernetes")
+		}
+
+		inmapServer, err = cloud.NewClient(clientset, *bucket)
+		if err != nil {
+			logger.WithError(err).Fatal("failed to initialize InMAP server")
+		}
+	} else {
+		inmapServer, err = cloud.NewFakeClient(nil, false, *bucket)
+		if err != nil {
+			logger.WithError(err).Fatal("failed to initialize fake InMAP server")
+		}
+	}
+
+	mx := http.NewServeMux()
+	mx.Handle("/", s)
+	mx.Handle("/cloudrpc", inmapServer)
+
 	var m *autocert.Manager
 
-	httpsSrv := makeHTTPServer(s)
+	httpsSrv := makeHTTPServer(mx)
 	httpsSrv.Addr = ":" + *tlsPort
 	if *production {
 		hostPolicy := func(ctx context.Context, reqHost string) error {

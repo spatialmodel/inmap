@@ -4,7 +4,6 @@ A reduced-form air quality model.
 
 ### Synopsis
 
-
 InMAP is a reduced-form air quality model for fine particulate matter (PM2.5).
 Use the subcommands specified below to access the model functionality.
 Additional information is available at http://inmap.spatialmodel.com.
@@ -21,11 +20,13 @@ Refer to https://github.com/spf13/viper for additional configuration information
 
 ```
       --config string   
-              config specifies the configuration file location.
+                                      config specifies the configuration file location.
   -h, --help            help for inmap
 ```
 
 ### SEE ALSO
+
+* [inmap cloud](inmap_cloud.md)	 - Interact with a Kubernetes cluster.
 * [inmap grid](inmap_grid.md)	 - Create a variable resolution grid
 * [inmap preproc](inmap_preproc.md)	 - Preprocess CTM output
 * [inmap run](inmap_run.md)	 - Run the model.
