@@ -148,8 +148,8 @@ func main() {
 	}
 
 	mx := http.NewServeMux()
+	mx.Handle("/cloudrpc.CloudRPC/", inmapServer)
 	mx.Handle("/", s)
-	mx.Handle("/cloudrpc", inmapServer)
 
 	var m *autocert.Manager
 
@@ -160,8 +160,8 @@ func main() {
 			if reqHost == *host || reqHost == "www."+*host {
 				return nil
 			}
-			logger.Errorf("acme/autocert: only %s or www.%s host is allowed", *host, *host)
-			return fmt.Errorf("acme/autocert: only %s or www.%s host is allowed", *host, *host)
+			logger.Errorf("acme/autocert: got request for %s host but only %s or www.%s host is allowed", reqHost, *host, *host)
+			return fmt.Errorf("acme/autocert: got request for %s host but only %s or www.%s host is allowed", reqHost, *host, *host)
 		}
 
 		var cache autocert.Cache
