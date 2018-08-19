@@ -148,7 +148,11 @@ func main() {
 	}
 
 	mx := http.NewServeMux()
-	mx.Handle("/cloudrpc.CloudRPC/", inmapServer)
+	mx.HandleFunc("/cloudrpc.CloudRPC/", func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		r = r.WithContext(context.WithValue(ctx, "user", "default_user"))
+		inmapServer.ServeHTTP(w, r)
+	})
 	mx.Handle("/", s)
 
 	var m *autocert.Manager

@@ -37,7 +37,10 @@ func (c *Client) jobOutputAddresses(ctx context.Context, name string, cmd []stri
 	for _, f := range inmaputil.OutputFiles() {
 		outputFiles[f] = struct{}{}
 	}
-	user := getUser(ctx)
+	user, err := getUser(ctx)
+	if err != nil {
+		return nil, err
+	}
 	o := make(map[string]string)
 	execCmd, _, err := inmaputil.Root.Find(cmd)
 	if err != nil {
@@ -80,7 +83,10 @@ func (c *Client) stageInputs(ctx context.Context, job *cloudrpc.JobSpec) error {
 		return err
 	}
 
-	user := getUser(ctx)
+	user, err := getUser(ctx)
+	if err != nil {
+		return err
+	}
 	for fname, data := range job.FileData {
 		filePath := user + "/" + job.Name + "/" + fname
 		if err := writeBlob(ctx, bucket, filePath, data); err != nil {

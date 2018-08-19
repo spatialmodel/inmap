@@ -82,7 +82,10 @@ func (c *Client) RunJob(ctx context.Context, job *cloudrpc.JobSpec) (*cloudrpc.J
 	if err := c.setOutputPaths(ctx, job); err != nil {
 		return nil, err
 	}
-	user := getUser(ctx)
+	user, err := getUser(ctx)
+	if err != nil {
+		return nil, err
+	}
 	k8sJob := createJob(userJobName(user, job.Name), job.Cmd, job.Args, c.Image, core.ResourceList{
 		core.ResourceMemory:  resource.MustParse(fmt.Sprintf("%dGi", job.MemoryGB)),
 		core.ResourceStorage: resource.MustParse(fmt.Sprintf("%dGi", job.StorageGB)),
@@ -107,7 +110,10 @@ func (c *Client) getk8sJob(ctx context.Context, job *cloudrpc.JobName) (*batch.J
 	if job.Version != inmap.Version {
 		return nil, fmt.Errorf("incorrect InMAP version: %s != %s", job.Version, inmap.Version)
 	}
-	user := getUser(ctx)
+	user, err := getUser(ctx)
+	if err != nil {
+		return nil, err
+	}
 	jobName := userJobName(user, job.Name)
 	jobList, err := c.jobControl.List(meta.ListOptions{})
 	if err != nil {
@@ -122,8 +128,12 @@ func (c *Client) getk8sJob(ctx context.Context, job *cloudrpc.JobName) (*batch.J
 }
 
 // getUser returns the "user" value of ctx.
-func getUser(ctx context.Context) string {
-	return ctx.Value("user").(string)
+func getUser(ctx context.Context) (string, error) {
+	u := ctx.Value("user")
+	if _, ok := u.(string); !ok {
+		return "", fmt.Errorf("inmap/cloud: invalid user '%v'", u)
+	}
+	return ctx.Value("user").(string), nil
 }
 
 // userJobName returns a combination of the user and job name.
