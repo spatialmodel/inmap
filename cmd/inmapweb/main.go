@@ -41,6 +41,7 @@ import (
 	"github.com/spatialmodel/inmap/epi"
 	"golang.org/x/crypto/acme/autocert"
 	"k8s.io/client-go/kubernetes"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"google.golang.org/grpc/grpclog"
