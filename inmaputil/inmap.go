@@ -23,6 +23,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/spatialmodel/inmap"
@@ -122,35 +123,56 @@ func Run(CobraCommand *cobra.Command, LogFile string, OutputFile string, OutputA
 
 	startTime := time.Now()
 
+	var upload uploader
+
 	// Start a function to receive and print log messages.
-	logfile, err := os.Create(LogFile)
+	logfile, err := os.Create(upload.maybeUpload(LogFile))
 	if err != nil {
 		return fmt.Errorf("inmap: problem creating log file: %v", err)
 	}
-	defer logfile.Close()
 	mw := io.MultiWriter(CobraCommand.OutOrStdout(), logfile)
 	log.SetOutput(mw)
 	cConverge := make(chan inmap.ConvergenceStatus)
 	cLog := make(chan *inmap.SimulationStatus)
 	msgLog := make(chan string)
+	var wg sync.WaitGroup
+	wg.Add(3)
 	go func() {
-		for {
-			select {
-			case msg := <-cConverge:
-				log.Println(msg.String())
-			case msg := <-cLog:
-				log.Println(msg.String())
-			case msg := <-msgLog:
-				log.Println(msg)
-			}
+		for msg := range cConverge {
+			log.Println(msg.String())
 		}
+		wg.Done()
+	}()
+	go func() {
+		for msg := range cLog {
+			log.Println(msg.String())
+		}
+		wg.Done()
+	}()
+	go func() {
+		for msg := range msgLog {
+			log.Println(msg)
+		}
+		wg.Done()
 	}()
 
-	o, err := inmap.NewOutputter(OutputFile, OutputAllLayers, OutputVariables, nil, m)
+	defer func() { // Wait for the logging to finish.
+		close(cConverge)
+		close(cLog)
+		close(msgLog)
+		wg.Wait()
+		logfile.Close()
+	}()
+
+	o, err := inmap.NewOutputter(upload.maybeUpload(OutputFile), OutputAllLayers, OutputVariables, nil, m)
 	if err != nil {
 		return err
 	}
 	log.Println("Parsing output variable expressions...")
+
+	if upload.err != nil {
+		return upload.err
+	}
 
 	sr, err := spatialRef(VarGrid)
 	if err != nil {
@@ -238,6 +260,7 @@ func Run(CobraCommand *cobra.Command, LogFile string, OutputFile string, OutputA
 		RunFuncs:  append(runFuncs, addRun...),
 		CleanupFuncs: append([]inmap.DomainManipulator{
 			o.Output(sr),
+			upload.uploadOutput,
 		}, addCleanup...),
 	}
 

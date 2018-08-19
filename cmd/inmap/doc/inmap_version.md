@@ -4,7 +4,6 @@ Print the version number
 
 ### Synopsis
 
-
 version prints the version number of this version of InMAP.
 
 ```
@@ -21,9 +20,10 @@ inmap version [flags]
 
 ```
       --config string   
-              config specifies the configuration file location.
+                                      config specifies the configuration file location.
 ```
 
 ### SEE ALSO
+
 * [inmap](inmap.md)	 - A reduced-form air quality model.
 

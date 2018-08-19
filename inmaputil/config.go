@@ -20,8 +20,10 @@ package inmaputil
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -74,6 +76,17 @@ func checkOutputFile(f string) (string, error) {
 		return "", fmt.Errorf(`you need to specify an output file configuration variable (for example: OutputFile="output.shp"`)
 	}
 	f = os.ExpandEnv(f)
+	if IsBlob(f) {
+		url, err := url.Parse(f)
+		if err != nil {
+			return f, err
+		}
+		_, err = OpenBucket(context.TODO(), url.Scheme+"://"+url.Host)
+		if err != nil {
+			return f, fmt.Errorf("inmap: error when checking OutputFile location: %v", err)
+		}
+		return f, nil
+	}
 	outdir := filepath.Dir(f)
 	if _, err := os.Stat(outdir); err != nil {
 		return f, fmt.Errorf("inmap: the OutputFile directory doesn't exist: %v", err)
@@ -127,6 +140,7 @@ func VarGridConfig(cfg *viper.Viper) (*inmap.VarGridConfig, error) {
 	if err != nil {
 		return nil, fmt.Errorf("VarGrid.Ynests: %v", err)
 	}
+	ctx := context.TODO()
 	c := inmap.VarGridConfig{
 		VariableGridXo:       cfg.GetFloat64("VarGrid.VariableGridXo"),
 		VariableGridYo:       cfg.GetFloat64("VarGrid.VariableGridYo"),
@@ -138,10 +152,10 @@ func VarGridConfig(cfg *viper.Viper) (*inmap.VarGridConfig, error) {
 		PopDensityThreshold:  cfg.GetFloat64("VarGrid.PopDensityThreshold"),
 		PopThreshold:         cfg.GetFloat64("VarGrid.PopThreshold"),
 		PopConcThreshold:     cfg.GetFloat64("VarGrid.PopConcThreshold"),
-		CensusFile:           maybeDownload(os.ExpandEnv(cfg.GetString("VarGrid.CensusFile")), outChan()),
+		CensusFile:           maybeDownload(ctx, os.ExpandEnv(cfg.GetString("VarGrid.CensusFile")), outChan()),
 		CensusPopColumns:     expandStringSlice(cfg.GetStringSlice("VarGrid.CensusPopColumns")),
 		PopGridColumn:        os.ExpandEnv(cfg.GetString("VarGrid.PopGridColumn")),
-		MortalityRateFile:    maybeDownload(os.ExpandEnv(cfg.GetString("VarGrid.MortalityRateFile")), outChan()),
+		MortalityRateFile:    maybeDownload(ctx, os.ExpandEnv(cfg.GetString("VarGrid.MortalityRateFile")), outChan()),
 		MortalityRateColumns: GetStringMapString("VarGrid.MortalityRateColumns", cfg),
 		GridProj:             os.ExpandEnv(cfg.GetString("VarGrid.GridProj")),
 	}

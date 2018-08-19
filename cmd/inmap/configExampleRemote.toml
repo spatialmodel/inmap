@@ -16,7 +16,7 @@ VariableGridData = "${TEST_URL}/inmapVarGrid.gob"
 # shapefile must be the same as the projection InMAP uses.
 # Can include environment variables.
 EmissionsShapefiles = [
-	"${TEST_URL}/nestedTestEmis.zip"
+	"${TEST_URL}/testEmis.shp"
 ]
 
 # EmissionUnits gives the units that the input emissions are in.
@@ -32,7 +32,7 @@ HTTPAddress = ":8080"
 
 # OutputFile is the path to the desired output shapefile location. It can
 # include environment variables.
-OutputFile = "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/output_${InMAPRunType}.shp"
+OutputFile = "file://test_bucket/test_user/test_job/output_${InMAPRunType}.shp"
 
 # LogFile is the path to the desired logfile location. It can include
 # environment variables. If LogFile is left blank, the logfile will be saved in
@@ -119,7 +119,7 @@ PopThreshold= 25000.0
 PopConcThreshold= 0.00000000001
 
 # CensusFile is the path to the shapefile holding population information.
-CensusFile= "${TEST_URL}/testPopulation.zip"
+CensusFile= "${TEST_URL}/testPopulation.shp"
 
 # CensusPopColumns is a list of the data fields in CensusFile that should
 # be included as population estimates in the model. They can be population
@@ -134,7 +134,7 @@ PopGridColumn= "TotalPop"
 
 # MortalityRateFile is the path to the shapefile containing baseline
 # mortality rate data.
-MortalityRateFile= "${TEST_URL}/testMortalityRate.zip"
+MortalityRateFile= "${TEST_URL}/testMortalityRate.shp"
 
 # MortalityRateColumns maps the names of each input population group to the name
 # of the field in MortalityRateFile that contains its respective baseline

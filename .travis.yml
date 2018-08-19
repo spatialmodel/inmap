@@ -15,6 +15,9 @@ before_install:
 
 install:
 - dep ensure
+- rm -r vendor/k8s.io
+- go get k8s.io/client-go/...
+- go install ./cmd/inmap
 script:
 - go test -short ./...
 - bash ./.travis/test_coverage.sh

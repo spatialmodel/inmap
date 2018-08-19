@@ -67,10 +67,31 @@ func TestInMAPDynamic(t *testing.T) {
 	}
 }
 
-func TestInMAPDynamicRemote(t *testing.T) {
+func TestInMAPDynamicRemote_http(t *testing.T) {
+	if err := os.Mkdir("test_bucket", os.ModePerm); err != nil {
+		t.Error(err)
+	}
+	defer os.RemoveAll("test_bucket")
 	srv := httptest.NewServer(http.FileServer(http.Dir("../cmd/inmap/testdata/")))
 	defer srv.Close()
 	os.Setenv("TEST_URL", srv.URL)
+
+	Cfg.Set("static", false)
+	Cfg.Set("createGrid", false) // this isn't used for the dynamic grid
+	os.Setenv("InMAPRunType", "dynamic")
+	Cfg.Set("config", "../cmd/inmap/configExampleRemote.toml")
+	Root.SetArgs([]string{"run", "steady"})
+	if err := Root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestInMAPDynamicRemote_bucket(t *testing.T) {
+	if err := os.Mkdir("test_bucket", os.ModePerm); err != nil {
+		t.Error(err)
+	}
+	defer os.RemoveAll("test_bucket")
+	os.Setenv("TEST_URL", "file://../cmd/inmap/testdata")
 
 	Cfg.Set("static", false)
 	Cfg.Set("createGrid", false) // this isn't used for the dynamic grid
