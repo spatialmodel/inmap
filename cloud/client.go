@@ -21,6 +21,7 @@ package cloud
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"github.com/spatialmodel/inmap"
@@ -138,7 +139,7 @@ func getUser(ctx context.Context) (string, error) {
 
 // userJobName returns a combination of the user and job name.
 func userJobName(user, name string) string {
-	return user + "_" + name
+	return strings.Replace(user, "_", "-", -1) + "-" + strings.Replace(name, "_", "-", -1)
 }
 
 func (c *Client) jobStatus(j *batch.Job) (*cloudrpc.JobStatus, error) {
