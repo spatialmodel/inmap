@@ -88,8 +88,7 @@ func (c *Client) RunJob(ctx context.Context, job *cloudrpc.JobSpec) (*cloudrpc.J
 		return nil, err
 	}
 	k8sJob := createJob(userJobName(user, job.Name), job.Cmd, job.Args, c.Image, core.ResourceList{
-		core.ResourceMemory:  resource.MustParse(fmt.Sprintf("%dGi", job.MemoryGB)),
-		core.ResourceStorage: resource.MustParse(fmt.Sprintf("%dGi", job.StorageGB)),
+		core.ResourceMemory: resource.MustParse(fmt.Sprintf("%dGi", job.MemoryGB)),
 	})
 	k8sJobResult, err := c.jobControl.Create(k8sJob)
 	if err != nil {

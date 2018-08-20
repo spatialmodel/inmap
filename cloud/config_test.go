@@ -27,7 +27,7 @@ import (
 )
 
 func TestRunInputFromViper(t *testing.T) {
-	js, err := inmaputil.CloudJobSpec("test_job", []string{"run", "steady"}, 1, 10)
+	js, err := inmaputil.CloudJobSpec("test_job", []string{"run", "steady"}, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,8 +115,5 @@ func TestRunInputFromViper(t *testing.T) {
 
 	if js.MemoryGB != 1 {
 		t.Errorf("memory: %d != 1", js.MemoryGB)
-	}
-	if js.StorageGB != 10 {
-		t.Errorf("storage: %d != 10", js.StorageGB)
 	}
 }

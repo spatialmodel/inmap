@@ -38,7 +38,7 @@ func TestClient_fake(t *testing.T) {
 	os.Mkdir("test", os.ModePerm)
 	defer os.RemoveAll("test")
 
-	jobSpec, err := inmaputil.CloudJobSpec("test_job", []string{"run", "steady"}, 1, 10)
+	jobSpec, err := inmaputil.CloudJobSpec("test_job", []string{"run", "steady"}, 1)
 	if err != nil {
 		t.Fatal(err)
 	}

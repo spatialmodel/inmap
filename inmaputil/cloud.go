@@ -51,7 +51,6 @@ func CloudJobStart(ctx context.Context, c cloudrpc.CloudRPCClient) error {
 		Cfg.GetString("job_name"),
 		Cfg.GetStringSlice("cmds"),
 		int32(Cfg.GetInt("memory_gb")),
-		int32(Cfg.GetInt("storage_gb")),
 	)
 	if err != nil {
 		return err
@@ -104,19 +103,18 @@ func CloudJobOutput(ctx context.Context, c cloudrpc.CloudRPCClient) error {
 // CloudJobSpec initializes a cloudrpc.JobSpec object from the given
 // configuration information. memoryGB and storageGB are the required
 // amounts of RAM and hard-disk storage, respectively, in gigabytes.
-func CloudJobSpec(name string, cmd []string, memoryGB, storageGB int32) (*cloudrpc.JobSpec, error) {
+func CloudJobSpec(name string, cmd []string, memoryGB int32) (*cloudrpc.JobSpec, error) {
 	inputFields := make(map[string]struct{})
 	for _, f := range InputFiles() {
 		inputFields[f] = struct{}{}
 	}
 
 	js := &cloudrpc.JobSpec{
-		Version:   inmap.Version,
-		Name:      name,
-		Cmd:       cmd,
-		MemoryGB:  memoryGB,
-		StorageGB: storageGB,
-		FileData:  make(map[string][]byte),
+		Version:  inmap.Version,
+		Name:     name,
+		Cmd:      cmd,
+		MemoryGB: memoryGB,
+		FileData: make(map[string][]byte),
 	}
 
 	execCmd, _, err := Root.Find(cmd)

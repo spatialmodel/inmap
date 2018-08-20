@@ -207,8 +207,6 @@ inmap cloud start [flags]
                                                                    simulation runs with a dynamic grid that changes resolution
                                                                    depending on spatial gradients in population density and
                                                                    concentration.
-      --storage_gb int                               
-                                                     							storage_gb specifies the gigabytes of hard-disk storage required for this job. (default 3)
 ```
 
 ### Options inherited from parent commands

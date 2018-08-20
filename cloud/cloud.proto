@@ -53,7 +53,7 @@ message JobSpec {
 
   // StorageGB specifies the required gigabytes of hard-disk storage for the
   // simulation.
-  int32 StorageGB = 6;
+  // int32 StorageGB = 6;
 
   // FileData holds the contents of any local files referred to by Args
   map<string,bytes> FileData = 7;

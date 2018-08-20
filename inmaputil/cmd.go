@@ -585,13 +585,6 @@ func init() {
 			defaultVal: 20,
 			flagsets:   []*pflag.FlagSet{cloudStartCmd.Flags()},
 		},
-		{
-			name: "storage_gb",
-			usage: `
-							storage_gb specifies the gigabytes of hard-disk storage required for this job.`,
-			defaultVal: 3,
-			flagsets:   []*pflag.FlagSet{cloudStartCmd.Flags()},
-		},
 	}
 
 	Cfg = viper.New()

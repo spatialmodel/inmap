@@ -40,9 +40,6 @@ type JobSpec struct {
 	// MemoryGB specifies the required gigabytes of RAM memory for the
 	// simulation.
 	MemoryGB int32
-	// StorageGB specifies the required gigabytes of hard-disk storage for the
-	// simulation.
-	StorageGB int32
 	// FileData holds the contents of any local files referred to by Args
 	FileData map[string][]byte
 }
@@ -87,14 +84,6 @@ func (m *JobSpec) GetMemoryGB() (x int32) {
 	return m.MemoryGB
 }
 
-// GetStorageGB gets the StorageGB of the JobSpec.
-func (m *JobSpec) GetStorageGB() (x int32) {
-	if m == nil {
-		return x
-	}
-	return m.StorageGB
-}
-
 // GetFileData gets the FileData of the JobSpec.
 func (m *JobSpec) GetFileData() (x map[string][]byte) {
 	if m == nil {
@@ -127,10 +116,6 @@ func (m *JobSpec) MarshalToWriter(writer jspb.Writer) {
 
 	if m.MemoryGB != 0 {
 		writer.WriteInt32(5, m.MemoryGB)
-	}
-
-	if m.StorageGB != 0 {
-		writer.WriteInt32(6, m.StorageGB)
 	}
 
 	if len(m.FileData) > 0 {
@@ -170,8 +155,6 @@ func (m *JobSpec) UnmarshalFromReader(reader jspb.Reader) *JobSpec {
 			m.Args = append(m.Args, reader.ReadString())
 		case 5:
 			m.MemoryGB = reader.ReadInt32()
-		case 6:
-			m.StorageGB = reader.ReadInt32()
 		case 7:
 			if m.FileData == nil {
 				m.FileData = map[string][]byte{}
