@@ -41,8 +41,7 @@ import (
 	"github.com/spatialmodel/inmap/epi"
 	"golang.org/x/crypto/acme/autocert"
 	"k8s.io/client-go/kubernetes"
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/rest"
 
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/testdata"
@@ -55,7 +54,6 @@ var (
 	tlsPort    = flag.String("tls-port", "10000", "Port to listen for encrypted requests")
 	port       = flag.String("port", "8080", "Port to listen for unencrypted requests")
 	bucket     = flag.String("bucket", "file://test", "Name of bucket for saving data")
-	kubeCfg    = flag.String("kube_cfg", "$HOME/.kube/config", "Location of kubernetes configuration file.")
 )
 
 var logger *logrus.Logger
@@ -127,9 +125,9 @@ func main() {
 
 	var inmapServer *cloud.Client
 	if *production {
-		config, err := clientcmd.BuildConfigFromFlags("", os.ExpandEnv(*kubeCfg))
+		config, err := rest.InClusterConfig()
 		if err != nil {
-			logger.WithError(err).Fatal("failed to read Kubernetes configuration")
+			logger.WithError(err).Fatal("failed to load in-cluster Kubernetes configuration")
 		}
 		clientset, err := kubernetes.NewForConfig(config)
 		if err != nil {
