@@ -192,11 +192,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:a086f76586ce6cf21b8a805b8568edc58ffab46d39897a0ce6047b6f9e108487"
+  digest = "1:58e4c8c88dcf9484351fc998da4bb23dfb3676623f582d9a6d46228ed12c9742"
   name = "github.com/ctessum/polyclip-go"
   packages = ["."]
   pruneopts = ""
-  revision = "a8ef493cdf2e6d7dd9ad4947c4a580ece44d6001"
+  revision = "6614925d6d7087b7afcd4c55571554f67efd2ec3"
 
 [[projects]]
   branch = "master"
@@ -453,14 +453,6 @@
   ]
   pruneopts = ""
   revision = "23c074d0eceb2b8a5bfdbb271ab780cde70f05a8"
-
-[[projects]]
-  digest = "1:7ab38c15bd21e056e3115c8b526d201eaf74e0308da9370997c6b3c187115d36"
-  name = "github.com/imdario/mergo"
-  packages = ["."]
-  pruneopts = ""
-  revision = "9f23e2d6bd2a77f959b2bf6acdbefd708a83a4a4"
-  version = "v0.3.6"
 
 [[projects]]
   digest = "1:3420dc392ec0042ad6c1b3032f5f20909a72c248b0ddfc3988adad18b46216c0"
@@ -1146,25 +1138,17 @@
     "pkg/apis/clientauthentication/v1beta1",
     "pkg/version",
     "plugin/pkg/client/auth/exec",
-    "plugin/pkg/client/auth/gcp",
     "rest",
     "rest/watch",
     "testing",
-    "third_party/forked/golang/template",
-    "tools/auth",
-    "tools/clientcmd",
     "tools/clientcmd/api",
-    "tools/clientcmd/api/latest",
-    "tools/clientcmd/api/v1",
     "tools/metrics",
     "tools/reference",
     "transport",
     "util/cert",
     "util/connrotation",
     "util/flowcontrol",
-    "util/homedir",
     "util/integer",
-    "util/jsonpath",
   ]
   pruneopts = ""
   revision = "7d04d0e2a0a1a4d4a1cd6baa432a2301492e4e65"
@@ -1266,9 +1250,8 @@
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/kubernetes/fake",
     "k8s.io/client-go/kubernetes/typed/batch/v1",
-    "k8s.io/client-go/plugin/pkg/client/auth/gcp",
+    "k8s.io/client-go/rest",
     "k8s.io/client-go/testing",
-    "k8s.io/client-go/tools/clientcmd",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
