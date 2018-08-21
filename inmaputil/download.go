@@ -105,7 +105,7 @@ func IsBlob(path string) bool {
 	return strings.HasPrefix(path, "gs://") || strings.HasPrefix(path, "s3://") || strings.HasPrefix(path, "file://")
 }
 
-// OpenBucket reutrns the blob storage bucket specified by bucketName,
+// OpenBucket returns the blob storage bucket specified by bucketName,
 // where bucketName must be in the format 'provider://name' where provider
 // is the name of the storage provider and name is the name of the bucket.
 // The currently accepted storage providers are "file" for the local filesystem

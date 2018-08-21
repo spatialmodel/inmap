@@ -42,7 +42,7 @@ func (c *Client) jobOutputAddresses(ctx context.Context, name string, cmd []stri
 		return nil, err
 	}
 	o := make(map[string]string)
-	execCmd, _, err := inmaputil.Root.Find(cmd)
+	execCmd, _, err := inmaputil.Root.Find(cmd[1:])
 	if err != nil {
 		return nil, err
 	}

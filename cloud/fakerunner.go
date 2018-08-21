@@ -54,7 +54,7 @@ func fakeRun(t *testing.T, checkConfig bool) func(action k8stesting.Action) (han
 			cmd = append(cmd, fmt.Sprintf("%s=%s", args[i], args[i+1]))
 		}
 		if checkConfig {
-			wantCmd := []string{"run", "steady",
+			wantCmd := []string{"inmap", "run", "steady",
 				"--EmissionUnits=tons/year",
 				"--EmissionsShapefiles=file://test/test_user/test_job/258bbcefe8c0073d6f323351463be9e9685e74bb92e367ca769b9536ed247213.shp",
 				"--InMAPData=file://test/test_user/test_job/434bf26e3fda1ef9cef7e1fa6cc6b5174d11a22b19cbe10d256adc83b2a97d44.ncf",
@@ -85,7 +85,7 @@ func fakeRun(t *testing.T, checkConfig bool) func(action k8stesting.Action) (han
 			}
 		}
 
-		xcmd := exec.Command("inmap", cmd...)
+		xcmd := exec.Command(cmd[0], cmd[1:]...)
 		o, err := xcmd.CombinedOutput()
 		if err != nil {
 			t.Error(err)

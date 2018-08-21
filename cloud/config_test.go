@@ -23,6 +23,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/inmaputil"
 )
 
@@ -31,11 +32,10 @@ func TestRunInputFromViper(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantVersion := "1.4.2"
-	if js.Version != wantVersion {
-		t.Errorf("version: %s != %s", js.Version, wantVersion)
+	if js.Version != inmap.Version {
+		t.Errorf("version: %s != %s", js.Version, inmap.Version)
 	}
-	wantCmd := []string{"run", "steady"}
+	wantCmd := []string{"inmap", "run", "steady"}
 	if !reflect.DeepEqual(js.Cmd, wantCmd) {
 		t.Errorf("cmd: %s != %s", js.Cmd, wantCmd)
 	}

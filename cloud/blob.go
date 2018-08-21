@@ -65,6 +65,9 @@ func (c *Client) Output(ctx context.Context, job *cloudrpc.JobName) (*cloudrpc.J
 		Files: make(map[string][]byte),
 	}
 	k8sJob, err := c.getk8sJob(ctx, job)
+	if err != nil {
+		return nil, err
+	}
 	addrs, err := c.jobOutputAddresses(ctx, job.Name, k8sJob.Spec.Template.Spec.Containers[0].Command)
 	if err != nil {
 		return nil, err

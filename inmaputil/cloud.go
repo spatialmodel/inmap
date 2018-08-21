@@ -103,6 +103,8 @@ func CloudJobOutput(ctx context.Context, c cloudrpc.CloudRPCClient) error {
 // CloudJobSpec initializes a cloudrpc.JobSpec object from the given
 // configuration information. memoryGB and storageGB are the required
 // amounts of RAM and hard-disk storage, respectively, in gigabytes.
+// name is the job name and cmd is a list of InMAP sub-commands
+// (e.g., "run steady").
 func CloudJobSpec(name string, cmd []string, memoryGB int32) (*cloudrpc.JobSpec, error) {
 	inputFields := make(map[string]struct{})
 	for _, f := range InputFiles() {
@@ -112,7 +114,7 @@ func CloudJobSpec(name string, cmd []string, memoryGB int32) (*cloudrpc.JobSpec,
 	js := &cloudrpc.JobSpec{
 		Version:  inmap.Version,
 		Name:     name,
-		Cmd:      cmd,
+		Cmd:      append([]string{"inmap"}, cmd...),
 		MemoryGB: memoryGB,
 		FileData: make(map[string][]byte),
 	}
