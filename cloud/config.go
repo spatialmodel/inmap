@@ -21,6 +21,7 @@ package cloud
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"path/filepath"
 	"strings"
 
@@ -82,19 +83,23 @@ func (c *Client) stageInputs(ctx context.Context, job *cloudrpc.JobSpec) error {
 	if err != nil {
 		return err
 	}
+	url, err := url.Parse(c.bucketName)
+	if err != nil {
+		return fmt.Errorf("inmap/cloud: staging inputs: %v", err)
+	}
 
 	user, err := getUser(ctx)
 	if err != nil {
 		return err
 	}
 	for fname, data := range job.FileData {
-		filePath := user + "/" + job.Name + "/" + fname
+		filePath := strings.TrimPrefix(url.Path+"/"+user+"/"+job.Name+"/"+fname, "/")
 		if err := writeBlob(ctx, bucket, filePath, data); err != nil {
 			return err
 		}
 		for i, arg := range job.Args {
 			if fname == arg {
-				job.Args[i] = c.bucketName + "/" + filePath
+				job.Args[i] = url.Scheme + "://" + url.Hostname() + "/" + filePath
 			}
 		}
 	}

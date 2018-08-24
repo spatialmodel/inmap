@@ -108,24 +108,24 @@ func IsBlob(path string) bool {
 // OpenBucket returns the blob storage bucket specified by bucketName,
 // where bucketName must be in the format 'provider://name' where provider
 // is the name of the storage provider and name is the name of the bucket.
+// Even if name contains subdirectories, only the base directory name will be
+// used when opening the bucket.
 // The currently accepted storage providers are "file" for the local filesystem
 // (e.g., for testing), "gs" for Google Cloud Storage, and "s3" for AWS S3.
 func OpenBucket(ctx context.Context, bucketName string) (*blob.Bucket, error) {
-	splitName := strings.Split(bucketName, "://")
-	if len(splitName) != 2 {
-		return nil, fmt.Errorf("cloud.OpenBucket: invalid bucket name: %s", bucketName)
+	url, err := url.Parse(bucketName)
+	if err != nil {
+		return nil, fmt.Errorf("inmaputil.OpenBucket: %v", err)
 	}
-	provider, name := splitName[0], splitName[1]
-
-	switch provider {
+	switch url.Scheme {
 	case "file":
-		return fileblob.NewBucket(name)
+		return fileblob.NewBucket(url.Hostname())
 	case "gs":
-		return gsBucket(ctx, name)
+		return gsBucket(ctx, url.Hostname())
 	case "s3":
-		return s3Bucket(ctx, name)
+		return s3Bucket(ctx, url.Hostname())
 	default:
-		return nil, fmt.Errorf("cloud.OpenBucket: invalid provider %s", provider)
+		return nil, fmt.Errorf("cloud.OpenBucket: invalid provider %s", url.Scheme)
 	}
 }
 

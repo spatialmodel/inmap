@@ -21,6 +21,7 @@ package cloud
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"net/url"
 	"path/filepath"
@@ -48,11 +49,16 @@ func writeBlob(ctx context.Context, bucket *blob.Bucket, key string, data []byte
 	b := bytes.NewBuffer(data)
 	w, err := bucket.NewWriter(ctx, key, &blob.WriterOptions{})
 	if err != nil {
-		return err
+		return fmt.Errorf("inmap/cloud: creating writer for blob %s: %v", key, err)
 	}
-	defer w.Close()
 	_, err = io.Copy(w, b)
-	return err
+	if err != nil {
+		return fmt.Errorf("inmap/cloud: copying blob %s: %v", key, err)
+	}
+	if err = w.Close(); err != nil {
+		return fmt.Errorf("inmap/cloud: writing blob %s: %v", key, err)
+	}
+	return nil
 }
 
 // Output returns the output of the specified job.
