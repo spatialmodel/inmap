@@ -19,6 +19,7 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package inmaputil
 
 import (
+	"os"
 	"testing"
 )
 
@@ -27,6 +28,7 @@ func TestPreprocWRFChem(t *testing.T) {
 	// check whether the output is correct elsewhere.
 	Cfg.Set("config", "../cmd/inmap/configExampleWRFChem.toml")
 	Root.SetArgs([]string{"preproc"})
+	defer os.Remove("../cmd/inmap/testdata/preproc/inmapData_WRFChem.ncf")
 	if err := Root.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -37,6 +39,7 @@ func TestPreprocGEOSChem(t *testing.T) {
 	// check whether the output is correct elsewhere.
 	Cfg.Set("config", "../cmd/inmap/configExampleGEOSChem.toml")
 	Root.SetArgs([]string{"preproc"})
+	defer os.Remove("../cmd/inmap/testdata/preproc/inmapData_GEOSChem.ncf")
 	if err := Root.Execute(); err != nil {
 		t.Fatal(err)
 	}

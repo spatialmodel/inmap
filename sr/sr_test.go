@@ -23,10 +23,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 
+	"bitbucket.org/ctessum/cdf"
 	"github.com/BurntSushi/toml"
+	"github.com/gonum/floats"
 	"github.com/spatialmodel/inmap"
 )
 
@@ -77,7 +80,7 @@ func TestSR(t *testing.T) {
 		t.Fatal(err)
 	}
 	outfile := "../cmd/inmap/testdata/testSR.ncf"
-	os.Remove(outfile)
+	defer os.Remove(outfile)
 	layers := []int{0, 2, 4}
 	begin := 0 // layer 0
 	end := -1
@@ -95,5 +98,138 @@ func TestSR(t *testing.T) {
 	end = 22
 	if err = sr.Run(outfile, layers, begin, end); err != nil {
 		t.Fatal(err)
+	}
+	t.Run("compare ncf", func(t *testing.T) {
+		ncfWithinTol(t, "../cmd/inmap/testdata/testSR.ncf", "../cmd/inmap/testdata/testSR.ncf", 1.e-10)
+	})
+}
+
+// ncfWithinTol creates errors if the new and old files are more different
+// than the given floating-point tolerance.
+func ncfWithinTol(t *testing.T, newFile, oldFile string, tol float64) {
+	newR, err := os.Open(newFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldR, err := os.Open(oldFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	new, err := cdf.Open(newR)
+	if err != nil {
+		t.Fatal(err)
+	}
+	old, err := cdf.Open(oldR)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Run("global attr", func(t *testing.T) {
+		newGlobalAttr := new.Header.Attributes("")
+		oldGlobalAttr := old.Header.Attributes("")
+		if len(newGlobalAttr) != len(oldGlobalAttr) {
+			t.Fatalf("global attr length: %d != %d", len(newGlobalAttr), len(oldGlobalAttr))
+		}
+		for i, attr := range newGlobalAttr {
+			if attr != oldGlobalAttr[i] {
+				t.Errorf("global attr %d, %s != %s", i, attr, oldGlobalAttr[i])
+			}
+		}
+	})
+	t.Run("variables", func(t *testing.T) {
+		newVars := new.Header.Variables()
+		oldVars := new.Header.Variables()
+		if len(newVars) != len(oldVars) {
+			t.Fatalf("number of variables: %d != %d", len(newVars), len(oldVars))
+		}
+		for i, v := range newVars {
+			t.Run("variable "+v, func(t *testing.T) {
+				oldV := oldVars[i]
+				if v != oldV {
+					t.Fatalf("%d: %s != %s", i, v, oldV)
+				}
+				t.Run("attr", func(t *testing.T) {
+					newAttr := new.Header.Attributes(v)
+					oldAttr := old.Header.Attributes(v)
+					if len(newAttr) != len(oldAttr) {
+						t.Fatalf("attr length: %d != %d", len(newAttr), len(oldAttr))
+					}
+					for i, attr := range newAttr {
+						if attr != oldAttr[i] {
+							t.Errorf("%d, %s != %s", i, attr, oldAttr[i])
+						}
+						newAttrVal := new.Header.GetAttribute(v, attr)
+						oldAttrVal := old.Header.GetAttribute(v, attr)
+						interfaceEqualWithinTol(t, newAttrVal, oldAttrVal, tol)
+					}
+				})
+				t.Run("data", func(t *testing.T) {
+					newDim := new.Header.Lengths(v)
+					oldDim := old.Header.Lengths(v)
+					if !reflect.DeepEqual(newDim, oldDim) {
+						t.Fatalf("dimensions: %v != %v", newDim, oldDim)
+					}
+					newData := new.Header.ZeroValue(v, arrayLen(newDim))
+					nr := new.Reader(v, nil, nil)
+					if _, err := nr.Read(newData); err != nil {
+						t.Fatal(err)
+					}
+					oldData := old.Header.ZeroValue(v, arrayLen(oldDim))
+					or := old.Reader(v, nil, nil)
+					if _, err := or.Read(oldData); err != nil {
+						t.Fatal(err)
+					}
+					interfaceEqualWithinTol(t, newData, oldData, tol)
+				})
+			})
+		}
+	})
+}
+
+func arrayLen(dim []int) int {
+	i := 1
+	for _, d := range dim {
+		i *= d
+	}
+	return i
+}
+
+func interfaceEqualWithinTol(t *testing.T, new, old interface{}, tol float64) {
+	switch tp := new.(type) {
+	case int, string, []int, []int32, []string:
+		if !reflect.DeepEqual(new, old) {
+			t.Errorf("%v != %v", new, old)
+		}
+	case float64:
+		if !floats.EqualWithinAbsOrRel(new.(float64), old.(float64), tol, tol) {
+			t.Errorf("%g != %g", new, old)
+		}
+	case []float64:
+		newV := new.([]float64)
+		oldV := old.([]float64)
+		if len(newV) != len(oldV) {
+			t.Errorf("length %d != %d", len(newV), len(oldV))
+			return
+		}
+		for i, n := range newV {
+			o := oldV[i]
+			if !floats.EqualWithinAbsOrRel(n, o, tol, tol) {
+				t.Errorf("%g != %g", n, o)
+			}
+		}
+	case []float32:
+		newV := new.([]float32)
+		oldV := old.([]float32)
+		if len(newV) != len(oldV) {
+			t.Errorf("length %d != %d", len(newV), len(oldV))
+			return
+		}
+		for i, n := range newV {
+			o := oldV[i]
+			if !floats.EqualWithinAbsOrRel(float64(n), float64(o), tol, tol) {
+				t.Errorf("%g != %g", n, o)
+			}
+		}
+	default:
+		t.Fatalf("invalid type %T", tp)
 	}
 }

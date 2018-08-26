@@ -61,7 +61,7 @@ func TestWorkerInit(t *testing.T) {
 }
 
 func TestSRPredict(t *testing.T) {
-	Cfg.Set("SR.OutputFile", "../cmd/inmap/testdata/testSR.ncf")
+	Cfg.Set("SR.OutputFile", "../cmd/inmap/testdata/testSR_golden.ncf")
 	Cfg.Set("OutputFile", "../cmd/inmap/testdata/output_SRPredict.shp")
 	Cfg.Set("EmissionsShapefiles", []string{"../cmd/inmap/testdata/testEmisSR.shp"})
 
@@ -74,7 +74,7 @@ func TestSRPredict(t *testing.T) {
 
 func TestSRPredictAboveTop(t *testing.T) {
 	Cfg.Set("config", "../cmd/inmap/configExample.toml")
-	Cfg.Set("SR.OutputFile", "../cmd/inmap/testdata/testSR.ncf")
+	Cfg.Set("SR.OutputFile", "../cmd/inmap/testdata/testSR_golden.ncf")
 	Cfg.Set("OutputFile", "../cmd/inmap/testdata/output_SRPredict.shp")
 	Cfg.Set("EmissionsShapefiles", []string{"../cmd/inmap/testdata/testEmis.shp"})
 	cfg, err := VarGridConfig(Cfg)
