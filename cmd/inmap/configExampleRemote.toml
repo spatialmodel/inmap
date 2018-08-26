@@ -59,15 +59,6 @@ TotalPM25 = "PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA"
 BasePM25 = "BaselineTotalPM25"
 WindSpeed = "WindSpeed"
 
-
-# SR holds information related to source-receptor matrix creation.
-[SR]
-# OutputFile is the path where the output file is or should be created
-# when creating a source-receptor matrix. It can contain environment variables.
-OutputFile = "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/testSR.ncf"
-
-
-
 # VarGrid provides information for specifying the variable resolution
 # grid.
 [VarGrid]

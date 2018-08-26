@@ -40,6 +40,7 @@ func TestInMAPStaticCreateGrid(t *testing.T) {
 	os.Setenv("InMAPRunType", "static")
 	Cfg.Set("config", "../cmd/inmap/configExample.toml")
 	Root.SetArgs([]string{"run", "steady"})
+	defer os.Remove("../cmd/inmap/testdata/output_static.log")
 	if err := Root.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -51,6 +52,7 @@ func TestInMAPStaticLoadGrid(t *testing.T) {
 	os.Setenv("InMAPRunType", "staticLoadGrid")
 	Cfg.Set("config", "../cmd/inmap/configExample.toml")
 	Root.SetArgs([]string{"run", "steady"})
+	defer os.Remove("../cmd/inmap/testdata/output_staticLoadGrid.log")
 	if err := Root.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -62,6 +64,7 @@ func TestInMAPDynamic(t *testing.T) {
 	os.Setenv("InMAPRunType", "dynamic")
 	Cfg.Set("config", "../cmd/inmap/configExample.toml")
 	Root.SetArgs([]string{"run", "steady"})
+	defer os.Remove("../cmd/inmap/testdata/output_dynamic.log")
 	if err := Root.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -81,6 +84,7 @@ func TestInMAPDynamicRemote_http(t *testing.T) {
 	os.Setenv("InMAPRunType", "dynamic")
 	Cfg.Set("config", "../cmd/inmap/configExampleRemote.toml")
 	Root.SetArgs([]string{"run", "steady"})
+	defer os.Remove("../cmd/inmap/testdata/output_dynamic.log")
 	if err := Root.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -98,6 +102,7 @@ func TestInMAPDynamicRemote_bucket(t *testing.T) {
 	os.Setenv("InMAPRunType", "dynamic")
 	Cfg.Set("config", "../cmd/inmap/configExampleRemote.toml")
 	Root.SetArgs([]string{"run", "steady"})
+	defer os.Remove("../cmd/inmap/testdata/output_dynamic.log")
 	if err := Root.Execute(); err != nil {
 		t.Fatal(err)
 	}
