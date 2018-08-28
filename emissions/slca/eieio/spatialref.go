@@ -55,6 +55,9 @@ func (s *SpatialEIO) loadSCCMap(sccMapFile string) error {
 		s.sccMap = append(s.sccMap, []int{})
 		for j := 2; j < len(r.Cells); j++ { // Skip first two columns.
 			industry := r.Cells[j].String()
+			if industry == "" {
+				continue
+			}
 			ioRow, err := s.IndustryIndex(industry)
 			if err != nil {
 				return fmt.Errorf("bea: loading SCC map: %v", err)
