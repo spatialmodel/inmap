@@ -711,7 +711,7 @@ func (o *Outputter) Output(sr *proj.SR) DomainManipulator {
 		sort.Strings(vars)
 		fields := make([]goshp.Field, len(vars))
 		for i, v := range vars {
-			fields[i] = goshp.FloatField(v, 14, 8)
+			fields[i] = shpFieldFromArray(v, results[v])
 		}
 
 		// remove extension and replace it with .shp
@@ -744,6 +744,50 @@ func (o *Outputter) Output(sr *proj.SR) DomainManipulator {
 
 		return nil
 	}
+}
+
+// shpFieldFromArray creates a shapefile field from the given array,
+// ensuring that all values in the array will have a minimum of 9 significant
+// digits.
+func shpFieldFromArray(name string, d []float64) goshp.Field {
+	const minPrecision = 9
+	minExp := math.Inf(+1)
+	maxExp := math.Inf(-1)
+	minVal := math.Inf(1)
+	for _, v := range d {
+		if v == 0 {
+			continue
+		}
+		exp := math.Log10(math.Abs(v))
+		if exp < minExp {
+			minExp = exp
+		}
+		if exp > maxExp {
+			maxExp = exp
+		}
+		if v < minVal {
+			minVal = v
+		}
+	}
+	var precision, size uint8
+	if math.IsInf(minExp, 0) {
+		precision = minPrecision - 1 // All zeros, so 8 decimal places.
+	} else {
+		precision = uint8(math.Max(0, -1*(math.Floor(minExp)-minPrecision+1)))
+	}
+
+	if math.IsInf(maxExp, 0) || maxExp < 1 {
+		size = precision + 1 // Size = 'x' + precision
+	} else {
+		size = uint8(math.Floor(maxExp)) + 1 + precision // Size = 'xxx' + precision
+	}
+	if precision > 0 {
+		size++ // Add a space for a '.'
+	}
+	if minVal < 0 { // Add space for a '-'
+		size++
+	}
+	return goshp.FloatField(name, size, precision)
 }
 
 // Results returns the simulation results.

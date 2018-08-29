@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -278,25 +279,25 @@ func TestOutputEquation(t *testing.T) {
 			WindSpeed:  2.16334701,
 			DoubleWind: 4.32669401,
 			ExpWind:    8.70020863,
-			ExpTwoWind: 75.69363021,
+			ExpTwoWind: 75.6936302,
 		},
 		{
 			WindSpeed:  1.88434911,
 			DoubleWind: 1.88434911 * 2,
 			ExpWind:    6.58206883,
-			ExpTwoWind: 43.32363008,
+			ExpTwoWind: 43.3236301,
 		},
 		{
 			WindSpeed:  2.7272017,
 			DoubleWind: 2.7272017 * 2,
 			ExpWind:    15.29004098,
-			ExpTwoWind: 233.78535321,
+			ExpTwoWind: 233.7853532,
 		},
 		{
 			WindSpeed:  2.56135321,
 			DoubleWind: 5.12270641,
 			ExpWind:    12.953334,
-			ExpTwoWind: 167.78886168,
+			ExpTwoWind: 167.7888617,
 		},
 	}
 
@@ -450,7 +451,7 @@ func TestOutput(t *testing.T) {
 	want := []outData{
 		{
 			BaselineTotalPM25: 4.90770054,
-			PM25Emissions:     0.00112376, //E / d.Cells[0].Volume,
+			PM25Emissions:     0.00112376243, //E / d.Cells[0].Volume,
 			TotalPop:          100000.,
 			WhiteNoLat:        50000.,
 			NPctWNoLat:        0.5,
@@ -1086,5 +1087,127 @@ func BenchmarkFromAEP(b *testing.B) {
 				}
 			})
 		}
+	}
+}
+
+func TestShpFieldFromArray(t *testing.T) {
+	tests := []struct {
+		a, b            float64
+		size, precision uint8
+		strA, strB      string
+	}{
+		{
+			a:         5013,
+			b:         1,
+			size:      13,
+			precision: 8,
+			strA:      "5013.00000000",
+			strB:      "1.00000000",
+		},
+		{
+			a:         5,
+			b:         1,
+			size:      10,
+			precision: 8,
+			strA:      "5.00000000",
+			strB:      "1.00000000",
+		},
+		{
+			a:         50,
+			b:         1,
+			size:      11,
+			precision: 8,
+			strA:      "50.00000000",
+			strB:      "1.00000000",
+		},
+		{
+			a:         50,
+			b:         0.1,
+			size:      12,
+			precision: 9,
+			strA:      "50.000000000",
+			strB:      "0.100000000",
+		},
+		{
+			a:         50.6,
+			b:         0.13,
+			size:      12,
+			precision: 9,
+			strA:      "50.600000000",
+			strB:      "0.130000000",
+		},
+		{
+			a:         0.13,
+			b:         0.0013,
+			size:      13,
+			precision: 11,
+			strA:      "0.13000000000",
+			strB:      "0.00130000000",
+		},
+		{
+			a:         0.0013,
+			b:         0,
+			size:      13,
+			precision: 11,
+			strA:      "0.00130000000",
+			strB:      "0.00000000000",
+		},
+		{
+			a:         -0.0013,
+			b:         0,
+			size:      14,
+			precision: 11,
+			strA:      "-0.00130000000",
+			strB:      "0.00000000000",
+		},
+		{
+			a:         0,
+			b:         0,
+			size:      10,
+			precision: 8,
+			strA:      "0.00000000",
+			strB:      "0.00000000",
+		},
+		{
+			a:         10,
+			b:         -10,
+			size:      11,
+			precision: 7,
+			strA:      "10.0000000",
+			strB:      "-10.0000000",
+		},
+		{
+			a:         10000000000,
+			b:         1000000000,
+			size:      11,
+			precision: 0,
+			strA:      "10000000000",
+			strB:      "1000000000",
+		},
+	}
+	for i, test := range tests {
+		t.Run(fmt.Sprint(i, test.a, test.b), func(t *testing.T) {
+			field := shpFieldFromArray("", []float64{test.a, test.b})
+			if field.Size != test.size {
+				t.Errorf("size: %d != %d", field.Size, test.size)
+			}
+			if field.Precision != test.precision {
+				t.Errorf("precision: %d != %d", field.Precision, test.precision)
+			}
+			strA := strconv.FormatFloat(test.a, 'f', int(field.Precision), 64)
+			if len(strA) > int(test.size) {
+				t.Errorf("a: string length: %d > %d", len(strA), test.size)
+			}
+			if strA != test.strA {
+				t.Errorf("a: '%s' != '%s'", strA, test.strA)
+			}
+			strB := strconv.FormatFloat(test.b, 'f', int(field.Precision), 64)
+			if len(strB) > int(test.size) {
+				t.Errorf("b: string length: %d > %d", len(strB), test.size)
+			}
+			if strB != test.strB {
+				t.Errorf("b: '%s' != '%s'", strB, test.strB)
+			}
+		})
 	}
 }
