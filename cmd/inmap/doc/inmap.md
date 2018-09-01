@@ -30,7 +30,7 @@ Refer to https://github.com/spf13/viper for additional configuration information
 * [inmap grid](inmap_grid.md)	 - Create a variable resolution grid
 * [inmap preproc](inmap_preproc.md)	 - Preprocess CTM output
 * [inmap run](inmap_run.md)	 - Run the model.
-* [inmap sr](inmap_sr.md)	 - Create an SR matrix.
+* [inmap sr](inmap_sr.md)	 - Interact with an SR matrix.
+* [inmap srpredict](inmap_srpredict.md)	 - Predict concentrations
 * [inmap version](inmap_version.md)	 - Print the version number
-* [inmap worker](inmap_worker.md)	 - Start an InMAP worker.
 

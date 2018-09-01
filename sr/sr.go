@@ -21,69 +21,73 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package sr
 
 import (
+	"context"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
+	"runtime"
 	"sort"
+	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"bitbucket.org/ctessum/cdf"
+	"github.com/cenkalti/backoff"
+	"github.com/ctessum/geom"
+	"github.com/ctessum/geom/encoding/shp"
+	"github.com/lnashier/viper"
 	"github.com/spatialmodel/inmap"
+	"github.com/spatialmodel/inmap/cloud"
+	"github.com/spatialmodel/inmap/cloud/cloudrpc"
 	"github.com/spatialmodel/inmap/science/chem/simplechem"
-	"golang.org/x/net/context"
+	"github.com/spf13/cobra"
 )
 
 // SR can be used to create a source-receptor matrix.
 type SR struct {
-	d           *inmap.InMAP
-	c           *Cluster
-	numNodes    int     // The number of nodes for performing calculations.
-	localWorker *Worker // Worker for local processing where there are 0 nodes.
-	m           inmap.Mechanism
+	d      *inmap.InMAP
+	client cloudrpc.CloudRPCClient
+	m      inmap.Mechanism
+	grid   []geom.Polygonal // grid is the geometry of the SR grid.
+
+	// prj is the grid projection.
+	prj string
+
+	// tempDir is a temporary directory for staging input and output files.
+	tempDir string
 }
 
 // NewSR initializes an SR object.
-// varGridFile specifies the location of the InMAP variable grid data.
-// inmapDataFile specifies the location of the InMAP regular grid data.
-// command is the command that should be executed to start slave processes.
-// nodes specify unique addresses of the machines that the simulations
-// should be carried out on. If len(nodes) == 0, then calculations will be
-// carried out locally instead of on a cluster.
-func NewSR(varGridFile, inmapDataFile, command, logDir string, config *inmap.VarGridConfig, nodes []string) (*SR, error) {
-	r, err := os.Open(varGridFile)
+// varGridData specifies a reader for the variable grid data file,
+// varGridConfig specifies the variable-resolution grid, and
+// client specifies a client to the service for running the simulations.
+func NewSR(varGridData io.Reader, varGridConfig *inmap.VarGridConfig, client cloudrpc.CloudRPCClient) (*SR, error) {
+	tempDir, err := ioutil.TempDir("", "inmap_sr")
 	if err != nil {
-		return nil, fmt.Errorf("problem opening file to load VariableGridData: %v", err)
+		return nil, err
 	}
 
 	var m simplechem.Mechanism
 	sr := &SR{
 		d: &inmap.InMAP{
 			InitFuncs: []inmap.DomainManipulator{
-				inmap.Load(r, config, nil, m),
+				inmap.Load(varGridData, varGridConfig, nil, m),
 			},
 		},
-		c:        NewCluster(command, logDir, "Worker.Exit", RPCPort),
-		numNodes: len(nodes),
-		m:        m,
+		client:  client,
+		m:       m,
+		tempDir: tempDir,
+		prj:     varGridConfig.GridProj,
 	}
+
 	if err = sr.d.Init(); err != nil {
-		return nil, fmt.Errorf("problem initializing variable grid data: %v\n", err)
+		return nil, fmt.Errorf("problem initializing variable grid data: %v", err)
 	}
-	// Start up workers
-	errChan := make(chan error)
-	for _, n := range nodes {
-		go func(n string) {
-			errChan <- sr.c.NewWorker(n)
-		}(n)
-	}
-	for range nodes {
-		if err = <-errChan; err != nil {
-			return nil, err
-		}
-	}
-	if sr.numNodes == 0 {
-		sr.localWorker = NewWorker(config, inmapDataFile, sr.d.GetGeometry(0, false))
-	}
+	sr.grid = sr.d.GetGeometry(0, false)
 	return sr, nil
 }
 
@@ -108,92 +112,130 @@ func (sr *SR) layerGridCells(layers []int) (int, error) {
 	return nCells, nil
 }
 
-type resulter interface {
-	Result() (*IOData, error)
-}
-
-// Run runs the simulations necessary to create a source-receptor matrix and writes out the
-// results. layers specifies the grid layers that SR relationships
+// Start starts the simulations necessary to create a source-receptor matrix
+// on a Kubernetes cluster.layers specifies the grid layers that SR relationships
 // should be calculated for. begin and end are indices in the static variable
 // grid where the computations should begin and end. if end<0, then end will
 // be set to the last grid cell in the static grid.
-// outfile is the location of the output file. The units of the SR matrix will
-// be μg/m3 PM2.5 concentration at each receptor per μg/s emission at each source.
-func (sr *SR) Run(outfile string, layers []int, begin, end int) error {
+func (sr *SR) Start(ctx context.Context, jobName string, layers []int, begin, end int, root *cobra.Command, config *viper.Viper, cmdArgs, inputFiles []string, memoryGB int32) error {
+	// Set mandatory configuration variables.
+	config.Set("OutputVariables", outputVarsStr)
+	config.Set("EmissionUnits", "ug/s")
 
-	errChan := make(chan error)
-	reqChan := make(chan resulter, 1000*sr.numNodes+1) // make sure there is enough buffering.
-	ctx := context.TODO()
-
-	go sr.writeResults(outfile, layers, reqChan, errChan) // Start process to write results to file
-
-	layersMap := make(map[int]Empty)
+	var maxLayer int
 	for _, l := range layers {
-		layersMap[l] = Empty{}
+		if l > maxLayer {
+			maxLayer = l
+		}
+	}
+
+	layersMap := make(map[int]struct{})
+	for _, l := range layers {
+		layersMap[l] = struct{}{}
 	}
 	if l := len(sr.d.Cells()); end < 0 || end > l {
 		end = l
 	}
 	for i := 0; i < len(sr.d.Cells()); i++ {
-
-		// check for errors in writer.
-		select {
-		case err := <-errChan:
-			sr.c.Shutdown()
-			return fmt.Errorf("sr.writeOutput: %v", err)
-		default:
-		}
-
 		cell := sr.d.Cells()[i]
 		_, layerok := layersMap[cell.Layer]
-		if i < begin || i >= end || !layerok {
+		if i >= end || cell.Layer > maxLayer {
+			break
+		} else if i < begin || !layerok {
 			continue
 		}
+		log.Println("starting", i)
 
-		log.Printf("Sending row=%v, layer=%v\n", i, cell.Layer)
-		rp := sr.newRequestPayload(i, cell)
-		if sr.numNodes > 0 {
-			r := sr.c.NewRequest(ctx, "Worker.Calculate", rp)
-			r.Send()
-			reqChan <- r
-		} else {
-			o := new(IOData)
-			if err := sr.localWorker.Calculate(rp, o); err != nil {
-				sr.c.Shutdown()
-				return err
-			}
-			reqChan <- o
+		// Create emissions shapefile for this source location.
+		fname, err := sr.writeEmisShapefile(i, cell)
+		if err != nil {
+			return err
+		}
+		config.Set("EmissionsShapefiles", []string{fname})
+
+		js, err := cloud.JobSpec(root, config, sr.jobName(jobName, i, cell), cmdArgs, inputFiles, memoryGB)
+		if err != nil {
+			return err
+		}
+
+		err = backoff.RetryNotify(
+			func() error {
+				// Start the simulation.
+				_, err = sr.client.RunJob(ctx, js)
+				if err != nil {
+					if strings.Contains(err.Error(), "already exists") {
+						log.Println(err)
+					} else {
+						return fmt.Errorf("sr: starting index %d layer %d: %v", i, cell.Layer, err)
+					}
+				}
+				return nil
+			},
+			backoff.NewExponentialBackOff(),
+			func(err error, d time.Duration) {
+				log.Printf("%v: retrying in %v", err, d)
+			},
+		)
+		if err != nil {
+			return err
 		}
 	}
-	close(reqChan)
-	sr.c.Shutdown()
-	return <-errChan // Wait for writer to finish.
+	return nil
 }
 
-func (sr *SR) newRequestPayload(i int, cell *inmap.Cell) *IOData {
-	requestPayload := new(IOData)
-	requestPayload.Row = i
-	requestPayload.Layer = cell.Layer
-	requestPayload.Emis = []*inmap.EmisRecord{
-		{
-			Height: cell.LayerHeight + cell.Dz/2,
-			VOC:    1, // all units = μg/s
-			NOx:    1,
-			NH3:    1,
-			SOx:    1,
-			PM25:   1,
-			Geom:   cell.Centroid(),
-		},
+func (sr *SR) jobName(jobName string, i int, cell *inmap.Cell) string {
+	return fmt.Sprintf("%s-%d-%d", jobName, i, cell.Layer)
+}
+
+// writeEmisShapefile writes an emissions input shapefile for SR index i
+// and the given source cell. It returns the path to the shapefile.
+func (sr *SR) writeEmisShapefile(i int, cell *inmap.Cell) (string, error) {
+	type emisRec struct {
+		geom.Point
+		VOC, NOx, NH3, SOx float64 // emissions [μg/s]
+		PM25               float64 `shp:"PM2_5"` // emissions [μg/s]
+		Height             float64 // stack height [m]
 	}
-	return requestPayload
+
+	fname := filepath.Join(sr.tempDir, fmt.Sprintf("emis_%d_%d.shp", i, cell.Layer))
+	prjfname := filepath.Join(sr.tempDir, fmt.Sprintf("emis_%d_%d.prj", i, cell.Layer))
+	e, err := shp.NewEncoder(fname, emisRec{})
+	if err != nil {
+		return "", err
+	}
+	err = e.Encode(&emisRec{
+		Height: cell.LayerHeight + cell.Dz/2,
+		VOC:    1, // all units = μg/s
+		NOx:    1,
+		NH3:    1,
+		SOx:    1,
+		PM25:   1,
+		Point:  cell.Centroid(),
+	})
+	if err != nil {
+		return "", err
+	}
+	e.Close()
+	o, err := os.Create(prjfname)
+	if err != nil {
+		return "", err
+	}
+	_, err = o.Write([]byte(sr.prj))
+	if err != nil {
+		return "", err
+	}
+	return fname, nil
 }
 
 var outputVars = map[string]string{"SOA": "SOA",
-	"PrimaryPM25": "PrimaryPM25",
-	"pNH4":        "pNH4",
-	"pSO4":        "pSO4",
-	"pNO3":        "pNO3",
+	"PrimPM25": "PrimaryPM25",
+	"pNH4":     "pNH4",
+	"pSO4":     "pSO4",
+	"pNO3":     "pNO3",
 }
+
+var outputVarsStr = "{\"SOA\":\"SOA\",\"PrimPM25\":\"PrimaryPM25\",\"pNH4\":\"pNH4\"," +
+	"\"pSO4\":\"pSO4\",\"pNO3\":\"pNO3\"}"
 
 func sortKeys(m map[string]string) []string {
 	o := make([]string, len(m))
@@ -206,19 +248,255 @@ func sortKeys(m map[string]string) []string {
 	return o
 }
 
-func (sr *SR) writeResults(outfile string, layers []int, requestChan chan resulter, errChan chan error) {
+// Save saves the results of the simulations that were run to create the SR
+// matrix specified by jobName to outfile.
+// layers specifies the grid layers that SR relationships were calculated for.
+// begin and end are indices in the static variable grid where the computations
+// should began and ended. if end<0, then end will be set to the last grid cell
+// in the static grid. outfile is the location of the output file. The units of
+// the SR matrix will be μg/m3 PM2.5 concentration at each receptor per μg/s
+// emission at each source.
+// If outfile already exists, the results will be written to the existing file;
+// otherwise a new file will be created.
+func (sr *SR) Save(ctx context.Context, outfile, jobName string, layers []int, begin, end int) error {
+	ff, f, err := sr.createOrOpenOutputFile(outfile, layers)
+	if err != nil {
+		return err
+	}
+	defer ff.Close()
+	defer os.RemoveAll(sr.tempDir)
+
+	var maxLayer int
+	for _, l := range layers {
+		if l > maxLayer {
+			maxLayer = l
+		}
+	}
+	cells := sr.d.Cells()
+
+	// Figure out the starting index for each layer.
+	layerStarts := make(map[int]int)
+	var il = -1
+	for i, c := range cells {
+		l := c.Layer
+		if il != l {
+			il = l
+			layerStarts[l] = i
+		}
+	}
+
+	// Make a map between the model layers and the SR layers.
+	layerMap := make(map[int]int)
+	for i, l := range layers {
+		layerMap[l] = i
+	}
+	if l := len(cells); end < 0 || end > l {
+		end = l
+	}
+
+	// Create functions to asynchronously retrieve the results.
+	numGetters := runtime.GOMAXPROCS(-1) * 3
+	var lock sync.Mutex
+	jobChan := make(chan int, len(cells))
+	errChan := make(chan error)
+	for x := 0; x < numGetters; x++ {
+		go func() {
+			for i := range jobChan {
+				cell := cells[i]
+				log.Println("saving", i, cell.Layer)
+				result, err := sr.results(ctx, jobName, i, cell)
+				if err != nil {
+					errChan <- err
+				}
+				for name, species := range outputVars {
+					data, ok := result[name]
+					if !ok {
+						errChan <- fmt.Errorf("sr: missing result variable %v from simulation %d layer %d", name, i, cell.Layer)
+					}
+					if len(data) != layerStarts[1] {
+						errChan <- fmt.Errorf("sr: wrong number of records in variable %v from simulation %d layer %d: %d != %d", name, i, cell.Layer, len(data), layerStarts[1])
+					}
+					data32 := make([]float32, len(data))
+					for j, val := range data {
+						data32[j] = float32(val)
+					}
+					l, ok := layerMap[cell.Layer]
+					if !ok {
+						panic(fmt.Errorf("sr: missing layer %d from %v", cell.Layer, layerMap))
+					}
+					row := i - layerStarts[cell.Layer]
+					begin := []int{l, row, 0}
+					end := []int{l, row, len(data32)}
+					lock.Lock()
+					w := f.Writer(species, begin, end)
+					if _, err := w.Write(data32); err != nil {
+						lock.Unlock()
+						errChan <- fmt.Errorf("sr: writing results for for row=%v, layer=%v: %v", i, cell.Layer, err)
+					}
+					lock.Unlock()
+				}
+			}
+			errChan <- nil
+		}()
+	}
+
+	// Save results asynchronously.
+	for i := 0; i < len(cells); i++ {
+		cell := cells[i]
+		_, layerok := layerMap[cell.Layer]
+		if i >= end || cell.Layer > maxLayer {
+			break
+		} else if i < begin || !layerok {
+			continue
+		}
+		jobChan <- i
+	}
+	close(jobChan)
+
+	// Check errors.
+	for i := 0; i < numGetters; i++ {
+		if err := <-errChan; err != nil {
+			return err
+		}
+	}
+	if err := cdf.UpdateNumRecs(ff); err != nil {
+		return fmt.Errorf("sr: finalizing output NetCDF file: %v", err)
+	}
+	return nil
+}
+
+// results gets the results of the simulation specified by the arguments
+// and regrids them to match the SR grid.
+func (sr *SR) results(ctx context.Context, jobName string, i int, cell *inmap.Cell) (map[string][]float64, error) {
+	var jobOutput *cloudrpc.JobOutput
+	err := backoff.RetryNotify(
+		func() error {
+			var err error
+			jobOutput, err = sr.client.Output(ctx, &cloudrpc.JobName{
+				Version: inmap.Version,
+				Name:    sr.jobName(jobName, i, cell),
+			})
+			return err
+		},
+		backoff.NewExponentialBackOff(),
+		func(err error, d time.Duration) {
+			log.Printf("%v: retrying in %v", err, d)
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	if len(jobOutput.Files) == 0 {
+		return nil, fmt.Errorf("sr: getting results for i=%d, layer=%d: no results", i, cell.Layer)
+	}
+	path := filepath.Join(sr.tempDir, fmt.Sprint(i))
+	os.Mkdir(path, os.ModePerm)
+	defer os.RemoveAll(path)
+	for fname, data := range jobOutput.Files {
+		w, err := os.Create(filepath.Join(sr.tempDir, fmt.Sprint(i), fname))
+		if err != nil {
+			return nil, fmt.Errorf("sr: getting results for i=%d, layer=%d: problem staging output shapefile: %v", i, cell.Layer, err)
+		}
+		_, err = w.Write(data)
+		if err != nil {
+			return nil, fmt.Errorf("sr: getting results for i=%d, layer=%d: problem staging output shapefile: %v", i, cell.Layer, err)
+		}
+	}
+	d, err := shp.NewDecoder(filepath.Join(sr.tempDir, fmt.Sprint(i), "OutputFile.shp"))
+	if err != nil {
+		return nil, fmt.Errorf("sr: getting results for i=%d, layer=%d: problem opening output shapefile: %v", i, cell.Layer, err)
+	}
+	defer d.Close()
+	fields := d.Reader.Fields()
+	vars := make([]string, len(fields))
+	for i, f := range fields {
+		vars[i] = f.String()
+	}
+	results := make(map[string][]float64)
+	for _, v := range vars {
+		results[v] = make([]float64, d.AttributeCount())
+	}
+	grid := make([]geom.Polygonal, d.AttributeCount())
+	for i := 0; i < d.AttributeCount(); i++ {
+		g, fields, more := d.DecodeRowFields(vars...)
+		if !more {
+			return nil, fmt.Errorf("sr: getting results for i=%d, layer=%d: problem reading output shapefile: ran out of rows", i, cell.Layer)
+		}
+		grid[i] = g.(geom.Polygonal)
+		for n, valStr := range fields {
+			v, err := strconv.ParseFloat(valStr, 64)
+			if err != nil {
+				return nil, fmt.Errorf("sr: getting results for i=%d, layer=%d: problem reading output shapefile: %v", i, cell.Layer, err)
+			}
+			results[n][i] = v
+		}
+	}
+	if err := d.Error(); err != nil {
+		return nil, fmt.Errorf("sr: reading results for i=%d, layer=%d: %v", i, cell.Layer, err)
+	}
+	for n, oldData := range results { // Regrid to SR grid.
+		newData, err := inmap.Regrid(grid, sr.grid, oldData)
+		if err != nil {
+			return nil, fmt.Errorf("sr: reading results for i=%d, layer=%d: %v", i, cell.Layer, err)
+		}
+		results[n] = newData
+	}
+	return results, nil
+}
+
+// Clean removes intermediate files created during simulations carried out
+// to create a source-receptor matrix.
+// layers specifies the grid layers that SR relationships
+// should be calculated for. begin and end are indices in the static variable
+// grid where the computations should begin and end. if end<0, then end will
+// be set to the last grid cell in the static grid.
+func (sr *SR) Clean(ctx context.Context, jobName string, layers []int, begin, end int) error {
+
+	var maxLayer int
+	for _, l := range layers {
+		if l > maxLayer {
+			maxLayer = l
+		}
+	}
+
+	layersMap := make(map[int]struct{})
+	for _, l := range layers {
+		layersMap[l] = struct{}{}
+	}
+	if l := len(sr.d.Cells()); end < 0 || end > l {
+		end = l
+	}
+	for i := 0; i < len(sr.d.Cells()); i++ {
+		cell := sr.d.Cells()[i]
+		_, layerok := layersMap[cell.Layer]
+		if i >= end || cell.Layer > maxLayer {
+			break
+		} else if i < begin || !layerok {
+			continue
+		}
+
+		// Delete the job.
+		_, err := sr.client.Delete(ctx, &cloudrpc.JobName{
+			Name:    sr.jobName(jobName, i, cell),
+			Version: inmap.Version,
+		})
+		if err != nil {
+			return fmt.Errorf("sr: cleaning up index %d layer %d: %v", i, cell.Layer, err)
+		}
+	}
+	return nil
+}
+
+func (sr *SR) createOrOpenOutputFile(outfile string, layers []int) (*os.File, *cdf.File, error) {
 	nGridCells, err := sr.layerGridCells(layers)
 	if err != nil {
-		errChan <- err
-		return
+		return nil, nil, err
 	}
 
 	var f *cdf.File
 	var ff *os.File
-
-	if _, fileErr := os.Stat(outfile); fileErr != nil { // file doesn't exist
-		log.Println("creating output file")
-
+	// Create the file if it doesn't exist, otherwise use the pre-existing file.
+	if _, fileErr := os.Stat(outfile); fileErr != nil {
 		// Get model variable names for inclusion in the SR matrix.
 		vars, descriptions, units := sr.d.OutputOptions(sr.m)
 		inmapVars := make(map[string]string)
@@ -268,17 +546,18 @@ func (sr *SR) writeResults(outfile string, layers []int, requestChan chan result
 
 		h.Define()
 
+		for _, err := range h.Check() {
+			return nil, nil, fmt.Errorf("creating SR netcdf file: %v", err)
+		}
+
 		ff, err = os.Create(outfile)
 		if err != nil {
-			errChan <- fmt.Errorf("creating SR netcdf file: %v", err)
-			return
+			return nil, nil, fmt.Errorf("creating SR netcdf file: %v", err)
 		}
 		f, err = cdf.Create(ff, h)
 		if err != nil {
-			errChan <- fmt.Errorf("creating new SR netcdf file: %v", err)
-			return
+			return nil, nil, fmt.Errorf("creating new SR netcdf file: %v", err)
 		}
-		defer ff.Close()
 
 		// Add included layers
 		l := make([]int32, len(layers))
@@ -287,26 +566,22 @@ func (sr *SR) writeResults(outfile string, layers []int, requestChan chan result
 		}
 		w := f.Writer("layers", []int{0}, []int{len(l)})
 		if _, err = w.Write(l); err != nil {
-			errChan <- fmt.Errorf("writing SR netcdf layers: %v", err)
-			return
+			return nil, nil, fmt.Errorf("writing SR netcdf layers: %v", err)
 		}
 
 		// Add InMAP data
 		o, err := inmap.NewOutputter("", true, inmapVars, nil, sr.m)
 		if err != nil {
-			errChan <- fmt.Errorf("inmap: preparing output variables: %v", err)
-			return
+			return nil, nil, fmt.Errorf("inmap: preparing output variables: %v", err)
 		}
 		data, err := sr.d.Results(o)
 		if err != nil {
-			errChan <- fmt.Errorf("writing InMAP variables to SR netcdf file: %v", err)
-			return
+			return nil, nil, fmt.Errorf("writing InMAP variables to SR netcdf file: %v", err)
 		}
 		for _, v := range inmapVars {
 			w := f.Writer(v, []int{0}, []int{len(data[v])})
 			if _, err := w.Write(data[v]); err != nil {
-				errChan <- fmt.Errorf("writing variable %s to SR netcdf file: %v", v, err)
-				return
+				return nil, nil, fmt.Errorf("writing variable %s to SR netcdf file: %v", v, err)
 			}
 		}
 
@@ -327,71 +602,18 @@ func (sr *SR) writeResults(outfile string, layers []int, requestChan chan result
 		for i, v := range []string{"N", "S", "E", "W"} {
 			w := f.Writer(v, []int{0}, []int{len(N)})
 			if _, err := w.Write(g[i]); err != nil {
-				errChan <- fmt.Errorf("writing direction %s to SR netcdf file: %v", v, err)
-				return
+				return nil, nil, fmt.Errorf("writing direction %s to SR netcdf file: %v", v, err)
 			}
 		}
-
 	} else { // file exists.
-		log.Println("opening existing output file")
 		ff, err = os.OpenFile(outfile, os.O_RDWR, os.ModePerm)
 		if err != nil {
-			errChan <- fmt.Errorf("opening SR netcdf file: %v", err)
-			return
+			return nil, nil, fmt.Errorf("opening SR netcdf file: %v", err)
 		}
 		f, err = cdf.Open(ff)
 		if err != nil {
-			errChan <- fmt.Errorf("initializing exisiting SR netcdf file: %v", err)
-			return
-		}
-		defer ff.Close()
-	}
-
-	// Figure out the starting index for each layer.
-	layerStarts := make(map[int]int)
-	var il = -1
-	for i, c := range sr.d.Cells() {
-		l := c.Layer
-		if il != l {
-			il = l
-			layerStarts[l] = i
+			return nil, nil, fmt.Errorf("initializing exisiting SR netcdf file: %v", err)
 		}
 	}
-
-	// make a map between the model layers and the SR layers
-	layerMap := make(map[int]int)
-	for i, l := range layers {
-		layerMap[l] = i
-	}
-	for req := range requestChan {
-		result, err := req.Result()
-		if err != nil {
-			errChan <- fmt.Errorf("SR simulation: %v", err)
-			return
-		}
-
-		for _, v := range outputVars {
-			data := result.Output[v]
-			data32 := make([]float32, len(data))
-			for i, val := range data {
-				data32[i] = float32(val)
-			}
-			l, ok := layerMap[result.Layer]
-			if !ok {
-				panic(fmt.Errorf("missing layer %d from %v", result.Layer, layerMap))
-			}
-			row := result.Row - layerStarts[result.Layer]
-			begin := []int{l, row, 0}
-			end := []int{l, row, len(data32)}
-			w := f.Writer(v, begin, end)
-			if _, err := w.Write(data32); err != nil {
-				errChan <- fmt.Errorf("writing results for for row=%v, layer=%v: %v\n",
-					result.Row, result.Layer, err)
-				return
-			}
-		}
-		log.Printf("Finished writing results for row=%v, layer=%v", result.Row, result.Layer)
-	}
-	cdf.UpdateNumRecs(ff)
-	errChan <- nil
+	return ff, f, nil
 }

@@ -29,14 +29,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/google/go-cloud/blob"
-	"github.com/google/go-cloud/blob/fileblob"
-	"github.com/google/go-cloud/blob/gcsblob"
-	"github.com/google/go-cloud/blob/s3blob"
-	"github.com/google/go-cloud/gcp"
+	"github.com/spatialmodel/inmap/cloud"
 )
 
 // download checks if the input is an existing file locally.
@@ -73,7 +66,6 @@ func downloadHTTP(path string, c chan string) string {
 	dir, err := ioutil.TempDir("", "inmap")
 	if err != nil {
 		panic(fmt.Errorf("inmaputil: failed creating temporary download directory: %v", err))
-		return path
 	}
 
 	fnames := expandShp(path)
@@ -105,60 +97,6 @@ func IsBlob(path string) bool {
 	return strings.HasPrefix(path, "gs://") || strings.HasPrefix(path, "s3://") || strings.HasPrefix(path, "file://")
 }
 
-// OpenBucket returns the blob storage bucket specified by bucketName,
-// where bucketName must be in the format 'provider://name' where provider
-// is the name of the storage provider and name is the name of the bucket.
-// Even if name contains subdirectories, only the base directory name will be
-// used when opening the bucket.
-// The currently accepted storage providers are "file" for the local filesystem
-// (e.g., for testing), "gs" for Google Cloud Storage, and "s3" for AWS S3.
-func OpenBucket(ctx context.Context, bucketName string) (*blob.Bucket, error) {
-	url, err := url.Parse(bucketName)
-	if err != nil {
-		return nil, fmt.Errorf("inmaputil.OpenBucket: %v", err)
-	}
-	switch url.Scheme {
-	case "file":
-		return fileblob.NewBucket(url.Hostname())
-	case "gs":
-		return gsBucket(ctx, url.Hostname())
-	case "s3":
-		return s3Bucket(ctx, url.Hostname())
-	default:
-		return nil, fmt.Errorf("cloud.OpenBucket: invalid provider %s", url.Scheme)
-	}
-}
-
-func gsBucket(ctx context.Context, name string) (*blob.Bucket, error) {
-	// See here for information on credentials:
-	// https://cloud.google.com/docs/authentication/getting-started
-	creds, err := gcp.DefaultCredentials(ctx)
-	if err != nil {
-		return nil, err
-	}
-	c, err := gcp.NewHTTPClient(gcp.DefaultTransport(), gcp.CredentialsTokenSource(creds))
-	if err != nil {
-		return nil, err
-	}
-	return gcsblob.OpenBucket(ctx, name, c)
-}
-
-// s3Bucket opens an s3 storage bucket. It assumes the following
-// environment variables are set: AWS_REGION, AWS_ACCESS_KEY_ID, and
-// AWS_SECRET_ACCESS_KEY.
-func s3Bucket(ctx context.Context, name string) (*blob.Bucket, error) {
-	region := os.ExpandEnv("AWS_REGION")
-	if region == "" {
-		region = "us-east-2"
-	}
-	c := &aws.Config{
-		Region:      aws.String(region),
-		Credentials: credentials.NewEnvCredentials(),
-	}
-	s := session.Must(session.NewSession(c))
-	return s3blob.OpenBucket(ctx, s, name)
-}
-
 // downloadBlob download the specified file from blob storage.
 func downloadBlob(ctx context.Context, path string, c chan string) string {
 	url, err := url.Parse(path)
@@ -166,7 +104,7 @@ func downloadBlob(ctx context.Context, path string, c chan string) string {
 		c <- err.Error()
 		return path
 	}
-	bucket, err := OpenBucket(ctx, url.Scheme+"://"+url.Host)
+	bucket, err := cloud.OpenBucket(ctx, url.Scheme+"://"+url.Host)
 	if err != nil {
 		c <- err.Error()
 		return path

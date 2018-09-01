@@ -15,15 +15,6 @@ inmap grid [flags]
 ### Options
 
 ```
-      --EmissionsShapefiles strings           
-                                                            EmissionsShapefiles are the paths to any emissions shapefiles.
-                                                            Can be elevated or ground level; elevated files need to have columns
-                                                            labeled "height", "diam", "temp", and "velocity" containing stack
-                                                            information in units of m, m, K, and m/s, respectively.
-                                                            Emissions will be allocated from the geometries in the shape file
-                                                            to the InMAP computational grid, but the mapping projection of the
-                                                            shapefile must be the same as the projection InMAP uses.
-                                                            Can include environment variables. (default [${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/testEmis.shp])
       --InMAPData string                      
                                                             InMAPData is the path to location of baseline meteorology and pollutant data.
                                                             The path can include environment variables. (default "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/testInMAPInputData.ncf")

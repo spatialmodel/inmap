@@ -26,16 +26,15 @@ import (
 	"strings"
 
 	"github.com/spatialmodel/inmap/cloud/cloudrpc"
-	"github.com/spatialmodel/inmap/inmaputil"
 	"github.com/spf13/pflag"
 )
 
 // jobOutputAddresses returns the locations of where the output files of the job
-// with the given name, belonging to the given user, with the given command,
+// with the given name, belonging to the given user, with the given command arguments,
 // will be stored.
 func (c *Client) jobOutputAddresses(ctx context.Context, name string, cmd []string) (map[string]string, error) {
 	outputFiles := make(map[string]struct{})
-	for _, f := range inmaputil.OutputFiles() {
+	for _, f := range c.outputFileArgs {
 		outputFiles[f] = struct{}{}
 	}
 	user, err := getUser(ctx)
@@ -43,7 +42,7 @@ func (c *Client) jobOutputAddresses(ctx context.Context, name string, cmd []stri
 		return nil, err
 	}
 	o := make(map[string]string)
-	execCmd, _, err := inmaputil.Root.Find(cmd[1:])
+	execCmd, _, err := c.root.Find(cmd[1:])
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +78,7 @@ func (c *Client) setOutputPaths(ctx context.Context, job *cloudrpc.JobSpec) erro
 // stageInputs stages the input data in blob storage and replaces the input
 // file locations with the actual locations of the staged input files.
 func (c *Client) stageInputs(ctx context.Context, job *cloudrpc.JobSpec) error {
-	bucket, err := inmaputil.OpenBucket(ctx, c.bucketName)
+	bucket, err := OpenBucket(ctx, c.bucketName)
 	if err != nil {
 		return err
 	}

@@ -29,7 +29,6 @@ import (
 
 	"github.com/google/go-cloud/blob"
 	"github.com/spatialmodel/inmap/cloud/cloudrpc"
-	"github.com/spatialmodel/inmap/inmaputil"
 )
 
 // readBlob reads the given blob from the given bucket.
@@ -63,7 +62,7 @@ func writeBlob(ctx context.Context, bucket *blob.Bucket, key string, data []byte
 
 // Output returns the output of the specified job.
 func (c *Client) Output(ctx context.Context, job *cloudrpc.JobName) (*cloudrpc.JobOutput, error) {
-	bucket, err := inmaputil.OpenBucket(ctx, c.bucketName)
+	bucket, err := OpenBucket(ctx, c.bucketName)
 	if err != nil {
 		return nil, err
 	}

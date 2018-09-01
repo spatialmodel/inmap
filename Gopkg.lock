@@ -124,6 +124,14 @@
   version = "v1.15.15"
 
 [[projects]]
+  digest = "1:f619cb9b07aebe5416262cdd8b86082e8d5bdc5264cb3b615ff858df0b645f97"
+  name = "github.com/cenkalti/backoff"
+  packages = ["."]
+  pruneopts = ""
+  revision = "2ea60e5f094469f9e65adb9cd103795b73ae743e"
+  version = "v2.0.0"
+
+[[projects]]
   digest = "1:8001ddd97e56640692a2960d028ec5d691a1ac5e0166fb065d70fb592985058b"
   name = "github.com/cpuguy83/go-md2man"
   packages = ["md2man"]
@@ -513,14 +521,6 @@
   pruneopts = ""
   revision = "14c1db30737a138f8d9797cffea58783892b2fae"
   version = "v1.0.0"
-
-[[projects]]
-  branch = "master"
-  digest = "1:2c5ad58492804c40bdaf5d92039b0cde8b5becd2b7feeb37d7d1cc36a8aa8dbe"
-  name = "github.com/kardianos/osext"
-  packages = ["."]
-  pruneopts = ""
-  revision = "ae77be60afb1dcacde03767a8c37337fad28ac14"
 
 [[projects]]
   branch = "master"
@@ -1175,6 +1175,7 @@
     "github.com/aws/aws-sdk-go/aws",
     "github.com/aws/aws-sdk-go/aws/credentials",
     "github.com/aws/aws-sdk-go/aws/session",
+    "github.com/cenkalti/backoff",
     "github.com/ctessum/atmos/acm2",
     "github.com/ctessum/atmos/advect",
     "github.com/ctessum/atmos/emep",
@@ -1215,7 +1216,6 @@
     "github.com/johanbrandhorst/protobuf/grpcweb",
     "github.com/johanbrandhorst/protobuf/jspb",
     "github.com/jonas-p/go-shp",
-    "github.com/kardianos/osext",
     "github.com/kr/pretty",
     "github.com/lnashier/viper",
     "github.com/remogatto/ftpget",
