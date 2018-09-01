@@ -29,7 +29,7 @@ import (
 )
 
 func TestCloud(t *testing.T) {
-	client, err := cloud.NewFakeClient(t, false, "file://test")
+	client, err := cloud.NewFakeClient(nil, nil, "file://test", inmaputil.Root, inmaputil.Cfg, inmaputil.InputFiles(), inmaputil.OutputFiles())
 	if err != nil {
 		t.Fatal(err)
 	}

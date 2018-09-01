@@ -19,6 +19,7 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package inmaputil
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -26,84 +27,86 @@ import (
 
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/encoding/shp"
-	"github.com/kardianos/osext"
 	"github.com/spatialmodel/inmap"
-	"github.com/spatialmodel/inmap/science/chem/simplechem"
+	"github.com/spatialmodel/inmap/cloud/cloudrpc"
 	"github.com/spatialmodel/inmap/sr"
 )
 
-// RunSR runs the SR matrix creator.
+// StartSR starts the SR matrix creator, getting configuration information from the
+// global Cfg variable.
+//
+// jobName is a user-specified name for the SR creation job.
+//
+// cmds is a list of InMAP subcommands for the individual simulations.
+//
+// memoryGB is the RAM required for each simulation, in GB.
 //
 // VariableGridData is the path to the location of the variable-resolution gridded
-// InMAP data, or the location where it should be created if it doesn't already
-// exist.
+// InMAP data.
 //
-// InMAPData is the path to location of baseline meteorology and pollutant data.
+// VarGrid provides information for specifying the variable resolution grid.
 //
-// LogDir is the directory that log files should be stored in when creating
-// a source-receptor matrix.
+// begin and end specify the beginning and end grid indices to process.
+//
+// layers specifies which vertical layers to process.
+//
+// client is a client of the cluster that will run the simulations.
+func StartSR(ctx context.Context, jobName string, cmds []string, memoryGB int32, VariableGridData string, VarGrid *inmap.VarGridConfig, begin, end int, layers []int, client cloudrpc.CloudRPCClient) error {
+	outChan := outChan()
+	varGridReader, err := os.Open(maybeDownload(ctx, VariableGridData, outChan))
+	if err != nil {
+		return fmt.Errorf("starting SR matrix---can't open variable grid data file: %v", err)
+	}
+	sr, err := sr.NewSR(varGridReader, VarGrid, client)
+	if err != nil {
+		return err
+	}
+	if err = sr.Start(ctx, jobName, layers, begin, end, Root, Cfg, cmds, InputFiles(), memoryGB); err != nil {
+		return err
+	}
+	return nil
+}
+
+// SaveSR saves the SR matrix results to an output file.
+//
+// jobName is a user-specified name for the SR creation job.
+//
+// VariableGridData is the path to the location of the variable-resolution gridded
+// InMAP data.
 //
 // OutputFile is the path where the output file is or should be created
 // when creating a source-receptor matrix.
 //
 // VarGrid provides information for specifying the variable resolution grid.
 //
-// configFile give the path to the configuration file.
+// begin and end specify the beginning and end grid indices to save.
 //
-// begin and end specify the beginning and end grid indices to process.
+// layers specifies which vertical layers to save.
 //
-// layers specifies which vertical layers to process.
-func RunSR(VariableGridData, InMAPData, LogDir, OutputFile string, VarGrid *inmap.VarGridConfig, configFile string, begin, end int, layers []int) error {
-	nodes, err := sr.PBSNodes()
+// client is a client of the cluster that will run the simulations.
+func SaveSR(ctx context.Context, jobName, OutputFile string, VariableGridData string, VarGrid *inmap.VarGridConfig, begin, end int, layers []int, client cloudrpc.CloudRPCClient) error {
+	varGridReader, err := os.Open(VariableGridData)
 	if err != nil {
-		log.Printf("Problem reading $PBS_NODEFILE: %v. Continuing on local machine.", err)
+		return fmt.Errorf("saving SR matrix---can't open variable grid data file: %v", err)
 	}
-
-	command, err := osext.Executable()
-	if err != nil {
-		return err
-	}
-	command = fmt.Sprintf("%s  worker --config=%s --rpcport=%s", command, configFile, sr.RPCPort)
-
-	sr, err := sr.NewSR(VariableGridData, InMAPData, command,
-		LogDir, VarGrid, nodes)
+	sr, err := sr.NewSR(varGridReader, VarGrid, client)
 	if err != nil {
 		return err
 	}
-
-	if err = sr.Run(OutputFile, layers, begin, end); err != nil {
-		return err
-	}
-
-	return nil
+	return sr.Save(ctx, OutputFile, jobName, layers, begin, end)
 }
 
-// NewWorker starts a new worker.
-//
-// VariableGridData is the path to the location of the variable-resolution gridded
-// InMAP data, or the location where it should be created if it doesn't already
-// exist.
-//
-// InMAPData is the path to location of baseline meteorology and pollutant data.
-//
-// VarGrid provides information for specifying the variable resolution grid.
-func NewWorker(VariableGridData, InMAPData string, VarGrid *inmap.VarGridConfig) (*sr.Worker, error) {
-	r, err := os.Open(VariableGridData)
+// CleanSR cleans up remote data created during the SR matrix creation simulations.
+func CleanSR(ctx context.Context, jobName, VariableGridData string, VarGrid *inmap.VarGridConfig, begin, end int, layers []int, client cloudrpc.CloudRPCClient) error {
+	varGridReader, err := os.Open(VariableGridData)
 	if err != nil {
-		return nil, fmt.Errorf("problem opening file to load VariableGridData: %v", err)
+		return fmt.Errorf("saving SR matrix---can't open variable grid data file: %v", err)
 	}
-	var m simplechem.Mechanism
-	d := &inmap.InMAP{
-		InitFuncs: []inmap.DomainManipulator{
-			inmap.Load(r, VarGrid, nil, m),
-		},
+	sr, err := sr.NewSR(varGridReader, VarGrid, client)
+	if err != nil {
+		return err
 	}
-	if err = d.Init(); err != nil {
-		return nil, err
-	}
-
-	worker := sr.NewWorker(VarGrid, InMAPData, d.GetGeometry(0, false))
-	return worker, nil
+	return sr.Clean(ctx, jobName, layers, begin, end)
 }
 
 // SRPredict uses the SR matrix specified in SROutputFile

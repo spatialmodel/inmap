@@ -27,14 +27,14 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/ctessum/gobra"
 	"github.com/lnashier/viper"
 	"github.com/skratchdot/open-golang/open"
 	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/science/chem/simplechem"
-	"github.com/spatialmodel/inmap/sr"
-	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -93,7 +93,7 @@ func init() {
               concentration.`,
 			shorthand:  "s",
 			defaultVal: false,
-			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), cloudStartCmd.Flags(), srStartCmd.Flags()},
 		},
 		{
 			name: "creategrid",
@@ -103,7 +103,7 @@ func init() {
               the simulation instead of reading it from a file. If --static is false, then
               this flag will also be automatically set to false.`,
 			defaultVal: false,
-			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), cloudStartCmd.Flags(), srStartCmd.Flags()},
 		},
 		{
 			name: "layers",
@@ -111,7 +111,7 @@ func init() {
               layers specifies a list of vertical layer numbers to
               be included in the SR matrix.`,
 			defaultVal: []int{0, 2, 4, 6},
-			flagsets:   []*pflag.FlagSet{srCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{srCmd.PersistentFlags()},
 		},
 		{
 			name: "begin",
@@ -119,7 +119,7 @@ func init() {
               begin specifies the beginning grid index (inclusive) for SR
               matrix generation.`,
 			defaultVal: 0,
-			flagsets:   []*pflag.FlagSet{srCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{srCmd.PersistentFlags()},
 		},
 		{
 			name: "end",
@@ -127,15 +127,7 @@ func init() {
               end specifies the ending grid index (exclusive) for SR matrix
               generation. The default is -1 which represents the last row.`,
 			defaultVal: -1,
-			flagsets:   []*pflag.FlagSet{srCmd.Flags(), cloudStartCmd.Flags()},
-		},
-		{
-			name: "rpcport",
-			usage: `
-              rpcport specifies the port to be used for RPC communication
-              when using distributed computing.`,
-			defaultVal: "6060",
-			flagsets:   []*pflag.FlagSet{srCmd.Flags(), workerCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{srCmd.PersistentFlags()},
 		},
 		{
 			name: "VarGrid.VariableGridXo",
@@ -143,7 +135,7 @@ func init() {
               VarGrid.VariableGridXo specifies the X coordinate of the
               lower-left corner of the InMAP grid.`,
 			defaultVal: -4000.0,
-			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), cloudStartCmd.Flags(), srStartCmd.Flags()},
 		},
 		{
 			name: "VarGrid.VariableGridYo",
@@ -151,7 +143,7 @@ func init() {
               VarGrid.VariableGridYo specifies the Y coordinate of the
               lower-left corner of the InMAP grid.`,
 			defaultVal: -4000.0,
-			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), cloudStartCmd.Flags(), srStartCmd.Flags()},
 		},
 		{
 			name: "VarGrid.VariableGridDx",
@@ -161,7 +153,7 @@ func init() {
               spatial projection--typically meters or degrees latitude
               and longitude.`,
 			defaultVal: 4000.0,
-			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), cloudStartCmd.Flags(), srStartCmd.Flags()},
 		},
 		{
 			name: "VarGrid.VariableGridDy",
@@ -171,28 +163,28 @@ func init() {
               spatial projection--typically meters or degrees latitude
               and longitude.`,
 			defaultVal: 4000.0,
-			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), cloudStartCmd.Flags(), srStartCmd.Flags()},
 		},
 		{
 			name: "VarGrid.Xnests",
 			usage: `
               Xnests specifies nesting multiples in the X direction.`,
 			defaultVal: []int{2, 2, 2},
-			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), cloudStartCmd.Flags(), srStartCmd.Flags()},
 		},
 		{
 			name: "VarGrid.Ynests",
 			usage: `
               Ynests specifies nesting multiples in the Y direction.`,
 			defaultVal: []int{2, 2, 2},
-			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), cloudStartCmd.Flags(), srStartCmd.Flags()},
 		},
 		{
 			name: "VarGrid.GridProj",
 			usage: `
               GridProj gives projection info for the CTM grid in Proj4 or WKT format.`,
 			defaultVal: "+proj=lcc +lat_1=33.000000 +lat_2=45.000000 +lat_0=40.000000 +lon_0=-97.000000 +x_0=0 +y_0=0 +a=6370997.000000 +b=6370997.000000 +to_meter=1",
-			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), cloudStartCmd.Flags(), srStartCmd.Flags(), srPredictCmd.Flags()},
 		},
 		{
 			name: "VarGrid.HiResLayers",
@@ -201,7 +193,7 @@ func init() {
               nesting in. Layers above this will have all grid cells in the lowest
               spatial resolution. This option is only used with static grids.`,
 			defaultVal: 1,
-			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), cloudStartCmd.Flags(), srStartCmd.Flags()},
 		},
 		{
 			name: "VarGrid.PopDensityThreshold",
@@ -212,7 +204,7 @@ func init() {
               is a candidate for splitting into smaller cells. This option is only used with
               static grids.`,
 			defaultVal: 0.0055,
-			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), cloudStartCmd.Flags(), srStartCmd.Flags()},
 		},
 		{
 			name: "VarGrid.PopThreshold",
@@ -222,7 +214,7 @@ func init() {
               is a candidate for splitting into smaller cells. This option is only used with
               static grids.`,
 			defaultVal: 40000.0,
-			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), cloudStartCmd.Flags(), srStartCmd.Flags()},
 		},
 		{
 			name: "VarGrid.PopConcThreshold",
@@ -232,7 +224,7 @@ func init() {
               See the documentation for PopConcMutator for more information. This
               option is only used with dynamic grids.`,
 			defaultVal: 0.000000001,
-			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), cloudStartCmd.Flags(), srStartCmd.Flags()},
 		},
 		{
 			name: "VarGrid.CensusFile",
@@ -240,7 +232,7 @@ func init() {
               VarGrid.CensusFile is the path to the shapefile holding population information.`,
 			defaultVal:  "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/testPopulation.shp",
 			isInputFile: true,
-			flagsets:    []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:    []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), cloudStartCmd.Flags(), srStartCmd.Flags()},
 		},
 		{
 			name: "VarGrid.CensusPopColumns",
@@ -249,7 +241,7 @@ func init() {
               be included as population estimates in the model. They can be population
               of different demographics or for different population scenarios.`,
 			defaultVal: []string{"TotalPop", "WhiteNoLat", "Black", "Native", "Asian", "Latino"},
-			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), cloudStartCmd.Flags(), srStartCmd.Flags()},
 		},
 		{
 			name: "VarGrid.PopGridColumn",
@@ -259,7 +251,7 @@ func init() {
               if a grid cell should be split. It should be one of the fields
               in CensusPopColumns.`,
 			defaultVal: "TotalPop",
-			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), cloudStartCmd.Flags(), srStartCmd.Flags()},
 		},
 		{
 			name: "VarGrid.MortalityRateFile",
@@ -268,7 +260,7 @@ func init() {
               mortality rate data.`,
 			defaultVal:  "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/testMortalityRate.shp",
 			isInputFile: true,
-			flagsets:    []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:    []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), cloudStartCmd.Flags(), srStartCmd.Flags()},
 		},
 		{
 			name: "VarGrid.MortalityRateColumns",
@@ -286,7 +278,7 @@ func init() {
 				"AsianMort":  "Asian",
 				"LatinoMort": "Latino",
 			},
-			flagsets: []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets: []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), cloudStartCmd.Flags(), srStartCmd.Flags()},
 		},
 		{
 			name: "InMAPData",
@@ -295,7 +287,7 @@ func init() {
               The path can include environment variables.`,
 			defaultVal:  "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/testInMAPInputData.ncf",
 			isInputFile: true,
-			flagsets:    []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags(), preprocCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:    []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srStartCmd.Flags(), preprocCmd.Flags(), cloudStartCmd.Flags()},
 		},
 		{
 			name: "VariableGridData",
@@ -305,7 +297,7 @@ func init() {
               exist. The path can include environment variables.`,
 			defaultVal:  "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/inmapVarGrid.gob",
 			isInputFile: true,
-			flagsets:    []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:    []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srStartCmd.PersistentFlags()},
 		},
 		{
 			name: "EmissionsShapefiles",
@@ -320,7 +312,7 @@ func init() {
               Can include environment variables.`,
 			defaultVal:  []string{"${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/testEmis.shp"},
 			isInputFile: true,
-			flagsets:    []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:    []*pflag.FlagSet{runCmd.PersistentFlags(), srPredictCmd.Flags()},
 		},
 		{
 			name: "EmissionUnits",
@@ -328,7 +320,7 @@ func init() {
               EmissionUnits gives the units that the input emissions are in.
               Acceptable values are 'tons/year', 'kg/year', 'ug/s', and 'μg/s'.`,
 			defaultVal: "tons/year",
-			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), srCmd.Flags(), srPredictCmd.Flags(), workerCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{runCmd.PersistentFlags(), srPredictCmd.Flags()},
 		},
 		{
 			name: "OutputFile",
@@ -337,7 +329,7 @@ func init() {
               include environment variables.`,
 			defaultVal:   "inmap_output.shp",
 			isOutputFile: true,
-			flagsets:     []*pflag.FlagSet{runCmd.PersistentFlags(), srPredictCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:     []*pflag.FlagSet{runCmd.PersistentFlags(), srPredictCmd.Flags()},
 		},
 		{
 			name: "LogFile",
@@ -347,7 +339,7 @@ func init() {
               the same location as the OutputFile.`,
 			defaultVal:   "",
 			isOutputFile: true,
-			flagsets:     []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags(), srCmd.Flags(), workerCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:     []*pflag.FlagSet{runCmd.PersistentFlags(), gridCmd.Flags()},
 		},
 		{
 			name: "OutputAllLayers",
@@ -366,7 +358,7 @@ func init() {
 				"TotalPM25": "PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA",
 				"TotalPopD": "(exp(log(1.078)/10 * TotalPM25) - 1) * TotalPop * AllCause / 100000",
 			},
-			flagsets: []*pflag.FlagSet{runCmd.PersistentFlags(), workerCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets: []*pflag.FlagSet{runCmd.PersistentFlags(), cloudStartCmd.Flags()},
 		},
 		{
 			name: "NumIterations",
@@ -374,15 +366,7 @@ func init() {
               NumIterations is the number of iterations to calculate. If < 1, convergence
               is automatically calculated.`,
 			defaultVal: 0,
-			flagsets:   []*pflag.FlagSet{steadyCmd.Flags(), workerCmd.Flags(), cloudStartCmd.Flags()},
-		},
-		{
-			name: "SR.LogDir",
-			usage: `
-              LogDir is the directory that log files should be stored in when creating
-              a source-receptor matrix. It can contain environment variables.`,
-			defaultVal: "log",
-			flagsets:   []*pflag.FlagSet{srCmd.Flags(), workerCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{steadyCmd.Flags(), cloudStartCmd.Flags(), srStartCmd.Flags()},
 		},
 		{
 			name: "SR.OutputFile",
@@ -391,7 +375,7 @@ func init() {
                when creating a source-receptor matrix. It can contain environment variables.`,
 			defaultVal:   "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/output_${InMAPRunType}.shp",
 			isOutputFile: true,
-			flagsets:     []*pflag.FlagSet{srCmd.Flags(), srPredictCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:     []*pflag.FlagSet{srSaveCmd.Flags(), srPredictCmd.Flags()},
 		},
 		{
 			name: "Preproc.CTMType",
@@ -400,7 +384,7 @@ func init() {
               model we are going to be reading data from. Valid
               options are "GEOS-Chem" and "WRF-Chem".`,
 			defaultVal: "WRF-Chem",
-			flagsets:   []*pflag.FlagSet{preprocCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.WRFChem.WRFOut",
@@ -408,7 +392,7 @@ func init() {
               Preproc.WRFChem.WRFOut is the location of WRF-Chem output files.
               [DATE] should be used as a wild card for the simulation date.`,
 			defaultVal: "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/preproc/wrfout_d01_[DATE]",
-			flagsets:   []*pflag.FlagSet{preprocCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.GEOSChem.GEOSA1",
@@ -416,7 +400,7 @@ func init() {
               Preproc.GEOSChem.GEOSA1 is the location of the GEOS 1-hour time average files.
               [DATE] should be used as a wild card for the simulation date.`,
 			defaultVal: "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/preproc/GEOSFP.[DATE].A1.2x25.nc",
-			flagsets:   []*pflag.FlagSet{preprocCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.GEOSChem.GEOSA3Cld",
@@ -425,7 +409,7 @@ func init() {
               parameter files. [DATE] should be used as a wild card for
               the simulation date.`,
 			defaultVal: "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/preproc/GEOSFP.[DATE].A3cld.2x25.nc",
-			flagsets:   []*pflag.FlagSet{preprocCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.GEOSChem.GEOSA3Dyn",
@@ -434,7 +418,7 @@ func init() {
               parameter files. [DATE] should be used as a wild card for
               the simulation date.`,
 			defaultVal: "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/preproc/GEOSFP.[DATE].A3dyn.2x25.nc",
-			flagsets:   []*pflag.FlagSet{preprocCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.GEOSChem.GEOSI3",
@@ -443,7 +427,7 @@ func init() {
               files. [DATE] should be used as a wild card for
               the simulation date.`,
 			defaultVal: "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/preproc/GEOSFP.[DATE].I3.2x25.nc",
-			flagsets:   []*pflag.FlagSet{preprocCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.GEOSChem.GEOSA3MstE",
@@ -452,7 +436,7 @@ func init() {
               on level edges files. [DATE] should be used as a wild card for
               the simulation date.`,
 			defaultVal: "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/preproc/GEOSFP.[DATE].A3mstE.2x25.nc",
-			flagsets:   []*pflag.FlagSet{preprocCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.GEOSChem.GEOSApBp",
@@ -461,7 +445,7 @@ func init() {
               variable file. It is optional; if it is not specified the Ap and Bp information
               will be extracted from the GEOSChem files.`,
 			defaultVal: "",
-			flagsets:   []*pflag.FlagSet{preprocCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.GEOSChem.GEOSChem",
@@ -469,7 +453,7 @@ func init() {
               Preproc.GEOSChem.GEOSChem is the location of GEOS-Chem output files.
               [DATE] should be used as a wild card for the simulation date.`,
 			defaultVal: "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/preproc/gc_output.[DATE].nc",
-			flagsets:   []*pflag.FlagSet{preprocCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.GEOSChem.ChemFileInterval",
@@ -477,7 +461,7 @@ func init() {
               Preproc.GEOSChem.ChemFileInterval specifies the time duration represented by each GEOS-Chem output file.
               E.g. "3h" for 3 hours`,
 			defaultVal: "3h",
-			flagsets:   []*pflag.FlagSet{preprocCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.GEOSChem.ChemRecordInterval",
@@ -485,14 +469,14 @@ func init() {
               Preproc.GEOSChem.ChemRecordInterval specifies the time duration represented by each GEOS-Chem output record.
               E.g. "3h" for 3 hours`,
 			defaultVal: "3h",
-			flagsets:   []*pflag.FlagSet{preprocCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.GEOSChem.NoChemHourIndex",
 			usage: `
               If Preproc.GEOSChem.NoChemHourIndex is true, the GEOS-Chem output files will be assumed to not contain a time dimension.`,
 			defaultVal: false,
-			flagsets:   []*pflag.FlagSet{preprocCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.GEOSChem.VegTypeGlobal",
@@ -502,7 +486,7 @@ func init() {
               http://wiki.seas.harvard.edu/geos-chem/index.php/Olson_land_map#Structure_of_the_vegtype.global_file`,
 			defaultVal:  "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/preproc/vegtype.global.txt",
 			isInputFile: true,
-			flagsets:    []*pflag.FlagSet{preprocCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:    []*pflag.FlagSet{preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.GEOSChem.Dash",
@@ -511,7 +495,7 @@ func init() {
               names should be assumed to be in the form 'IJ-AVG-S__xxx' vs.
               the form 'IJ_AVG_S__xxx'.`,
 			defaultVal: false,
-			flagsets:   []*pflag.FlagSet{preprocCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.StartDate",
@@ -519,7 +503,7 @@ func init() {
               Preproc.StartDate is the date of the beginning of the simulation.
               Format = "YYYYMMDD".`,
 			defaultVal: "No Default",
-			flagsets:   []*pflag.FlagSet{preprocCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.EndDate",
@@ -527,63 +511,63 @@ func init() {
               Preproc.EndDate is the date of the end of the simulation.
               Format = "YYYYMMDD".`,
 			defaultVal: "No Default",
-			flagsets:   []*pflag.FlagSet{preprocCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.CtmGridXo",
 			usage: `
               Preproc.CtmGridXo is the lower left of Chemical Transport Model (CTM) grid, x`,
 			defaultVal: 0.0,
-			flagsets:   []*pflag.FlagSet{preprocCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.CtmGridYo",
 			usage: `
               Preproc.CtmGridYo is the lower left of grid, y`,
 			defaultVal: 0.0,
-			flagsets:   []*pflag.FlagSet{preprocCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.CtmGridDx",
 			usage: `
               Preproc.CtmGridDx is the grid cell length in x direction [m]`,
 			defaultVal: 1000.0,
-			flagsets:   []*pflag.FlagSet{preprocCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.CtmGridDy",
 			usage: `
               Preproc.CtmGridDy is the grid cell length in y direction [m]`,
 			defaultVal: 1000.0,
-			flagsets:   []*pflag.FlagSet{preprocCmd.Flags(), cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{preprocCmd.Flags()},
 		},
 		{
 			name: "job_name",
 			usage: `
 							job_name specifies the name of a cloud job`,
 			defaultVal: "test_job",
-			flagsets:   []*pflag.FlagSet{cloudCmd.PersistentFlags()},
+			flagsets:   []*pflag.FlagSet{cloudCmd.PersistentFlags(), srCmd.PersistentFlags()},
 		},
 		{
 			name: "addr",
 			usage: `
 							addr specifies the URL to connect to for running cloud jobs`,
 			defaultVal: "inmap.run:443",
-			flagsets:   []*pflag.FlagSet{cloudCmd.PersistentFlags()},
+			flagsets:   []*pflag.FlagSet{cloudCmd.PersistentFlags(), srCmd.PersistentFlags()},
 		},
 		{
 			name: "cmds",
 			usage: `
 							cmds specifies the inmap subcommands to run.`,
 			defaultVal: []string{"run", "steady"},
-			flagsets:   []*pflag.FlagSet{cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{cloudStartCmd.Flags(), srStartCmd.Flags()},
 		},
 		{
 			name: "memory_gb",
 			usage: `
-							memorgy_gb specifies the gigabytes of RAM memory required for this job.`,
+							memory_gb specifies the gigabytes of RAM memory required for this job.`,
 			defaultVal: 20,
-			flagsets:   []*pflag.FlagSet{cloudStartCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{cloudStartCmd.Flags(), srStartCmd.Flags()},
 		},
 	}
 
@@ -667,10 +651,10 @@ func init() {
 	Root.AddCommand(gridCmd)
 	Root.AddCommand(preprocCmd)
 	Root.AddCommand(srCmd)
-	srCmd.AddCommand(srPredictCmd)
-	Root.AddCommand(workerCmd)
+	srCmd.AddCommand(srStartCmd, srSaveCmd, srCleanCmd)
+	Root.AddCommand(srPredictCmd)
 	Root.AddCommand(cloudCmd)
-	cloudCmd.AddCommand(cloudStartCmd, cloudStatusCmd, cloudOutputCmd)
+	cloudCmd.AddCommand(cloudStartCmd, cloudStatusCmd, cloudOutputCmd, cloudDeleteCmd)
 }
 
 // outChan returns a channel printing to standard output.
@@ -762,7 +746,7 @@ concentrations with no temporal variability.`,
 
 		shapeFiles := removeShpSupportFiles(expandStringSlice(Cfg.GetStringSlice("EmissionsShapefiles")))
 		// This goes over each shapeFile and downloads it if necessary.
-		for i, _ := range shapeFiles {
+		for i := range shapeFiles {
 			shapeFiles[i] = maybeDownload(context.TODO(), shapeFiles[i], outChan)
 		}
 
@@ -843,43 +827,65 @@ file and saves the result for use in future InMAP simulations.`,
 	DisableAutoGenTag: true,
 }
 
-// srCmd is a command that creates an SR matrix.
 var srCmd = &cobra.Command{
-	Use:   "sr",
-	Short: "Create an SR matrix.",
-	Long: `sr creates a source-receptor matrix from InMAP simulations.
-Simulations will be run on the cluster defined by $PBS_NODEFILE.
-If $PBS_NODEFILE doesn't exist, the simulations will run on the
-local machine.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		outChan := outChan()
+	Use:               "sr",
+	Short:             "Interact with an SR matrix.",
+	DisableAutoGenTag: true,
+}
 
+var srStartCmd = &cobra.Command{
+	Use:   "start",
+	Short: "Start simulations to create an SR matrix",
+	Long: `start starts the InMAP simulations necessary to create
+a source-receptor matrix.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
 		vgc, err := VarGridConfig(Cfg)
 		if err != nil {
 			return err
 		}
-		layers, err := cast.ToIntSliceE(Cfg.Get("layers"))
+		layers, err := intSliceFromString(Cfg.GetString("layers"))
 		if err != nil {
 			return fmt.Errorf("inmap: reading SR 'layers': %v", err)
 		}
+		c, err := NewCloudClient()
+		if err != nil {
+			return err
+		}
 		ctx := context.TODO()
-		return RunSR(
-			maybeDownload(ctx, os.ExpandEnv(Cfg.GetString("VariableGridData")), outChan),
-			maybeDownload(ctx, os.ExpandEnv(Cfg.GetString("InMAPData")), outChan),
-			os.ExpandEnv(Cfg.GetString("SR.LogDir")),
-			os.ExpandEnv(Cfg.GetString("SR.OutputFile")),
+		return StartSR(
+			ctx,
+			Cfg.GetString("job_name"),
+			Cfg.GetStringSlice("cmds"),
+			int32(Cfg.GetInt("memory_gb")),
+			os.ExpandEnv(Cfg.GetString("VariableGridData")),
 			vgc,
-			Cfg.GetString("configFile"), Cfg.GetInt("begin"), Cfg.GetInt("end"), layers)
+			Cfg.GetInt("begin"),
+			Cfg.GetInt("end"),
+			layers,
+			c,
+		)
 	},
 	DisableAutoGenTag: true,
 }
 
-// workerCmd is a command that starts a new worker.
-var workerCmd = &cobra.Command{
-	Use:   "worker",
-	Short: "Start an InMAP worker.",
-	Long: `worker starts an InMAP worker that listens over RPC for simulation requests,
-does the simulations, and returns results.`,
+func intSliceFromString(s string) ([]int, error) {
+	s = strings.TrimSuffix(strings.TrimPrefix(s, "["), "]")
+	sSlice := strings.Split(s, ",")
+	o := make([]int, len(sSlice))
+	for i, s := range sSlice {
+		v, err := strconv.ParseInt(s, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		o[i] = int(v)
+	}
+	return o, nil
+}
+
+var srSaveCmd = &cobra.Command{
+	Use:   "save",
+	Short: "Save simulation results to create an SR matrix",
+	Long:  `save saves the results of InMAP simulations created using 'start'`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		outChan := outChan()
 
@@ -887,16 +893,60 @@ does the simulations, and returns results.`,
 		if err != nil {
 			return err
 		}
-		ctx := context.TODO()
-		worker, err := NewWorker(
-			maybeDownload(ctx, os.ExpandEnv(Cfg.GetString("VariableGridData")), outChan),
-			maybeDownload(ctx, os.ExpandEnv(Cfg.GetString("InMAPData")), outChan),
-			vgc,
-		)
+		layers, err := intSliceFromString(Cfg.GetString("layers"))
+		if err != nil {
+			return fmt.Errorf("inmap: reading SR 'layers': %v", err)
+		}
+		c, err := NewCloudClient()
 		if err != nil {
 			return err
 		}
-		return sr.WorkerListen(worker, sr.RPCPort)
+		ctx := context.TODO()
+		return SaveSR(
+			ctx,
+			Cfg.GetString("job_name"),
+			os.ExpandEnv(Cfg.GetString("SR.OutputFile")),
+			maybeDownload(ctx, os.ExpandEnv(Cfg.GetString("VariableGridData")), outChan),
+			vgc,
+			Cfg.GetInt("begin"),
+			Cfg.GetInt("end"),
+			layers,
+			c,
+		)
+	},
+	DisableAutoGenTag: true,
+}
+
+var srCleanCmd = &cobra.Command{
+	Use:   "clean",
+	Short: "clean cleans up temporary simulation output",
+	Long:  `save cleans up the InMAP simulations created using 'start'`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		outChan := outChan()
+
+		vgc, err := VarGridConfig(Cfg)
+		if err != nil {
+			return err
+		}
+		layers, err := intSliceFromString(Cfg.GetString("layers"))
+		if err != nil {
+			return fmt.Errorf("inmap: reading SR 'layers': %v", err)
+		}
+		c, err := NewCloudClient()
+		if err != nil {
+			return err
+		}
+		ctx := context.TODO()
+		return CleanSR(
+			ctx,
+			Cfg.GetString("job_name"),
+			maybeDownload(ctx, os.ExpandEnv(Cfg.GetString("VariableGridData")), outChan),
+			vgc,
+			Cfg.GetInt("begin"),
+			Cfg.GetInt("end"),
+			layers,
+			c,
+		)
 	},
 	DisableAutoGenTag: true,
 }
@@ -960,9 +1010,24 @@ var cloudOutputCmd = &cobra.Command{
 	DisableAutoGenTag: true,
 }
 
+// cloudDeleteCmd deletes a cloud job.
+var cloudDeleteCmd = &cobra.Command{
+	Use:   "delete",
+	Short: "Delete a cloud job.",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		c, err := NewCloudClient()
+		if err != nil {
+			return err
+		}
+		ctx := context.Background()
+		return CloudJobDelete(ctx, Cfg.GetString("job_name"), c)
+	},
+	DisableAutoGenTag: true,
+}
+
 // srPredictCmd is a command that makes predictions using the SR matrix.
 var srPredictCmd = &cobra.Command{
-	Use:   "predict",
+	Use:   "srpredict",
 	Short: "Predict concentrations",
 	Long: `predict uses the SR matrix specified in the configuration file
 field SR.OutputFile to predict concentrations resulting
@@ -1039,7 +1104,7 @@ func StartWebServer() {
 	log.Println("Loading front-end...")
 
 	for _, cmd := range []*cobra.Command{Root, versionCmd, runCmd, steadyCmd,
-		gridCmd, preprocCmd, srCmd, srPredictCmd, workerCmd} {
+		gridCmd, preprocCmd, srCmd, srPredictCmd} {
 		cmd.SilenceUsage = true // We don't want the usage messages in the GUI.
 	}
 

@@ -31,6 +31,8 @@ service CloudRPC {
   // requested simulation name.
   rpc Output(JobName) returns(JobOutput) {}
 
+  // Delete deletes the specified simulation.
+  rpc Delete(JobName) returns(JobName) {}
 }
 
 // JobSpec is the input for the RunJob service.

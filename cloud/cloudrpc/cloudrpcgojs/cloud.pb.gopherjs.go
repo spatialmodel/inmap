@@ -441,6 +441,8 @@ type CloudRPCClient interface {
 	// Output returns the output file(s) of the
 	// requested simulation name.
 	Output(ctx context.Context, in *JobName, opts ...grpcweb.CallOption) (*JobOutput, error)
+	// Delete deletes the specified simulation.
+	Delete(ctx context.Context, in *JobName, opts ...grpcweb.CallOption) (*JobName, error)
 }
 
 type cloudRPCClient struct {
@@ -479,4 +481,13 @@ func (c *cloudRPCClient) Output(ctx context.Context, in *JobName, opts ...grpcwe
 	}
 
 	return new(JobOutput).Unmarshal(resp)
+}
+
+func (c *cloudRPCClient) Delete(ctx context.Context, in *JobName, opts ...grpcweb.CallOption) (*JobName, error) {
+	resp, err := c.client.RPCCall(ctx, "Delete", in.Marshal(), opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return new(JobName).Unmarshal(resp)
 }

@@ -31,6 +31,7 @@ import (
 	"github.com/ctessum/geom/proj"
 	"github.com/lnashier/viper"
 	"github.com/spatialmodel/inmap"
+	"github.com/spatialmodel/inmap/cloud"
 	"github.com/spf13/cast"
 )
 
@@ -81,7 +82,7 @@ func checkOutputFile(f string) (string, error) {
 		if err != nil {
 			return f, err
 		}
-		_, err = OpenBucket(context.TODO(), url.Scheme+"://"+url.Host)
+		_, err = cloud.OpenBucket(context.TODO(), url.Scheme+"://"+url.Host)
 		if err != nil {
 			return f, fmt.Errorf("inmap: error when checking OutputFile location: %v", err)
 		}

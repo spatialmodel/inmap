@@ -24,8 +24,10 @@ import (
 	"strings"
 
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
+	"github.com/lnashier/viper"
 	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/cloud/cloudrpc"
+	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 	batch "k8s.io/api/batch/v1"
 	core "k8s.io/api/core/v1"
@@ -44,23 +46,38 @@ type Client struct {
 
 	bucketName string
 
+	root   *cobra.Command
+	config *viper.Viper
+
+	// inputFileArgs and outputFileArgs list the names of the
+	// configuration arguments that represent input and output files.
+	inputFileArgs, outputFileArgs []string
+
 	// Image holds the container image to be used.
 	// The default is "inmap/inmap:latest".
 	Image string
 }
 
 // NewClient creates a new distributed InMAP Kubernetes client.
-// storage is the name of a blob storage bucket for storing output files
+// root is the root command to be run, config holds simulation configuration
+// information, and
+// bucketName is the name of a blob storage bucket for storing output files
 // in the format gs://bucketname.
-func NewClient(k kubernetes.Interface, bucketName string) (*Client, error) {
+// inputFileArgs and outputFileArgs list the names of the
+// configuration arguments that represent input and output files.
+func NewClient(k kubernetes.Interface, root *cobra.Command, config *viper.Viper, bucketName string, inputFileArgs, outputFileArgs []string) (*Client, error) {
 	batchClient := k.BatchV1()
 	jobControl := batchClient.Jobs("inmap-distributed")
 
 	c := &Client{
-		Interface:  k,
-		jobControl: jobControl,
-		bucketName: bucketName,
-		Image:      "inmap/inmap:latest",
+		Interface:      k,
+		jobControl:     jobControl,
+		bucketName:     bucketName,
+		root:           root,
+		config:         config,
+		inputFileArgs:  inputFileArgs,
+		outputFileArgs: outputFileArgs,
+		Image:          "inmap/inmap:latest",
 	}
 
 	grpcServer := grpc.NewServer(grpc.MaxMsgSize(4.295e+9)) // 4 gib max message size.
@@ -104,6 +121,15 @@ func (c *Client) Status(ctx context.Context, job *cloudrpc.JobName) (*cloudrpc.J
 		return nil, err
 	}
 	return c.jobStatus(k8sJob)
+}
+
+// Delete deletes the given job.
+func (c *Client) Delete(ctx context.Context, job *cloudrpc.JobName) (*cloudrpc.JobName, error) {
+	user, err := getUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return job, c.jobControl.Delete(userJobName(user, job.Name), nil)
 }
 
 func (c *Client) getk8sJob(ctx context.Context, job *cloudrpc.JobName) (*batch.Job, error) {

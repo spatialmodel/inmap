@@ -16,10 +16,11 @@ You should have received a copy of the GNU General Public License
 along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package sr
+package sr_test
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -31,6 +32,9 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/gonum/floats"
 	"github.com/spatialmodel/inmap"
+	"github.com/spatialmodel/inmap/cloud"
+	"github.com/spatialmodel/inmap/inmaputil"
+	"github.com/spatialmodel/inmap/sr"
 )
 
 type config struct {
@@ -66,16 +70,68 @@ func loadConfig(file string) (*config, error) {
 }
 
 func TestSR(t *testing.T) {
+	checkConfig := func(cmd []string) {
+		var foundOutputVars, foundEmisUnits, foundEmissionsShapefiles bool
+		for _, a := range cmd {
+			if strings.Contains(a, "EmissionsShapefiles") {
+				foundEmissionsShapefiles = true
+				if !strings.Contains(a, "file://") {
+					t.Errorf("EmissionUnits should be have 'file://' in it but doesn't: %s", a)
+				}
+			}
+			if strings.Contains(a, "EmissionUnits") {
+				foundEmisUnits = true
+				if !strings.Contains(a, "ug/s") {
+					t.Errorf("EmissionUnits should be ug/s but is: %s", a)
+				}
+			}
+			if strings.Contains(a, "OutputVariables") {
+				foundOutputVars = true
+				if !strings.Contains(a, "{\"SOA\":\"SOA\",\"PrimPM25\":\"PrimaryPM25\",\"pNH4\":\"pNH4\","+
+					"\"pSO4\":\"pSO4\",\"pNO3\":\"pNO3\"}") {
+					t.Errorf("wrong OutputVariables: %s", a)
+				}
+			}
+		}
+		if !foundEmissionsShapefiles {
+			t.Error("didn't find emissions shapefiles")
+		}
+		if !foundEmisUnits {
+			t.Error("didn't find emissions units")
+		}
+		if !foundOutputVars {
+			t.Error("didn't find output variables")
+		}
+	}
+
+	checkRun := func(o []byte, err error) {
+		if err != nil {
+			t.Error(err)
+		}
+		for _, l := range strings.Split(string(o), "\n") {
+			if strings.Contains(strings.ToLower(l), "error") {
+				t.Log(l)
+			}
+		}
+	}
+
+	ctx := context.WithValue(context.Background(), "user", "test_user")
+
 	cfg, err := loadConfig("../cmd/inmap/configExample.toml")
 	if err != nil {
 		t.Fatal(err)
 	}
-	cfg.VariableGridData = strings.TrimSuffix(cfg.VariableGridData, ".gob") + "_SR.gob"
-	command := "nocommand"
-	logDir := "noLogs"
-	var nodes []string // no nodes means it will run locally.
-	sr, err := NewSR(cfg.VariableGridData, cfg.InMAPData, command,
-		logDir, &cfg.VarGrid, nodes)
+	varGridReader, err := os.Open(strings.TrimSuffix(cfg.VariableGridData, ".gob") + "_SR.gob")
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Mkdir("test", os.ModePerm)
+	client, err := cloud.NewFakeClient(checkConfig, checkRun, "file://test", inmaputil.Root, inmaputil.Cfg, inmaputil.InputFiles(), inmaputil.OutputFiles())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll("test")
+	s, err := sr.NewSR(varGridReader, &cfg.VarGrid, cloud.FakeRPCClient{Client: client})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,23 +140,32 @@ func TestSR(t *testing.T) {
 	layers := []int{0, 2, 4}
 	begin := 0 // layer 0
 	end := -1
-	if err = sr.Run(outfile, layers, begin, end); err != nil {
+	if err = s.Start(ctx, "sr_test2", layers, begin, end, inmaputil.Root, inmaputil.Cfg, []string{"run", "steady"}, inmaputil.InputFiles(), 2); err != nil {
+		t.Fatal(err)
+	}
+	if err = s.Save(ctx, outfile, "sr_test2", layers, begin, end); err != nil {
 		t.Fatal(err)
 	}
 
 	// Run it again for different indices.
-	sr, err = NewSR(cfg.VariableGridData, cfg.InMAPData, command,
-		logDir, &cfg.VarGrid, nodes)
+	varGridReader, err = os.Open(strings.TrimSuffix(cfg.VariableGridData, ".gob") + "_SR.gob")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, err = sr.NewSR(varGridReader, &cfg.VarGrid, cloud.FakeRPCClient{Client: client})
 	if err != nil {
 		t.Fatal(err)
 	}
 	begin = 20 // layer 2
 	end = 22
-	if err = sr.Run(outfile, layers, begin, end); err != nil {
+	if err = s.Start(ctx, "sr_test", layers, begin, end, inmaputil.Root, inmaputil.Cfg, []string{"run", "steady"}, inmaputil.InputFiles(), 2); err != nil {
+		t.Fatal(err)
+	}
+	if err = s.Save(ctx, outfile, "sr_test", layers, begin, end); err != nil {
 		t.Fatal(err)
 	}
 	t.Run("compare ncf", func(t *testing.T) {
-		ncfWithinTol(t, "../cmd/inmap/testdata/testSR.ncf", "../cmd/inmap/testdata/testSR.ncf", 1.e-10)
+		ncfWithinTol(t, "../cmd/inmap/testdata/testSR.ncf", "../cmd/inmap/testdata/testSR_golden.ncf", 1.e-9)
 	})
 }
 
@@ -226,7 +291,7 @@ func interfaceEqualWithinTol(t *testing.T, new, old interface{}, tol float64) {
 		for i, n := range newV {
 			o := oldV[i]
 			if !floats.EqualWithinAbsOrRel(float64(n), float64(o), tol, tol) {
-				t.Errorf("%g != %g", n, o)
+				t.Errorf("%d: %g != %g", i, n, o)
 			}
 		}
 	default:

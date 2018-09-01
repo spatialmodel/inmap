@@ -1,12 +1,22 @@
-## inmap sr
+## inmap sr clean
 
-Interact with an SR matrix.
+clean cleans up temporary simulation output
 
 ### Synopsis
 
-Interact with an SR matrix.
+save cleans up the InMAP simulations created using 'start'
+
+```
+inmap sr clean [flags]
+```
 
 ### Options
+
+```
+  -h, --help   help for clean
+```
+
+### Options inherited from parent commands
 
 ```
       --addr string       
@@ -14,10 +24,11 @@ Interact with an SR matrix.
       --begin int         
                                         begin specifies the beginning grid index (inclusive) for SR
                                         matrix generation.
+      --config string     
+                                        config specifies the configuration file location.
       --end int           
                                         end specifies the ending grid index (exclusive) for SR matrix
                                         generation. The default is -1 which represents the last row. (default -1)
-  -h, --help              help for sr
       --job_name string   
                           							job_name specifies the name of a cloud job (default "test_job")
       --layers ints       
@@ -25,17 +36,7 @@ Interact with an SR matrix.
                                         be included in the SR matrix. (default [0,2,4,6])
 ```
 
-### Options inherited from parent commands
-
-```
-      --config string   
-                                      config specifies the configuration file location.
-```
-
 ### SEE ALSO
 
-* [inmap](inmap.md)	 - A reduced-form air quality model.
-* [inmap sr clean](inmap_sr_clean.md)	 - clean cleans up temporary simulation output
-* [inmap sr save](inmap_sr_save.md)	 - Save simulation results to create an SR matrix
-* [inmap sr start](inmap_sr_start.md)	 - Start simulations to create an SR matrix
+* [inmap sr](inmap_sr.md)	 - Interact with an SR matrix.
 

@@ -16,19 +16,19 @@ You should have received a copy of the GNU General Public License
 along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package cloud
+package cloud_test
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 
 	"github.com/spatialmodel/inmap"
+	"github.com/spatialmodel/inmap/cloud"
 	"github.com/spatialmodel/inmap/inmaputil"
 )
 
 func TestRunInputFromViper(t *testing.T) {
-	js, err := inmaputil.CloudJobSpec("test_job", []string{"run", "steady"}, 1)
+	js, err := cloud.JobSpec(inmaputil.Root, inmaputil.Cfg, "test_job", []string{"run", "steady"}, inmaputil.InputFiles(), 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,9 +50,7 @@ func TestRunInputFromViper(t *testing.T) {
 		"--OutputFile":                   "inmap_output.shp",
 		"--VarGrid.PopThreshold":         "40000",
 		"--VarGrid.Ynests":               "2,2,2",
-		"--static":                       "false",
 		"--VarGrid.MortalityRateColumns": "{\"AllCause\":\"TotalPop\",\"AsianMort\":\"Asian\",\"BlackMort\":\"Black\",\"LatinoMort\":\"Latino\",\"NativeMort\":\"Native\",\"WhNoLMort\":\"WhiteNoLat\"}\n",
-		"--creategrid":                   "false",
 		"--VarGrid.Xnests":               "2,2,2",
 		"--EmissionsShapefiles":          "258bbcefe8c0073d6f323351463be9e9685e74bb92e367ca769b9536ed247213.shp",
 		"--VarGrid.PopGridColumn":        "TotalPop",
@@ -62,7 +60,6 @@ func TestRunInputFromViper(t *testing.T) {
 		"--VarGrid.VariableGridYo":       "-4000",
 		"--InMAPData":                    "434bf26e3fda1ef9cef7e1fa6cc6b5174d11a22b19cbe10d256adc83b2a97d44.ncf",
 		"--VarGrid.VariableGridXo":       "-4000",
-		"--OutputAllLayers":              "false",
 		"--VarGrid.HiResLayers":          "1",
 		"--VarGrid.PopDensityThreshold":  "0.0055",
 		"--VarGrid.VariableGridDy":       "4000",
@@ -96,12 +93,18 @@ func TestRunInputFromViper(t *testing.T) {
 		"764874ad5081665459c67d40607f68df6fc689aa695b4822e012aef84cba5394.shx": 108,
 		"764874ad5081665459c67d40607f68df6fc689aa695b4822e012aef84cba5394.dbf": 341,
 		"764874ad5081665459c67d40607f68df6fc689aa695b4822e012aef84cba5394.prj": 432,
-		"6c3122217a2817d29cbe795c72f6cb83c43321e70d922802db10b5ea4cf5a16e.txt": 244,
 		"6cd7b21b88adfaac1ac16cf4d5a746d6818b17eaa1cbc629899020a0ef2e9ece.gob": 27389,
 		"434bf26e3fda1ef9cef7e1fa6cc6b5174d11a22b19cbe10d256adc83b2a97d44.ncf": 14284,
 	}
 	if len(js.FileData) != len(wantFiles) {
-		fmt.Errorf("incorrect number of files: %d != %d", len(js.FileData), len(wantFiles))
+		t.Errorf("incorrect number of files: %d != %d", len(js.FileData), len(wantFiles))
+		if len(js.FileData) < len(wantFiles) {
+			for wf := range wantFiles {
+				if _, ok := js.FileData[wf]; !ok {
+					t.Errorf("missing file %s", wf)
+				}
+			}
+		}
 	}
 	for name, b := range js.FileData {
 		if wantB, ok := wantFiles[name]; ok {

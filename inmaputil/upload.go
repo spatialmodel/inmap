@@ -30,6 +30,7 @@ import (
 
 	"github.com/google/go-cloud/blob"
 	"github.com/spatialmodel/inmap"
+	"github.com/spatialmodel/inmap/cloud"
 )
 
 type uploader struct {
@@ -56,7 +57,7 @@ func (u *uploader) uploadOutput(d *inmap.InMAP) error {
 		if err != nil {
 			return fmt.Errorf("inmaputil: parsing url '%s' for upload: %s", files[1], err)
 		}
-		bucket, err := OpenBucket(ctx, url.Scheme+"://"+url.Host)
+		bucket, err := cloud.OpenBucket(ctx, url.Scheme+"://"+url.Host)
 		if err != nil {
 			return fmt.Errorf("inmaputil: opening bucket to upload file '%s': %s", files[1], err)
 		}

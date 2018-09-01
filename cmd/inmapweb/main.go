@@ -39,6 +39,7 @@ import (
 	"github.com/spatialmodel/inmap/cloud"
 	"github.com/spatialmodel/inmap/emissions/slca/eieio"
 	"github.com/spatialmodel/inmap/epi"
+	"github.com/spatialmodel/inmap/inmaputil"
 	"golang.org/x/crypto/acme/autocert"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -134,12 +135,12 @@ func main() {
 			logger.WithError(err).Fatal("failed to initialize Kubernetes")
 		}
 
-		inmapServer, err = cloud.NewClient(clientset, *bucket)
+		inmapServer, err = cloud.NewClient(clientset, inmaputil.Root, inmaputil.Cfg, *bucket, inmaputil.InputFiles(), inmaputil.OutputFiles())
 		if err != nil {
 			logger.WithError(err).Fatal("failed to initialize InMAP server")
 		}
 	} else {
-		inmapServer, err = cloud.NewFakeClient(nil, false, *bucket)
+		inmapServer, err = cloud.NewFakeClient(nil, false, *bucket, inmaputil.Root, inmaputil.Cfg, inmaputil.InputFiles(), inmaputil.OutputFiles())
 		if err != nil {
 			logger.WithError(err).Fatal("failed to initialize fake InMAP server")
 		}
