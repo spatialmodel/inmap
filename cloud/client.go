@@ -63,7 +63,7 @@ func NewClient(k kubernetes.Interface, bucketName string) (*Client, error) {
 		Image:      "inmap/inmap:latest",
 	}
 
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(grpc.MaxMsgSize(4.295e+9)) // 4 gib max message size.
 	cloudrpc.RegisterCloudRPCServer(grpcServer, c)
 	c.WrappedGrpcServer = grpcweb.WrapServer(grpcServer, grpcweb.WithWebsockets(true))
 
