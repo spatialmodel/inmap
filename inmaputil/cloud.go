@@ -38,7 +38,13 @@ import (
 
 // NewCloudClient creates a new RPC client based on the information in Cfg.
 func NewCloudClient() (cloudrpc.CloudRPCClient, error) {
-	conn, err := grpc.Dial(Cfg.GetString("addr"), grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, "")))
+	conn, err := grpc.Dial(Cfg.GetString("addr"),
+		grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, "")),
+		grpc.WithDefaultCallOptions(
+			grpc.MaxCallRecvMsgSize(4.295e+9), // 4 gib max message size
+			grpc.MaxCallSendMsgSize(4.295e+9), // 4 gib max message size
+		),
+	)
 	if err != nil {
 		return nil, err
 	}
