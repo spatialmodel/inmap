@@ -20,9 +20,8 @@ package ces
 import (
 	"testing"
 
+	"github.com/gonum/floats"
 	"github.com/spatialmodel/inmap/emissions/slca/eieio"
-
-	"gonum.org/v1/gonum/mat"
 )
 
 func TestCES(t *testing.T) {
@@ -70,7 +69,7 @@ func TestCES(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		have := mat.Sum(d)
+		have := floats.Sum(d.Data)
 		want := 9.09462878742879e+12
 		if have != want {
 			t.Errorf("white/other = %g; want %g", have, want)
@@ -80,7 +79,7 @@ func TestCES(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		have = mat.Sum(d)
+		have = floats.Sum(d.Data)
 		want = 1.0027534612837496e+12
 		if have != want {
 			t.Errorf("black = %g; want %g", have, want)
@@ -90,7 +89,7 @@ func TestCES(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		have = mat.Sum(d)
+		have = floats.Sum(d.Data)
 		want = 1.265211068411983e+12
 		if have != want {
 			t.Errorf("latino = %g; want %g", have, want)

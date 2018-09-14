@@ -341,7 +341,25 @@ func array2vec(d []float64) *mat.VecDense {
 
 // WhiteOtherDemand returns the domestic personal consumption final demand by white non-Latino
 // people and people of other races besides Black and Latino.
-func (c *CES) WhiteOtherDemand(eio *eieio.EIO, commodities *eieio.Mask, year eieio.Year) (*mat.VecDense, error) {
+func (c *CES) WhiteOtherDemand(eio *eieio.EIO, commodities *eieio.Mask, year eieio.Year) (*eieiorpc.Vector, error) {
+	return c.adjustDemand(eio, commodities, year, c.whiteOtherFrac)
+}
+
+// BlackDemand returns the domestic personal consumption final demand by
+// Black people.
+func (c *CES) BlackDemand(eio *eieio.EIO, commodities *eieio.Mask, year eieio.Year) (*eieiorpc.Vector, error) {
+	return c.adjustDemand(eio, commodities, year, c.blackFrac)
+}
+
+// LatinoDemand returns the domestic personal consumption final demand by
+// Latino people.
+func (c *CES) LatinoDemand(eio *eieio.EIO, commodities *eieio.Mask, year eieio.Year) (*eieiorpc.Vector, error) {
+	return c.adjustDemand(eio, commodities, year, c.latinoFrac)
+}
+
+// adjustDemand returns the domestic personal consumption after adjusting it
+// using the frac function.
+func (c *CES) adjustDemand(eio *eieio.EIO, commodities *eieio.Mask, year eieio.Year, frac func(int, string) (float64, error)) (*eieiorpc.Vector, error) {
 	demand, err := eio.FinalDemand(context.TODO(), &eieiorpc.FinalDemandInput{
 		FinalDemandType: eieiorpc.FinalDemandType_PersonalConsumption,
 		Commodities:     mask2rpc(commodities),
@@ -356,65 +374,11 @@ func (c *CES) WhiteOtherDemand(eio *eieio.EIO, commodities *eieio.Mask, year eie
 		if v == 0 {
 			continue
 		}
-		f, err := c.whiteOtherFrac(int(year), sector)
+		f, err := frac(int(year), sector)
 		if err != nil {
 			return nil, err
 		}
 		demand.Data[i] = v * f
-	}
-	return rpc2vec(demand), nil
-}
-
-// BlackDemand returns the domestic personal consumption final demand by
-// Black people.
-func (c *CES) BlackDemand(eio *eieio.EIO, commodities *eieio.Mask, year eieio.Year) (*mat.VecDense, error) {
-	demandRPC, err := eio.FinalDemand(context.TODO(), &eieiorpc.FinalDemandInput{
-		FinalDemandType: eieiorpc.FinalDemandType_PersonalConsumption,
-		Commodities:     mask2rpc(commodities),
-		Year:            int32(year),
-		Location:        eieiorpc.Location_Domestic,
-	})
-	if err != nil {
-		return nil, err
-	}
-	demand := rpc2vec(demandRPC)
-	for i, sector := range eio.Commodities {
-		v := demand.At(i, 0)
-		if v == 0 {
-			continue
-		}
-		f, err := c.blackFrac(int(year), sector)
-		if err != nil {
-			return nil, err
-		}
-		demand.SetVec(i, v*f)
-	}
-	return demand, nil
-}
-
-// LatinoDemand returns the domestic personal consumption final demand by
-// Latino people.
-func (c *CES) LatinoDemand(eio *eieio.EIO, commodities *eieio.Mask, year eieio.Year) (*mat.VecDense, error) {
-	demandRPC, err := eio.FinalDemand(context.TODO(), &eieiorpc.FinalDemandInput{
-		FinalDemandType: eieiorpc.FinalDemandType_PersonalConsumption,
-		Commodities:     mask2rpc(commodities),
-		Year:            int32(year),
-		Location:        eieiorpc.Location_Domestic,
-	})
-	if err != nil {
-		return nil, err
-	}
-	demand := rpc2vec(demandRPC)
-	for i, sector := range eio.Commodities {
-		v := demand.At(i, 0)
-		if v == 0 {
-			continue
-		}
-		f, err := c.latinoFrac(int(year), sector)
-		if err != nil {
-			return nil, err
-		}
-		demand.SetVec(i, v*f)
 	}
 	return demand, nil
 }
