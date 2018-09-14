@@ -21,7 +21,7 @@ import (
 	"context"
 	"testing"
 
-	eieiorpc "github.com/spatialmodel/inmap/emissions/slca/eieio/grpc/gogrpc"
+	"github.com/spatialmodel/inmap/emissions/slca/eieio/eieiorpc"
 )
 
 func TestLoadFinalDemand(t *testing.T) {

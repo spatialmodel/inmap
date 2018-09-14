@@ -26,7 +26,7 @@ import (
 	"github.com/gonum/floats"
 
 	"github.com/spatialmodel/inmap/epi"
-	eieiorpc "github.com/spatialmodel/inmap/emissions/slca/eieio/grpc/gogrpc"
+	"github.com/spatialmodel/inmap/emissions/slca/eieio/eieiorpc"
 )
 
 func TestCSTConfig_EmissionsSurrogate(t *testing.T) {

@@ -17,16 +17,6 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.*/
 
 package eieio
 
-// Install the code generation dependencies.
-// go get -u github.com/golang/protobuf/protoc-gen-go
-// go get -u github.com/johanbrandhorst/protobuf/protoc-gen-gopherjs
-
-// Generate the gRPC client/server code. (Information at https://grpc.io/docs/quickstart/go.html)
-//go:generate protoc -I:grpc eieio.proto --go_out=plugins=grpc:grpc/gogrpc --gopherjs_out=plugins=grpc:grpc/gopherjsgrpc
-
-// Build the client javascript code.
-//go:generate gopherjs build -m ./gui
-
 import (
 	"bytes"
 	"context"
@@ -60,9 +50,9 @@ import (
 	"gonum.org/v1/plot/vg/vgimg"
 	"google.golang.org/grpc"
 
-	"github.com/spatialmodel/inmap/epi"
 	"github.com/spatialmodel/inmap/emissions/slca"
-	eieiorpc "github.com/spatialmodel/inmap/emissions/slca/eieio/grpc/gogrpc"
+	"github.com/spatialmodel/inmap/emissions/slca/eieio/eieiorpc"
+	"github.com/spatialmodel/inmap/epi"
 )
 
 type config struct {

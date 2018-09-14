@@ -10,7 +10,7 @@ import (
 	"github.com/BurntSushi/toml"
 
 	"github.com/spatialmodel/inmap/epi"
-	eieiorpc "github.com/spatialmodel/inmap/emissions/slca/eieio/grpc/gogrpc"
+	"github.com/spatialmodel/inmap/emissions/slca/eieio/eieiorpc"
 )
 
 func TestPopulationIncidence(t *testing.T) {

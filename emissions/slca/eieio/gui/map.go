@@ -27,7 +27,7 @@ import (
 	leaflet "github.com/ctessum/go-leaflet"
 	"github.com/ctessum/go-leaflet/plugin/glify"
 	"github.com/gopherjs/gopherjs/js"
-	eieiorpc "github.com/spatialmodel/inmap/emissions/slca/eieio/grpc/gopherjsgrpc"
+	eieiorpc "github.com/spatialmodel/inmap/emissions/slca/eieio/eieiorpc/eieiorpcjs"
 )
 
 func (c *GUI) LoadMap(div string) error {

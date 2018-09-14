@@ -32,7 +32,7 @@ import (
 	"gonum.org/v1/gonum/mat"
 
 	"github.com/spatialmodel/inmap/emissions/slca"
-	eieiorpc "github.com/spatialmodel/inmap/emissions/slca/eieio/grpc/gogrpc"
+	"github.com/spatialmodel/inmap/emissions/slca/eieio/eieiorpc"
 )
 
 // SpatialEIO implements a spatial EIO LCA model.

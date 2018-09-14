@@ -25,7 +25,7 @@ import (
 	"strconv"
 	"strings"
 
-	eieiorpc "github.com/spatialmodel/inmap/emissions/slca/eieio/grpc/gogrpc"
+	"github.com/spatialmodel/inmap/emissions/slca/eieio/eieiorpc"
 
 	"github.com/ctessum/requestcache"
 	"gonum.org/v1/gonum/mat"

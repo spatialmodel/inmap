@@ -22,7 +22,7 @@ import (
 
 	"gonum.org/v1/gonum/mat"
 
-	eieiorpc "github.com/spatialmodel/inmap/emissions/slca/eieio/grpc/gogrpc"
+	"github.com/spatialmodel/inmap/emissions/slca/eieio/eieiorpc"
 )
 
 // FinalDemand specifies the available types of final demand.

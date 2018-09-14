@@ -24,7 +24,7 @@ import (
 	"math"
 	"testing"
 
-	eieiorpc "github.com/spatialmodel/inmap/emissions/slca/eieio/grpc/gogrpc"
+	"github.com/spatialmodel/inmap/emissions/slca/eieio/eieiorpc"
 )
 
 const tolerance = 1.e-10 // tolerance for float comparison

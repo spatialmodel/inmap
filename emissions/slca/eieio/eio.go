@@ -15,11 +15,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with InMAP.  If not, see <http://www.gnu.org/licenses/>.*/
 
-// package eieio implements an Extended InMAP Economic Input-Output (EIEIO)
-// life cycle assessment
-// model based on the US Bureau of Economic Analysis (BEA)
-// Annual Input-Output Accounts Data from
-// https://www.gov/industry/io_annual.htm
 package eieio
 
 import (
@@ -30,7 +25,7 @@ import (
 	"github.com/ctessum/requestcache"
 	"gonum.org/v1/gonum/mat"
 
-	eieiorpc "github.com/spatialmodel/inmap/emissions/slca/eieio/grpc/gogrpc"
+	"github.com/spatialmodel/inmap/emissions/slca/eieio/eieiorpc"
 )
 
 // Config holds simulation configuration imformation.
