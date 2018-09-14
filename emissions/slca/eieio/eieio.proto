@@ -48,10 +48,19 @@ service EIEIOrpc {
 
   rpc CommodityMask(StringInput) returns (Mask) {}
   rpc EmitterMask(StringInput) returns (Mask) {}
+
+  rpc Commodities(StringInput) returns (StringList) {}
+  rpc Industries(StringInput) returns (StringList) {}
+
+  rpc DemographicConsumption(DemographicConsumptionInput) returns (Vector) {}
 }
 
 message StringInput {
   string String = 1;
+}
+
+message StringList {
+  repeated string List = 1;
 }
 
 message Selectors {
@@ -160,6 +169,19 @@ message FinalDemandInput {
   Mask Commodities = 2;
   int32 Year = 3;
   Location Location = 4;
+}
+
+message DemographicConsumptionInput {
+  Demograph Demograph = 1;
+  Mask Commodities = 2;
+  int32 Year = 3;
+}
+
+// These are the included demographic groups.
+enum Demograph {
+  Black = 0;
+  Hispanic = 1;
+  WhiteOther = 2;
 }
 
 message ConcentrationMatrixInput {

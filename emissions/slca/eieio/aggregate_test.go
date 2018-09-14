@@ -55,7 +55,7 @@ func TestAggregator_io(t *testing.T) {
 
 	t.Run("industry mask", func(t *testing.T) {
 		mask := a.IndustryMask("Elec.")
-		r := len(e.Industries)
+		r := len(e.industries)
 		v := mat.NewVecDense(r, nil)
 		for i := 0; i < r; i++ {
 			v.SetVec(i, float64(i))
@@ -70,7 +70,7 @@ func TestAggregator_io(t *testing.T) {
 
 	t.Run("commodity mask", func(t *testing.T) {
 		mask := a.CommodityMask("Elec.")
-		r := len(e.Commodities)
+		r := len(e.commodities)
 		v := mat.NewVecDense(r, nil)
 		for i := 0; i < r; i++ {
 			v.SetVec(i, float64(i))

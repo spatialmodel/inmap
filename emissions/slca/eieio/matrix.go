@@ -128,7 +128,7 @@ func (e *EIO) textRowFromExcel(fileName, sheet string, row, startCol, endCol int
 // as well as a map in the format map[code]description.
 func (e *EIO) industriesSummary(fileName string) (codes, descriptions []string, err error) {
 	const startRow, endRow = 7, 78
-	return e.industries(fileName, startRow, endRow)
+	return e.getIndustries(fileName, startRow, endRow)
 }
 
 // industriesDetail returns the industry codes and descriptions from the
@@ -136,13 +136,13 @@ func (e *EIO) industriesSummary(fileName string) (codes, descriptions []string, 
 // as well as a map in the format map[code]description.
 func (e *EIO) industriesDetail(fileName string) (codes, descriptions []string, err error) {
 	const startRow, endRow = 5, 394
-	return e.industries(fileName, startRow, endRow)
+	return e.getIndustries(fileName, startRow, endRow)
 }
 
 // industries returns the industry codes and descriptions from the
 // given Excel file,
 // as well as a map in the format map[code]description.
-func (e *EIO) industries(fileName string, startRow, endRow int) (codes, descriptions []string, err error) {
+func (e *EIO) getIndustries(fileName string, startRow, endRow int) (codes, descriptions []string, err error) {
 	const codeCol, descCol = 0, 1
 	codes, err = e.textColumnFromExcel(fileName, "2007", codeCol, startRow, endRow)
 	if err != nil {
@@ -161,7 +161,7 @@ func (e *EIO) industries(fileName string, startRow, endRow int) (codes, descript
 func (e *EIO) commoditiesSummary(fileName string) (codes, descriptions []string, err error) {
 	const codeRow, descRow = 5, 6
 	const startCol, endCol = 2, 75
-	return e.commodities(fileName, codeRow, descRow, startCol, endCol)
+	return e.getCommodities(fileName, codeRow, descRow, startCol, endCol)
 }
 
 // commoditiesDetail returns the industry codes and descriptions from the
@@ -170,13 +170,13 @@ func (e *EIO) commoditiesSummary(fileName string) (codes, descriptions []string,
 func (e *EIO) commoditiesDetail(fileName string) (codes, descriptions []string, err error) {
 	const codeRow, descRow = 4, 3
 	const startCol, endCol = 2, 391
-	return e.commodities(fileName, codeRow, descRow, startCol, endCol)
+	return e.getCommodities(fileName, codeRow, descRow, startCol, endCol)
 }
 
 // commodities returns the commodity codes and descriptions from the
 // given Excel file,
 // as well as a map in the format map[code]description.
-func (e *EIO) commodities(fileName string, codeRow, descRow, startCol, endCol int) (codes, descriptions []string, err error) {
+func (e *EIO) getCommodities(fileName string, codeRow, descRow, startCol, endCol int) (codes, descriptions []string, err error) {
 	codes, err = e.textRowFromExcel(fileName, "2007", codeRow, startCol, endCol)
 	if err != nil {
 		return nil, nil, err

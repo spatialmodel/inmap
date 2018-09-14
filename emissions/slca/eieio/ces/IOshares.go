@@ -31,9 +31,7 @@ import (
 	"strconv"
 	"strings"
 
-	"gonum.org/v1/gonum/mat"
-
-	"github.com/spatialmodel/inmap/emissions/slca/eieio"
+	"github.com/gonum/floats"
 	"github.com/spatialmodel/inmap/emissions/slca/eieio/eieiorpc"
 
 	"github.com/tealeg/xlsx"
@@ -60,6 +58,8 @@ type CES struct {
 	whiteFractions  map[int]map[string]float64
 	blackFractions  map[int]map[string]float64
 	latinoFractions map[int]map[string]float64
+
+	eio eieiorpc.EIEIOrpcServer
 }
 
 // txtToSlice converts a line-delimited list of strings in
@@ -138,7 +138,7 @@ func dataToXlsxFile(d map[string]float64, xlsxFile *xlsx.File, sheet string) {
 }
 
 // NewCES loads data into a new CES object.
-func NewCES() (*CES, error) {
+func NewCES(eio eieiorpc.EIEIOrpcServer) (*CES, error) {
 	// Create map of IO categories to CE categories
 	ioCEMap := make(map[string][]string)
 	ioCEXLSXPath := filepath.Join(Filedir, "IO-CEcrosswalk.xlsx")
@@ -153,6 +153,7 @@ func NewCES() (*CES, error) {
 		whiteFractions:  make(map[int]map[string]float64),
 		blackFractions:  make(map[int]map[string]float64),
 		latinoFractions: make(map[int]map[string]float64),
+		eio:             eio,
 	}
 
 	for _, sheet := range ioCEXLSX.Sheets {
@@ -314,63 +315,73 @@ func (c *CES) latinoFrac(year int, IOSector string) (float64, error) {
 	return v, nil
 }
 
-func mask2rpc(m *eieio.Mask) *eieiorpc.Mask {
-	if m == nil {
-		return nil
-	}
-	return &eieiorpc.Mask{Data: vec2array((*mat.VecDense)(m))}
-}
-func vec2array(v *mat.VecDense) []float64 {
-	if v == nil {
-		return nil
-	}
-	return v.RawVector().Data
-}
-func rpc2vec(d *eieiorpc.Vector) *mat.VecDense {
-	if d == nil {
-		return nil
-	}
-	return array2vec(d.Data)
-}
-func array2vec(d []float64) *mat.VecDense {
-	if len(d) == 0 {
-		return nil
-	}
-	return mat.NewVecDense(len(d), d)
-}
-
-// WhiteOtherDemand returns the domestic personal consumption final demand by white non-Latino
-// people and people of other races besides Black and Latino.
-func (c *CES) WhiteOtherDemand(eio *eieio.EIO, commodities *eieio.Mask, year eieio.Year) (*eieiorpc.Vector, error) {
-	return c.adjustDemand(eio, commodities, year, c.whiteOtherFrac)
-}
-
-// BlackDemand returns the domestic personal consumption final demand by
-// Black people.
-func (c *CES) BlackDemand(eio *eieio.EIO, commodities *eieio.Mask, year eieio.Year) (*eieiorpc.Vector, error) {
-	return c.adjustDemand(eio, commodities, year, c.blackFrac)
-}
-
-// LatinoDemand returns the domestic personal consumption final demand by
-// Latino people.
-func (c *CES) LatinoDemand(eio *eieio.EIO, commodities *eieio.Mask, year eieio.Year) (*eieiorpc.Vector, error) {
-	return c.adjustDemand(eio, commodities, year, c.latinoFrac)
-}
-
-// adjustDemand returns the domestic personal consumption after adjusting it
+// DemographicConsumption returns domestic personal consumption final demand
+// plus private final demand for the specified demograph.
+// Personal consumption and private residential expenditures are directly adjusted
 // using the frac function.
-func (c *CES) adjustDemand(eio *eieio.EIO, commodities *eieio.Mask, year eieio.Year, frac func(int, string) (float64, error)) (*eieiorpc.Vector, error) {
-	demand, err := eio.FinalDemand(context.TODO(), &eieiorpc.FinalDemandInput{
+// Other private expenditures are adjusted by the scalar:
+//		adj = sum(frac(personal + private_residential)) / sum(personal + private_residential)
+// Acceptable demographs:
+//		Black: People self-identifying as black or African-American.
+//		Hispanic: People self-identifying as Hispanic or Latino.
+//		WhiteOther: people self identifying as white or other races besides black, and not Hispanic.
+func (c *CES) DemographicConsumption(ctx context.Context, in *eieiorpc.DemographicConsumptionInput) (*eieiorpc.Vector, error) {
+	var frac func(int, string) (float64, error)
+	switch in.Demograph {
+	case eieiorpc.Demograph_Black:
+		frac = c.blackFrac
+	case eieiorpc.Demograph_Hispanic:
+		frac = c.latinoFrac
+	case eieiorpc.Demograph_WhiteOther:
+		frac = c.whiteOtherFrac
+	default:
+		return nil, fmt.Errorf("invalid demograph: %s", in.Demograph)
+	}
+	return c.adjustDemand(ctx, in.Commodities, in.Year, frac)
+}
+
+// adjustDemand returns domestic personal consumption final demand plus private final demand
+// after adjusting it using the frac function.
+// Personal consumption and private residential expenditures are directly adjusted
+// using the frac function.
+// Other private expenditures are adjusted by the scalar:
+//		adj = sum(frac(personal + private_residential)) / sum(personal + private_residential)
+func (c *CES) adjustDemand(ctx context.Context, commodities *eieiorpc.Mask, year int32, frac func(year int, commodity string) (float64, error)) (*eieiorpc.Vector, error) {
+	// First, get the adjusted personal consumption.
+	pc, err := c.eio.FinalDemand(ctx, &eieiorpc.FinalDemandInput{
 		FinalDemandType: eieiorpc.FinalDemandType_PersonalConsumption,
-		Commodities:     mask2rpc(commodities),
-		Year:            int32(year),
+		Commodities:     commodities,
+		Year:            year,
 		Location:        eieiorpc.Location_Domestic,
 	})
 	if err != nil {
 		return nil, err
 	}
-	for i, sector := range eio.Commodities {
-		v := demand.Data[i]
+
+	// Then, get the private residential expenditures.
+	pcRes, err := c.eio.FinalDemand(ctx, &eieiorpc.FinalDemandInput{
+		FinalDemandType: eieiorpc.FinalDemandType_PrivateResidential,
+		Commodities:     commodities,
+		Year:            year,
+		Location:        eieiorpc.Location_Domestic,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Now, add the two together
+	floats.Add(pc.Data, pcRes.Data)
+
+	// Next, adjust the personal consumption by the provided fractions.
+	demand := &eieiorpc.Vector{
+		Data: make([]float64, len(pc.Data)),
+	}
+	commodityList, err := c.eio.Commodities(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	for i, sector := range commodityList.List {
+		v := pc.Data[i]
 		if v == 0 {
 			continue
 		}
@@ -379,6 +390,26 @@ func (c *CES) adjustDemand(eio *eieio.EIO, commodities *eieio.Mask, year eieio.Y
 			return nil, err
 		}
 		demand.Data[i] = v * f
+	}
+
+	// Now we create an adjustment factor and use it to adjust the
+	// rest of the private expenditures.
+	adj := floats.Sum(demand.Data) / floats.Sum(pc.Data)
+	for _, dt := range []eieiorpc.FinalDemandType{
+		eieiorpc.FinalDemandType_PrivateStructures,
+		eieiorpc.FinalDemandType_PrivateIP,
+		eieiorpc.FinalDemandType_InventoryChange} {
+
+		d, err := c.eio.FinalDemand(context.TODO(), &eieiorpc.FinalDemandInput{
+			FinalDemandType: dt,
+			Commodities:     commodities,
+			Year:            year,
+			Location:        eieiorpc.Location_Domestic,
+		})
+		if err != nil {
+			return nil, err
+		}
+		floats.AddScaled(demand.Data, adj, d.Data)
 	}
 	return demand, nil
 }

@@ -41,6 +41,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"github.com/sirupsen/logrus"
+	"github.com/spatialmodel/inmap/emissions/slca/eieio/ces"
 	"gonum.org/v1/gonum/mat"
 	"gonum.org/v1/plot"
 	"gonum.org/v1/plot/palette"
@@ -66,6 +67,7 @@ type config struct {
 // Server is a server for EIO LCA model simulation data.
 type Server struct {
 	*SpatialEIO
+	*ces.CES
 	ioAgg  *Aggregator
 	sccAgg *Aggregator
 
@@ -99,7 +101,7 @@ type ServerConfig struct {
 	DefaultYear Year
 }
 
-// NewServer creates a new EIO-LCA server, where hr is the hazard ratio
+// NewServer creates a new EIO-LCA server, where hr represents the hazard ratio
 // functions to be used.
 func NewServer(c *ServerConfig, hr ...epi.HRer) (*Server, error) {
 	s, err := NewSpatial(&c.SpatialConfig, hr...)
@@ -121,6 +123,10 @@ func NewServer(c *ServerConfig, hr ...epi.HRer) (*Server, error) {
 		SpatialEIO:  s,
 		defaultYear: c.DefaultYear,
 		Log:         logrus.StandardLogger(),
+	}
+	model.CES, err = ces.NewCES(model)
+	if err != nil {
+		return nil, fmt.Errorf("eioserve: loading demographic consumption: %v", err)
 	}
 
 	grpcServer := grpc.NewServer()
@@ -351,7 +357,7 @@ func (s *Server) DemandGroups(ctx context.Context, in *eieiorpc.Selection) (*eie
 func commodityGroup(e *EIO, m *Mask) []string {
 	var o []string
 	v := (mat.VecDense)(*m)
-	for i, c := range e.Commodities {
+	for i, c := range e.commodities {
 		if v.At(i, 0) != 0 {
 			o = append(o, c)
 		}

@@ -9,6 +9,7 @@
 
 	It has these top-level messages:
 		StringInput
+		StringList
 		Selectors
 		Selection
 		Year
@@ -18,6 +19,7 @@
 		GeometryInput
 		ColorInfo
 		FinalDemandInput
+		DemographicConsumptionInput
 		ConcentrationMatrixInput
 		ConcentrationInput
 		EmissionsMatrixInput
@@ -211,6 +213,30 @@ func (x FinalDemandType) String() string {
 	return FinalDemandType_name[int(x)]
 }
 
+// These are the included demographic groups.
+type Demograph int
+
+const (
+	Demograph_Black      Demograph = 0
+	Demograph_Hispanic   Demograph = 1
+	Demograph_WhiteOther Demograph = 2
+)
+
+var Demograph_name = map[int]string{
+	0: "Black",
+	1: "Hispanic",
+	2: "WhiteOther",
+}
+var Demograph_value = map[string]int{
+	"Black":      0,
+	"Hispanic":   1,
+	"WhiteOther": 2,
+}
+
+func (x Demograph) String() string {
+	return Demograph_name[int(x)]
+}
+
 type StringInput struct {
 	String string
 }
@@ -263,6 +289,69 @@ func (m *StringInput) UnmarshalFromReader(reader jspb.Reader) *StringInput {
 
 // Unmarshal unmarshals a StringInput from a slice of bytes.
 func (m *StringInput) Unmarshal(rawBytes []byte) (*StringInput, error) {
+	reader := jspb.NewReader(rawBytes)
+
+	m = m.UnmarshalFromReader(reader)
+
+	if err := reader.Err(); err != nil {
+		return nil, err
+	}
+
+	return m, nil
+}
+
+type StringList struct {
+	List []string
+}
+
+// GetList gets the List of the StringList.
+func (m *StringList) GetList() (x []string) {
+	if m == nil {
+		return x
+	}
+	return m.List
+}
+
+// MarshalToWriter marshals StringList to the provided writer.
+func (m *StringList) MarshalToWriter(writer jspb.Writer) {
+	if m == nil {
+		return
+	}
+
+	for _, val := range m.List {
+		writer.WriteString(1, val)
+	}
+
+	return
+}
+
+// Marshal marshals StringList to a slice of bytes.
+func (m *StringList) Marshal() []byte {
+	writer := jspb.NewWriter()
+	m.MarshalToWriter(writer)
+	return writer.GetResult()
+}
+
+// UnmarshalFromReader unmarshals a StringList from the provided reader.
+func (m *StringList) UnmarshalFromReader(reader jspb.Reader) *StringList {
+	for reader.Next() {
+		if m == nil {
+			m = &StringList{}
+		}
+
+		switch reader.GetFieldNumber() {
+		case 1:
+			m.List = append(m.List, reader.ReadString())
+		default:
+			reader.SkipField()
+		}
+	}
+
+	return m
+}
+
+// Unmarshal unmarshals a StringList from a slice of bytes.
+func (m *StringList) Unmarshal(rawBytes []byte) (*StringList, error) {
 	reader := jspb.NewReader(rawBytes)
 
 	m = m.UnmarshalFromReader(reader)
@@ -1172,6 +1261,103 @@ func (m *FinalDemandInput) UnmarshalFromReader(reader jspb.Reader) *FinalDemandI
 
 // Unmarshal unmarshals a FinalDemandInput from a slice of bytes.
 func (m *FinalDemandInput) Unmarshal(rawBytes []byte) (*FinalDemandInput, error) {
+	reader := jspb.NewReader(rawBytes)
+
+	m = m.UnmarshalFromReader(reader)
+
+	if err := reader.Err(); err != nil {
+		return nil, err
+	}
+
+	return m, nil
+}
+
+type DemographicConsumptionInput struct {
+	Demograph   Demograph
+	Commodities *Mask
+	Year        int32
+}
+
+// GetDemograph gets the Demograph of the DemographicConsumptionInput.
+func (m *DemographicConsumptionInput) GetDemograph() (x Demograph) {
+	if m == nil {
+		return x
+	}
+	return m.Demograph
+}
+
+// GetCommodities gets the Commodities of the DemographicConsumptionInput.
+func (m *DemographicConsumptionInput) GetCommodities() (x *Mask) {
+	if m == nil {
+		return x
+	}
+	return m.Commodities
+}
+
+// GetYear gets the Year of the DemographicConsumptionInput.
+func (m *DemographicConsumptionInput) GetYear() (x int32) {
+	if m == nil {
+		return x
+	}
+	return m.Year
+}
+
+// MarshalToWriter marshals DemographicConsumptionInput to the provided writer.
+func (m *DemographicConsumptionInput) MarshalToWriter(writer jspb.Writer) {
+	if m == nil {
+		return
+	}
+
+	if int(m.Demograph) != 0 {
+		writer.WriteEnum(1, int(m.Demograph))
+	}
+
+	if m.Commodities != nil {
+		writer.WriteMessage(2, func() {
+			m.Commodities.MarshalToWriter(writer)
+		})
+	}
+
+	if m.Year != 0 {
+		writer.WriteInt32(3, m.Year)
+	}
+
+	return
+}
+
+// Marshal marshals DemographicConsumptionInput to a slice of bytes.
+func (m *DemographicConsumptionInput) Marshal() []byte {
+	writer := jspb.NewWriter()
+	m.MarshalToWriter(writer)
+	return writer.GetResult()
+}
+
+// UnmarshalFromReader unmarshals a DemographicConsumptionInput from the provided reader.
+func (m *DemographicConsumptionInput) UnmarshalFromReader(reader jspb.Reader) *DemographicConsumptionInput {
+	for reader.Next() {
+		if m == nil {
+			m = &DemographicConsumptionInput{}
+		}
+
+		switch reader.GetFieldNumber() {
+		case 1:
+			m.Demograph = Demograph(reader.ReadEnum())
+		case 2:
+			reader.ReadMessage(func() {
+				m.Commodities = m.Commodities.UnmarshalFromReader(reader)
+			})
+		case 3:
+			m.Year = reader.ReadInt32()
+		default:
+			reader.SkipField()
+		}
+	}
+
+	return m
+}
+
+// Unmarshal unmarshals a DemographicConsumptionInput from a slice of bytes.
+func (m *DemographicConsumptionInput) Unmarshal(rawBytes []byte) (*DemographicConsumptionInput, error) {
 	reader := jspb.NewReader(rawBytes)
 
 	m = m.UnmarshalFromReader(reader)
@@ -2674,6 +2860,9 @@ type EIEIOrpcClient interface {
 	FinalDemand(ctx context.Context, in *FinalDemandInput, opts ...grpcweb.CallOption) (*Vector, error)
 	CommodityMask(ctx context.Context, in *StringInput, opts ...grpcweb.CallOption) (*Mask, error)
 	EmitterMask(ctx context.Context, in *StringInput, opts ...grpcweb.CallOption) (*Mask, error)
+	Commodities(ctx context.Context, in *StringInput, opts ...grpcweb.CallOption) (*StringList, error)
+	Industries(ctx context.Context, in *StringInput, opts ...grpcweb.CallOption) (*StringList, error)
+	DemographicConsumption(ctx context.Context, in *DemographicConsumptionInput, opts ...grpcweb.CallOption) (*Vector, error)
 }
 
 type eIEIOrpcClient struct {
@@ -2883,4 +3072,31 @@ func (c *eIEIOrpcClient) EmitterMask(ctx context.Context, in *StringInput, opts 
 	}
 
 	return new(Mask).Unmarshal(resp)
+}
+
+func (c *eIEIOrpcClient) Commodities(ctx context.Context, in *StringInput, opts ...grpcweb.CallOption) (*StringList, error) {
+	resp, err := c.client.RPCCall(ctx, "Commodities", in.Marshal(), opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return new(StringList).Unmarshal(resp)
+}
+
+func (c *eIEIOrpcClient) Industries(ctx context.Context, in *StringInput, opts ...grpcweb.CallOption) (*StringList, error) {
+	resp, err := c.client.RPCCall(ctx, "Industries", in.Marshal(), opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return new(StringList).Unmarshal(resp)
+}
+
+func (c *eIEIOrpcClient) DemographicConsumption(ctx context.Context, in *DemographicConsumptionInput, opts ...grpcweb.CallOption) (*Vector, error) {
+	resp, err := c.client.RPCCall(ctx, "DemographicConsumption", in.Marshal(), opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return new(Vector).Unmarshal(resp)
 }

@@ -67,10 +67,10 @@ func (e *EIO) NewIOAggregator(fileName string) (*Aggregator, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(industries) != len(e.Industries) {
-		return nil, fmt.Errorf("eieio.NewIOAggregator: incorrect number of industries: %d != %d", len(industries), len(e.Industries))
+	if len(industries) != len(e.industries) {
+		return nil, fmt.Errorf("eieio.NewIOAggregator: incorrect number of industries: %d != %d", len(industries), len(e.industries))
 	}
-	for i, ind := range e.Industries {
+	for i, ind := range e.industries {
 		if industries[i] != ind {
 			return nil, fmt.Errorf("eieio.NewIOAggregator: industries don't match: %s != %s", industries[i], ind)
 		}
@@ -80,10 +80,10 @@ func (e *EIO) NewIOAggregator(fileName string) (*Aggregator, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(commodities) != len(e.Commodities) {
-		return nil, fmt.Errorf("eieio.NewIOAggregator: incorrect number of commodities: %d != %d", len(commodities), len(e.Commodities))
+	if len(commodities) != len(e.commodities) {
+		return nil, fmt.Errorf("eieio.NewIOAggregator: incorrect number of commodities: %d != %d", len(commodities), len(e.commodities))
 	}
-	for i, com := range e.Commodities {
+	for i, com := range e.commodities {
 		if commodities[i] != com {
 			return nil, fmt.Errorf("eieio.NewIOAggregator: commodities don't match: %s != %s", commodities[i], com)
 		}
@@ -240,7 +240,7 @@ func (e *EIO) IndustryMask(name string) (*Mask, error) {
 	if err != nil {
 		return nil, err
 	}
-	m := mat.NewVecDense(len(e.Industries), nil)
+	m := mat.NewVecDense(len(e.industries), nil)
 	m.SetVec(i, 1)
 	mm := Mask(*m)
 	return &mm, nil
@@ -252,7 +252,7 @@ func (e *EIO) CommodityMask(name string) (*Mask, error) {
 	if err != nil {
 		return nil, err
 	}
-	m := mat.NewVecDense(len(e.Commodities), nil)
+	m := mat.NewVecDense(len(e.commodities), nil)
 	m.SetVec(i, 1)
 	mm := Mask(*m)
 	return &mm, nil

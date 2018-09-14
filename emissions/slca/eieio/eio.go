@@ -92,9 +92,9 @@ type EIO struct {
 	// types for imports for each year at the detailed sector level.
 	importFinalDemand map[Year]map[FinalDemand]*mat.VecDense
 
-	// Industries and Commodities are the industry and commodity
+	// industries and commodities are the industry and commodity
 	// sectors in the model
-	Industries, Commodities []string
+	industries, commodities []string
 
 	// industryIndices and commodityIndices map the sector
 	// names to array indices.
@@ -207,19 +207,29 @@ func New(cfg *Config) (*EIO, error) {
 	}
 
 	i := <-industriesChan
-	eio.Industries = i.s
+	eio.industries = i.s
 	if i.e != nil {
 		return nil, i.e
 	}
 	c := <-commoditiesChan
-	eio.Commodities = c.s
+	eio.commodities = c.s
 	if c.e != nil {
 		return nil, c.e
 	}
-	eio.industryIndices = indexLookup(eio.Industries)
-	eio.commodityIndices = indexLookup(eio.Commodities)
+	eio.industryIndices = indexLookup(eio.industries)
+	eio.commodityIndices = indexLookup(eio.commodities)
 
 	return eio, err
+}
+
+// Commodities returns the commodity sectors in the model.
+func (e *EIO) Commodities(ctx context.Context, _ *eieiorpc.StringInput) (*eieiorpc.StringList, error) {
+	return &eieiorpc.StringList{List: e.commodities}, nil
+}
+
+// Industries returns the industry sectors in the model.
+func (e *EIO) Industries(ctx context.Context, _ *eieiorpc.StringInput) (*eieiorpc.StringList, error) {
+	return &eieiorpc.StringList{List: e.industries}, nil
 }
 
 // Years returns the years represented by the receiver.
@@ -337,7 +347,7 @@ func (e *EIO) FinalDemand(ctx context.Context, input *eieiorpc.FinalDemandInput)
 // specified for the given commodity sector, and zeros for all other
 // sectors.
 func (e *EIO) FinalDemandSingle(commodity string, amount float64) (*mat.VecDense, error) {
-	v := mat.NewVecDense(len(e.Commodities), nil)
+	v := mat.NewVecDense(len(e.commodities), nil)
 	i, err := e.CommodityIndex(commodity)
 	if err != nil {
 		return nil, err
