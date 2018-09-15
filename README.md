@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/spatialmodel/inmap.svg?branch=master)](https://travis-ci.org/spatialmodel/inmap) [![Coverage Status](https://coveralls.io/repos/github/spatialmodel/inmap/badge.svg?branch=master)](https://coveralls.io/github/spatialmodel/inmap?branch=master) [![GoDoc](http://godoc.org/github.com/spatialmodel/inmap?status.svg)](http://godoc.org/github.com/spatialmodel/inmap) [![Go Report Card](https://goreportcard.com/badge/github.com/spatialmodel/inmap)](https://goreportcard.com/report/github.com/spatialmodel/inmap)
 
-_Note: This is the documentation for the version 1.4.2 of InMAP. Documentation for other versions is available [here](https://github.com/spatialmodel/inmap/releases)._
+_Note: This is the documentation for the development version of InMAP. Documentation for other versions is available [here](https://github.com/spatialmodel/inmap/releases)._
 
 ## About InMAP
 
@@ -34,7 +34,9 @@ You can also compile InMAP from its source code. The instructions here are speci
 	git clone https://github.com/spatialmodel/inmap.git # Download the code.
 	cd inmap # Move into the InMAP directory
 	go get github.com/golang/dep/cmd/dep # Install the program that will download the required libraries
-	dep ensure # Download the required libraries
+	dep ensure -v # Download the required libraries
+	rm -r vendor/k8s.io # Deal with one library that needs special treatment
+	go get k8s.io/client-go/...
 	go install ./cmd/inmap # Compile and install the InMAP executable.
 	```
 
