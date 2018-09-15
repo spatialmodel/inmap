@@ -19,10 +19,10 @@ syntax = "proto3";
 package eieiorpc;
 
 service EIEIOrpc {
-  rpc DemandGroups(Selection) returns (Selectors) {}
-  rpc DemandSectors(Selection) returns (Selectors) {}
-  rpc ProdGroups(Selection) returns (Selectors) {}
-  rpc ProdSectors(Selection) returns (Selectors) {}
+  rpc EndUseGroups(Selection) returns (Selectors) {}
+  rpc EndUseSectors(Selection) returns (Selectors) {}
+  rpc EmitterGroups(Selection) returns (Selectors) {}
+  rpc EmitterSectors(Selection) returns (Selectors) {}
 
   rpc Years(Selection) returns (Year) {}
   rpc DefaultSelection(Selection) returns (Selection) {}
@@ -46,8 +46,14 @@ service EIEIOrpc {
 
   rpc FinalDemand(FinalDemandInput) returns (Vector) {}
 
-  rpc CommodityMask(StringInput) returns (Mask) {}
+  rpc EndUseMask(StringInput) returns (Mask) {}
   rpc EmitterMask(StringInput) returns (Mask) {}
+
+
+  rpc EndUseGroupNames(StringInput) returns (StringList) {}
+  rpc EndUseGroupAbbrevs(StringInput) returns (StringList) {}
+  rpc EmitterGroupNames(StringInput) returns (StringList) {}
+  rpc EmitterGroupAbbrevs(StringInput) returns (StringList) {}
 
   rpc Commodities(StringInput) returns (StringList) {}
   rpc Industries(StringInput) returns (StringList) {}

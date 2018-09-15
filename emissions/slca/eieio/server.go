@@ -199,9 +199,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// CommodityMask returns a mask that can be used to limit a FinalDemand vector
-// to demand for commidities in the commodity group defined by abbrev.
-func (s *Server) CommodityMask(ctx context.Context, abbrev *eieiorpc.StringInput) (*eieiorpc.Mask, error) {
+// EndUseMask returns a mask that can be used to limit a FinalDemand vector
+// to demand for end-uses in the end-use group defined by abbrev.
+func (s *Server) EndUseMask(ctx context.Context, abbrev *eieiorpc.StringInput) (*eieiorpc.Mask, error) {
 	return mask2rpc(s.ioAgg.CommodityMask(abbrev.String_)), nil
 }
 
@@ -209,6 +209,26 @@ func (s *Server) CommodityMask(ctx context.Context, abbrev *eieiorpc.StringInput
 // caused by emissions from the SCC codes defined by abbrev.
 func (s *Server) EmitterMask(ctx context.Context, abbrev *eieiorpc.StringInput) (*eieiorpc.Mask, error) {
 	return mask2rpc(s.sccAgg.IndustryMask(abbrev.String_)), nil
+}
+
+// EndUseGroupNames returns the names of the end-use groups.
+func (s *Server) EndUseGroupNames(ctx context.Context, _ *eieiorpc.StringInput) (*eieiorpc.StringList, error) {
+	return &eieiorpc.StringList{List: s.ioAgg.Names()}, nil
+}
+
+// EndUseGroupAbbrevs returns the abbreviations of the end-use groups.
+func (s *Server) EndUseGroupAbbrevs(ctx context.Context, _ *eieiorpc.StringInput) (*eieiorpc.StringList, error) {
+	return &eieiorpc.StringList{List: s.ioAgg.Abbreviations()}, nil
+}
+
+// EmitterGroupNames returns the names of the emitter groups.
+func (s *Server) EmitterGroupNames(ctx context.Context, _ *eieiorpc.StringInput) (*eieiorpc.StringList, error) {
+	return &eieiorpc.StringList{List: s.sccAgg.Names()}, nil
+}
+
+// EmitterGroupAbbrevs returns the abbreviations of the emitter groups.
+func (s *Server) EmitterGroupAbbrevs(ctx context.Context, _ *eieiorpc.StringInput) (*eieiorpc.StringList, error) {
+	return &eieiorpc.StringList{List: s.sccAgg.Abbreviations()}, nil
 }
 
 func (s *Server) impactsMenu(ctx context.Context, selection *eieiorpc.Selection, commodityMask, industryMask *Mask) (*eieiorpc.Vector, error) {
@@ -300,8 +320,8 @@ func (s *Server) perArea(v *eieiorpc.Vector, err error) (*eieiorpc.Vector, error
 	return vec2rpc(v2), nil
 }
 
-// DemandGroups returns the available demand groups.
-func (s *Server) DemandGroups(ctx context.Context, in *eieiorpc.Selection) (*eieiorpc.Selectors, error) {
+// EndUseGroups returns the available demand groups.
+func (s *Server) EndUseGroups(ctx context.Context, in *eieiorpc.Selection) (*eieiorpc.Selectors, error) {
 	s.Log.WithFields(logrus.Fields{
 		"DemandGroup":      in.DemandGroup,
 		"DemandSector":     in.DemandSector,
@@ -309,7 +329,7 @@ func (s *Server) DemandGroups(ctx context.Context, in *eieiorpc.Selection) (*eie
 		"ProductionSector": in.ProductionSector,
 		"ImpactType":       in.ImpactType,
 		"FinalDemandType":  in.FinalDemandType,
-	}).Info("eioserve generating DemandGroups")
+	}).Info("eioserve generating EndUseGroups")
 	productionMask, err := s.productionMask(in.ProductionGroup, in.ProductionSector)
 	if err != nil {
 		return nil, err
@@ -350,7 +370,7 @@ func (s *Server) DemandGroups(ctx context.Context, in *eieiorpc.Selection) (*eie
 		"ProductionSector": in.ProductionSector,
 		"ImpactType":       in.ImpactType,
 		"FinalDemandType":  in.FinalDemandType,
-	}).Info("eioserve finished generating DemandGroups")
+	}).Info("eioserve finished generating EndUseGroups")
 	return out, nil
 }
 
@@ -380,8 +400,8 @@ func sccGroup(s *SpatialEIO, m *Mask) (codes, descriptions []string) {
 	return
 }
 
-// DemandSectors returns the available demand sectors.
-func (s *Server) DemandSectors(ctx context.Context, in *eieiorpc.Selection) (*eieiorpc.Selectors, error) {
+// EndUseSectors returns the available demand sectors.
+func (s *Server) EndUseSectors(ctx context.Context, in *eieiorpc.Selection) (*eieiorpc.Selectors, error) {
 	s.Log.WithFields(logrus.Fields{
 		"DemandGroup":      in.DemandGroup,
 		"DemandSector":     in.DemandSector,
@@ -389,7 +409,7 @@ func (s *Server) DemandSectors(ctx context.Context, in *eieiorpc.Selection) (*ei
 		"ProductionSector": in.ProductionSector,
 		"ImpactType":       in.ImpactType,
 		"DemandType":       in.FinalDemandType,
-	}).Info("eioserve generating DemandSectors")
+	}).Info("eioserve generating EndUseSectors")
 	out := &eieiorpc.Selectors{Names: []string{All}}
 	productionMask, err := s.productionMask(in.ProductionGroup, in.ProductionSector)
 	if err != nil {
@@ -439,7 +459,7 @@ func (s *Server) DemandSectors(ctx context.Context, in *eieiorpc.Selection) (*ei
 		"ProductionSector": in.ProductionSector,
 		"ImpactType":       in.ImpactType,
 		"FinalDemandType":  in.FinalDemandType,
-	}).Info("eioserve finished generating DemandSectors")
+	}).Info("eioserve finished generating EndUseSectors")
 	return out, nil
 }
 
@@ -477,8 +497,8 @@ func (s *Server) productionMask(productionGroup, productionSector string) (*Mask
 	return s.SpatialEIO.SCCMask(slca.SCC(productionSector))
 }
 
-// ProdGroups returns the available production groups.
-func (s *Server) ProdGroups(ctx context.Context, in *eieiorpc.Selection) (*eieiorpc.Selectors, error) {
+// EmitterGroups returns the available emitter groups.
+func (s *Server) EmitterGroups(ctx context.Context, in *eieiorpc.Selection) (*eieiorpc.Selectors, error) {
 	s.Log.WithFields(logrus.Fields{
 		"DemandGroup":      in.DemandGroup,
 		"DemandSector":     in.DemandSector,
@@ -486,7 +506,7 @@ func (s *Server) ProdGroups(ctx context.Context, in *eieiorpc.Selection) (*eieio
 		"ProductionSector": in.ProductionSector,
 		"ImpactType":       in.ImpactType,
 		"DemandType":       in.FinalDemandType,
-	}).Info("eioserve generating ProdGroups")
+	}).Info("eioserve generating EmitterGroups")
 	demandMask, err := s.demandMask(in.DemandGroup, in.DemandSector)
 	if err != nil {
 		return nil, err
@@ -524,12 +544,12 @@ func (s *Server) ProdGroups(ctx context.Context, in *eieiorpc.Selection) (*eieio
 		"ProductionSector": in.ProductionSector,
 		"ImpactType":       in.ImpactType,
 		"FinalDemandType":  in.FinalDemandType,
-	}).Info("eioserve finished generating ProdGroups")
+	}).Info("eioserve finished generating EmitterGroups")
 	return out, nil
 }
 
-// ProdSectors returns the available production sectors.
-func (s *Server) ProdSectors(ctx context.Context, in *eieiorpc.Selection) (*eieiorpc.Selectors, error) {
+// EmitterSectors returns the available production sectors.
+func (s *Server) EmitterSectors(ctx context.Context, in *eieiorpc.Selection) (*eieiorpc.Selectors, error) {
 	s.Log.WithFields(logrus.Fields{
 		"DemandGroup":      in.DemandGroup,
 		"DemandSector":     in.DemandSector,
@@ -537,7 +557,7 @@ func (s *Server) ProdSectors(ctx context.Context, in *eieiorpc.Selection) (*eiei
 		"ProductionSector": in.ProductionSector,
 		"ImpactType":       in.ImpactType,
 		"FinailDemandType": in.FinalDemandType,
-	}).Info("eioserve generating ProdSectors")
+	}).Info("eioserve generating EmitterSectors")
 	demandMask, err := s.demandMask(in.DemandGroup, in.DemandSector)
 	if err != nil {
 		return nil, err
@@ -586,7 +606,7 @@ func (s *Server) ProdSectors(ctx context.Context, in *eieiorpc.Selection) (*eiei
 		"ProductionSector": in.ProductionSector,
 		"ImpactType":       in.ImpactType,
 		"FinalDemandType":  in.FinalDemandType,
-	}).Info("eioserve finished generating ProdSectors")
+	}).Info("eioserve finished generating EmitterSectors")
 	return out, nil
 }
 

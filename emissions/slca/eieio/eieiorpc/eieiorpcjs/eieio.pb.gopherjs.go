@@ -2838,10 +2838,10 @@ const _ = grpcweb.GrpcWebPackageIsVersion3
 // Client API for EIEIOrpc service
 
 type EIEIOrpcClient interface {
-	DemandGroups(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Selectors, error)
-	DemandSectors(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Selectors, error)
-	ProdGroups(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Selectors, error)
-	ProdSectors(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Selectors, error)
+	EndUseGroups(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Selectors, error)
+	EndUseSectors(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Selectors, error)
+	EmitterGroups(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Selectors, error)
+	EmitterSectors(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Selectors, error)
 	Years(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Year, error)
 	DefaultSelection(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Selection, error)
 	Populations(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Selectors, error)
@@ -2858,8 +2858,12 @@ type EIEIOrpcClient interface {
 	ConcentrationResponseAverage(ctx context.Context, in *ConcentrationResponseAverageInput, opts ...grpcweb.CallOption) (*Vector, error)
 	PopulationIncidence(ctx context.Context, in *PopulationIncidenceInput, opts ...grpcweb.CallOption) (*PopulationIncidenceOutput, error)
 	FinalDemand(ctx context.Context, in *FinalDemandInput, opts ...grpcweb.CallOption) (*Vector, error)
-	CommodityMask(ctx context.Context, in *StringInput, opts ...grpcweb.CallOption) (*Mask, error)
+	EndUseMask(ctx context.Context, in *StringInput, opts ...grpcweb.CallOption) (*Mask, error)
 	EmitterMask(ctx context.Context, in *StringInput, opts ...grpcweb.CallOption) (*Mask, error)
+	EndUseGroupNames(ctx context.Context, in *StringInput, opts ...grpcweb.CallOption) (*StringList, error)
+	EndUseGroupAbbrevs(ctx context.Context, in *StringInput, opts ...grpcweb.CallOption) (*StringList, error)
+	EmitterGroupNames(ctx context.Context, in *StringInput, opts ...grpcweb.CallOption) (*StringList, error)
+	EmitterGroupAbbrevs(ctx context.Context, in *StringInput, opts ...grpcweb.CallOption) (*StringList, error)
 	Commodities(ctx context.Context, in *StringInput, opts ...grpcweb.CallOption) (*StringList, error)
 	Industries(ctx context.Context, in *StringInput, opts ...grpcweb.CallOption) (*StringList, error)
 	DemographicConsumption(ctx context.Context, in *DemographicConsumptionInput, opts ...grpcweb.CallOption) (*Vector, error)
@@ -2876,8 +2880,8 @@ func NewEIEIOrpcClient(hostname string, opts ...grpcweb.DialOption) EIEIOrpcClie
 	}
 }
 
-func (c *eIEIOrpcClient) DemandGroups(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Selectors, error) {
-	resp, err := c.client.RPCCall(ctx, "DemandGroups", in.Marshal(), opts...)
+func (c *eIEIOrpcClient) EndUseGroups(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Selectors, error) {
+	resp, err := c.client.RPCCall(ctx, "EndUseGroups", in.Marshal(), opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2885,8 +2889,8 @@ func (c *eIEIOrpcClient) DemandGroups(ctx context.Context, in *Selection, opts .
 	return new(Selectors).Unmarshal(resp)
 }
 
-func (c *eIEIOrpcClient) DemandSectors(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Selectors, error) {
-	resp, err := c.client.RPCCall(ctx, "DemandSectors", in.Marshal(), opts...)
+func (c *eIEIOrpcClient) EndUseSectors(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Selectors, error) {
+	resp, err := c.client.RPCCall(ctx, "EndUseSectors", in.Marshal(), opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2894,8 +2898,8 @@ func (c *eIEIOrpcClient) DemandSectors(ctx context.Context, in *Selection, opts 
 	return new(Selectors).Unmarshal(resp)
 }
 
-func (c *eIEIOrpcClient) ProdGroups(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Selectors, error) {
-	resp, err := c.client.RPCCall(ctx, "ProdGroups", in.Marshal(), opts...)
+func (c *eIEIOrpcClient) EmitterGroups(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Selectors, error) {
+	resp, err := c.client.RPCCall(ctx, "EmitterGroups", in.Marshal(), opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2903,8 +2907,8 @@ func (c *eIEIOrpcClient) ProdGroups(ctx context.Context, in *Selection, opts ...
 	return new(Selectors).Unmarshal(resp)
 }
 
-func (c *eIEIOrpcClient) ProdSectors(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Selectors, error) {
-	resp, err := c.client.RPCCall(ctx, "ProdSectors", in.Marshal(), opts...)
+func (c *eIEIOrpcClient) EmitterSectors(ctx context.Context, in *Selection, opts ...grpcweb.CallOption) (*Selectors, error) {
+	resp, err := c.client.RPCCall(ctx, "EmitterSectors", in.Marshal(), opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -3056,8 +3060,8 @@ func (c *eIEIOrpcClient) FinalDemand(ctx context.Context, in *FinalDemandInput, 
 	return new(Vector).Unmarshal(resp)
 }
 
-func (c *eIEIOrpcClient) CommodityMask(ctx context.Context, in *StringInput, opts ...grpcweb.CallOption) (*Mask, error) {
-	resp, err := c.client.RPCCall(ctx, "CommodityMask", in.Marshal(), opts...)
+func (c *eIEIOrpcClient) EndUseMask(ctx context.Context, in *StringInput, opts ...grpcweb.CallOption) (*Mask, error) {
+	resp, err := c.client.RPCCall(ctx, "EndUseMask", in.Marshal(), opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -3072,6 +3076,42 @@ func (c *eIEIOrpcClient) EmitterMask(ctx context.Context, in *StringInput, opts 
 	}
 
 	return new(Mask).Unmarshal(resp)
+}
+
+func (c *eIEIOrpcClient) EndUseGroupNames(ctx context.Context, in *StringInput, opts ...grpcweb.CallOption) (*StringList, error) {
+	resp, err := c.client.RPCCall(ctx, "EndUseGroupNames", in.Marshal(), opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return new(StringList).Unmarshal(resp)
+}
+
+func (c *eIEIOrpcClient) EndUseGroupAbbrevs(ctx context.Context, in *StringInput, opts ...grpcweb.CallOption) (*StringList, error) {
+	resp, err := c.client.RPCCall(ctx, "EndUseGroupAbbrevs", in.Marshal(), opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return new(StringList).Unmarshal(resp)
+}
+
+func (c *eIEIOrpcClient) EmitterGroupNames(ctx context.Context, in *StringInput, opts ...grpcweb.CallOption) (*StringList, error) {
+	resp, err := c.client.RPCCall(ctx, "EmitterGroupNames", in.Marshal(), opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return new(StringList).Unmarshal(resp)
+}
+
+func (c *eIEIOrpcClient) EmitterGroupAbbrevs(ctx context.Context, in *StringInput, opts ...grpcweb.CallOption) (*StringList, error) {
+	resp, err := c.client.RPCCall(ctx, "EmitterGroupAbbrevs", in.Marshal(), opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return new(StringList).Unmarshal(resp)
 }
 
 func (c *eIEIOrpcClient) Commodities(ctx context.Context, in *StringInput, opts ...grpcweb.CallOption) (*StringList, error) {

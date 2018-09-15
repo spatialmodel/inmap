@@ -83,8 +83,8 @@ func TestServer_grpc(t *testing.T) {
 		selectors *eieiorpc.Selectors
 	}{
 		{
-			name: "DemandGroups",
-			f:    s.DemandGroups,
+			name: "EndUseGroups",
+			f:    s.EndUseGroups,
 			selection: &eieiorpc.Selection{
 				DemandGroup:      All,
 				DemandSector:     All,
@@ -102,8 +102,8 @@ func TestServer_grpc(t *testing.T) {
 			},
 		},
 		{
-			name: "DemandSectors_1",
-			f:    s.DemandSectors,
+			name: "EndUseSectors_1",
+			f:    s.EndUseSectors,
 			selection: &eieiorpc.Selection{
 				DemandGroup:      All,
 				DemandSector:     All,
@@ -121,8 +121,8 @@ func TestServer_grpc(t *testing.T) {
 			},
 		},
 		{
-			name: "DemandSectors_2",
-			f:    s.DemandSectors,
+			name: "EndUseSectors_2",
+			f:    s.EndUseSectors,
 			selection: &eieiorpc.Selection{
 				DemandGroup:      "Electricity",
 				DemandSector:     All,
@@ -140,8 +140,8 @@ func TestServer_grpc(t *testing.T) {
 			},
 		},
 		{
-			name: "ProdGroups",
-			f:    s.ProdGroups,
+			name: "EmitterGroups",
+			f:    s.EmitterGroups,
 			selection: &eieiorpc.Selection{
 				DemandGroup:      All,
 				DemandSector:     All,
@@ -162,8 +162,8 @@ func TestServer_grpc(t *testing.T) {
 			},
 		},
 		{
-			name: "ProdSectors_1",
-			f:    s.ProdSectors,
+			name: "EmitterSectors_1",
+			f:    s.EmitterSectors,
 			selection: &eieiorpc.Selection{
 				DemandGroup:      All,
 				DemandSector:     All,
@@ -181,8 +181,8 @@ func TestServer_grpc(t *testing.T) {
 			},
 		},
 		{
-			name: "ProdSectors_2",
-			f:    s.ProdSectors,
+			name: "EmitterSectors_2",
+			f:    s.EmitterSectors,
 			selection: &eieiorpc.Selection{
 				DemandGroup:      All,
 				DemandSector:     All,

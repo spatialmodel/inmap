@@ -213,7 +213,7 @@ func (e *EIO) loadFinalDemand(detailFileName, summaryFileName string, year, deta
 
 	// Add in aggregated demand groups.
 	aggregatedDemands := []FinalDemand{All, NonExport}
-	demandGroups := [][]FinalDemand{
+	EndUseGroups := [][]FinalDemand{
 		[]FinalDemand{
 			PersonalConsumption, PrivateStructures,
 			PrivateEquipment, PrivateIP, PrivateResidential,
@@ -234,7 +234,7 @@ func (e *EIO) loadFinalDemand(detailFileName, summaryFileName string, year, deta
 	for i, d := range aggregatedDemands {
 		r, c := o[PersonalConsumption].Dims()
 		v := mat.NewDense(r, c, nil)
-		for _, dd := range demandGroups[i] {
+		for _, dd := range EndUseGroups[i] {
 			v.Add(v, o[dd])
 		}
 		o[d] = v.ColView(0).(*mat.VecDense)
