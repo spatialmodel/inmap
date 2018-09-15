@@ -336,9 +336,9 @@ func (e *EIO) FinalDemand(ctx context.Context, input *eieiorpc.FinalDemandInput)
 	default:
 		panic(fmt.Errorf("invalid final demand location %s", input.Location.String()))
 	}
-	if input.Commodities != nil {
+	if input.EndUseMask != nil {
 		// Set activity in industries we're not interested in to zero.
-		rpc2mask(input.Commodities).Mask(v)
+		rpc2mask(input.EndUseMask).Mask(v)
 	}
 	return vec2rpc(v), nil
 }

@@ -324,7 +324,8 @@ func (c *CES) latinoFrac(year int, IOSector string) (float64, error) {
 // Acceptable demographs:
 //		Black: People self-identifying as black or African-American.
 //		Hispanic: People self-identifying as Hispanic or Latino.
-//		WhiteOther: people self identifying as white or other races besides black, and not Hispanic.
+//		WhiteOther: People self identifying as white or other races besides black, and not Hispanic.
+//		All: The total population.
 func (c *CES) DemographicConsumption(ctx context.Context, in *eieiorpc.DemographicConsumptionInput) (*eieiorpc.Vector, error) {
 	var frac func(int, string) (float64, error)
 	switch in.Demograph {
@@ -334,10 +335,12 @@ func (c *CES) DemographicConsumption(ctx context.Context, in *eieiorpc.Demograph
 		frac = c.latinoFrac
 	case eieiorpc.Demograph_WhiteOther:
 		frac = c.whiteOtherFrac
+	case eieiorpc.Demograph_All:
+		frac = func(int, string) (float64, error) { return 1, nil }
 	default:
 		return nil, fmt.Errorf("invalid demograph: %s", in.Demograph)
 	}
-	return c.adjustDemand(ctx, in.Commodities, in.Year, frac)
+	return c.adjustDemand(ctx, in.EndUseMask, in.Year, frac)
 }
 
 // adjustDemand returns domestic personal consumption final demand plus private final demand
@@ -350,7 +353,7 @@ func (c *CES) adjustDemand(ctx context.Context, commodities *eieiorpc.Mask, year
 	// First, get the adjusted personal consumption.
 	pc, err := c.eio.FinalDemand(ctx, &eieiorpc.FinalDemandInput{
 		FinalDemandType: eieiorpc.FinalDemandType_PersonalConsumption,
-		Commodities:     commodities,
+		EndUseMask:      commodities,
 		Year:            year,
 		Location:        eieiorpc.Location_Domestic,
 	})
@@ -361,7 +364,7 @@ func (c *CES) adjustDemand(ctx context.Context, commodities *eieiorpc.Mask, year
 	// Then, get the private residential expenditures.
 	pcRes, err := c.eio.FinalDemand(ctx, &eieiorpc.FinalDemandInput{
 		FinalDemandType: eieiorpc.FinalDemandType_PrivateResidential,
-		Commodities:     commodities,
+		EndUseMask:      commodities,
 		Year:            year,
 		Location:        eieiorpc.Location_Domestic,
 	})
@@ -402,7 +405,7 @@ func (c *CES) adjustDemand(ctx context.Context, commodities *eieiorpc.Mask, year
 
 		d, err := c.eio.FinalDemand(context.TODO(), &eieiorpc.FinalDemandInput{
 			FinalDemandType: dt,
-			Commodities:     commodities,
+			EndUseMask:      commodities,
 			Year:            year,
 			Location:        eieiorpc.Location_Domestic,
 		})

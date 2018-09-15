@@ -27,8 +27,8 @@ import (
 	"testing"
 
 	"github.com/BurntSushi/toml"
-	"github.com/spatialmodel/inmap/epi"
 	"github.com/spatialmodel/inmap/emissions/slca/eieio/eieiorpc"
+	"github.com/spatialmodel/inmap/epi"
 )
 
 func TestServer_grpc(t *testing.T) {
@@ -86,15 +86,15 @@ func TestServer_grpc(t *testing.T) {
 			name: "EndUseGroups",
 			f:    s.EndUseGroups,
 			selection: &eieiorpc.Selection{
-				DemandGroup:      All,
-				DemandSector:     All,
-				ProductionGroup:  All,
-				ProductionSector: All,
-				ImpactType:       "health",
-				Population:       "TotalPop",
-				FinalDemandType:  eieiorpc.FinalDemandType_AllDemand,
-				Year:             2011,
-				Pol:              &eieiorpc.Selection_Pollutant{eieiorpc.Pollutant_TotalPM25},
+				EndUseGroup:     All,
+				EndUseSector:    All,
+				EmitterGroup:    All,
+				EmitterSector:   All,
+				ImpactType:      "health",
+				Population:      "TotalPop",
+				FinalDemandType: eieiorpc.FinalDemandType_AllDemand,
+				Year:            2011,
+				Pol:             &eieiorpc.Selection_Pollutant{eieiorpc.Pollutant_TotalPM25},
 			},
 			selectors: &eieiorpc.Selectors{
 				Names:  []string{"All", "Food", "Goods", "Transportation", "Services", "Shelter", "Information and Entertainment", "Electricity"},
@@ -105,15 +105,15 @@ func TestServer_grpc(t *testing.T) {
 			name: "EndUseSectors_1",
 			f:    s.EndUseSectors,
 			selection: &eieiorpc.Selection{
-				DemandGroup:      All,
-				DemandSector:     All,
-				ProductionGroup:  All,
-				ProductionSector: All,
-				ImpactType:       "conc",
-				Population:       "TotalPop",
-				FinalDemandType:  eieiorpc.FinalDemandType_AllDemand,
-				Year:             2011,
-				Pol:              &eieiorpc.Selection_Pollutant{eieiorpc.Pollutant_TotalPM25},
+				EndUseGroup:     All,
+				EndUseSector:    All,
+				EmitterGroup:    All,
+				EmitterSector:   All,
+				ImpactType:      "conc",
+				Population:      "TotalPop",
+				FinalDemandType: eieiorpc.FinalDemandType_AllDemand,
+				Year:            2011,
+				Pol:             &eieiorpc.Selection_Pollutant{eieiorpc.Pollutant_TotalPM25},
 			},
 			selectors: &eieiorpc.Selectors{
 				Names:  []string{"All"},
@@ -124,15 +124,15 @@ func TestServer_grpc(t *testing.T) {
 			name: "EndUseSectors_2",
 			f:    s.EndUseSectors,
 			selection: &eieiorpc.Selection{
-				DemandGroup:      "Electricity",
-				DemandSector:     All,
-				ProductionGroup:  All,
-				ProductionSector: All,
-				ImpactType:       "conc",
-				Population:       "TotalPop",
-				FinalDemandType:  eieiorpc.FinalDemandType_AllDemand,
-				Year:             2011,
-				Pol:              &eieiorpc.Selection_Pollutant{eieiorpc.Pollutant_TotalPM25},
+				EndUseGroup:     "Electricity",
+				EndUseSector:    All,
+				EmitterGroup:    All,
+				EmitterSector:   All,
+				ImpactType:      "conc",
+				Population:      "TotalPop",
+				FinalDemandType: eieiorpc.FinalDemandType_AllDemand,
+				Year:            2011,
+				Pol:             &eieiorpc.Selection_Pollutant{eieiorpc.Pollutant_TotalPM25},
 			},
 			selectors: &eieiorpc.Selectors{
 				Names:  []string{"All", "Electric power generation, transmission, and distribution"},
@@ -143,14 +143,14 @@ func TestServer_grpc(t *testing.T) {
 			name: "EmitterGroups",
 			f:    s.EmitterGroups,
 			selection: &eieiorpc.Selection{
-				DemandGroup:      All,
-				DemandSector:     All,
-				ProductionGroup:  All,
-				ProductionSector: All,
-				ImpactType:       "emis",
-				FinalDemandType:  eieiorpc.FinalDemandType_AllDemand,
-				Year:             2011,
-				Pol:              &eieiorpc.Selection_Emission{eieiorpc.Emission_PM25},
+				EndUseGroup:     All,
+				EndUseSector:    All,
+				EmitterGroup:    All,
+				EmitterSector:   All,
+				ImpactType:      "emis",
+				FinalDemandType: eieiorpc.FinalDemandType_AllDemand,
+				Year:            2011,
+				Pol:             &eieiorpc.Selection_Emission{eieiorpc.Emission_PM25},
 			},
 			selectors: &eieiorpc.Selectors{
 				Names: []string{"All", "Other Industrial Processes", "Industrial Fuel Comb.",
@@ -165,14 +165,14 @@ func TestServer_grpc(t *testing.T) {
 			name: "EmitterSectors_1",
 			f:    s.EmitterSectors,
 			selection: &eieiorpc.Selection{
-				DemandGroup:      All,
-				DemandSector:     All,
-				ProductionGroup:  All,
-				ProductionSector: All,
-				ImpactType:       "emis",
-				FinalDemandType:  eieiorpc.FinalDemandType_AllDemand,
-				Year:             2011,
-				Pol:              &eieiorpc.Selection_Emission{eieiorpc.Emission_PM25},
+				EndUseGroup:     All,
+				EndUseSector:    All,
+				EmitterGroup:    All,
+				EmitterSector:   All,
+				ImpactType:      "emis",
+				FinalDemandType: eieiorpc.FinalDemandType_AllDemand,
+				Year:            2011,
+				Pol:             &eieiorpc.Selection_Emission{eieiorpc.Emission_PM25},
 			},
 			selectors: &eieiorpc.Selectors{
 				Codes:  []string{"All"},
@@ -184,14 +184,14 @@ func TestServer_grpc(t *testing.T) {
 			name: "EmitterSectors_2",
 			f:    s.EmitterSectors,
 			selection: &eieiorpc.Selection{
-				DemandGroup:      All,
-				DemandSector:     All,
-				ProductionGroup:  "Mining & Mineral Processing",
-				ProductionSector: All,
-				ImpactType:       "emis",
-				FinalDemandType:  eieiorpc.FinalDemandType_AllDemand,
-				Year:             2011,
-				Pol:              &eieiorpc.Selection_Emission{eieiorpc.Emission_PM25},
+				EndUseGroup:     All,
+				EndUseSector:    All,
+				EmitterGroup:    "Mining & Mineral Processing",
+				EmitterSector:   All,
+				ImpactType:      "emis",
+				FinalDemandType: eieiorpc.FinalDemandType_AllDemand,
+				Year:            2011,
+				Pol:             &eieiorpc.Selection_Emission{eieiorpc.Emission_PM25},
 			},
 			selectors: &eieiorpc.Selectors{
 				Codes: []string{"All", "0030501403", "0030500505", "0030500622", "0030501062", "0030501207", "0030500310",
@@ -330,15 +330,15 @@ func TestServer_grpc(t *testing.T) {
 		} {
 			t.Run(test.impactType, func(t *testing.T) {
 				mapInfo, err := s.MapInfo(context.Background(), &eieiorpc.Selection{
-					DemandGroup:      All,
-					DemandSector:     All,
-					ProductionGroup:  All,
-					ProductionSector: All,
-					ImpactType:       test.impactType,
-					FinalDemandType:  eieiorpc.FinalDemandType_AllDemand,
-					Year:             2011,
-					Pol:              &eieiorpc.Selection_Pollutant{eieiorpc.Pollutant_TotalPM25},
-					Population:       "TotalPop",
+					EndUseGroup:     All,
+					EndUseSector:    All,
+					EmitterGroup:    All,
+					EmitterSector:   All,
+					ImpactType:      test.impactType,
+					FinalDemandType: eieiorpc.FinalDemandType_AllDemand,
+					Year:            2011,
+					Pol:             &eieiorpc.Selection_Pollutant{eieiorpc.Pollutant_TotalPM25},
+					Population:      "TotalPop",
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -356,15 +356,15 @@ func TestServer_grpc(t *testing.T) {
 			t.Fatal(err)
 		}
 		want := &eieiorpc.Selection{
-			DemandGroup:      "All",
-			DemandSector:     "All",
-			ProductionGroup:  "All",
-			ProductionSector: "All",
-			ImpactType:       "conc",
-			FinalDemandType:  eieiorpc.FinalDemandType_AllDemand,
-			Year:             2011,
-			Population:       "TotalPop",
-			Pol:              &eieiorpc.Selection_Pollutant{eieiorpc.Pollutant_TotalPM25},
+			EndUseGroup:     "All",
+			EndUseSector:    "All",
+			EmitterGroup:    "All",
+			EmitterSector:   "All",
+			ImpactType:      "conc",
+			FinalDemandType: eieiorpc.FinalDemandType_AllDemand,
+			Year:            2011,
+			Population:      "TotalPop",
+			Pol:             &eieiorpc.Selection_Pollutant{eieiorpc.Pollutant_TotalPM25},
 		}
 		if !reflect.DeepEqual(ds, want) {
 			t.Errorf("%+v != %+v", ds, want)

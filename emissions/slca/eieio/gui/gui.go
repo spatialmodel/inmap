@@ -101,10 +101,10 @@ func (c *GUI) update(query string) {
 // queryFromSelection creates a URL query from s.
 func queryFromSelection(s eieiorpc.Selection) url.Values {
 	v := url.Values{}
-	v.Set("dg", s.DemandGroup)
-	v.Set("ds", s.DemandSector)
-	v.Set("pg", s.ProductionGroup)
-	v.Set("ps", s.ProductionSector)
+	v.Set("dg", s.EndUseGroup)
+	v.Set("ds", s.EndUseSector)
+	v.Set("pg", s.EmitterGroup)
+	v.Set("ps", s.EmitterSector)
 	v.Set("it", s.ImpactType)
 	v.Set("dt", fmt.Sprintf("%d", s.FinalDemandType))
 	v.Set("y", fmt.Sprint(s.Year))
@@ -130,10 +130,10 @@ func selectionFromQuery(q string) eieiorpc.Selection {
 	v, err := url.ParseQuery(q)
 	check(err)
 	var s eieiorpc.Selection
-	s.DemandGroup = v.Get("dg")
-	s.DemandSector = v.Get("ds")
-	s.ProductionGroup = v.Get("pg")
-	s.ProductionSector = v.Get("ps")
+	s.EndUseGroup = v.Get("dg")
+	s.EndUseSector = v.Get("ds")
+	s.EmitterGroup = v.Get("pg")
+	s.EmitterSector = v.Get("ps")
 	s.ImpactType = v.Get("it")
 	dt, err := strconv.ParseInt(v.Get("dt"), 10, 32)
 	check(err)
@@ -159,10 +159,10 @@ func selectionFromQuery(q string) eieiorpc.Selection {
 // Selection variable.
 func selectionFromForm() eieiorpc.Selection {
 	var s eieiorpc.Selection
-	s.DemandGroup = selected("#dg")
-	s.DemandSector = selected("#ds")
-	s.ProductionGroup = selected("#pg")
-	s.ProductionSector = selected("#ps")
+	s.EndUseGroup = selected("#dg")
+	s.EndUseSector = selected("#ds")
+	s.EmitterGroup = selected("#pg")
+	s.EmitterSector = selected("#ps")
 	s.ImpactType = selected("#it")
 	dt, err := strconv.ParseInt(selected("#dt"), 10, 32)
 	check(err)

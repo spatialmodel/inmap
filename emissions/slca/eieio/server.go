@@ -234,7 +234,7 @@ func (s *Server) EmitterGroupAbbrevs(ctx context.Context, _ *eieiorpc.StringInpu
 func (s *Server) impactsMenu(ctx context.Context, selection *eieiorpc.Selection, commodityMask, industryMask *Mask) (*eieiorpc.Vector, error) {
 	demand, err := s.SpatialEIO.EIO.FinalDemand(ctx, &eieiorpc.FinalDemandInput{
 		FinalDemandType: selection.FinalDemandType,
-		Commodities:     mask2rpc(commodityMask),
+		EndUseMask:      mask2rpc(commodityMask),
 		Year:            selection.Year,
 		Location:        eieiorpc.Location_Domestic,
 	})
@@ -244,13 +244,13 @@ func (s *Server) impactsMenu(ctx context.Context, selection *eieiorpc.Selection,
 	switch selection.ImpactType {
 	case "health", "conc":
 		return s.SpatialEIO.Health(ctx, &eieiorpc.HealthInput{
-			Demand:     demand,
-			Industries: mask2rpc(industryMask),
-			Pollutant:  selection.GetPollutant(),
-			Population: selection.Population,
-			Year:       selection.Year,
-			Location:   eieiorpc.Location_Domestic,
-			HR:         "NasariACS",
+			Demand:      demand,
+			EmitterMask: mask2rpc(industryMask),
+			Pollutant:   selection.GetPollutant(),
+			Population:  selection.Population,
+			Year:        selection.Year,
+			Location:    eieiorpc.Location_Domestic,
+			HR:          "NasariACS",
 		})
 	case "emis":
 		return s.SpatialEIO.Emissions(ctx, &eieiorpc.EmissionsInput{
@@ -268,7 +268,7 @@ func (s *Server) impactsMenu(ctx context.Context, selection *eieiorpc.Selection,
 func (s *Server) impactsMap(ctx context.Context, selection *eieiorpc.Selection, commodityMask, industryMask *Mask) (*eieiorpc.Vector, error) {
 	demand, err := s.SpatialEIO.EIO.FinalDemand(ctx, &eieiorpc.FinalDemandInput{
 		FinalDemandType: selection.FinalDemandType,
-		Commodities:     mask2rpc(commodityMask),
+		EndUseMask:      mask2rpc(commodityMask),
 		Year:            selection.Year,
 		Location:        eieiorpc.Location_Domestic,
 	})
@@ -278,13 +278,13 @@ func (s *Server) impactsMap(ctx context.Context, selection *eieiorpc.Selection, 
 	switch selection.ImpactType {
 	case "health":
 		return s.perArea(s.SpatialEIO.Health(ctx, &eieiorpc.HealthInput{
-			Demand:     demand,
-			Industries: mask2rpc(industryMask),
-			Pollutant:  selection.GetPollutant(),
-			Population: selection.Population,
-			Year:       selection.Year,
-			Location:   eieiorpc.Location_Domestic,
-			HR:         "NasariACS",
+			Demand:      demand,
+			EmitterMask: mask2rpc(industryMask),
+			Pollutant:   selection.GetPollutant(),
+			Population:  selection.Population,
+			Year:        selection.Year,
+			Location:    eieiorpc.Location_Domestic,
+			HR:          "NasariACS",
 		}))
 	case "conc":
 		return s.SpatialEIO.Concentrations(ctx, &eieiorpc.ConcentrationInput{
@@ -323,14 +323,14 @@ func (s *Server) perArea(v *eieiorpc.Vector, err error) (*eieiorpc.Vector, error
 // EndUseGroups returns the available demand groups.
 func (s *Server) EndUseGroups(ctx context.Context, in *eieiorpc.Selection) (*eieiorpc.Selectors, error) {
 	s.Log.WithFields(logrus.Fields{
-		"DemandGroup":      in.DemandGroup,
-		"DemandSector":     in.DemandSector,
-		"ProductionGroup":  in.ProductionGroup,
-		"ProductionSector": in.ProductionSector,
+		"DemandGroup":      in.EndUseGroup,
+		"DemandSector":     in.EndUseSector,
+		"ProductionGroup":  in.EmitterGroup,
+		"ProductionSector": in.EmitterSector,
 		"ImpactType":       in.ImpactType,
 		"FinalDemandType":  in.FinalDemandType,
 	}).Info("eioserve generating EndUseGroups")
-	productionMask, err := s.productionMask(in.ProductionGroup, in.ProductionSector)
+	productionMask, err := s.productionMask(in.EmitterGroup, in.EmitterSector)
 	if err != nil {
 		return nil, err
 	}
@@ -364,10 +364,10 @@ func (s *Server) EndUseGroups(ctx context.Context, in *eieiorpc.Selection) (*eie
 	sorter := selectorSorter(*out)
 	sort.Sort(&sorter)
 	s.Log.WithFields(logrus.Fields{
-		"DemandGroup":      in.DemandGroup,
-		"DemandSector":     in.DemandSector,
-		"ProductionGroup":  in.ProductionGroup,
-		"ProductionSector": in.ProductionSector,
+		"DemandGroup":      in.EndUseGroup,
+		"DemandSector":     in.EndUseSector,
+		"ProductionGroup":  in.EmitterGroup,
+		"ProductionSector": in.EmitterSector,
 		"ImpactType":       in.ImpactType,
 		"FinalDemandType":  in.FinalDemandType,
 	}).Info("eioserve finished generating EndUseGroups")
@@ -403,19 +403,19 @@ func sccGroup(s *SpatialEIO, m *Mask) (codes, descriptions []string) {
 // EndUseSectors returns the available demand sectors.
 func (s *Server) EndUseSectors(ctx context.Context, in *eieiorpc.Selection) (*eieiorpc.Selectors, error) {
 	s.Log.WithFields(logrus.Fields{
-		"DemandGroup":      in.DemandGroup,
-		"DemandSector":     in.DemandSector,
-		"ProductionGroup":  in.ProductionGroup,
-		"ProductionSector": in.ProductionSector,
+		"DemandGroup":      in.EndUseGroup,
+		"DemandSector":     in.EndUseSector,
+		"ProductionGroup":  in.EmitterGroup,
+		"ProductionSector": in.EmitterSector,
 		"ImpactType":       in.ImpactType,
 		"DemandType":       in.FinalDemandType,
 	}).Info("eioserve generating EndUseSectors")
 	out := &eieiorpc.Selectors{Names: []string{All}}
-	productionMask, err := s.productionMask(in.ProductionGroup, in.ProductionSector)
+	productionMask, err := s.productionMask(in.EmitterGroup, in.EmitterSector)
 	if err != nil {
 		return nil, err
 	}
-	if in.DemandGroup == All {
+	if in.EndUseGroup == All {
 		// impacts produced by all sectors owing to all sectors.
 		impacts, err := s.impactsMenu(ctx, in, nil, productionMask)
 		if err != nil {
@@ -424,7 +424,7 @@ func (s *Server) EndUseSectors(ctx context.Context, in *eieiorpc.Selection) (*ei
 		out.Values = []float32{float32(mat.Sum(array2vec(impacts.Data)))}
 		return out, nil
 	}
-	mask, err := s.demandMask(in.DemandGroup, All)
+	mask, err := s.demandMask(in.EndUseGroup, All)
 	if err != nil {
 		return nil, err
 	}
@@ -440,7 +440,7 @@ func (s *Server) EndUseSectors(ctx context.Context, in *eieiorpc.Selection) (*ei
 	out.Values = append(out.Values, temp...)
 	for i, sector := range sectors {
 		// impacts produced by all sectors owing to consumption in this sector.
-		mask, err := s.demandMask(in.DemandGroup, sector)
+		mask, err := s.demandMask(in.EndUseGroup, sector)
 		if err != nil {
 			return nil, err
 		}
@@ -453,10 +453,10 @@ func (s *Server) EndUseSectors(ctx context.Context, in *eieiorpc.Selection) (*ei
 	sorter := selectorSorter(*out)
 	sort.Sort(&sorter)
 	s.Log.WithFields(logrus.Fields{
-		"DemandGroup":      in.DemandGroup,
-		"DemandSector":     in.DemandSector,
-		"ProductionGroup":  in.ProductionGroup,
-		"ProductionSector": in.ProductionSector,
+		"DemandGroup":      in.EndUseGroup,
+		"DemandSector":     in.EndUseSector,
+		"ProductionGroup":  in.EmitterGroup,
+		"ProductionSector": in.EmitterSector,
 		"ImpactType":       in.ImpactType,
 		"FinalDemandType":  in.FinalDemandType,
 	}).Info("eioserve finished generating EndUseSectors")
@@ -500,14 +500,14 @@ func (s *Server) productionMask(productionGroup, productionSector string) (*Mask
 // EmitterGroups returns the available emitter groups.
 func (s *Server) EmitterGroups(ctx context.Context, in *eieiorpc.Selection) (*eieiorpc.Selectors, error) {
 	s.Log.WithFields(logrus.Fields{
-		"DemandGroup":      in.DemandGroup,
-		"DemandSector":     in.DemandSector,
-		"ProductionGroup":  in.ProductionGroup,
-		"ProductionSector": in.ProductionSector,
+		"DemandGroup":      in.EndUseGroup,
+		"DemandSector":     in.EndUseSector,
+		"ProductionGroup":  in.EmitterGroup,
+		"ProductionSector": in.EmitterSector,
 		"ImpactType":       in.ImpactType,
 		"DemandType":       in.FinalDemandType,
 	}).Info("eioserve generating EmitterGroups")
-	demandMask, err := s.demandMask(in.DemandGroup, in.DemandSector)
+	demandMask, err := s.demandMask(in.EndUseGroup, in.EndUseSector)
 	if err != nil {
 		return nil, err
 	}
@@ -538,10 +538,10 @@ func (s *Server) EmitterGroups(ctx context.Context, in *eieiorpc.Selection) (*ei
 	sorter := selectorSorter(*out)
 	sort.Sort(&sorter)
 	s.Log.WithFields(logrus.Fields{
-		"DemandGroup":      in.DemandGroup,
-		"DemandSector":     in.DemandSector,
-		"ProductionGroup":  in.ProductionGroup,
-		"ProductionSector": in.ProductionSector,
+		"DemandGroup":      in.EndUseGroup,
+		"DemandSector":     in.EndUseSector,
+		"ProductionGroup":  in.EmitterGroup,
+		"ProductionSector": in.EmitterSector,
 		"ImpactType":       in.ImpactType,
 		"FinalDemandType":  in.FinalDemandType,
 	}).Info("eioserve finished generating EmitterGroups")
@@ -551,20 +551,20 @@ func (s *Server) EmitterGroups(ctx context.Context, in *eieiorpc.Selection) (*ei
 // EmitterSectors returns the available production sectors.
 func (s *Server) EmitterSectors(ctx context.Context, in *eieiorpc.Selection) (*eieiorpc.Selectors, error) {
 	s.Log.WithFields(logrus.Fields{
-		"DemandGroup":      in.DemandGroup,
-		"DemandSector":     in.DemandSector,
-		"ProductionGroup":  in.ProductionGroup,
-		"ProductionSector": in.ProductionSector,
+		"DemandGroup":      in.EndUseGroup,
+		"DemandSector":     in.EndUseSector,
+		"ProductionGroup":  in.EmitterGroup,
+		"ProductionSector": in.EmitterSector,
 		"ImpactType":       in.ImpactType,
 		"FinailDemandType": in.FinalDemandType,
 	}).Info("eioserve generating EmitterSectors")
-	demandMask, err := s.demandMask(in.DemandGroup, in.DemandSector)
+	demandMask, err := s.demandMask(in.EndUseGroup, in.EndUseSector)
 	if err != nil {
 		return nil, err
 	}
 
 	out := &eieiorpc.Selectors{Names: []string{All}, Codes: []string{All}}
-	if in.ProductionGroup == All {
+	if in.EmitterGroup == All {
 		v, err2 := s.impactsMenu(ctx, in, demandMask, nil)
 		if err2 != nil {
 			return nil, err2
@@ -572,7 +572,7 @@ func (s *Server) EmitterSectors(ctx context.Context, in *eieiorpc.Selection) (*e
 		out.Values = []float32{float32(mat.Sum(array2vec(v.Data)))}
 		return out, nil
 	}
-	mask, err := s.productionMask(in.ProductionGroup, All)
+	mask, err := s.productionMask(in.EmitterGroup, All)
 	if err != nil {
 		return nil, err
 	}
@@ -587,7 +587,7 @@ func (s *Server) EmitterSectors(ctx context.Context, in *eieiorpc.Selection) (*e
 	temp := make([]float32, len(sectors))
 	out.Values = append(out.Values, temp...)
 	for i, sector := range sectors {
-		mask, err := s.productionMask(in.ProductionGroup, sector)
+		mask, err := s.productionMask(in.EmitterGroup, sector)
 		if err != nil {
 			return nil, err
 		}
@@ -600,10 +600,10 @@ func (s *Server) EmitterSectors(ctx context.Context, in *eieiorpc.Selection) (*e
 	sorter := selectorSorter(*out)
 	sort.Sort(&sorter)
 	s.Log.WithFields(logrus.Fields{
-		"DemandGroup":      in.DemandGroup,
-		"DemandSector":     in.DemandSector,
-		"ProductionGroup":  in.ProductionGroup,
-		"ProductionSector": in.ProductionSector,
+		"DemandGroup":      in.EndUseGroup,
+		"DemandSector":     in.EndUseSector,
+		"ProductionGroup":  in.EmitterGroup,
+		"ProductionSector": in.EmitterSector,
 		"ImpactType":       in.ImpactType,
 		"FinalDemandType":  in.FinalDemandType,
 	}).Info("eioserve finished generating EmitterSectors")
@@ -613,19 +613,19 @@ func (s *Server) EmitterSectors(ctx context.Context, in *eieiorpc.Selection) (*e
 // MapInfo returns the grid cell colors and a legend for the given selection.
 func (s *Server) MapInfo(ctx context.Context, in *eieiorpc.Selection) (*eieiorpc.ColorInfo, error) {
 	s.Log.WithFields(logrus.Fields{
-		"DemandGroup":      in.DemandGroup,
-		"DemandSector":     in.DemandSector,
-		"ProductionGroup":  in.ProductionGroup,
-		"ProductionSector": in.ProductionSector,
+		"DemandGroup":      in.EndUseGroup,
+		"DemandSector":     in.EndUseSector,
+		"ProductionGroup":  in.EmitterGroup,
+		"ProductionSector": in.EmitterSector,
 		"ImpactType":       in.ImpactType,
 		"DemandType":       in.FinalDemandType,
 	}).Info("eioserve generating MapInfo")
 	out := new(eieiorpc.ColorInfo)
-	commodityMask, err := s.demandMask(in.DemandGroup, in.DemandSector)
+	commodityMask, err := s.demandMask(in.EndUseGroup, in.EndUseSector)
 	if err != nil {
 		return nil, err
 	}
-	industryMask, err := s.productionMask(in.ProductionGroup, in.ProductionSector)
+	industryMask, err := s.productionMask(in.EmitterGroup, in.EmitterSector)
 	if err != nil {
 		return nil, err
 	}
@@ -665,10 +665,10 @@ func (s *Server) MapInfo(ctx context.Context, in *eieiorpc.Selection) (*eieiorpc
 		out.RGB[i] = []byte{col.R, col.G, col.B}
 	}
 	s.Log.WithFields(logrus.Fields{
-		"DemandGroup":      in.DemandGroup,
-		"DemandSector":     in.DemandSector,
-		"ProductionGroup":  in.ProductionGroup,
-		"ProductionSector": in.ProductionSector,
+		"DemandGroup":      in.EndUseGroup,
+		"DemandSector":     in.EndUseSector,
+		"ProductionGroup":  in.EmitterGroup,
+		"ProductionSector": in.EmitterSector,
 		"ImpactType":       in.ImpactType,
 		"FinalDemandType":  in.FinalDemandType,
 	}).Info("eioserve finished generating MapInfo")
@@ -812,15 +812,15 @@ func (s *Server) inverseArea() (*mat.VecDense, error) {
 
 func (s *Server) DefaultSelection(ctx context.Context, in *eieiorpc.Selection) (*eieiorpc.Selection, error) {
 	return &eieiorpc.Selection{
-		DemandGroup:      All,
-		DemandSector:     All,
-		ProductionGroup:  All,
-		ProductionSector: All,
-		ImpactType:       "conc",
-		FinalDemandType:  eieiorpc.FinalDemandType_AllDemand,
-		Year:             int32(s.defaultYear),
-		Population:       s.SpatialEIO.CSTConfig.CensusPopColumns[0],
-		Pol:              &eieiorpc.Selection_Pollutant{eieiorpc.Pollutant_TotalPM25},
+		EndUseGroup:     All,
+		EndUseSector:    All,
+		EmitterGroup:    All,
+		EmitterSector:   All,
+		ImpactType:      "conc",
+		FinalDemandType: eieiorpc.FinalDemandType_AllDemand,
+		Year:            int32(s.defaultYear),
+		Population:      s.SpatialEIO.CSTConfig.CensusPopColumns[0],
+		Pol:             &eieiorpc.Selection_Pollutant{eieiorpc.Pollutant_TotalPM25},
 	}, nil
 }
 

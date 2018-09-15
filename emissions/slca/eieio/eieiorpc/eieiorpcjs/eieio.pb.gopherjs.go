@@ -220,17 +220,20 @@ const (
 	Demograph_Black      Demograph = 0
 	Demograph_Hispanic   Demograph = 1
 	Demograph_WhiteOther Demograph = 2
+	Demograph_All        Demograph = 3
 )
 
 var Demograph_name = map[int]string{
 	0: "Black",
 	1: "Hispanic",
 	2: "WhiteOther",
+	3: "All",
 }
 var Demograph_value = map[string]int{
 	"Black":      0,
 	"Hispanic":   1,
 	"WhiteOther": 2,
+	"All":        3,
 }
 
 func (x Demograph) String() string {
@@ -457,14 +460,14 @@ func (m *Selectors) Unmarshal(rawBytes []byte) (*Selectors, error) {
 }
 
 type Selection struct {
-	DemandGroup      string
-	DemandSector     string
-	ProductionGroup  string
-	ProductionSector string
-	ImpactType       string
-	FinalDemandType  FinalDemandType
-	Year             int32
-	Population       string
+	EndUseGroup     string
+	EndUseSector    string
+	EmitterGroup    string
+	EmitterSector   string
+	ImpactType      string
+	FinalDemandType FinalDemandType
+	Year            int32
+	Population      string
 	// Types that are valid to be assigned to Pol:
 	//	*Selection_Pollutant
 	//	*Selection_Emission
@@ -495,36 +498,36 @@ func (m *Selection) GetPol() (x isSelection_Pol) {
 	return m.Pol
 }
 
-// GetDemandGroup gets the DemandGroup of the Selection.
-func (m *Selection) GetDemandGroup() (x string) {
+// GetEndUseGroup gets the EndUseGroup of the Selection.
+func (m *Selection) GetEndUseGroup() (x string) {
 	if m == nil {
 		return x
 	}
-	return m.DemandGroup
+	return m.EndUseGroup
 }
 
-// GetDemandSector gets the DemandSector of the Selection.
-func (m *Selection) GetDemandSector() (x string) {
+// GetEndUseSector gets the EndUseSector of the Selection.
+func (m *Selection) GetEndUseSector() (x string) {
 	if m == nil {
 		return x
 	}
-	return m.DemandSector
+	return m.EndUseSector
 }
 
-// GetProductionGroup gets the ProductionGroup of the Selection.
-func (m *Selection) GetProductionGroup() (x string) {
+// GetEmitterGroup gets the EmitterGroup of the Selection.
+func (m *Selection) GetEmitterGroup() (x string) {
 	if m == nil {
 		return x
 	}
-	return m.ProductionGroup
+	return m.EmitterGroup
 }
 
-// GetProductionSector gets the ProductionSector of the Selection.
-func (m *Selection) GetProductionSector() (x string) {
+// GetEmitterSector gets the EmitterSector of the Selection.
+func (m *Selection) GetEmitterSector() (x string) {
 	if m == nil {
 		return x
 	}
-	return m.ProductionSector
+	return m.EmitterSector
 }
 
 // GetImpactType gets the ImpactType of the Selection.
@@ -592,20 +595,20 @@ func (m *Selection) MarshalToWriter(writer jspb.Writer) {
 		}
 	}
 
-	if len(m.DemandGroup) > 0 {
-		writer.WriteString(1, m.DemandGroup)
+	if len(m.EndUseGroup) > 0 {
+		writer.WriteString(1, m.EndUseGroup)
 	}
 
-	if len(m.DemandSector) > 0 {
-		writer.WriteString(2, m.DemandSector)
+	if len(m.EndUseSector) > 0 {
+		writer.WriteString(2, m.EndUseSector)
 	}
 
-	if len(m.ProductionGroup) > 0 {
-		writer.WriteString(3, m.ProductionGroup)
+	if len(m.EmitterGroup) > 0 {
+		writer.WriteString(3, m.EmitterGroup)
 	}
 
-	if len(m.ProductionSector) > 0 {
-		writer.WriteString(4, m.ProductionSector)
+	if len(m.EmitterSector) > 0 {
+		writer.WriteString(4, m.EmitterSector)
 	}
 
 	if len(m.ImpactType) > 0 {
@@ -643,13 +646,13 @@ func (m *Selection) UnmarshalFromReader(reader jspb.Reader) *Selection {
 
 		switch reader.GetFieldNumber() {
 		case 1:
-			m.DemandGroup = reader.ReadString()
+			m.EndUseGroup = reader.ReadString()
 		case 2:
-			m.DemandSector = reader.ReadString()
+			m.EndUseSector = reader.ReadString()
 		case 3:
-			m.ProductionGroup = reader.ReadString()
+			m.EmitterGroup = reader.ReadString()
 		case 4:
-			m.ProductionSector = reader.ReadString()
+			m.EmitterSector = reader.ReadString()
 		case 5:
 			m.ImpactType = reader.ReadString()
 		case 6:
@@ -1162,7 +1165,7 @@ func (m *ColorInfo) Unmarshal(rawBytes []byte) (*ColorInfo, error) {
 
 type FinalDemandInput struct {
 	FinalDemandType FinalDemandType
-	Commodities     *Mask
+	EndUseMask      *Mask
 	Year            int32
 	Location        Location
 }
@@ -1175,12 +1178,12 @@ func (m *FinalDemandInput) GetFinalDemandType() (x FinalDemandType) {
 	return m.FinalDemandType
 }
 
-// GetCommodities gets the Commodities of the FinalDemandInput.
-func (m *FinalDemandInput) GetCommodities() (x *Mask) {
+// GetEndUseMask gets the EndUseMask of the FinalDemandInput.
+func (m *FinalDemandInput) GetEndUseMask() (x *Mask) {
 	if m == nil {
 		return x
 	}
-	return m.Commodities
+	return m.EndUseMask
 }
 
 // GetYear gets the Year of the FinalDemandInput.
@@ -1209,9 +1212,9 @@ func (m *FinalDemandInput) MarshalToWriter(writer jspb.Writer) {
 		writer.WriteEnum(1, int(m.FinalDemandType))
 	}
 
-	if m.Commodities != nil {
+	if m.EndUseMask != nil {
 		writer.WriteMessage(2, func() {
-			m.Commodities.MarshalToWriter(writer)
+			m.EndUseMask.MarshalToWriter(writer)
 		})
 	}
 
@@ -1245,7 +1248,7 @@ func (m *FinalDemandInput) UnmarshalFromReader(reader jspb.Reader) *FinalDemandI
 			m.FinalDemandType = FinalDemandType(reader.ReadEnum())
 		case 2:
 			reader.ReadMessage(func() {
-				m.Commodities = m.Commodities.UnmarshalFromReader(reader)
+				m.EndUseMask = m.EndUseMask.UnmarshalFromReader(reader)
 			})
 		case 3:
 			m.Year = reader.ReadInt32()
@@ -1273,9 +1276,9 @@ func (m *FinalDemandInput) Unmarshal(rawBytes []byte) (*FinalDemandInput, error)
 }
 
 type DemographicConsumptionInput struct {
-	Demograph   Demograph
-	Commodities *Mask
-	Year        int32
+	Demograph  Demograph
+	EndUseMask *Mask
+	Year       int32
 }
 
 // GetDemograph gets the Demograph of the DemographicConsumptionInput.
@@ -1286,12 +1289,12 @@ func (m *DemographicConsumptionInput) GetDemograph() (x Demograph) {
 	return m.Demograph
 }
 
-// GetCommodities gets the Commodities of the DemographicConsumptionInput.
-func (m *DemographicConsumptionInput) GetCommodities() (x *Mask) {
+// GetEndUseMask gets the EndUseMask of the DemographicConsumptionInput.
+func (m *DemographicConsumptionInput) GetEndUseMask() (x *Mask) {
 	if m == nil {
 		return x
 	}
-	return m.Commodities
+	return m.EndUseMask
 }
 
 // GetYear gets the Year of the DemographicConsumptionInput.
@@ -1312,9 +1315,9 @@ func (m *DemographicConsumptionInput) MarshalToWriter(writer jspb.Writer) {
 		writer.WriteEnum(1, int(m.Demograph))
 	}
 
-	if m.Commodities != nil {
+	if m.EndUseMask != nil {
 		writer.WriteMessage(2, func() {
-			m.Commodities.MarshalToWriter(writer)
+			m.EndUseMask.MarshalToWriter(writer)
 		})
 	}
 
@@ -1344,7 +1347,7 @@ func (m *DemographicConsumptionInput) UnmarshalFromReader(reader jspb.Reader) *D
 			m.Demograph = Demograph(reader.ReadEnum())
 		case 2:
 			reader.ReadMessage(func() {
-				m.Commodities = m.Commodities.UnmarshalFromReader(reader)
+				m.EndUseMask = m.EndUseMask.UnmarshalFromReader(reader)
 			})
 		case 3:
 			m.Year = reader.ReadInt32()
@@ -1998,13 +2001,13 @@ func (m *HealthMatrixInput) Unmarshal(rawBytes []byte) (*HealthMatrixInput, erro
 }
 
 type HealthInput struct {
-	Demand     *Vector
-	Industries *Mask
-	Pollutant  Pollutant
-	Population string
-	Year       int32
-	Location   Location
-	HR         string
+	Demand      *Vector
+	EmitterMask *Mask
+	Pollutant   Pollutant
+	Population  string
+	Year        int32
+	Location    Location
+	HR          string
 }
 
 // GetDemand gets the Demand of the HealthInput.
@@ -2015,12 +2018,12 @@ func (m *HealthInput) GetDemand() (x *Vector) {
 	return m.Demand
 }
 
-// GetIndustries gets the Industries of the HealthInput.
-func (m *HealthInput) GetIndustries() (x *Mask) {
+// GetEmitterMask gets the EmitterMask of the HealthInput.
+func (m *HealthInput) GetEmitterMask() (x *Mask) {
 	if m == nil {
 		return x
 	}
-	return m.Industries
+	return m.EmitterMask
 }
 
 // GetPollutant gets the Pollutant of the HealthInput.
@@ -2075,9 +2078,9 @@ func (m *HealthInput) MarshalToWriter(writer jspb.Writer) {
 		})
 	}
 
-	if m.Industries != nil {
+	if m.EmitterMask != nil {
 		writer.WriteMessage(2, func() {
-			m.Industries.MarshalToWriter(writer)
+			m.EmitterMask.MarshalToWriter(writer)
 		})
 	}
 
@@ -2125,7 +2128,7 @@ func (m *HealthInput) UnmarshalFromReader(reader jspb.Reader) *HealthInput {
 			})
 		case 2:
 			reader.ReadMessage(func() {
-				m.Industries = m.Industries.UnmarshalFromReader(reader)
+				m.EmitterMask = m.EmitterMask.UnmarshalFromReader(reader)
 			})
 		case 3:
 			m.Pollutant = Pollutant(reader.ReadEnum())

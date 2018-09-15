@@ -76,10 +76,10 @@ message Selectors {
 }
 
 message Selection {
-	string DemandGroup = 1;
-	string DemandSector = 2;
-	string ProductionGroup = 3;
-	string ProductionSector = 4;
+	string EndUseGroup = 1;
+	string EndUseSector = 2;
+	string EmitterGroup = 3;
+	string EmitterSector = 4;
 	string ImpactType = 5;
 	FinalDemandType FinalDemandType = 6;
   int32  Year = 7;
@@ -172,14 +172,14 @@ enum FinalDemandType {
 
 message FinalDemandInput {
   FinalDemandType FinalDemandType = 1;
-  Mask Commodities = 2;
+  Mask EndUseMask = 2;
   int32 Year = 3;
   Location Location = 4;
 }
 
 message DemographicConsumptionInput {
   Demograph Demograph = 1;
-  Mask Commodities = 2;
+  Mask EndUseMask = 2;
   int32 Year = 3;
 }
 
@@ -188,6 +188,7 @@ enum Demograph {
   Black = 0;
   Hispanic = 1;
   WhiteOther = 2;
+  All = 3;
 }
 
 message ConcentrationMatrixInput {
@@ -232,7 +233,7 @@ message HealthMatrixInput {
 
 message HealthInput {
   Vector Demand = 1;
-  Mask Industries = 2;
+  Mask EmitterMask = 2;
   Pollutant Pollutant = 3;
   string Population = 4;
   int32 Year = 5;

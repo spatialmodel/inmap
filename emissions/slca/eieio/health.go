@@ -25,8 +25,8 @@ import (
 
 	"bitbucket.org/ctessum/sparse"
 
-	"github.com/spatialmodel/inmap/epi"
 	"github.com/spatialmodel/inmap/emissions/slca/eieio/eieiorpc"
+	"github.com/spatialmodel/inmap/epi"
 
 	"gonum.org/v1/gonum/mat"
 )
@@ -83,7 +83,7 @@ func (e *SpatialEIO) Health(ctx context.Context, request *eieiorpc.HealthInput) 
 	}
 	req := &healthRequest{
 		demand:     array2vec(request.Demand.Data),
-		industries: rpc2mask(request.Industries),
+		industries: rpc2mask(request.EmitterMask),
 		pol:        Pollutant(request.Pollutant),
 		pop:        request.Population,
 		year:       Year(request.Year),
