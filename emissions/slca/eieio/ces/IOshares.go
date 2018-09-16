@@ -400,6 +400,7 @@ func (c *CES) adjustDemand(ctx context.Context, commodities *eieiorpc.Mask, year
 	adj := floats.Sum(demand.Data) / floats.Sum(pc.Data)
 	for _, dt := range []eieiorpc.FinalDemandType{
 		eieiorpc.FinalDemandType_PrivateStructures,
+		eieiorpc.FinalDemandType_PrivateEquipment,
 		eieiorpc.FinalDemandType_PrivateIP,
 		eieiorpc.FinalDemandType_InventoryChange} {
 

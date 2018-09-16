@@ -24,10 +24,10 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/gonum/floats"
-	"github.com/spatialmodel/epi"
 	"github.com/spatialmodel/inmap/emissions/slca/eieio"
 	"github.com/spatialmodel/inmap/emissions/slca/eieio/ces"
 	"github.com/spatialmodel/inmap/emissions/slca/eieio/eieiorpc"
+	"github.com/spatialmodel/inmap/epi"
 )
 
 func TestCES(t *testing.T) {
@@ -48,47 +48,10 @@ func TestCES(t *testing.T) {
 		t.Fatalf("failed to create server: %v", err)
 	}
 
-	/*	cfg := eieio.ServerConfig{
-		SpatialConfig: &eieio.SpatialConfig{
-
-			Years:                       []eieio.Year{2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015},
-			DetailYear:                  2007,
-			UseSummary:                  "../data/IOUse_Before_Redefinitions_PRO_1997-2015_Summary.xlsx",
-			UseDetail:                   "../data/IOUse_Before_Redefinitions_PRO_2007_Detail.xlsx",
-			ImportsSummary:              "../data/ImportMatrices_Before_Redefinitions_SUM_1997-2016.xlsx",
-			ImportsDetail:               "../data/ImportMatrices_Before_Redefinitions_DET_2007.xlsx",
-			TotalRequirementsSummary:    "../data/IxC_TR_1997-2015_Summary.xlsx",
-			TotalRequirementsDetail:     "../data/IxC_TR_2007_Detail.xlsx",
-			DomesticRequirementsSummary: "../data/IxC_Domestic_1997-2015_Summary.xlsx",
-			DomesticRequirementsDetail:  "../data/IxC_Domestic_2007_Detail.xlsx",
-		},
-	}*/
-
-	/*e, err := eieio.NewServer(&cfg)
-	if err != nil {
-		t.Fatal(err)
-	}*/
-
 	c, err := ces.NewCES(s)
 	if err != nil {
 		t.Fatal(err)
 	}
-	/*	sector := "Animal (except poultry) slaughtering, rendering, and processing"
-		v, err := c.whiteOtherFrac(2007, sector)
-		if err != nil {
-			t.Error(err)
-		}
-		want := 0.7631713337219025
-		if v != want {
-			t.Errorf("want %g, have %g", want, v)
-		}
-		if _, err := c.whiteOtherFrac(3030, sector); err == nil {
-			t.Error("bad year: this should cause an error")
-		}
-
-		if _, err := c.whiteOtherFrac(2007, "Animal (except poultry)"); err == nil {
-			t.Error("missing sector: this should cause an error")
-		}*/
 
 	t.Run("demand", func(t *testing.T) {
 		d, err := c.DemographicConsumption(context.Background(), &eieiorpc.DemographicConsumptionInput{
@@ -98,10 +61,10 @@ func TestCES(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		have := floats.Sum(d.Data)
-		want := 1.082388720998684e+13
-		if have != want {
-			t.Errorf("white/other = %g; want %g", have, want)
+		haveWhiteOther := floats.Sum(d.Data)
+		want := 1.1494028913920795e+13
+		if haveWhiteOther != want {
+			t.Errorf("white/other = %g; want %g", haveWhiteOther, want)
 		}
 
 		d, err = c.DemographicConsumption(context.Background(), &eieiorpc.DemographicConsumptionInput{
@@ -111,10 +74,10 @@ func TestCES(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		have = floats.Sum(d.Data)
-		want = 1.1414981404936084e+12
-		if have != want {
-			t.Errorf("black = %g; want %g", have, want)
+		haveBlack := floats.Sum(d.Data)
+		want = 1.2121719653466628e+12
+		if haveBlack != want {
+			t.Errorf("black = %g; want %g", haveBlack, want)
 		}
 
 		d, err = c.DemographicConsumption(context.Background(), &eieiorpc.DemographicConsumptionInput{
@@ -124,10 +87,48 @@ func TestCES(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		have = floats.Sum(d.Data)
-		want = 1.4404668535628293e+12
-		if have != want {
-			t.Errorf("latino = %g; want %g", have, want)
+		haveHispanic := floats.Sum(d.Data)
+		want = 1.5296507939512983e+12
+		if haveHispanic != want {
+			t.Errorf("hispanic = %g; want %g", haveHispanic, want)
+		}
+
+		d, err = c.DemographicConsumption(context.Background(), &eieiorpc.DemographicConsumptionInput{
+			Demograph: eieiorpc.Demograph_All,
+			Year:      2014,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		haveAll := floats.Sum(d.Data)
+		allSum := haveBlack + haveHispanic + haveWhiteOther
+
+		if !floats.EqualWithinAbsOrRel(haveAll, allSum, 1e-1, 1e-1) {
+			t.Errorf("total demographic: %g != %g", haveAll, allSum)
+		}
+
+		var overallTotal float64
+		for _, dt := range []eieiorpc.FinalDemandType{
+			eieiorpc.FinalDemandType_PersonalConsumption,
+			eieiorpc.FinalDemandType_PrivateResidential,
+			eieiorpc.FinalDemandType_PrivateStructures,
+			eieiorpc.FinalDemandType_PrivateEquipment,
+			eieiorpc.FinalDemandType_PrivateIP,
+			eieiorpc.FinalDemandType_InventoryChange} {
+
+			d, err := s.FinalDemand(context.TODO(), &eieiorpc.FinalDemandInput{
+				FinalDemandType: dt,
+				Year:            2014,
+				Location:        eieiorpc.Location_Domestic,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			overallTotal += floats.Sum(d.Data)
+		}
+
+		if !floats.EqualWithinAbsOrRel(haveAll, overallTotal, 1e-8, 1e-8) {
+			t.Errorf("overall total: %g != %g", haveAll, overallTotal)
 		}
 
 		for _, year := range cfg.Config.Years {
@@ -139,11 +140,5 @@ func TestCES(t *testing.T) {
 				t.Error(err)
 			}
 		}
-
 	})
-
-	// This should not change the existing file.
-	//if err := c.WriteXLSX("processed.xlsx"); err != nil {
-	//	t.Fatal(err)
-	//}
 }
