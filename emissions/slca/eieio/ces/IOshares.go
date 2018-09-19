@@ -262,7 +262,22 @@ func NewCES(eio eieiorpc.EIEIOrpcServer) (*CES, error) {
 		ces.latinoFractions[year] = latinoFinal
 		ces.blackFractions[year] = blackFinal
 	}
+	ces.normalize()
 	return &ces, nil
+}
+
+func (ces *CES) normalize() {
+	for year := range ces.whiteFractions {
+		for sector := range ces.whiteFractions[year] {
+			whiteV := ces.whiteFractions[year][sector]
+			latinoV := ces.latinoFractions[year][sector]
+			blackV := ces.blackFractions[year][sector]
+			total := whiteV + latinoV + blackV
+			ces.whiteFractions[year][sector] = whiteV / total
+			ces.latinoFractions[year][sector] = latinoV / total
+			ces.blackFractions[year][sector] = blackV / total
+		}
+	}
 }
 
 // ErrMissingSector happens when a IO sector is requested which there is
