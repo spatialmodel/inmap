@@ -368,7 +368,6 @@ func (c *CES) adjustDemand(ctx context.Context, commodities *eieiorpc.Mask, year
 	// First, get the adjusted personal consumption.
 	pc, err := c.eio.FinalDemand(ctx, &eieiorpc.FinalDemandInput{
 		FinalDemandType: eieiorpc.FinalDemandType_PersonalConsumption,
-		EndUseMask:      commodities,
 		Year:            year,
 		Location:        eieiorpc.Location_Domestic,
 	})
@@ -379,7 +378,6 @@ func (c *CES) adjustDemand(ctx context.Context, commodities *eieiorpc.Mask, year
 	// Then, get the private residential expenditures.
 	pcRes, err := c.eio.FinalDemand(ctx, &eieiorpc.FinalDemandInput{
 		FinalDemandType: eieiorpc.FinalDemandType_PrivateResidential,
-		EndUseMask:      commodities,
 		Year:            year,
 		Location:        eieiorpc.Location_Domestic,
 	})
@@ -419,9 +417,8 @@ func (c *CES) adjustDemand(ctx context.Context, commodities *eieiorpc.Mask, year
 		eieiorpc.FinalDemandType_PrivateIP,
 		eieiorpc.FinalDemandType_InventoryChange} {
 
-		d, err := c.eio.FinalDemand(context.TODO(), &eieiorpc.FinalDemandInput{
+		d, err := c.eio.FinalDemand(ctx, &eieiorpc.FinalDemandInput{
 			FinalDemandType: dt,
-			EndUseMask:      commodities,
 			Year:            year,
 			Location:        eieiorpc.Location_Domestic,
 		})
@@ -429,6 +426,9 @@ func (c *CES) adjustDemand(ctx context.Context, commodities *eieiorpc.Mask, year
 			return nil, err
 		}
 		floats.AddScaled(demand.Data, adj, d.Data)
+	}
+	if commodities != nil {
+		floats.Mul(demand.Data, commodities.Data) // Apply the mask.
 	}
 	return demand, nil
 }

@@ -107,38 +107,86 @@ func TestCES(t *testing.T) {
 			t.Errorf("total demographic: %g != %g", haveAll, allSum)
 		}
 
-		var overallTotal float64
-		for _, dt := range []eieiorpc.FinalDemandType{
-			eieiorpc.FinalDemandType_PersonalConsumption,
-			eieiorpc.FinalDemandType_PrivateResidential,
-			eieiorpc.FinalDemandType_PrivateStructures,
-			eieiorpc.FinalDemandType_PrivateEquipment,
-			eieiorpc.FinalDemandType_PrivateIP,
-			eieiorpc.FinalDemandType_InventoryChange} {
+		t.Run("dt", func(t *testing.T) {
+			var overallTotal float64
+			for _, dt := range []eieiorpc.FinalDemandType{
+				eieiorpc.FinalDemandType_PersonalConsumption,
+				eieiorpc.FinalDemandType_PrivateResidential,
+				eieiorpc.FinalDemandType_PrivateStructures,
+				eieiorpc.FinalDemandType_PrivateEquipment,
+				eieiorpc.FinalDemandType_PrivateIP,
+				eieiorpc.FinalDemandType_InventoryChange} {
 
-			d, err := s.FinalDemand(context.TODO(), &eieiorpc.FinalDemandInput{
-				FinalDemandType: dt,
-				Year:            2014,
-				Location:        eieiorpc.Location_Domestic,
+				d, err := s.FinalDemand(context.TODO(), &eieiorpc.FinalDemandInput{
+					FinalDemandType: dt,
+					Year:            2014,
+					Location:        eieiorpc.Location_Domestic,
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				overallTotal += floats.Sum(d.Data)
+			}
+
+			if !floats.EqualWithinAbsOrRel(haveAll, overallTotal, 1e-8, 1e-8) {
+				t.Errorf("overall total: %g != %g", haveAll, overallTotal)
+			}
+		})
+
+		t.Run("mask", func(t *testing.T) {
+			ctx := context.Background()
+
+			totalCons, err := c.DemographicConsumption(ctx, &eieiorpc.DemographicConsumptionInput{
+				Year:      2014,
+				Demograph: eieiorpc.Demograph_Black,
 			})
 			if err != nil {
 				t.Fatal(err)
 			}
-			overallTotal += floats.Sum(d.Data)
-		}
 
-		if !floats.EqualWithinAbsOrRel(haveAll, overallTotal, 1e-8, 1e-8) {
-			t.Errorf("overall total: %g != %g", haveAll, overallTotal)
-		}
-
-		for _, year := range cfg.Config.Years {
-			_, err = c.DemographicConsumption(context.Background(), &eieiorpc.DemographicConsumptionInput{
-				Demograph: eieiorpc.Demograph_Hispanic,
-				Year:      int32(year),
-			})
+			ioAbbrevs, err := s.EndUseGroupAbbrevs(ctx, &eieiorpc.StringInput{})
 			if err != nil {
-				t.Error(err)
+				t.Fatal(err)
 			}
-		}
+			var sum []float64
+			for j, useAbbrev := range ioAbbrevs.List {
+				useMask, err := s.EndUseMask(ctx, &eieiorpc.StringInput{String_: useAbbrev})
+				if err != nil {
+					t.Fatal(err)
+				}
+				cons, err := c.DemographicConsumption(ctx, &eieiorpc.DemographicConsumptionInput{
+					Year:       2014,
+					EndUseMask: useMask,
+					Demograph:  eieiorpc.Demograph_Black,
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if j == 0 {
+					sum = make([]float64, len(cons.Data))
+				}
+				floats.Add(sum, cons.Data)
+			}
+			if len(totalCons.Data) != len(sum) {
+				t.Fatalf("length %d != %d", len(totalCons.Data), len(sum))
+			}
+			for i, v := range totalCons.Data {
+				if !floats.EqualWithinAbsOrRel(sum[i], v, 1e-10, 1e-10) {
+					t.Errorf("%d: %g != %g", i, sum[i], v)
+				}
+			}
+		})
+
+		t.Run("years", func(t *testing.T) {
+			for _, year := range cfg.Config.Years {
+				_, err = c.DemographicConsumption(context.Background(), &eieiorpc.DemographicConsumptionInput{
+					Demograph: eieiorpc.Demograph_Hispanic,
+					Year:      int32(year),
+				})
+				if err != nil {
+					t.Error(err)
+				}
+			}
+		})
 	})
 }
