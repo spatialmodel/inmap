@@ -211,6 +211,15 @@ func (e *EIO) loadFinalDemand(detailFileName, summaryFileName string, year, deta
 		o[demand] = detailDemandVec
 	}
 
+	// Set negative demand to zero.
+	for _, v := range o {
+		for i := 0; i < v.Len(); i++ {
+			if v.At(i, 0) < 0 {
+				v.SetVec(i, 0)
+			}
+		}
+	}
+
 	// Add in aggregated demand groups.
 	aggregatedDemands := []FinalDemand{All, NonExport}
 	EndUseGroups := [][]FinalDemand{
@@ -238,15 +247,6 @@ func (e *EIO) loadFinalDemand(detailFileName, summaryFileName string, year, deta
 			v.Add(v, o[dd])
 		}
 		o[d] = v.ColView(0).(*mat.VecDense)
-	}
-
-	// Set negative demand to zero.
-	for _, v := range o {
-		for i := 0; i < v.Len(); i++ {
-			if v.At(i, 0) < 0 {
-				v.SetVec(i, 0)
-			}
-		}
 	}
 
 	return o, nil

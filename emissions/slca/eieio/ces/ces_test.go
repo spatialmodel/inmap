@@ -143,12 +143,24 @@ func TestCES(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			totalDeaths, err := s.Health(ctx, &eieiorpc.HealthInput{
+				Demand:     totalCons,
+				Pollutant:  eieiorpc.Pollutant_TotalPM25,
+				Population: "TotalPop",
+				Year:       2014,
+				Location:   eieiorpc.Location_Domestic,
+				HR:         "NasariACS",
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
 
 			ioAbbrevs, err := s.EndUseGroupAbbrevs(ctx, &eieiorpc.StringInput{})
 			if err != nil {
 				t.Fatal(err)
 			}
 			var sum []float64
+			var deathSum float64
 			for j, useAbbrev := range ioAbbrevs.List {
 				useMask, err := s.EndUseMask(ctx, &eieiorpc.StringInput{String_: useAbbrev})
 				if err != nil {
@@ -166,14 +178,30 @@ func TestCES(t *testing.T) {
 					sum = make([]float64, len(cons.Data))
 				}
 				floats.Add(sum, cons.Data)
+
+				deaths, err := s.Health(ctx, &eieiorpc.HealthInput{
+					Demand:     cons,
+					Pollutant:  eieiorpc.Pollutant_TotalPM25,
+					Population: "TotalPop",
+					Year:       2014,
+					Location:   eieiorpc.Location_Domestic,
+					HR:         "NasariACS",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				deathSum += floats.Sum(deaths.Data)
 			}
 			if len(totalCons.Data) != len(sum) {
-				t.Fatalf("length %d != %d", len(totalCons.Data), len(sum))
+				t.Fatalf("consumption length %d != %d", len(totalCons.Data), len(sum))
 			}
 			for i, v := range totalCons.Data {
 				if !floats.EqualWithinAbsOrRel(sum[i], v, 1e-10, 1e-10) {
-					t.Errorf("%d: %g != %g", i, sum[i], v)
+					t.Errorf("consumption %d: %g != %g", i, sum[i], v)
 				}
+			}
+			if !floats.EqualWithinAbsOrRel(floats.Sum(totalDeaths.Data), deathSum, 1e-10, 1e-10) {
+				t.Errorf("deaths: %g != %g", floats.Sum(totalDeaths.Data), deathSum)
 			}
 		})
 

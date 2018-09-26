@@ -67,7 +67,7 @@ func TestEIO(t *testing.T) {
 	// "total industry output" row. The spreadsheet value is $21,425 million.
 	// The calculated value is slightly different because we are setting negative
 	// final demand to zero.
-	const wantOilseedProduction2007 = 2.65690994625e+10
+	const wantOilseedProduction2007 = 2.8790982747699997e+10
 	if different(oilseedProduction2007, wantOilseedProduction2007) {
 		t.Errorf("oilseed production 2007: have %g, want %g", oilseedProduction2007, wantOilseedProduction2007)
 	}

@@ -21,6 +21,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/gonum/floats"
 	"github.com/spatialmodel/inmap/emissions/slca/eieio/eieiorpc"
 )
 
@@ -39,7 +40,7 @@ func TestLoadFinalDemand(t *testing.T) {
 		t.Fatalf("length should be 389 but is %d", r)
 	}
 	v := allDemand.Data[388]
-	want := 1.696e+03 * 1.0e6 // total from spreadsheet (but different because imports)
+	want := 1.26261e+5 * 1.0e6 // total from spreadsheet (but different because imports and negative values)
 	if different(v, want) {
 		t.Errorf("have %v but want %v", v, want)
 	}
@@ -63,5 +64,53 @@ func TestLoadFinalDemand(t *testing.T) {
 	)
 	if different(v, pcWant) {
 		t.Errorf("have %v but want %v", v, pcWant)
+	}
+}
+
+func TestFinalDemand_sum(t *testing.T) {
+	e := loadSpatial(t).EIO
+	allDemand, err := e.FinalDemand(context.Background(), &eieiorpc.FinalDemandInput{
+		FinalDemandType: eieiorpc.FinalDemandType_NonExport,
+		Year:            2007,
+		Location:        eieiorpc.Location_Domestic,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var demandSum *eieiorpc.Vector
+	for _, fd := range []eieiorpc.FinalDemandType{eieiorpc.FinalDemandType_DefenseConsumption,
+		eieiorpc.FinalDemandType_DefenseStructures, eieiorpc.FinalDemandType_DefenseEquipment,
+		eieiorpc.FinalDemandType_DefenseIP, eieiorpc.FinalDemandType_NondefenseConsumption,
+		eieiorpc.FinalDemandType_NondefenseStructures, eieiorpc.FinalDemandType_NondefenseEquipment,
+		eieiorpc.FinalDemandType_NondefenseIP, eieiorpc.FinalDemandType_LocalConsumption,
+		eieiorpc.FinalDemandType_LocalStructures, eieiorpc.FinalDemandType_LocalEquipment,
+		eieiorpc.FinalDemandType_LocalIP,
+
+		eieiorpc.FinalDemandType_PersonalConsumption,
+		eieiorpc.FinalDemandType_PrivateResidential,
+		eieiorpc.FinalDemandType_PrivateStructures,
+		eieiorpc.FinalDemandType_PrivateEquipment,
+		eieiorpc.FinalDemandType_PrivateIP,
+		eieiorpc.FinalDemandType_InventoryChange,
+	} {
+		temp, err := e.FinalDemand(context.Background(), &eieiorpc.FinalDemandInput{
+			FinalDemandType: fd,
+			Year:            2007,
+			Location:        eieiorpc.Location_Domestic,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if demandSum == nil {
+			demandSum = temp
+		} else {
+			floats.Add(demandSum.Data, temp.Data)
+		}
+	}
+	for i, v := range allDemand.Data {
+		if !floats.EqualWithinAbsOrRel(v, demandSum.Data[i], 1e-10, 1e-10) {
+			t.Errorf("%d: %g != %g", i, v, demandSum.Data[i])
+		}
 	}
 }
