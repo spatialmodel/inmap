@@ -98,7 +98,7 @@ func TestServer_grpc(t *testing.T) {
 			},
 			selectors: &eieiorpc.Selectors{
 				Names:  []string{"All", "Food", "Goods", "Transportation", "Services", "Shelter", "Information and Entertainment", "Electricity"},
-				Values: []float32{0.14021207, 0.03827497, 0.033649687, 0.02409342, 0.021128865, 0.0182907, 0.0037628177, 0.0010116103},
+				Values: []float32{0.14021207, 0.038151223, 0.036187083, 0.024247574, 0.019742511, 0.01743482, 0.003491058, 0.0009578001},
 			},
 		},
 		{
@@ -136,7 +136,7 @@ func TestServer_grpc(t *testing.T) {
 			},
 			selectors: &eieiorpc.Selectors{
 				Names:  []string{"All", "Electric power generation, transmission, and distribution"},
-				Values: []float32{0.0010116103, 0.0010116103},
+				Values: []float32{0.0009578001, 0.0009578001},
 			},
 		},
 		{
@@ -390,7 +390,7 @@ func TestServer_grpc(t *testing.T) {
 			t.Fatal(err)
 		}
 		want := &eieiorpc.Year{
-			Years: []int32{2007, 2011},
+			Years: []int32{2007, 2011, 2015},
 		}
 		if !reflect.DeepEqual(y, want) {
 			t.Errorf("%+v != %+v", y, want)

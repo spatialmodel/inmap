@@ -40,7 +40,7 @@ func TestLoadFinalDemand(t *testing.T) {
 		t.Fatalf("length should be 389 but is %d", r)
 	}
 	v := allDemand.Data[388]
-	want := 1.26261e+5 * 1.0e6 // total from spreadsheet (but different because imports and negative values)
+	want := 1.26269e+5 * 1.0e6 // total from spreadsheet (but different because imports and negative values)
 	if different(v, want) {
 		t.Errorf("have %v but want %v", v, want)
 	}
@@ -69,6 +69,23 @@ func TestLoadFinalDemand(t *testing.T) {
 
 func TestFinalDemand_sum(t *testing.T) {
 	e := loadSpatial(t).EIO
+
+	t.Run("negative", func(t *testing.T) {
+		allDemand, err := e.FinalDemand(context.Background(), &eieiorpc.FinalDemandInput{
+			FinalDemandType: eieiorpc.FinalDemandType_AllDemand,
+			Year:            2015,
+			Location:        eieiorpc.Location_Domestic,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		for i, v := range allDemand.Data {
+			if v < 0 {
+				t.Errorf("final demand index %d < 0 = %g", i, v)
+			}
+		}
+	})
+
 	allDemand, err := e.FinalDemand(context.Background(), &eieiorpc.FinalDemandInput{
 		FinalDemandType: eieiorpc.FinalDemandType_NonExport,
 		Year:            2007,

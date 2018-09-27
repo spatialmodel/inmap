@@ -8,7 +8,7 @@ StaticDir = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/eieio"
 DefaultYear = 2011
 
 [Config]
-  Years = [2007, 2011]
+  Years = [2007, 2011, 2015]
   DetailYear = 2007
   UseSummary = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/eieio/data/IOUse_Before_Redefinitions_PRO_1997-2015_Summary.xlsx"
   UseDetail = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/eieio/data/IOUse_Before_Redefinitions_PRO_2007_Detail.xlsx"

@@ -62,7 +62,7 @@ func TestCES(t *testing.T) {
 			t.Fatal(err)
 		}
 		haveWhiteOther := floats.Sum(d.Data)
-		want := 1.1359995947463227e+13
+		want := 1.2266264876604041e+13
 		if haveWhiteOther != want {
 			t.Errorf("white/other = %g; want %g", haveWhiteOther, want)
 		}
@@ -75,7 +75,7 @@ func TestCES(t *testing.T) {
 			t.Fatal(err)
 		}
 		haveBlack := floats.Sum(d.Data)
-		want = 1.1905337045261685e+12
+		want = 1.2810049534676526e+12
 		if haveBlack != want {
 			t.Errorf("black = %g; want %g", haveBlack, want)
 		}
@@ -88,7 +88,7 @@ func TestCES(t *testing.T) {
 			t.Fatal(err)
 		}
 		haveHispanic := floats.Sum(d.Data)
-		want = 1.5028577232263906e+12
+		want = 1.6193962594997866e+12
 		if haveHispanic != want {
 			t.Errorf("hispanic = %g; want %g", haveHispanic, want)
 		}

@@ -214,7 +214,7 @@ func (e *EIO) loadFinalDemand(detailFileName, summaryFileName string, year, deta
 	// Set negative demand to zero.
 	for _, v := range o {
 		for i := 0; i < v.Len(); i++ {
-			if v.At(i, 0) < 0 {
+			if (!imports && v.At(i, 0) < 0) || (imports && v.At(i, 0) > 0) {
 				v.SetVec(i, 0)
 			}
 		}
