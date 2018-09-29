@@ -20,36 +20,27 @@ Go to [releases](https://github.com/spatialmodel/inmap/releases) to download the
 
 You can also compile InMAP from its source code. The instructions here are specific to Linux or Mac computers; other systems should work with minor changes to the commands below. Refer [here](http://golang.org/doc/install#requirements) for a list of theoretically supported systems.
 
-1. Install the [Go compiler](http://golang.org/doc/install). Make sure you install the correct version (64 bit) for your system. It may be useful to go through one of the tutorials to make sure the compiler is correctly installed. Make sure that you have set the `$GOPATH` environment variable. On Linux or Macintosh systems, this can be done using the command `export GOPATH=$HOME/go`. On Windows systems, you can follow [these](http://www.computerhope.com/issues/ch000549.htm) directions.
-
-2. Make sure your `$PATH` environment variable includes the directories `$GOROOT/bin` and `$GOPATH/bin`. On Linux or Macintosh systems, this can be done using the command `export PATH=$PATH:$GOPATH/bin`. On Windows systems, you can follow [these](http://www.computerhope.com/issues/ch000549.htm) directions.
+1. Install the [Go compiler](http://golang.org/doc/install), version 1.11 or higher. Make sure you install the correct version (64 bit) for your system. It may be useful to go through one of the tutorials to make sure the compiler is correctly installed.
 
 3. Install the [git](http://git-scm.com/) and [mercurial](http://mercurial.selenic.com/) version control programs, if they are not already installed. If you are using a shared system or cluster, you may just need to load them with the commands `module load git` and `module load hg`.
 
 4. Download and install the main program:
 
 	``` bash
-	mkdir -p $GOPATH/src/github.com/spatialmodel # Create the directory for the code.
-	cd $GOPATH/src/github.com/spatialmodel # Move to the directory.
 	git clone https://github.com/spatialmodel/inmap.git # Download the code.
 	cd inmap # Move into the InMAP directory
-	go get github.com/golang/dep/cmd/dep # Install the program that will download the required libraries
-	dep ensure -v # Download the required libraries
-	rm -r vendor/k8s.io # Deal with one library that needs special treatment
-	go get k8s.io/client-go/...
-	go install ./cmd/inmap # Compile and install the InMAP executable.
+	GO111MODULE=on go build ./cmd/inmap # Compile the InMAP executable.
 	```
 
-5. Optional: run the tests and evaluations (this may take a while):
+	There should now be a file named `inmap` or `inmap.exe` in the current dirctory. This is the inmap executable file. It can be copied or moved to any directory of your choosing and run as described below in "Running InMAP".
+
+5. Optional: run the tests:
 
 	``` bash
-	cd $GOPATH/src/github.com/spatialmodel/inmap
-	go test ./... -timeout="200h"
-	# or
-	go test ./... -short
+	cd /path/to/inmap # Move to the directory where InMAP is downloaded,
+	# if you are not already there.
+	GO111MODULE=on go test ./... -short
 	```
-
-	To only run the tests and not the evaluations, run `go test ./...  -short`. If you do run the evaluations, make sure you first download the evaluation data from the [InMAP release page](https://github.com/spatialmodel/inmap/releases) and set the `evaldata` environment variable to the location of the unzipped directory.
 
 ## Running InMAP
 
