@@ -115,23 +115,25 @@ func TestSR(t *testing.T) {
 		}
 	}
 
+	cfg := inmaputil.InitializeConfig()
+
 	ctx := context.WithValue(context.Background(), "user", "test_user")
 
-	cfg, err := loadConfig("../cmd/inmap/configExample.toml")
+	config, err := loadConfig("../cmd/inmap/configExample.toml")
 	if err != nil {
 		t.Fatal(err)
 	}
-	varGridReader, err := os.Open(strings.TrimSuffix(cfg.VariableGridData, ".gob") + "_SR.gob")
+	varGridReader, err := os.Open(strings.TrimSuffix(config.VariableGridData, ".gob") + "_SR.gob")
 	if err != nil {
 		t.Fatal(err)
 	}
 	os.Mkdir("test", os.ModePerm)
-	client, err := cloud.NewFakeClient(checkConfig, checkRun, "file://test", inmaputil.Root, inmaputil.Cfg, inmaputil.InputFiles(), inmaputil.OutputFiles())
+	client, err := cloud.NewFakeClient(checkConfig, checkRun, "file://test", cfg.Root, cfg.Viper, cfg.InputFiles(), cfg.OutputFiles())
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll("test")
-	s, err := sr.NewSR(varGridReader, &cfg.VarGrid, cloud.FakeRPCClient{Client: client})
+	s, err := sr.NewSR(varGridReader, &config.VarGrid, cloud.FakeRPCClient{Client: client})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +142,7 @@ func TestSR(t *testing.T) {
 	layers := []int{0, 2, 4}
 	begin := 0 // layer 0
 	end := -1
-	if err = s.Start(ctx, "sr_test2", layers, begin, end, inmaputil.Root, inmaputil.Cfg, []string{"run", "steady"}, inmaputil.InputFiles(), 2); err != nil {
+	if err = s.Start(ctx, "sr_test2", layers, begin, end, cfg.Root, cfg.Viper, []string{"run", "steady"}, cfg.InputFiles(), 2); err != nil {
 		t.Fatal(err)
 	}
 	if err = s.Save(ctx, outfile, "sr_test2", layers, begin, end); err != nil {
@@ -148,17 +150,17 @@ func TestSR(t *testing.T) {
 	}
 
 	// Run it again for different indices.
-	varGridReader, err = os.Open(strings.TrimSuffix(cfg.VariableGridData, ".gob") + "_SR.gob")
+	varGridReader, err = os.Open(strings.TrimSuffix(config.VariableGridData, ".gob") + "_SR.gob")
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err = sr.NewSR(varGridReader, &cfg.VarGrid, cloud.FakeRPCClient{Client: client})
+	s, err = sr.NewSR(varGridReader, &config.VarGrid, cloud.FakeRPCClient{Client: client})
 	if err != nil {
 		t.Fatal(err)
 	}
 	begin = 20 // layer 2
 	end = 22
-	if err = s.Start(ctx, "sr_test", layers, begin, end, inmaputil.Root, inmaputil.Cfg, []string{"run", "steady"}, inmaputil.InputFiles(), 2); err != nil {
+	if err = s.Start(ctx, "sr_test", layers, begin, end, cfg.Root, cfg.Viper, []string{"run", "steady"}, cfg.InputFiles(), 2); err != nil {
 		t.Fatal(err)
 	}
 	if err = s.Save(ctx, outfile, "sr_test", layers, begin, end); err != nil {

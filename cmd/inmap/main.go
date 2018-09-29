@@ -33,12 +33,14 @@ func main() {
 			commands++
 		}
 	}
+	cfg := inmaputil.InitializeConfig()
+
 	if commands == 1 { // If only one command was supplied, start the GUI server.
-		inmaputil.StartWebServer()
+		cfg.StartWebServer()
 	}
 
 	// If more than one command was supplied, run in CLI mode.
-	if err := inmaputil.Root.Execute(); err != nil {
+	if err := cfg.Root.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(-1)
 	}

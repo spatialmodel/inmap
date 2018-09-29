@@ -33,9 +33,10 @@ import (
 )
 
 func main() {
+	cfg := inmaputil.InitializeConfig()
 
 	// Generate documentation for the available commands.
-	doc.GenMarkdownTree(inmaputil.Root, "./cmd/inmap/doc/")
+	doc.GenMarkdownTree(cfg.Root, "./cmd/inmap/doc/")
 
 	writeOutputOptions()
 }

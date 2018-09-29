@@ -124,6 +124,8 @@ func main() {
 	}
 	s.Log = logger
 
+	cfg := inmaputil.InitializeConfig()
+
 	var inmapServer *cloud.Client
 	if *production {
 		config, err := rest.InClusterConfig()
@@ -135,12 +137,12 @@ func main() {
 			logger.WithError(err).Fatal("failed to initialize Kubernetes")
 		}
 
-		inmapServer, err = cloud.NewClient(clientset, inmaputil.Root, inmaputil.Cfg, *bucket, inmaputil.InputFiles(), inmaputil.OutputFiles())
+		inmapServer, err = cloud.NewClient(clientset, cfg.Root, cfg.Viper, *bucket, cfg.InputFiles(), cfg.OutputFiles())
 		if err != nil {
 			logger.WithError(err).Fatal("failed to initialize InMAP server")
 		}
 	} else {
-		inmapServer, err = cloud.NewFakeClient(nil, false, *bucket, inmaputil.Root, inmaputil.Cfg, inmaputil.InputFiles(), inmaputil.OutputFiles())
+		inmapServer, err = cloud.NewFakeClient(nil, nil, *bucket, cfg.Root, cfg.Viper, cfg.InputFiles(), cfg.OutputFiles())
 		if err != nil {
 			logger.WithError(err).Fatal("failed to initialize fake InMAP server")
 		}

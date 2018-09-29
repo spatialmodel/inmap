@@ -75,15 +75,16 @@ func TestClient_fake(t *testing.T) {
 			}
 		}
 	}
+	cfg := inmaputil.InitializeConfig()
 
-	c, err := cloud.NewFakeClient(checkConfig, checkRun, "file://test", inmaputil.Root, inmaputil.Cfg, inmaputil.InputFiles(), inmaputil.OutputFiles())
+	c, err := cloud.NewFakeClient(checkConfig, checkRun, "file://test", cfg.Root, cfg.Viper, cfg.InputFiles(), cfg.OutputFiles())
 	if err != nil {
 		t.Fatal(err)
 	}
 	os.Mkdir("test", os.ModePerm)
 	defer os.RemoveAll("test")
 
-	jobSpec, err := cloud.JobSpec(inmaputil.Root, inmaputil.Cfg, "test_job", []string{"run", "steady"}, inmaputil.InputFiles(), 1)
+	jobSpec, err := cloud.JobSpec(cfg.Root, cfg.Viper, "test_job", []string{"run", "steady"}, cfg.InputFiles(), 1)
 	if err != nil {
 		t.Fatal(err)
 	}

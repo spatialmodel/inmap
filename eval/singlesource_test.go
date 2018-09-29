@@ -40,11 +40,13 @@ func TestSingleSource(t *testing.T) {
 
 	os.MkdirAll("singleSource", os.ModePerm)
 
-	for _, filename := range []string{"configSingleSource_9km.toml", "configSingleSource_nested.toml"} {
-		inmaputil.Cfg.Set("config", filename)
+	cfg := inmaputil.InitializeConfig()
 
-		inmaputil.Root.SetArgs([]string{"run", "steady"})
-		if err := inmaputil.Root.Execute(); err != nil {
+	for _, filename := range []string{"configSingleSource_9km.toml", "configSingleSource_nested.toml"} {
+		cfg.Set("config", filename)
+
+		cfg.Root.SetArgs([]string{"run", "steady"})
+		if err := cfg.Root.Execute(); err != nil {
 			t.Fatal(err)
 		}
 	}

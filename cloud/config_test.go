@@ -28,7 +28,8 @@ import (
 )
 
 func TestRunInputFromViper(t *testing.T) {
-	js, err := cloud.JobSpec(inmaputil.Root, inmaputil.Cfg, "test_job", []string{"run", "steady"}, inmaputil.InputFiles(), 1)
+	cfg := inmaputil.InitializeConfig()
+	js, err := cloud.JobSpec(cfg.Root, cfg.Viper, "test_job", []string{"run", "steady"}, cfg.InputFiles(), 1)
 	if err != nil {
 		t.Fatal(err)
 	}

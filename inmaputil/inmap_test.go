@@ -27,50 +27,55 @@ import (
 )
 
 func TestCreateGrid(t *testing.T) {
-	Cfg.Set("config", "../cmd/inmap/configExample.toml")
-	Root.SetArgs([]string{"grid"})
-	if err := Root.Execute(); err != nil {
+	cfg := InitializeConfig()
+	cfg.Set("config", "../cmd/inmap/configExample.toml")
+	cfg.Root.SetArgs([]string{"grid"})
+	if err := cfg.Root.Execute(); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestInMAPStaticCreateGrid(t *testing.T) {
-	Cfg.Set("static", true)
-	Cfg.Set("createGrid", true)
+	cfg := InitializeConfig()
+	cfg.Set("static", true)
+	cfg.Set("createGrid", true)
 	os.Setenv("InMAPRunType", "static")
-	Cfg.Set("config", "../cmd/inmap/configExample.toml")
-	Root.SetArgs([]string{"run", "steady"})
+	cfg.Set("config", "../cmd/inmap/configExample.toml")
+	cfg.Root.SetArgs([]string{"run", "steady"})
 	defer os.Remove("../cmd/inmap/testdata/output_static.log")
-	if err := Root.Execute(); err != nil {
+	if err := cfg.Root.Execute(); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestInMAPStaticLoadGrid(t *testing.T) {
-	Cfg.Set("static", true)
-	Cfg.Set("createGrid", false)
+	cfg := InitializeConfig()
+	cfg.Set("static", true)
+	cfg.Set("createGrid", false)
 	os.Setenv("InMAPRunType", "staticLoadGrid")
-	Cfg.Set("config", "../cmd/inmap/configExample.toml")
-	Root.SetArgs([]string{"run", "steady"})
+	cfg.Set("config", "../cmd/inmap/configExample.toml")
+	cfg.Root.SetArgs([]string{"run", "steady"})
 	defer os.Remove("../cmd/inmap/testdata/output_staticLoadGrid.log")
-	if err := Root.Execute(); err != nil {
+	if err := cfg.Root.Execute(); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestInMAPDynamic(t *testing.T) {
-	Cfg.Set("static", false)
-	Cfg.Set("createGrid", false) // this isn't used for the dynamic grid
+	cfg := InitializeConfig()
+	cfg.Set("static", false)
+	cfg.Set("createGrid", false) // this isn't used for the dynamic grid
 	os.Setenv("InMAPRunType", "dynamic")
-	Cfg.Set("config", "../cmd/inmap/configExample.toml")
-	Root.SetArgs([]string{"run", "steady"})
+	cfg.Set("config", "../cmd/inmap/configExample.toml")
+	cfg.Root.SetArgs([]string{"run", "steady"})
 	defer os.Remove("../cmd/inmap/testdata/output_dynamic.log")
-	if err := Root.Execute(); err != nil {
+	if err := cfg.Root.Execute(); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestInMAPDynamicRemote_http(t *testing.T) {
+	cfg := InitializeConfig()
 	if err := os.Mkdir("test_bucket", os.ModePerm); err != nil {
 		t.Error(err)
 	}
@@ -79,50 +84,52 @@ func TestInMAPDynamicRemote_http(t *testing.T) {
 	defer srv.Close()
 	os.Setenv("TEST_URL", srv.URL)
 
-	Cfg.Set("static", false)
-	Cfg.Set("createGrid", false) // this isn't used for the dynamic grid
+	cfg.Set("static", false)
+	cfg.Set("createGrid", false) // this isn't used for the dynamic grid
 	os.Setenv("InMAPRunType", "dynamic")
-	Cfg.Set("config", "../cmd/inmap/configExampleRemote.toml")
-	Root.SetArgs([]string{"run", "steady"})
+	cfg.Set("config", "../cmd/inmap/configExampleRemote.toml")
+	cfg.Root.SetArgs([]string{"run", "steady"})
 	defer os.Remove("../cmd/inmap/testdata/output_dynamic.log")
-	if err := Root.Execute(); err != nil {
+	if err := cfg.Root.Execute(); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestInMAPDynamicRemote_bucket(t *testing.T) {
+	cfg := InitializeConfig()
 	if err := os.Mkdir("test_bucket", os.ModePerm); err != nil {
 		t.Error(err)
 	}
 	defer os.RemoveAll("test_bucket")
 	os.Setenv("TEST_URL", "file://../cmd/inmap/testdata")
 
-	Cfg.Set("static", false)
-	Cfg.Set("createGrid", false) // this isn't used for the dynamic grid
+	cfg.Set("static", false)
+	cfg.Set("createGrid", false) // this isn't used for the dynamic grid
 	os.Setenv("InMAPRunType", "dynamic")
-	Cfg.Set("config", "../cmd/inmap/configExampleRemote.toml")
-	Root.SetArgs([]string{"run", "steady"})
+	cfg.Set("config", "../cmd/inmap/configExampleRemote.toml")
+	cfg.Root.SetArgs([]string{"run", "steady"})
 	defer os.Remove("../cmd/inmap/testdata/output_dynamic.log")
-	if err := Root.Execute(); err != nil {
+	if err := cfg.Root.Execute(); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestGetStringMapString(t *testing.T) {
+	cfg := InitializeConfig()
 	// Test regular map[string]string.
-	save := Cfg.Get("VarGrid.MortalityRateColumns")
-	Cfg.Set("VarGrid.MortalityRateColumns", map[string]string{"allcause": "TotalPop", "whnolmort": "WhiteNoLat"})
-	a := GetStringMapString("VarGrid.MortalityRateColumns", Cfg)
+	save := cfg.Get("VarGrid.MortalityRateColumns")
+	cfg.Set("VarGrid.MortalityRateColumns", map[string]string{"allcause": "TotalPop", "whnolmort": "WhiteNoLat"})
+	a := GetStringMapString("VarGrid.MortalityRateColumns", cfg.Viper)
 	wantA := map[string]string{"allcause": "TotalPop", "whnolmort": "WhiteNoLat"}
 	if !reflect.DeepEqual(a, wantA) {
 		t.Errorf("b: %v != %v", a, wantA)
 	}
 	// Test json object.
-	Cfg.Set("VarGrid.MortalityRateColumns", `{"AllCause":"TotalPop"}`)
-	b := GetStringMapString("VarGrid.MortalityRateColumns", Cfg)
+	cfg.Set("VarGrid.MortalityRateColumns", `{"AllCause":"TotalPop"}`)
+	b := GetStringMapString("VarGrid.MortalityRateColumns", cfg.Viper)
 	wantB := map[string]string{"AllCause": "TotalPop"}
 	if !reflect.DeepEqual(b, wantB) {
 		t.Errorf("b: %v != %v", b, wantB)
 	}
-	Cfg.Set("VarGrid.MortalityRateColumns", save)
+	cfg.Set("VarGrid.MortalityRateColumns", save)
 }

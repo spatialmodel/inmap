@@ -33,15 +33,17 @@ func TestNEI2005Dynamic(t *testing.T) {
 
 	os.MkdirAll("nei2005", os.ModePerm)
 
+	cfg := inmaputil.InitializeConfig()
+
 	os.Setenv("InMAPRunType", "dynamic")
-	inmaputil.Cfg.Set("config", "nei2005Config.toml")
-	inmaputil.Root.SetArgs([]string{"run", "steady"})
-	if err := inmaputil.Root.Execute(); err != nil {
+	cfg.Set("config", "nei2005Config.toml")
+	cfg.Root.SetArgs([]string{"run", "steady"})
+	if err := cfg.Root.Execute(); err != nil {
 		t.Fatal(err)
 	}
 
-	outputFile := inmaputil.Cfg.GetString("OutputFile")
-	inmapData := inmaputil.Cfg.GetString("InMAPData")
+	outputFile := cfg.GetString("OutputFile")
+	inmapData := cfg.GetString("InMAPData")
 	if err := obsCompare(outputFile, inmapData, filepath.Join(evalData, "annual_all_2005.csv"),
 		filepath.Join(evalData, "states.shp"), filepath.Dir(outputFile), "dynamic"); err != nil {
 		t.Error(err)
@@ -61,16 +63,18 @@ func TestNEI2005Static(t *testing.T) {
 
 	os.MkdirAll("nei2005", os.ModePerm)
 
+	cfg := inmaputil.InitializeConfig()
+
 	os.Setenv("InMAPRunType", "static")
-	inmaputil.Cfg.Set("config", "nei2005Config.toml")
-	inmaputil.Cfg.Set("static", true)
-	inmaputil.Root.SetArgs([]string{"run", "steady"})
-	if err := inmaputil.Root.Execute(); err != nil {
+	cfg.Set("config", "nei2005Config.toml")
+	cfg.Set("static", true)
+	cfg.Root.SetArgs([]string{"run", "steady"})
+	if err := cfg.Root.Execute(); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := obsCompare(inmaputil.Cfg.GetString("OutputFile"), inmaputil.Cfg.GetString("InMAPData"), filepath.Join(evalData, "annual_all_2005.csv"),
-		filepath.Join(evalData, "states.shp"), filepath.Dir(inmaputil.Cfg.GetString("OutputFile")), "static"); err != nil {
+	if err := obsCompare(cfg.GetString("OutputFile"), cfg.GetString("InMAPData"), filepath.Join(evalData, "annual_all_2005.csv"),
+		filepath.Join(evalData, "states.shp"), filepath.Dir(cfg.GetString("OutputFile")), "static"); err != nil {
 		t.Error(err)
 	}
 }
