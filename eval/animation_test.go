@@ -158,17 +158,19 @@ func TestAnimation_logo(t *testing.T) {
 	}
 	f.Close()
 
+	cfg := inmaputil.InitializeConfig()
+
 	dynamic := true
 	createGrid := false // this isn't used for the dynamic grid
 	os.Setenv("InMAPRunType", "dynamic")
-	inmaputil.Cfg.Set("config", "nei2005Config.toml")
-	inmaputil.Cfg.Set("VarGrid.CensusFile", "animation_logo/logo.shp")
-	inmaputil.Cfg.Set("VarGrid.CensusPopColumns", []string{"Pop"})
-	inmaputil.Cfg.Set("VarGrid.PopGridColumn", "Pop")
-	inmaputil.Cfg.Set("VarGrid.MortalityRateFile", "animation_logo/logo.shp")
-	inmaputil.Cfg.Set("VarGrid.MortalityRateColumns", []string{"MR"})
+	cfg.Set("config", "nei2005Config.toml")
+	cfg.Set("VarGrid.CensusFile", "animation_logo/logo.shp")
+	cfg.Set("VarGrid.CensusPopColumns", []string{"Pop"})
+	cfg.Set("VarGrid.PopGridColumn", "Pop")
+	cfg.Set("VarGrid.MortalityRateFile", "animation_logo/logo.shp")
+	cfg.Set("VarGrid.MortalityRateColumns", []string{"MR"})
 
-	cfg, err := inmaputil.VarGridConfig(inmaputil.Cfg)
+	vgc, err := inmaputil.VarGridConfig(cfg.Viper)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -184,9 +186,9 @@ func TestAnimation_logo(t *testing.T) {
 	const framePeriod = 3600.0 * 3
 
 	if err := inmaputil.Run(nil, "animation_logo/logoOut.log", "animation_logo/logoOut.shp", false,
-		map[string]string{"TotalPM25": "TotalPM25"}, inmaputil.Cfg.GetString("EmissionUnits"),
+		map[string]string{"TotalPM25": "TotalPM25"}, cfg.GetString("EmissionUnits"),
 		[]string{"animation_logo/logo.shp"},
-		cfg, inmaputil.Cfg.GetString("InMAPData"), inmaputil.Cfg.GetString("VariableGridData"), inmaputil.Cfg.GetInt("NumIterations"),
+		vgc, cfg.GetString("InMAPData"), cfg.GetString("VariableGridData"), cfg.GetInt("NumIterations"),
 		dynamic, createGrid, inmaputil.DefaultScienceFuncs, nil,
 		[]inmap.DomainManipulator{inmap.RunPeriodically(framePeriod, saveConc(dataChan))}, nil, simplechem.Mechanism{}); err != nil {
 		t.Fatal(err)
@@ -217,11 +219,13 @@ func TestAnimation_nei(t *testing.T) {
 
 	os.MkdirAll("animation_nei", os.ModePerm)
 
+	cfg := inmaputil.InitializeConfig()
+
 	dynamic := true
 	createGrid := false // this isn't used for the dynamic grid
 	os.Setenv("InMAPRunType", "dynamic")
-	inmaputil.Cfg.SetConfigFile("nei2005Config.toml")
-	cfg, err := inmaputil.VarGridConfig(inmaputil.Cfg)
+	cfg.SetConfigFile("nei2005Config.toml")
+	vgc, err := inmaputil.VarGridConfig(cfg.Viper)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -237,9 +241,9 @@ func TestAnimation_nei(t *testing.T) {
 	const framePeriod = 3600.0
 
 	if err := inmaputil.Run(nil, "animation_nei/results.log", "animation_nei/results.shp", false,
-		inmaputil.GetStringMapString("OutputVariables", inmaputil.Cfg), inmaputil.Cfg.GetString("EmissionUnits"),
-		inmaputil.Cfg.GetStringSlice("EmissionsShapefiles"),
-		cfg, inmaputil.Cfg.GetString("InMAPData"), inmaputil.Cfg.GetString("VariableGridData"), inmaputil.Cfg.GetInt("NumIterations"),
+		inmaputil.GetStringMapString("OutputVariables", cfg.Viper), cfg.GetString("EmissionUnits"),
+		cfg.GetStringSlice("EmissionsShapefiles"),
+		vgc, cfg.GetString("InMAPData"), cfg.GetString("VariableGridData"), cfg.GetInt("NumIterations"),
 		dynamic, createGrid, inmaputil.DefaultScienceFuncs, nil,
 		[]inmap.DomainManipulator{inmap.RunPeriodically(framePeriod, saveConc(dataChan))}, nil, simplechem.Mechanism{}); err != nil {
 		t.Fatal(err)

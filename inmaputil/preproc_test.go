@@ -24,23 +24,25 @@ import (
 )
 
 func TestPreprocWRFChem(t *testing.T) {
+	cfg := InitializeConfig()
 	// Here we only test whether the program runs. We
 	// check whether the output is correct elsewhere.
-	Cfg.Set("config", "../cmd/inmap/configExampleWRFChem.toml")
-	Root.SetArgs([]string{"preproc"})
+	cfg.Set("config", "../cmd/inmap/configExampleWRFChem.toml")
+	cfg.Root.SetArgs([]string{"preproc"})
 	defer os.Remove("../cmd/inmap/testdata/preproc/inmapData_WRFChem.ncf")
-	if err := Root.Execute(); err != nil {
+	if err := cfg.Root.Execute(); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestPreprocGEOSChem(t *testing.T) {
+	cfg := InitializeConfig()
 	// Here we only test whether the program runs. We
 	// check whether the output is correct elsewhere.
-	Cfg.Set("config", "../cmd/inmap/configExampleGEOSChem.toml")
-	Root.SetArgs([]string{"preproc"})
+	cfg.Set("config", "../cmd/inmap/configExampleGEOSChem.toml")
+	cfg.Root.SetArgs([]string{"preproc"})
 	defer os.Remove("../cmd/inmap/testdata/preproc/inmapData_GEOSChem.ncf")
-	if err := Root.Execute(); err != nil {
+	if err := cfg.Root.Execute(); err != nil {
 		t.Fatal(err)
 	}
 }

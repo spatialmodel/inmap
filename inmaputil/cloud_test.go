@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License
 along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package inmaputil_test
+package inmaputil
 
 import (
 	"context"
@@ -25,11 +25,11 @@ import (
 	"testing"
 
 	"github.com/spatialmodel/inmap/cloud"
-	"github.com/spatialmodel/inmap/inmaputil"
 )
 
 func TestCloud(t *testing.T) {
-	client, err := cloud.NewFakeClient(nil, nil, "file://test", inmaputil.Root, inmaputil.Cfg, inmaputil.InputFiles(), inmaputil.OutputFiles())
+	cfg := InitializeConfig()
+	client, err := cloud.NewFakeClient(nil, nil, "file://test", cfg.Root, cfg.Viper, cfg.InputFiles(), cfg.OutputFiles())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,13 +39,13 @@ func TestCloud(t *testing.T) {
 	defer os.RemoveAll("test")
 
 	t.Run("start", func(t *testing.T) {
-		if err := inmaputil.CloudJobStart(ctx, c); err != nil {
+		if err := CloudJobStart(ctx, c, cfg); err != nil {
 			t.Fatal(err)
 		}
 	})
 
 	t.Run("status", func(t *testing.T) {
-		status, err := inmaputil.CloudJobStatus(ctx, c)
+		status, err := CloudJobStatus(ctx, c, cfg)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -58,12 +58,12 @@ func TestCloud(t *testing.T) {
 
 	t.Run("output", func(t *testing.T) {
 		defer os.RemoveAll("test_job")
-		err := inmaputil.CloudJobOutput(ctx, c)
+		err := CloudJobOutput(ctx, c, cfg)
 		if err != nil {
 			t.Fatal(err)
 		}
 		wantFiles := map[string]int64{
-			"OutputFile.dbf": 2609,
+			"OutputFile.dbf": 465,
 			"OutputFile.prj": 431,
 			"OutputFile.shp": 2276,
 			"OutputFile.shx": 228,

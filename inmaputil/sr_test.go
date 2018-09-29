@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License
 along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package inmaputil_test
+package inmaputil
 
 import (
 	"context"
@@ -24,23 +24,23 @@ import (
 	"testing"
 
 	"github.com/spatialmodel/inmap/cloud"
-	"github.com/spatialmodel/inmap/inmaputil"
 )
 
 func TestSR(t *testing.T) {
+	cfg := InitializeConfig()
 	output := "../cmd/inmap/testdata/tempSR.ncf"
 	begin := 8
 	end := 9
 	layers := []int{0}
 	cmds := []string{"run", "steady"}
 	defer os.Remove(output)
-	vgc, err := inmaputil.VarGridConfig(inmaputil.Cfg)
+	vgc, err := VarGridConfig(cfg.Viper)
 	if err != nil {
 		t.Fatal(err)
 	}
 	ctx := context.WithValue(context.Background(), "user", "test_user")
 
-	client, err := cloud.NewFakeClient(nil, nil, "file://test", inmaputil.Root, inmaputil.Cfg, inmaputil.InputFiles(), inmaputil.OutputFiles())
+	client, err := cloud.NewFakeClient(nil, nil, "file://test", cfg.Root, cfg.Viper, cfg.InputFiles(), cfg.OutputFiles())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,14 +48,14 @@ func TestSR(t *testing.T) {
 	os.Mkdir("test", os.ModePerm)
 	defer os.RemoveAll("test")
 
-	err = inmaputil.StartSR(ctx, "test_sr", cmds, 1,
-		os.ExpandEnv(inmaputil.Cfg.GetString("VariableGridData")),
-		vgc, begin, end, layers, c)
+	err = StartSR(ctx, "test_sr", cmds, 1,
+		os.ExpandEnv(cfg.GetString("VariableGridData")),
+		vgc, begin, end, layers, c, cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = inmaputil.SaveSR(ctx, "test_sr", output,
-		os.ExpandEnv(inmaputil.Cfg.GetString("VariableGridData")),
+	err = SaveSR(ctx, "test_sr", output,
+		os.ExpandEnv(cfg.GetString("VariableGridData")),
 		vgc, begin, end, layers, c)
 	if err != nil {
 		t.Fatal(err)
@@ -63,29 +63,29 @@ func TestSR(t *testing.T) {
 }
 
 func TestSRPredict(t *testing.T) {
-	inmaputil.Cfg.Set("SR.OutputFile", "../cmd/inmap/testdata/testSR_golden.ncf")
-	inmaputil.Cfg.Set("OutputFile", "../cmd/inmap/testdata/output_SRPredict.shp")
-	inmaputil.Cfg.Set("EmissionsShapefiles", []string{"../cmd/inmap/testdata/testEmisSR.shp"})
+	cfg := InitializeConfig()
+	cfg.Set("SR.OutputFile", "../cmd/inmap/testdata/testSR_golden.ncf")
+	cfg.Set("OutputFile", "../cmd/inmap/testdata/output_SRPredict.shp")
+	cfg.Set("EmissionsShapefiles", []string{"../cmd/inmap/testdata/testEmisSR.shp"})
 
-	inmaputil.Cfg.Set("config", "../cmd/inmap/configExample.toml")
-	inmaputil.Root.SetArgs([]string{"sr", "predict"})
-	if err := inmaputil.Root.Execute(); err != nil {
+	cfg.Set("config", "../cmd/inmap/configExample.toml")
+	cfg.Root.SetArgs([]string{"srpredict"})
+	if err := cfg.Root.Execute(); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestSRPredictAboveTop(t *testing.T) {
-	cfg := inmaputil.Cfg
+	cfg := InitializeConfig()
 	cfg.Set("config", "../cmd/inmap/configExample.toml")
 	cfg.Set("SR.OutputFile", "../cmd/inmap/testdata/testSR_golden.ncf")
 	cfg.Set("OutputFile", "../cmd/inmap/testdata/output_SRPredict.shp")
 	cfg.Set("EmissionsShapefiles", []string{"../cmd/inmap/testdata/testEmis.shp"})
-	vcfg, err := inmaputil.VarGridConfig(cfg)
+	vcfg, err := VarGridConfig(cfg.Viper)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	if err := inmaputil.SRPredict(cfg.GetString("EmissionUnits"), cfg.GetString("SR.OutputFile"), cfg.GetString("OutputFile"), cfg.GetStringSlice("EmissionsShapefiles"), vcfg); err != nil {
+	if err := SRPredict(cfg.GetString("EmissionUnits"), cfg.GetString("SR.OutputFile"), cfg.GetString("OutputFile"), cfg.GetStringSlice("EmissionsShapefiles"), vcfg); err != nil {
 		t.Fatal(err)
 	}
 }

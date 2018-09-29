@@ -61,18 +61,20 @@ func TestFuelScenarios(t *testing.T) {
 		"battery.VehicleCycle.EVbatteryLiIonPerMile",
 	}
 
+	cfg := inmaputil.InitializeConfig()
+
 	for i, scenario := range scenarios {
-		inmaputil.Cfg.Set("config", "nei2005Config.toml")
+		cfg.Set("config", "nei2005Config.toml")
 		emisName := emissionsNames[i]
-		inmaputil.Cfg.Set("EmissionsShapefiles", []string{
+		cfg.Set("EmissionsShapefiles", []string{
 			filepath.Join(evalData, "FuelScenarios", "emissions", fmt.Sprintf("%s.elevated.shp", emisName)),
 			filepath.Join(evalData, "FuelScenarios", "emissions", fmt.Sprintf("%s.groundlevel.shp", emisName)),
 		})
-		inmaputil.Cfg.Set("OutputFile", filepath.Join("FuelScenarios", fmt.Sprintf("%s_vargrid.shp", scenario)))
+		cfg.Set("OutputFile", filepath.Join("FuelScenarios", fmt.Sprintf("%s_vargrid.shp", scenario)))
 
-		inmaputil.Root.SetArgs([]string{"run", "steady"})
+		cfg.Root.SetArgs([]string{"run", "steady"})
 
-		if err := inmaputil.Root.Execute(); err != nil {
+		if err := cfg.Root.Execute(); err != nil {
 			t.Fatal(err)
 		}
 	}

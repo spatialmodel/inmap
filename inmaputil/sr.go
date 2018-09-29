@@ -51,7 +51,7 @@ import (
 // layers specifies which vertical layers to process.
 //
 // client is a client of the cluster that will run the simulations.
-func StartSR(ctx context.Context, jobName string, cmds []string, memoryGB int32, VariableGridData string, VarGrid *inmap.VarGridConfig, begin, end int, layers []int, client cloudrpc.CloudRPCClient) error {
+func StartSR(ctx context.Context, jobName string, cmds []string, memoryGB int32, VariableGridData string, VarGrid *inmap.VarGridConfig, begin, end int, layers []int, client cloudrpc.CloudRPCClient, cfg *Cfg) error {
 	outChan := outChan()
 	varGridReader, err := os.Open(maybeDownload(ctx, VariableGridData, outChan))
 	if err != nil {
@@ -61,7 +61,7 @@ func StartSR(ctx context.Context, jobName string, cmds []string, memoryGB int32,
 	if err != nil {
 		return err
 	}
-	if err = sr.Start(ctx, jobName, layers, begin, end, Root, Cfg, cmds, InputFiles(), memoryGB); err != nil {
+	if err = sr.Start(ctx, jobName, layers, begin, end, cfg.Root, cfg.Viper, cmds, cfg.InputFiles(), memoryGB); err != nil {
 		return err
 	}
 	return nil

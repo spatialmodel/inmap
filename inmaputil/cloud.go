@@ -33,9 +33,9 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-// NewCloudClient creates a new RPC client based on the information in Cfg.
-func NewCloudClient() (cloudrpc.CloudRPCClient, error) {
-	conn, err := grpc.Dial(Cfg.GetString("addr"),
+// NewCloudClient creates a new RPC client based on the information in cfg.
+func NewCloudClient(cfg *Cfg) (cloudrpc.CloudRPCClient, error) {
+	conn, err := grpc.Dial(cfg.GetString("addr"),
 		grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, "")),
 		grpc.WithDefaultCallOptions(
 			grpc.MaxCallRecvMsgSize(4.295e+9), // 4 gib max message size
@@ -48,14 +48,14 @@ func NewCloudClient() (cloudrpc.CloudRPCClient, error) {
 	return cloudrpc.NewCloudRPCClient(conn), nil
 }
 
-// CloudJobStart starts a new cloud job based on the information in Cfg.
-func CloudJobStart(ctx context.Context, c cloudrpc.CloudRPCClient) error {
+// CloudJobStart starts a new cloud job based on the information in cfg.
+func CloudJobStart(ctx context.Context, c cloudrpc.CloudRPCClient, cfg *Cfg) error {
 	in, err := cloud.JobSpec(
-		Root, Cfg,
-		Cfg.GetString("job_name"),
-		Cfg.GetStringSlice("cmds"),
-		InputFiles(),
-		int32(Cfg.GetInt("memory_gb")),
+		cfg.Root, cfg.Viper,
+		cfg.GetString("job_name"),
+		cfg.GetStringSlice("cmds"),
+		cfg.InputFiles(),
+		int32(cfg.GetInt("memory_gb")),
 	)
 	if err != nil {
 		return err
@@ -73,21 +73,21 @@ func CloudJobStart(ctx context.Context, c cloudrpc.CloudRPCClient) error {
 }
 
 // CloudJobStatus checks the status of a cloud job
-// based on the information in Cfg.
-func CloudJobStatus(ctx context.Context, c cloudrpc.CloudRPCClient) (*cloudrpc.JobStatus, error) {
+// based on the information in cfg.
+func CloudJobStatus(ctx context.Context, c cloudrpc.CloudRPCClient, cfg *Cfg) (*cloudrpc.JobStatus, error) {
 	in := &cloudrpc.JobName{
 		Version: inmap.Version,
-		Name:    Cfg.GetString("job_name"),
+		Name:    cfg.GetString("job_name"),
 	}
 	return c.Status(ctx, in)
 }
 
 // CloudJobOutput retrieves and saves the output of a cloud job
-// based on the information in Cfg. The files will be saved
+// based on the information in cfg. The files will be saved
 // in `current_dir/job_name`, where current_dir is the directory
 // the command is run in.
-func CloudJobOutput(ctx context.Context, c cloudrpc.CloudRPCClient) error {
-	name := Cfg.GetString("job_name")
+func CloudJobOutput(ctx context.Context, c cloudrpc.CloudRPCClient, cfg *Cfg) error {
+	name := cfg.GetString("job_name")
 	in := &cloudrpc.JobName{
 		Version: inmap.Version,
 		Name:    name,
