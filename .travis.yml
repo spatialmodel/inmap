@@ -1,7 +1,6 @@
 language: go
 go:
-- 1.9.x
-- 1.10.x
+- 1.11.x
 - master
 matrix:
   allow_failures:
@@ -11,15 +10,11 @@ before_install:
 - go get github.com/axw/gocov/gocov
 - go get github.com/mattn/goveralls
 - go get golang.org/x/tools/cmd/cover
-- go get github.com/golang/dep/cmd/dep
 
 install:
-- dep ensure
-- rm -r vendor/k8s.io
-- go get k8s.io/client-go/...
-- go install ./cmd/inmap
+- GO111MODULE=on go install ./cmd/inmap
 script:
-- go test -short ./...
+- GO111MODULE=on go test -short ./...
 - bash ./.travis/test_coverage.sh
 
 env:
