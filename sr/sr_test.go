@@ -34,8 +34,38 @@ import (
 	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/cloud"
 	"github.com/spatialmodel/inmap/inmaputil"
+	"github.com/spatialmodel/inmap/science/chem/simplechem"
 	"github.com/spatialmodel/inmap/sr"
 )
+
+// TestSaveSRGrid checks the ability to save a grid file
+// for SR matrix generation tests.
+func saveSRGrid(t *testing.T, filename string) {
+	cfg, ctmdata, pop, popIndices, mr, mortIndices := inmap.VarGridTestData()
+	cfg.HiResLayers = 6
+	f, err := os.Create(filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	emis := inmap.NewEmissions()
+
+	var m simplechem.Mechanism
+	mutator, err := inmap.PopulationMutator(cfg, popIndices)
+	if err != nil {
+		t.Error(err)
+	}
+	d := &inmap.InMAP{
+		InitFuncs: []inmap.DomainManipulator{
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis, m),
+			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, m, nil),
+			inmap.Save(f),
+		},
+	}
+	if err := d.Init(); err != nil {
+		t.Error(err)
+	}
+}
 
 type config struct {
 	InMAPData        string
@@ -123,7 +153,10 @@ func TestSR(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	varGridReader, err := os.Open(strings.TrimSuffix(config.VariableGridData, ".gob") + "_SR.gob")
+	varGridFile := strings.TrimSuffix(config.VariableGridData, ".gob") + "_SR.gob"
+	saveSRGrid(t, varGridFile)
+	defer os.Remove(varGridFile)
+	varGridReader, err := os.Open(varGridFile)
 	if err != nil {
 		t.Fatal(err)
 	}

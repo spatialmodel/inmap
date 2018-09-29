@@ -20,41 +20,11 @@ package inmap_test
 
 import (
 	"bytes"
-	"os"
 	"testing"
 
 	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/science/chem/simplechem"
 )
-
-// TestSaveSRGrid checks the ability to save a grid file
-// for SR matrix generation tests.
-func TestSaveSRGrid(t *testing.T) {
-	cfg, ctmdata, pop, popIndices, mr, mortIndices := inmap.VarGridTestData()
-	cfg.HiResLayers = 6
-	f, err := os.Create("cmd/inmap/testdata/inmapVarGrid_SR.gob")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	emis := inmap.NewEmissions()
-
-	var m simplechem.Mechanism
-	mutator, err := inmap.PopulationMutator(cfg, popIndices)
-	if err != nil {
-		t.Error(err)
-	}
-	d := &inmap.InMAP{
-		InitFuncs: []inmap.DomainManipulator{
-			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis, m),
-			cfg.MutateGrid(mutator, ctmdata, pop, mr, emis, m, nil),
-			inmap.Save(f),
-		},
-	}
-	if err := d.Init(); err != nil {
-		t.Error(err)
-	}
-}
 
 func TestSaveLoad(t *testing.T) {
 	buf := bytes.NewBuffer([]byte{})
