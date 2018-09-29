@@ -4,7 +4,7 @@
 # with script found at https://github.com/gopns/gopns/blob/master/test-coverage.sh
 
 echo "mode: set" > acc.out
-returnval=`go test -short -v -coverprofile=profile.out`
+returnval=`GO111MODULE=on go test -short -v -coverprofile=profile.out`
 echo ${returnval}
 if [[ ${returnval} != *FAIL* ]]
 then
@@ -21,7 +21,7 @@ do
 	if ls $Dir/*.go &> /dev/null;
 	then
 		echo $Dir
-		returnval=`go test -short -coverprofile=profile.out $Dir`
+		returnval=`GO111MODULE=on go test -short -coverprofile=profile.out $Dir`
 		echo ${returnval}
 		if [[ ${returnval} != *FAIL* ]]
 		then
