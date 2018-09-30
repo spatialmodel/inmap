@@ -22,9 +22,11 @@ import (
 	"context"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/spatialmodel/inmap/cloud"
+	"github.com/spatialmodel/inmap/cloud/cloudrpc"
 )
 
 func TestCloud(t *testing.T) {
@@ -50,9 +52,11 @@ func TestCloud(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		wantStatus := "&JobStatus{Conditions:[],StartTime:<nil>,CompletionTime:<nil>,Active:0,Succeeded:0,Failed:0,}"
-		if status.Status != wantStatus {
-			t.Errorf("wrong status: %s != %s", status.Status, wantStatus)
+		wantStatus := &cloudrpc.JobStatus{
+		// Status: "&JobStatus{Conditions:[],StartTime:<nil>,CompletionTime:<nil>,Active:0,Succeeded:0,Failed:0,}",
+		}
+		if !reflect.DeepEqual(status, wantStatus) {
+			t.Errorf("wrong status: %v != %v", status, wantStatus)
 		}
 	})
 

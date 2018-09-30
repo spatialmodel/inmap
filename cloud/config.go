@@ -59,6 +59,34 @@ func (c *Client) jobOutputAddresses(ctx context.Context, name string, cmd []stri
 	return o, nil
 }
 
+func (c *Client) checkOutputs(ctx context.Context, name string, cmd []string) error {
+	addrs, err := c.jobOutputAddresses(ctx, name, cmd)
+	if err != nil {
+		return err
+	}
+	bucket, err := OpenBucket(ctx, c.bucketName)
+	if err != nil {
+		return err
+	}
+	for _, addr := range addrs {
+		for _, fname := range expandShp(addr) {
+			url, err := url.Parse(fname)
+			if err != nil {
+				return err
+			}
+			r, err := bucket.NewReader(ctx, strings.TrimLeft(url.Path, "/"))
+			if err != nil {
+				return err
+			}
+			if r.Size() == 0 {
+
+			}
+			r.Close()
+		}
+	}
+	return nil
+}
+
 // setOutputPaths changes the paths of the output files in the given
 // job specification so that they match
 // the locations where the files should be stored.

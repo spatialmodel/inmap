@@ -23,8 +23,8 @@ service CloudRPC {
   // output file(s).
   rpc RunJob(JobSpec) returns (JobStatus) {}
 
-  // OutputAddresses returns status and the addresses the output file(s) of the
-  // requested simulation name.
+  // Status returns the status of the simulation with the
+  // requested name.
   rpc Status(JobName) returns(JobStatus) {}
 
   // Output returns the output file(s) of the
@@ -61,9 +61,21 @@ message JobSpec {
   map<string,bytes> FileData = 7;
 }
 
+enum Status {
+  Complete = 0;
+  Failed = 1;
+  Missing = 2;
+  Running = 3;
+}
+
 message JobStatus {
   // Status holds the current status of the job.
-  string Status = 1;
+  Status Status = 1;
+  string Message = 2;
+
+  // Unix time, the number of seconds elapsed since January 1, 1970 UTC
+  int64 StartTime = 3;
+  int64 CompletionTime = 4;
 }
 
 message JobOutput {

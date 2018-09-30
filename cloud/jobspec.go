@@ -181,6 +181,9 @@ func fileContentsAndSum(filePath string) ([]byte, string, error) {
 	if _, err := io.Copy(&dst, src); err != nil {
 		return nil, "", err
 	}
+	if err := src.Close(); err != nil {
+		return nil, "", err
+	}
 	sumBytes := sha256.Sum256(dst.Bytes())
 	return dst.Bytes(), fmt.Sprintf("%x", sumBytes[0:sha256.Size]), nil
 }

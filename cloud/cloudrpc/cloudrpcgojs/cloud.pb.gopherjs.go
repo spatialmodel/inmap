@@ -27,6 +27,32 @@ import (
 // is compatible with the jspb package it is being compiled against.
 const _ = jspb.JspbPackageIsVersion2
 
+type Status int
+
+const (
+	Status_Complete Status = 0
+	Status_Failed   Status = 1
+	Status_Missing  Status = 2
+	Status_Running  Status = 3
+)
+
+var Status_name = map[int]string{
+	0: "Complete",
+	1: "Failed",
+	2: "Missing",
+	3: "Running",
+}
+var Status_value = map[string]int{
+	"Complete": 0,
+	"Failed":   1,
+	"Missing":  2,
+	"Running":  3,
+}
+
+func (x Status) String() string {
+	return Status_name[int(x)]
+}
+
 // JobSpec is the input for the RunJob service.
 type JobSpec struct {
 	// Version is the required InMAP version.
@@ -195,15 +221,43 @@ func (m *JobSpec) Unmarshal(rawBytes []byte) (*JobSpec, error) {
 
 type JobStatus struct {
 	// Status holds the current status of the job.
-	Status string
+	Status  Status
+	Message string
+	// Unix time, the number of seconds elapsed since January 1, 1970 UTC
+	StartTime      int64
+	CompletionTime int64
 }
 
 // GetStatus gets the Status of the JobStatus.
-func (m *JobStatus) GetStatus() (x string) {
+func (m *JobStatus) GetStatus() (x Status) {
 	if m == nil {
 		return x
 	}
 	return m.Status
+}
+
+// GetMessage gets the Message of the JobStatus.
+func (m *JobStatus) GetMessage() (x string) {
+	if m == nil {
+		return x
+	}
+	return m.Message
+}
+
+// GetStartTime gets the StartTime of the JobStatus.
+func (m *JobStatus) GetStartTime() (x int64) {
+	if m == nil {
+		return x
+	}
+	return m.StartTime
+}
+
+// GetCompletionTime gets the CompletionTime of the JobStatus.
+func (m *JobStatus) GetCompletionTime() (x int64) {
+	if m == nil {
+		return x
+	}
+	return m.CompletionTime
 }
 
 // MarshalToWriter marshals JobStatus to the provided writer.
@@ -212,8 +266,20 @@ func (m *JobStatus) MarshalToWriter(writer jspb.Writer) {
 		return
 	}
 
-	if len(m.Status) > 0 {
-		writer.WriteString(1, m.Status)
+	if int(m.Status) != 0 {
+		writer.WriteEnum(1, int(m.Status))
+	}
+
+	if len(m.Message) > 0 {
+		writer.WriteString(2, m.Message)
+	}
+
+	if m.StartTime != 0 {
+		writer.WriteInt64(3, m.StartTime)
+	}
+
+	if m.CompletionTime != 0 {
+		writer.WriteInt64(4, m.CompletionTime)
 	}
 
 	return
@@ -235,7 +301,13 @@ func (m *JobStatus) UnmarshalFromReader(reader jspb.Reader) *JobStatus {
 
 		switch reader.GetFieldNumber() {
 		case 1:
-			m.Status = reader.ReadString()
+			m.Status = Status(reader.ReadEnum())
+		case 2:
+			m.Message = reader.ReadString()
+		case 3:
+			m.StartTime = reader.ReadInt64()
+		case 4:
+			m.CompletionTime = reader.ReadInt64()
 		default:
 			reader.SkipField()
 		}
@@ -435,8 +507,8 @@ type CloudRPCClient interface {
 	// RunJob performs an InMAP simulation and returns the paths to the
 	// output file(s).
 	RunJob(ctx context.Context, in *JobSpec, opts ...grpcweb.CallOption) (*JobStatus, error)
-	// OutputAddresses returns status and the addresses the output file(s) of the
-	// requested simulation name.
+	// Status returns the status of the simulation with the
+	// requested name.
 	Status(ctx context.Context, in *JobName, opts ...grpcweb.CallOption) (*JobStatus, error)
 	// Output returns the output file(s) of the
 	// requested simulation name.

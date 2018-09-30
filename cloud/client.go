@@ -87,13 +87,25 @@ func NewClient(k kubernetes.Interface, root *cobra.Command, config *viper.Viper,
 	return c, nil
 }
 
-// Create creates (and queues) a Kubernetes job with the given name that executes
+// RunJob creates (and queues) a Kubernetes job with the given name that executes
 // the given command with the given command-line arguments on the given container
 // image. resources specifies the minimum required resources for execution.
 func (c *Client) RunJob(ctx context.Context, job *cloudrpc.JobSpec) (*cloudrpc.JobStatus, error) {
 	if job.Version != inmap.Version {
 		return nil, fmt.Errorf("incorrect InMAP version: %s != %s", job.Version, inmap.Version)
 	}
+
+	status, err := c.Status(ctx, &cloudrpc.JobName{Name: job.Name, Version: job.Version})
+	if err != nil {
+		return nil, err
+	}
+	if status.Status != cloudrpc.Status_Failed { //TODO:  status.Status != cloudrpc.Status_Missing && {
+		// Only create the job if it is missing or failed.
+		return status, nil
+	}
+	// TODO: Is this necessary?
+	c.Delete(ctx, &cloudrpc.JobName{Name: job.Name, Version: job.Version})
+
 	if err := c.stageInputs(ctx, job); err != nil {
 		return nil, err
 	}
@@ -107,20 +119,11 @@ func (c *Client) RunJob(ctx context.Context, job *cloudrpc.JobSpec) (*cloudrpc.J
 	k8sJob := createJob(userJobName(user, job.Name), job.Cmd, job.Args, c.Image, core.ResourceList{
 		core.ResourceMemory: resource.MustParse(fmt.Sprintf("%dGi", job.MemoryGB)),
 	})
-	k8sJobResult, err := c.jobControl.Create(k8sJob)
+	_, err = c.jobControl.Create(k8sJob)
 	if err != nil {
 		return nil, err
 	}
-	return c.jobStatus(k8sJobResult)
-}
-
-// Status returns the status of the given job.
-func (c *Client) Status(ctx context.Context, job *cloudrpc.JobName) (*cloudrpc.JobStatus, error) {
-	k8sJob, err := c.getk8sJob(ctx, job)
-	if err != nil {
-		return nil, err
-	}
-	return c.jobStatus(k8sJob)
+	return c.Status(ctx, &cloudrpc.JobName{Name: job.Name, Version: job.Version})
 }
 
 // Delete deletes the given job.
@@ -167,10 +170,36 @@ func userJobName(user, name string) string {
 	return strings.Replace(user, "_", "-", -1) + "-" + strings.Replace(name, "_", "-", -1)
 }
 
-func (c *Client) jobStatus(j *batch.Job) (*cloudrpc.JobStatus, error) {
-	return &cloudrpc.JobStatus{
-		Status: j.Status.String(),
-	}, nil
+// Status returns the status of the given job.
+func (c *Client) Status(ctx context.Context, job *cloudrpc.JobName) (*cloudrpc.JobStatus, error) {
+	s := new(cloudrpc.JobStatus)
+	/*k8sJob, err := c.getk8sJob(ctx, job)
+	if err != nil {
+		return &cloudrpc.JobStatus{
+			Status:  cloudrpc.Status_Missing,
+			Message: err.Error(),
+		}, nil
+	}
+	for _, c := range k8sJob.Status.Conditions {
+		if c.Type == batch.JobComplete && c.Status == core.ConditionTrue {
+			s.Status = cloudrpc.Status_Complete
+			s.StartTime = k8sJob.Status.StartTime.Time.Unix()
+			s.CompletionTime = k8sJob.Status.CompletionTime.Time.Unix()
+		} else if c.Type == batch.JobFailed && c.Status == core.ConditionTrue {
+			s.Status = cloudrpc.Status_Failed
+		}
+	}
+	if k8sJob.Status.Active > 0 {
+		s.Status = cloudrpc.Status_Running
+		s.StartTime = k8sJob.Status.StartTime.Time.Unix()
+	}*/
+	//TODO: err = c.checkOutputs(ctx, name, k8sJob.Spec.Template.Spec.Containers[0].Command)
+	err := c.checkOutputs(ctx, job.Name, []string{"inmap", "run", "steady"})
+	if err != nil {
+		s.Status = cloudrpc.Status_Failed
+		s.Message = fmt.Sprintf("job completed but the following error occurred when checking outputs: %s", err)
+	}
+	return s, nil
 }
 
 // createJob creates a Kubernetes job specification with the given name that executes the
