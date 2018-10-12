@@ -1,0 +1,109 @@
+Name,SCC
+Car: CIDI HEV - Biodiesel,2202210172
+Car: CIDI HEV - DME,2202210172
+Car: CIDI HEV - E-Diesel,2202210172
+Car: CIDI HEV - FT Diesel,2202210172
+Car: CIDI HEV - LS Diesel,2202210172
+Car: CIDI HEV - RD from Pyrolysis,2202210172
+Car: CIDI ICEV - Biodiesel,2202210172
+Car: CIDI ICEV - DME,2202210172
+Car: CIDI ICEV - E-Diesel,2202210172
+Car: CIDI ICEV - FT Diesel,2202210172
+Car: CIDI ICEV - LS Diesel,2202210172
+Car: CIDI ICEV - RD from Alage,2202210172
+Car: CIDI ICEV - RD from Bio Oil,2202210172
+Car: CIDI ICEV - RD from Pyrolysis,2202210172
+Car: CIDI PHEV - BD and Electricity,2202210172
+Car: CIDI PHEV - DME and Electricity,2202210172
+Car: CIDI PHEV - E-Diesel and Electricity,2202210172
+Car: CIDI PHEV - FTD and Electricity,2202210172
+Car: CIDI PHEV - LS Diesel and Electricity,2202210172
+Car: CIDI PHEV - RD from Pyrolysis and Electricity,2202210172
+Car: EV - Electricity (Type 1 Li-Ion/LMO Conventional Material),2201210440
+Car: EV - Electricity (Type 1 Li-Ion/LMO Lightweight Material),2201210440
+Car: FCV - CA gasoline,2201210172
+Car: FCV - CNG,2268003020
+Car: FCV - E10,2201210172
+Car: FCV - EtOH,2205210172
+Car: FCV - Gaseous H2 (Type 1 Ni-MH Conventional Material),2201210440
+Car: FCV - Gaseous H2 (Type 1 Ni-MH Lightweight Material),2201210440
+Car: FCV - Liquid H2,2201210440
+Car: FCV - LNG,2268003020
+Car: FCV - LPG,2267003020
+Car: FCV - LS Diesel,2202210172
+Car: FCV - MeOH,2205210172
+Car: FCV - Naphtha,2202210172
+Car: FCV PHEV - Gaseous H2 and Electricity,2201210440
+Car: FCV PHEV - Liquid H2 and Electricity,2201210440
+Car: SI HEV - CA gasoline,2201210172
+Car: SI HEV - CNG,2268003020
+Car: SI HEV - E10 (Type 1 Ni-MH Conventional Material),2201210172
+Car: SI HEV - E10 (Type 1 Ni-MH Lightweight Material),2201210172
+Car: SI HEV - EtOH,2205210172
+Car: SI HEV - Gaseous H2,2201210440
+Car: SI HEV - Liquid H2,2201210440
+Car: SI HEV - LNG,2268003020
+Car: SI HEV - LPG,2267003020
+Car: SI HEV - MeOH,2205210172
+Car: SI HEV - RG from Pyrolysis,2201210172
+Car: SI ICEV - Bi-Fuel CNGV on CNG,2268003020
+Car: SI ICEV - BtOH Flexible-Fuel,2205210172
+Car: SI ICEV - CA gasoline,2201210172
+Car: SI ICEV - CNG,2268003020
+Car: SI ICEV - Dedi. EtOH,2205210172
+Car: SI ICEV - Dedi. MeOH,2205210172
+Car: SI ICEV - E10,2201210172
+Car: SI ICEV - E10 (Type 1 Conventional Material),2201210172
+Car: SI ICEV - E10 (Type 1 Lightweight Material),2201210172
+Car: SI ICEV - EtOH FFV,2205210172
+Car: SI ICEV - Gaseous H2,2201210440
+Car: SI ICEV - Gasoline (Type 2 Conventional Material),2201210172
+Car: SI ICEV - Gasoline (Type 2 Lightweight Material),2201210172
+Car: SI ICEV - HOF E25,2201210172
+Car: SI ICEV - HOF E40,2201210172
+Car: SI ICEV - Liquid H2,2201210440
+Car: SI ICEV - LNG,2268003020
+Car: SI ICEV - LPG,2267003020
+Car: SI ICEV - MeOH Flexible-Fuel,2205210172
+Car: SI ICEV - Pyrolysis Gasoline from Forest Residue,2201210172
+Car: SI ICEV - RG from Bio Oil,2201210172
+Car: SI ICEV - RG from Forest Residue,2201210172
+Car: SI ICEV - RG from IDL,2201210172
+Car: SI ICEV - RG from Pyrolysis,2201210172
+Car: SI PHEV - CA gasoline and Electricity,2201210172
+Car: SI PHEV - CNG and Electricity,2268003020
+Car: SI PHEV - E10 and Electricity (Type 1 Li-Ion/LMO Conventional Material),2201210172
+Car: SI PHEV - E10 and Electricity (Type 1 Li-Ion/LMO Lightweight Material),2201210172
+Car: SI PHEV - EtOH and Electricity,2205210172
+Car: SI PHEV - Gaseous H2 and Electricity,2201210440
+Car: SI PHEV - Liquid H2 and Electricity,2201210440
+Car: SI PHEV - LNG and Electricity,2268003020
+Car: SI PHEV - LPG and Electricity,2267003020
+Car: SI PHEV - MeOH and Electricity,2205210172
+Car: SI PHEV - RG and Electricity,2201210172
+Car: SIDI ICEV - CA gasoline,2201210172
+Car: SIDI ICEV - Dedi. EtOH,2205210172
+Car: SIDI ICEV - Dedi. MeOH,2205210172
+Car: SIDI ICEV - E10,2201210172
+Car: SIDI ICEV - Gasoline,2201210172
+HD Bus: School CIDI - LS Diesel,2202430372
+HD Bus: School SI - CNG,2268008005
+HD Truck: Combination Long-Haul CIDI - LS Diesel,2202620272
+HD Truck: Combination Long-Haul SI - CNG,2268008005
+PUT: SI HEV - E10 (Type 1 Ni-MH Conventional Material),2201310172
+PUT: SI ICEV - E10 (Type 1 Conventional Material),2201310172
+PUT: SI ICEV - E10 (Type 1 Lightweight Material),2201310172
+PUT: SI ICEV - Gasoline (Type 2 Conventional Material),2201310172
+PUT: SI ICEV - Gasoline (Type 2 Lightweight Material),2201310172
+SUV: EV - Electricity (Type 1 Li-Ion/LMO Conventional Material),2201310340
+SUV: EV - Electricity (Type 1 Li-Ion/LMO Lightweight Material),2201310340
+SUV: FCV - Gaseous H2 (Type 1 Ni-MH Conventional Material),2201310340
+SUV: FCV - Gaseous H2 (Type 1 Ni-MH Lightweight Material),2201310340
+SUV: SI HEV - E10 (Type 1 Ni-MH Conventional Material),2201310172
+SUV: SI HEV - E10 (Type 1 Ni-MH Lightweight Material),2201310172
+SUV: SI ICEV - E10 (Type 1 Conventional Material),2201310172
+SUV: SI ICEV - E10 (Type 1 Lightweight Material),2201310172
+SUV: SI ICEV - E10 (Type 2 Conventional Material),2201310172
+SUV: SI ICEV - E10 (Type 2 Lightweight Material),2201310172
+SUV: SI PHEV - E10 and Electricity (Type 1 Li-Ion/LMO Conventional Material),2201310172
+SUV: SI PHEV - E10 and Electricity (Type 1 Li-Ion/LMO Lightweight Material),2201310172

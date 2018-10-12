@@ -20,11 +20,10 @@ package slca
 import (
 	"encoding/json"
 	"fmt"
-	"go/build"
 	"log"
 	"net/http"
-	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strconv"
 	"sync"
@@ -90,15 +89,16 @@ var templates *template.Template
 var pkgdir string
 
 func init() {
-	gopath := os.ExpandEnv("$GOPATH")
-	p, err := build.Import("github.com/spatialmodel/inmap/emissions/slca", gopath, build.FindOnly)
+	fmt.Println(reflect.TypeOf(DB{}).PkgPath())
+	/*p, err := build.Import("github.com/spatialmodel/inmap/emissions/slca", build.Default.GOPATH, build.FindOnly)
 	if err != nil {
 		panic(err)
-	}
+	}*/
+	p := "../"
 	templates = template.Must(template.ParseFiles(
-		filepath.Join(p.Dir, "results.html"),
-		filepath.Join(p.Dir, "results.js")))
-	pkgdir = p.Dir
+		filepath.Join(p, "results.html"),
+		filepath.Join(p, "results.js")))
+	pkgdir = p
 }
 
 func (db *DB) resultPageHandler(prefix string) http.HandlerFunc {
