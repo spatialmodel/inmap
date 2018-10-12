@@ -27,9 +27,9 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/spatialmodel/inmap/epi"
 	"github.com/spatialmodel/inmap/emissions/aep"
 	"github.com/spatialmodel/inmap/emissions/aep/aeputil"
+	"github.com/spatialmodel/inmap/epi"
 
 	"bitbucket.org/ctessum/cdf"
 	"github.com/BurntSushi/toml"
@@ -52,6 +52,7 @@ type DB struct {
 func LoadDB(lca LCADB, cstConfigFile io.Reader) (*DB, error) {
 	db := new(DB)
 	db.LCADB = lca
+	db.CSTConfig = &CSTConfig{}
 
 	if _, err := toml.DecodeReader(cstConfigFile, db.CSTConfig); err != nil {
 		return nil, err

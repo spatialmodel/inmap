@@ -1,0 +1,2062 @@
+<greet version="10783" rev="$Rev$">
+  <basic_parameters year_selected="2014;;2015;;False;;bas_year;Tessum, Christopher tess0050@umn.edu;8/18/2015 2:01:55 PM;" lhv="True" />
+  <monitored>
+    <monitor path_id="51207813" output_id="00000258-0000-0000-0000-000000000000" mix_id="-1" item_id="1" mean="" tolerence="" itype="Base" mtype="emission" vtex_id="f43ce55a-a237-47c6-b204-3361d8d252bf" uniqueid="cef4aad1-bbac-4a31-8ef6-c9c51f8971d7">
+      <excel_location excel_sheet="" excel_cell="" excel_unit="" />
+    </monitor>
+  </monitored>
+  <data>
+    <pathways>
+      <groups notes="" />
+      <pathway id="85005546" name="Pipeline Transportation Test" notes="" main-output="e2c710d4-f448-432d-86d6-309def6c502a" modified-on="8/17/2015 8:39:06 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+        <vertex id="bba3e183-72aa-4d13-818a-195174cfb6ca" location="-275,-117.5" model-id="85005255" type="0" />
+        <vertex id="b66d4bdf-db86-4dc4-8aad-b82e6d8a9c4f" location="-766.6666,-135" model-id="84888653" type="0" />
+        <edge output-vertex="b66d4bdf-db86-4dc4-8aad-b82e6d8a9c4f" output-id="986a10b8-cc35-4900-9480-dd57894bed6c" input-vertex="bba3e183-72aa-4d13-818a-195174cfb6ca" input-id="158b2270-30e6-494b-a8c5-5188ac4c53a0" />
+        <edge output-vertex="bba3e183-72aa-4d13-818a-195174cfb6ca" output-id="9ce0fb79-a1c7-4f82-81dd-4e996042edff" input-vertex="e2c710d4-f448-432d-86d6-309def6c502a" input-id="e2c710d4-f448-432d-86d6-309def6c502a" />
+        <output id="e2c710d4-f448-432d-86d6-309def6c502a" resource="84887947" location="235,-80" notes="" />
+      </pathway>
+      <pathway id="87596262" name="Displacement Test" notes="" main-output="f0a9118f-75fa-4b1a-828a-643a973f8f12" modified-on="9/16/2015 8:17:42 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+        <vertex id="5986ed43-7b35-4493-9819-4a4a2b1f5c7f" location="-350,-35" model-id="87595890" type="0" />
+        <edge output-vertex="5986ed43-7b35-4493-9819-4a4a2b1f5c7f" output-id="85874faf-bd8f-4d32-93e3-6f5a8cb89841" input-vertex="f0a9118f-75fa-4b1a-828a-643a973f8f12" input-id="f0a9118f-75fa-4b1a-828a-643a973f8f12" />
+        <output id="f0a9118f-75fa-4b1a-828a-643a973f8f12" resource="84887947" location="185,20" notes="" />
+      </pathway>
+      <pathway id="91622530" name="Volume Allocation Test" notes="" main-output="7fd0707c-f100-4029-83cd-2384c7c57384" modified-on="11/2/2015 10:42:10 AM" modified-by="Tessum, Christopher tess0050@umn.edu">
+        <vertex id="d79abdb0-688e-402e-b368-bf3e3cbbed1d" location="-300,-95" model-id="91622200" type="0" />
+        <edge output-vertex="d79abdb0-688e-402e-b368-bf3e3cbbed1d" output-id="d1ee8099-f0ad-413a-9559-b61e0bc742bb" input-vertex="7fd0707c-f100-4029-83cd-2384c7c57384" input-id="7fd0707c-f100-4029-83cd-2384c7c57384" />
+        <output id="7fd0707c-f100-4029-83cd-2384c7c57384" resource="84887947" location="285,-65" notes="" />
+      </pathway>
+      <pathway id="91622456" name="Energy Allocation Test" notes="" main-output="ca433425-b883-4b27-bb8b-d46bfb481465" modified-on="11/2/2015 10:40:56 AM" modified-by="Tessum, Christopher tess0050@umn.edu">
+        <vertex id="9198fa61-26d2-463d-8c67-3bb876b3e761" location="-375,-95" model-id="91622146" type="0" />
+        <edge output-vertex="9198fa61-26d2-463d-8c67-3bb876b3e761" output-id="fcedd94c-6ca6-4733-9659-dd9694694328" input-vertex="ca433425-b883-4b27-bb8b-d46bfb481465" input-id="ca433425-b883-4b27-bb8b-d46bfb481465" />
+        <output id="ca433425-b883-4b27-bb8b-d46bfb481465" resource="84887947" location="285,-65" notes="" />
+      </pathway>
+      <pathway id="87589674" name="Amount Group Test" notes="" main-output="f98f3c39-2d89-44dc-9db5-f691289b6d51" modified-on="9/16/2015 6:29:55 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+        <vertex id="f779c251-675d-46c1-9b07-cac756f60df8" location="-50,-50" model-id="87589600" type="0" />
+        <vertex id="b60653ba-c74e-4458-acf8-015027dcbeec" location="-575,-50" model-id="84888653" type="0" />
+        <edge output-vertex="b60653ba-c74e-4458-acf8-015027dcbeec" output-id="986a10b8-cc35-4900-9480-dd57894bed6c" input-vertex="f779c251-675d-46c1-9b07-cac756f60df8" input-id="ce249e33-acf4-4487-8400-221435fef79b" />
+        <edge output-vertex="f779c251-675d-46c1-9b07-cac756f60df8" output-id="fe2389d7-3a67-42e0-aff2-b0b22aede9fb" input-vertex="f98f3c39-2d89-44dc-9db5-f691289b6d51" input-id="f98f3c39-2d89-44dc-9db5-f691289b6d51" />
+        <output id="f98f3c39-2d89-44dc-9db5-f691289b6d51" resource="84887947" location="450,0" notes="" />
+      </pathway>
+      <pathway id="87595475" name="Mass Allocation Test" notes="" main-output="adb1770b-8bb5-42f2-a075-83e712b0c585" modified-on="9/16/2015 8:04:35 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+        <vertex id="7d98c267-ad43-4402-9761-92ba38458828" location="-375,-95" model-id="87595405" type="0" />
+        <edge output-vertex="7d98c267-ad43-4402-9761-92ba38458828" output-id="7cfafb9b-957d-484e-ba21-07152b907249" input-vertex="adb1770b-8bb5-42f2-a075-83e712b0c585" input-id="adb1770b-8bb5-42f2-a075-83e712b0c585" />
+        <output id="adb1770b-8bb5-42f2-a075-83e712b0c585" resource="84887947" location="285,-65" notes="" />
+      </pathway>
+      <pathway id="87596181" name="Resource 2 Source" notes="" main-output="ed7d3373-6ebf-46ef-abc5-d83ff390c8b3" modified-on="9/16/2015 8:16:21 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+        <vertex id="68556f86-e23f-4505-aaa0-0db177458cca" location="-275,-100" model-id="87596012" type="0" />
+        <edge output-vertex="68556f86-e23f-4505-aaa0-0db177458cca" output-id="57ac6d90-af1e-4fc8-9526-2d8df2aaa904" input-vertex="ed7d3373-6ebf-46ef-abc5-d83ff390c8b3" input-id="ed7d3373-6ebf-46ef-abc5-d83ff390c8b3" />
+        <output id="ed7d3373-6ebf-46ef-abc5-d83ff390c8b3" resource="87590001" location="335,0" notes="" />
+      </pathway>
+      <pathway id="87590192" name="Loop Test" notes="" main-output="c69611ca-d3fa-40d3-a529-c2d99f4fa8d5" modified-on="9/16/2015 6:39:50 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+        <vertex id="ee1cacce-9392-4343-a044-97c1d2586251" location="-500,-67.5" model-id="84888653" type="0" />
+        <vertex id="2378d4dc-dcdd-49b6-adc5-a8468382f2d7" location="-25,-85" model-id="87590141" type="0" />
+        <edge output-vertex="ee1cacce-9392-4343-a044-97c1d2586251" output-id="986a10b8-cc35-4900-9480-dd57894bed6c" input-vertex="2378d4dc-dcdd-49b6-adc5-a8468382f2d7" input-id="1e5b20a4-8c1d-4e79-a996-64b7ea0a68c4" />
+        <edge output-vertex="2378d4dc-dcdd-49b6-adc5-a8468382f2d7" output-id="65bcf946-1c3b-475f-a9ba-e3fa4b2a5581" input-vertex="c69611ca-d3fa-40d3-a529-c2d99f4fa8d5" input-id="c69611ca-d3fa-40d3-a529-c2d99f4fa8d5" />
+        <output id="c69611ca-d3fa-40d3-a529-c2d99f4fa8d5" resource="84887947" location="435,0" notes="" />
+      </pathway>
+      <pathway id="91622498" name="Market Allocation Test" notes="" main-output="e4672874-a40c-4261-9f9b-85bb23a62afc" modified-on="11/2/2015 10:41:38 AM" modified-by="Tessum, Christopher tess0050@umn.edu">
+        <vertex id="3ad7c756-d8c0-4074-b732-7def63a5fc06" location="-325,-95" model-id="91622175" type="0" />
+        <edge output-vertex="3ad7c756-d8c0-4074-b732-7def63a5fc06" output-id="b74db0b7-233a-40f4-997d-b4dca708377d" input-vertex="e4672874-a40c-4261-9f9b-85bb23a62afc" input-id="e4672874-a40c-4261-9f9b-85bb23a62afc" />
+        <output id="e4672874-a40c-4261-9f9b-85bb23a62afc" resource="84887947" location="285,-65" notes="" />
+      </pathway>
+      <pathway id="91831966" name="Test Efficiency Group" notes="" main-output="66f265fa-7bf6-4398-8ef2-a685d4752897" modified-on="11/6/2015 12:57:01 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+        <vertex id="5284f7de-8314-497f-acfe-8cc99b914c41" location="470,-30" model-id="88270726" type="0" />
+        <vertex id="c3c21d13-4377-4a18-bc5e-23eb9e4d9a3a" location="-30,10" model-id="84888653" type="0" />
+        <edge output-vertex="5284f7de-8314-497f-acfe-8cc99b914c41" output-id="4e946b90-2dac-4c5b-b324-a22dbe712dd4" input-vertex="66f265fa-7bf6-4398-8ef2-a685d4752897" input-id="66f265fa-7bf6-4398-8ef2-a685d4752897" />
+        <edge output-vertex="c3c21d13-4377-4a18-bc5e-23eb9e4d9a3a" output-id="986a10b8-cc35-4900-9480-dd57894bed6c" input-vertex="5284f7de-8314-497f-acfe-8cc99b914c41" input-id="a801114f-c956-4a71-bc6e-803dd5223b7c" />
+        <output id="66f265fa-7bf6-4398-8ef2-a685d4752897" resource="84887947" location="970,62.5" notes="" />
+      </pathway>
+      <pathway id="85174330" name="Multimode Transportation Test" notes="" main-output="6b294269-9edd-4367-a157-359a546aba55" modified-on="8/19/2015 7:32:10 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+        <vertex id="fe9ab78c-0013-4f08-b767-06f850b39932" location="-525,-67.5" model-id="84888653" type="0" />
+        <vertex id="73d3eadf-8ae8-44b4-9c5f-0f1a09246e32" location="-4.291534E-06,-67.5" model-id="85174254" type="0" />
+        <edge output-vertex="fe9ab78c-0013-4f08-b767-06f850b39932" output-id="986a10b8-cc35-4900-9480-dd57894bed6c" input-vertex="73d3eadf-8ae8-44b4-9c5f-0f1a09246e32" input-id="d4e8a145-fa66-4f19-b2f5-726bdce5b784" />
+        <edge output-vertex="73d3eadf-8ae8-44b4-9c5f-0f1a09246e32" output-id="7c41d1de-a5b9-4095-93f4-f627ea67a235" input-vertex="6b294269-9edd-4367-a157-359a546aba55" input-id="6b294269-9edd-4367-a157-359a546aba55" />
+        <output id="6b294269-9edd-4367-a157-359a546aba55" resource="84887947" location="520,-15" notes="" />
+      </pathway>
+      <pathway id="85005378" name="Rail Transportation Test" notes="" main-output="d0089ef4-6a2b-4689-a41f-136b7e35ffd3" modified-on="8/17/2015 8:36:36 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+        <vertex id="c8c372f8-7d80-4268-8a05-eb6a5f2d84b9" location="-475,-85" model-id="84888653" type="0" />
+        <vertex id="66e8d85f-4634-49f2-a89d-7e67ff6d99ba" location="74.99999,-85" model-id="85005143" type="0" />
+        <edge output-vertex="c8c372f8-7d80-4268-8a05-eb6a5f2d84b9" output-id="986a10b8-cc35-4900-9480-dd57894bed6c" input-vertex="66e8d85f-4634-49f2-a89d-7e67ff6d99ba" input-id="1ce15711-00b4-414f-9eee-ceb785114e77" />
+        <edge output-vertex="66e8d85f-4634-49f2-a89d-7e67ff6d99ba" output-id="b801fe5c-60ae-4738-86a7-ff8993bd24a5" input-vertex="d0089ef4-6a2b-4689-a41f-136b7e35ffd3" input-id="d0089ef4-6a2b-4689-a41f-136b7e35ffd3" />
+        <output id="d0089ef4-6a2b-4689-a41f-136b7e35ffd3" resource="84887947" location="570,-15" notes="" />
+      </pathway>
+      <pathway id="84889252" name="Test Pathway Tanker Trans" notes="" main-output="eca29976-a397-48ec-939c-d0fe1eed8025" modified-on="8/16/2015 12:21:18 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+        <vertex id="b5f829a8-5b3c-469c-932b-78f924d710b9" location="-250,-85" model-id="84888653" type="0" />
+        <vertex id="91908e2f-f070-49ea-a76e-46c60efdcdb5" location="275,-100" model-id="84889109" type="0" />
+        <edge output-vertex="b5f829a8-5b3c-469c-932b-78f924d710b9" output-id="986a10b8-cc35-4900-9480-dd57894bed6c" input-vertex="91908e2f-f070-49ea-a76e-46c60efdcdb5" input-id="314f5228-1999-4d06-a97a-beccc5213fac" />
+        <edge output-vertex="91908e2f-f070-49ea-a76e-46c60efdcdb5" output-id="46655c3d-cd19-4d2e-84d1-1b61e4d22f9b" input-vertex="eca29976-a397-48ec-939c-d0fe1eed8025" input-id="eca29976-a397-48ec-939c-d0fe1eed8025" />
+        <output id="eca29976-a397-48ec-939c-d0fe1eed8025" resource="84887947" location="770,-65" notes="" />
+      </pathway>
+      <pathway id="91978382" name="Input Test" notes="" main-output="b42b6f62-f23b-4cb9-b887-9fc198b425e9" modified-on="11/6/2015 1:33:02 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+        <vertex id="5086f1f2-1666-43be-b2e4-fa56d36bcebd" location="0,0" model-id="91978316" type="0" />
+        <vertex id="c85aac62-cf6d-480a-988d-5873160c4277" location="0,0" model-id="84888653" type="0" />
+        <edge output-vertex="c85aac62-cf6d-480a-988d-5873160c4277" output-id="986a10b8-cc35-4900-9480-dd57894bed6c" input-vertex="5086f1f2-1666-43be-b2e4-fa56d36bcebd" input-id="0df6f6c3-b6f9-40fc-81b5-0736f58ff5aa" />
+        <edge output-vertex="5086f1f2-1666-43be-b2e4-fa56d36bcebd" output-id="658125cb-70de-45e1-a6fe-d9f6bad3fed4" input-vertex="b42b6f62-f23b-4cb9-b887-9fc198b425e9" input-id="b42b6f62-f23b-4cb9-b887-9fc198b425e9" />
+        <output id="b42b6f62-f23b-4cb9-b887-9fc198b425e9" resource="84887947" location="385,-30" notes="" />
+      </pathway>
+      <pathway id="85005593" name="Truck Transportation Test" notes="" main-output="fd04430f-9e90-4089-99f3-000919cbc727" modified-on="8/17/2015 8:39:53 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+        <vertex id="5db0976b-f0ab-48bc-b3dc-925c1e1d7c34" location="-150,-50" model-id="85005334" type="0" />
+        <vertex id="57708211-8853-484b-904b-6a7cc574cc5e" location="-650,-35" model-id="84888653" type="0" />
+        <edge output-vertex="57708211-8853-484b-904b-6a7cc574cc5e" output-id="986a10b8-cc35-4900-9480-dd57894bed6c" input-vertex="5db0976b-f0ab-48bc-b3dc-925c1e1d7c34" input-id="19d1d762-84a1-491b-a518-b904396df971" />
+        <edge output-vertex="5db0976b-f0ab-48bc-b3dc-925c1e1d7c34" output-id="adfec6ab-cf89-4897-9b28-e65ef2d9a38f" input-vertex="fd04430f-9e90-4089-99f3-000919cbc727" input-id="fd04430f-9e90-4089-99f3-000919cbc727" />
+        <output id="fd04430f-9e90-4089-99f3-000919cbc727" resource="84887947" location="350,0" notes="" />
+      </pathway>
+      <pathway id="86537005" name="Multimode Test" notes="" main-output="7c2b4446-0c78-47ae-ab40-1092c6c5245e" modified-on="9/4/2015 2:03:25 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+        <vertex id="70aebf5b-7ce3-4786-8d1e-f23c9433c34f" location="-75.00001,-67.5" model-id="86536943" type="0" />
+        <vertex id="dfaf2727-99b9-4d97-96a1-3d44ccb226f1" location="-550,-67.5" model-id="84888653" type="0" />
+        <edge output-vertex="dfaf2727-99b9-4d97-96a1-3d44ccb226f1" output-id="986a10b8-cc35-4900-9480-dd57894bed6c" input-vertex="70aebf5b-7ce3-4786-8d1e-f23c9433c34f" input-id="d09f82be-e991-4f2e-b2dd-70a596b0d9ab" />
+        <edge output-vertex="70aebf5b-7ce3-4786-8d1e-f23c9433c34f" output-id="5bc6a939-801b-486b-8a6f-53581377d300" input-vertex="7c2b4446-0c78-47ae-ab40-1092c6c5245e" input-id="7c2b4446-0c78-47ae-ab40-1092c6c5245e" />
+        <output id="7c2b4446-0c78-47ae-ab40-1092c6c5245e" resource="84887947" location="420,-15" notes="" />
+      </pathway>
+      <pathway id="84888718" name="Test Resource Source" notes="" main-output="4d29c70e-a053-45dd-8dd6-f27092a9b57a" modified-on="8/16/2015 12:11:58 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+        <vertex id="8ee263d6-d029-43f4-b456-356928f2b719" location="-250,-50" model-id="84888653" type="0" />
+        <edge output-vertex="8ee263d6-d029-43f4-b456-356928f2b719" output-id="986a10b8-cc35-4900-9480-dd57894bed6c" input-vertex="4d29c70e-a053-45dd-8dd6-f27092a9b57a" input-id="4d29c70e-a053-45dd-8dd6-f27092a9b57a" />
+        <output id="4d29c70e-a053-45dd-8dd6-f27092a9b57a" resource="84887947" location="285,-15" notes="" />
+      </pathway>
+    </pathways>
+    <resources>
+      <groups>
+        <group id="1" name="Petroleum Fuel" notes="" include_in="4" />
+        <group id="2" name="Natural Gas Fuel" notes="" include_in="4" />
+        <group id="3" name="Coal Fuel" notes="" include_in="4" />
+        <group id="4" name="Fossil Fuel" notes="" />
+        <group id="5" name="Renewable" notes="" include_in="8" />
+        <group id="6" name="Biomass" notes="" include_in="8" />
+        <group id="7" name="Nuclear" notes="" include_in="8" />
+        <group id="8" name="Non Fossil Fuel" notes="" />
+        <group id="9" name="Fertilizer" notes="" />
+        <group id="10" name="Pesticide" notes="" />
+        <group id="11" name="Credit" notes="" />
+        <group id="12" name="Renewable Natural Gas" notes="" />
+      </groups>
+      <resources>
+        <resource can_be_primary="True" c_ratio="" market_value="0;$/m^3;50;$/m^3;False;;87590001798;Tessum, Christopher tess0050@umn.edu;9/16/2015 6:33:13 PM;" density="0;kg/m^3;1000;kg/m^3;False;;87590001796;Tessum, Christopher tess0050@umn.edu;9/16/2015 6:32:52 PM;" heating_value_hhv="0;J/m^3;2.4;J/m^3;False;;87598383506;Tessum, Christopher tess0050@umn.edu;9/16/2015 8:53:07 PM;" heating_value_lhv="0;J/m^3;1.2;J/m^3;False;;87590001797;Tessum, Christopher tess0050@umn.edu;9/16/2015 8:53:01 PM;" temperature="" pressure="" id="87590001" name="Test Resource Liquid 2" notes="" picture="empty.png" state="liquid" family="" modified-on="9/16/2015 8:53:11 PM" modified-by="Tessum, Christopher tess0050@umn.edu" />
+        <resource can_be_primary="True" c_ratio="0;%;0.002;%;False;;84887948069;Tessum, Christopher tess0050@umn.edu;8/16/2015 11:58:54 AM;" market_value="0;$/m^3;1;$/m^3;False;;84887948118;Tessum, Christopher tess0050@umn.edu;8/16/2015 11:58:56 AM;" density="0;kg/m^3;1000;kg/m^3;False;;84887948056;Tessum, Christopher tess0050@umn.edu;8/16/2015 11:57:54 AM;" heating_value_hhv="0;J/m^3;2;J/m^3;False;;84887948094;Tessum, Christopher tess0050@umn.edu;8/16/2015 11:58:11 AM;" heating_value_lhv="0;J/m^3;1;J/m^3;False;;84887948106;Tessum, Christopher tess0050@umn.edu;8/16/2015 11:58:02 AM;" temperature="" pressure="" id="84887947" name="Test Resource Liquid" notes="" picture="empty.png" s_ratio="0;%;0.001;%;False;;84887948082;Tessum, Christopher tess0050@umn.edu;8/16/2015 11:58:46 AM;" state="liquid" family="" modified-on="8/16/2015 11:59:23 AM" modified-by="Tessum, Christopher tess0050@umn.edu" />
+      </resources>
+    </resources>
+    <processes>
+      <stationary id="91622200" name="Volume Allocation Test" notes="" picture="empty.png" modified-on="11/2/2015 10:36:40 AM" modified-by="Tessum, Christopher tess0050@umn.edu" urban_share="0;%;0;%;True;;8ff59304-12b2-4f09-83e2-a6f2096c7442;;;" autoCMatrix="True">
+        <coproducts allocation_method="Volume">
+          <coproduct ref="87590001" method="allocation" id="3d68e006-edcc-424b-a243-bc60a6a9e2b5" notes="">
+            <amount>
+              <year value="0;J;150;J;False;;aeb709dd-5369-4927-98a2-e1a59cd725f7;Tessum, Christopher tess0050@umn.edu;9/16/2015 8:54:52 PM;" year="0" />
+            </amount>
+            <conventional_products />
+          </coproduct>
+        </coproducts>
+        <io-carbon-map>
+          <output id="3d68e006-edcc-424b-a243-bc60a6a9e2b5">
+            <input id="5d8bfb4b-6819-49ca-897a-3de1e3650534" ratio="0" />
+          </output>
+          <output id="d1ee8099-f0ad-413a-9559-b61e0bc742bb">
+            <input id="5d8bfb4b-6819-49ca-897a-3de1e3650534" ratio="0" />
+          </output>
+        </io-carbon-map>
+        <input source="Well" ref="84887947" id="5d8bfb4b-6819-49ca-897a-3de1e3650534" notes="" modified-on="9/16/2015 7:59:12 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+          <technology ref="84888048" account_in_balance="True">
+            <share mostRecent="0" notes="">
+              <year value="0;%;1;%;False;;69e84aa7-924c-4188-b600-95f842ae8247;Tessum, Christopher tess0050@umn.edu;9/16/2015 8:35:31 PM;" year="0" />
+            </share>
+          </technology>
+          <amount mostRecent="0" notes="">
+            <year value="0;J;1000;J;False;;f22f94b3-62c2-4208-81de-ad86ac8291fd;Tessum, Christopher tess0050@umn.edu;9/16/2015 7:59:39 PM;" year="0" />
+          </amount>
+        </input>
+        <output ref="84887947" id="d1ee8099-f0ad-413a-9559-b61e0bc742bb" notes="" modified-on="9/16/2015 7:59:21 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+          <amount mostRecent="0" notes="">
+            <year value="0;J;750;J;False;;b63881a5-ddf9-45f3-b58e-a091a8c05978;Tessum, Christopher tess0050@umn.edu;9/16/2015 7:59:46 PM;" year="0" />
+          </amount>
+        </output>
+      </stationary>
+      <stationary id="91622175" name="Market Allocation Test" notes="" picture="empty.png" modified-on="11/2/2015 10:36:15 AM" modified-by="Tessum, Christopher tess0050@umn.edu" urban_share="0;%;0;%;True;;e24d6c4c-0fdb-40ec-8291-6dd39191b563;;;" autoCMatrix="True">
+        <coproducts allocation_method="Market">
+          <coproduct ref="87590001" method="allocation" id="d57de866-d2d9-4833-83dc-a5ed3d262587" notes="">
+            <amount>
+              <year value="0;J;150;J;False;;870ff448-bdaf-42c1-8be1-0a45aa8df5ca;Tessum, Christopher tess0050@umn.edu;9/16/2015 8:54:52 PM;" year="0" />
+            </amount>
+            <conventional_products />
+          </coproduct>
+        </coproducts>
+        <io-carbon-map>
+          <output id="d57de866-d2d9-4833-83dc-a5ed3d262587">
+            <input id="a72fe8af-b893-4168-843d-0dafe2e0aa93" ratio="0" />
+          </output>
+          <output id="b74db0b7-233a-40f4-997d-b4dca708377d">
+            <input id="a72fe8af-b893-4168-843d-0dafe2e0aa93" ratio="0" />
+          </output>
+        </io-carbon-map>
+        <input source="Well" ref="84887947" id="a72fe8af-b893-4168-843d-0dafe2e0aa93" notes="" modified-on="9/16/2015 7:59:12 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+          <technology ref="84888048" account_in_balance="True">
+            <share mostRecent="0" notes="">
+              <year value="0;%;1;%;False;;d44f15df-28b4-43f1-a581-833dde79e242;Tessum, Christopher tess0050@umn.edu;9/16/2015 8:35:31 PM;" year="0" />
+            </share>
+          </technology>
+          <amount mostRecent="0" notes="">
+            <year value="0;J;1000;J;False;;4e4cf60e-7b1a-4ca2-ac3b-30c292d324bc;Tessum, Christopher tess0050@umn.edu;9/16/2015 7:59:39 PM;" year="0" />
+          </amount>
+        </input>
+        <output ref="84887947" id="b74db0b7-233a-40f4-997d-b4dca708377d" notes="" modified-on="9/16/2015 7:59:21 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+          <amount mostRecent="0" notes="">
+            <year value="0;J;750;J;False;;41e41440-570f-4797-8b56-a82123e2d9cd;Tessum, Christopher tess0050@umn.edu;9/16/2015 7:59:46 PM;" year="0" />
+          </amount>
+        </output>
+      </stationary>
+      <transportation id="84889109" name="Test Process Tanker Trans" notes="" picture="empty.png" modified-on="8/17/2015 9:17:44 PM" modified-by="Tessum, Christopher tess0050@umn.edu" urban_share="0;%;0;;True;;1;;;" moisture="0;%;0;%;True;;84889109384;;;">
+        <io-carbon-map>
+          <output id="46655c3d-cd19-4d2e-84d1-1b61e4d22f9b">
+            <input id="314f5228-1999-4d06-a97a-beccc5213fac" ratio="1" />
+          </output>
+        </io-carbon-map>
+        <step dest_ref="56798416" origin_ref="45" ref="84888143" fuel_share_ref="1" back_haul="True" id="81346c74-c9d3-4015-ba39-1c1aea5f5111">
+          <distance mostRecent="0" notes="">
+            <year value="0;m;1000000;m;False;;84889109388;Tessum, Christopher tess0050@umn.edu;8/16/2015 5:41:11 PM;" year="0" />
+          </distance>
+          <share mostRecent="0" notes="">
+            <year value="0;%;1;%;False;;84889109393;Tessum, Christopher tess0050@umn.edu;8/16/2015 5:41:16 PM;" year="0" />
+          </share>
+          <urban_share mostRecent="0" notes="">
+            <year value="0;%;0;%;True;;84889109400;;;" year="0" />
+          </urban_share>
+        </step>
+        <output ref="84887947" id="46655c3d-cd19-4d2e-84d1-1b61e4d22f9b" notes="" modified-on="" modified-by="">
+          <amount mostRecent="0" notes="">
+            <year value="1;kg;0;kg;True;;84889109425;;;" year="0" />
+          </amount>
+        </output>
+        <input source="Previous" ref="84887947" id="314f5228-1999-4d06-a97a-beccc5213fac" notes="" modified-on="" modified-by="">
+          <amount mostRecent="0" notes="">
+            <year value="1;kg;0;kg;True;;84889109413;;;" year="0" />
+          </amount>
+        </input>
+      </transportation>
+      <stationary id="87589600" name="Amount Group Test Process" notes="" picture="empty.png" modified-on="11/5/2015 10:10:57 AM" modified-by="Tessum, Christopher tess0050@umn.edu" urban_share="0;%;0;%;True;;87589600782;;;" autoCMatrix="True">
+        <io-carbon-map>
+          <output id="fe2389d7-3a67-42e0-aff2-b0b22aede9fb">
+            <input id="ce249e33-acf4-4487-8400-221435fef79b" ratio="1" />
+          </output>
+        </io-carbon-map>
+        <group type="amount">
+          <amount mostRecent="0" notes="">
+            <year value="0;J;3000;J;False;;87589600785;Tessum, Christopher tess0050@umn.edu;11/5/2015 10:10:51 AM;" year="0" />
+          </amount>
+          <shares>
+            <input source="Previous" ref="84887947" id="ce249e33-acf4-4487-8400-221435fef79b" notes="" modified-on="9/16/2015 6:24:51 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+              <share mostRecent="0" notes="">
+                <year value="0;%;1;%;False;;87589600783;Tessum, Christopher tess0050@umn.edu;9/16/2015 6:25:13 PM;" year="0" />
+              </share>
+              <technology ref="84888048" account_in_balance="True">
+                <share mostRecent="0" notes="">
+                  <year value="0;%;1;%;False;;techref_84888048_share;Tessum, Christopher tess0050@umn.edu;9/16/2015 8:33:30 PM;" year="0" />
+                </share>
+              </technology>
+              <amount mostRecent="0" notes="">
+                <year value="0;%;0;%;True;;87589600784;;;" year="0" />
+              </amount>
+            </input>
+          </shares>
+        </group>
+        <output ref="84887947" id="fe2389d7-3a67-42e0-aff2-b0b22aede9fb" notes="" modified-on="9/16/2015 6:25:39 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+          <amount mostRecent="0" notes="">
+            <year value="0;J;2000;J;False;;87589600786;Tessum, Christopher tess0050@umn.edu;9/16/2015 6:25:46 PM;" year="0" />
+          </amount>
+        </output>
+      </stationary>
+      <stationary id="87595405" name="Mass Allocation Test" notes="" picture="empty.png" modified-on="9/16/2015 8:55:03 PM" modified-by="Tessum, Christopher tess0050@umn.edu" urban_share="0;%;0;%;True;;87595405494;;;" autoCMatrix="True">
+        <coproducts allocation_method="Mass">
+          <coproduct ref="87590001" method="allocation" id="e65889ad-ff83-46a6-b8d5-7b32526575d2" notes="">
+            <amount>
+              <year value="0;J;150;J;False;;87595405497;Tessum, Christopher tess0050@umn.edu;9/16/2015 8:54:52 PM;" year="0" />
+            </amount>
+            <conventional_products />
+          </coproduct>
+        </coproducts>
+        <io-carbon-map>
+          <output id="e65889ad-ff83-46a6-b8d5-7b32526575d2">
+            <input id="7420b166-255a-4452-8bed-287ba1d7a00a" ratio="0" />
+          </output>
+          <output id="7cfafb9b-957d-484e-ba21-07152b907249">
+            <input id="7420b166-255a-4452-8bed-287ba1d7a00a" ratio="0" />
+          </output>
+        </io-carbon-map>
+        <input source="Well" ref="84887947" id="7420b166-255a-4452-8bed-287ba1d7a00a" notes="" modified-on="9/16/2015 7:59:12 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+          <technology ref="84888048" account_in_balance="True">
+            <share mostRecent="0" notes="">
+              <year value="0;%;1;%;False;;87597324964;Tessum, Christopher tess0050@umn.edu;9/16/2015 8:35:31 PM;" year="0" />
+            </share>
+          </technology>
+          <amount mostRecent="0" notes="">
+            <year value="0;J;1000;J;False;;87595405493;Tessum, Christopher tess0050@umn.edu;9/16/2015 7:59:39 PM;" year="0" />
+          </amount>
+        </input>
+        <output ref="84887947" id="7cfafb9b-957d-484e-ba21-07152b907249" notes="" modified-on="9/16/2015 7:59:21 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+          <amount mostRecent="0" notes="">
+            <year value="0;J;750;J;False;;87595405495;Tessum, Christopher tess0050@umn.edu;9/16/2015 7:59:46 PM;" year="0" />
+          </amount>
+        </output>
+      </stationary>
+      <stationary id="87590141" name="Loop Test" notes="" picture="empty.png" modified-on="9/16/2015 9:05:06 PM" modified-by="Tessum, Christopher tess0050@umn.edu" urban_share="0;%;0;%;True;;87590141721;;;" autoCMatrix="True">
+        <io-carbon-map>
+          <output id="65bcf946-1c3b-475f-a9ba-e3fa4b2a5581">
+            <input id="360ad679-0d70-4b7c-add7-20aaf7cdf2e9" ratio="0" />
+            <input id="1e5b20a4-8c1d-4e79-a996-64b7ea0a68c4" ratio="0" />
+          </output>
+        </io-carbon-map>
+        <input source="Pathway" pathway="87590192" ref="84887947" id="360ad679-0d70-4b7c-add7-20aaf7cdf2e9" notes="" modified-on="9/16/2015 6:35:00 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+          <technology ref="84888048" account_in_balance="True">
+            <share mostRecent="0" notes="">
+              <year value="0;%;1;%;False;;87597280387;Tessum, Christopher tess0050@umn.edu;9/16/2015 8:34:46 PM;" year="0" />
+            </share>
+          </technology>
+          <amount mostRecent="0" notes="">
+            <year value="0;J;1000;J;False;;87590141720;Tessum, Christopher tess0050@umn.edu;9/16/2015 6:35:23 PM;" year="0" />
+          </amount>
+        </input>
+        <input source="Previous" ref="84887947" id="1e5b20a4-8c1d-4e79-a996-64b7ea0a68c4" notes="" modified-on="9/16/2015 6:38:38 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+          <technology ref="85051562" account_in_balance="True">
+            <share mostRecent="0" notes="">
+              <year value="0;%;1;%;False;;techref_85051562_share;Tessum, Christopher tess0050@umn.edu;9/16/2015 8:35:01 PM;" year="0" />
+            </share>
+          </technology>
+          <amount mostRecent="0" notes="">
+            <year value="0;J;10000;J;False;;87590318392;Tessum, Christopher tess0050@umn.edu;9/16/2015 9:05:02 PM;" year="0" />
+          </amount>
+        </input>
+        <output ref="84887947" id="65bcf946-1c3b-475f-a9ba-e3fa4b2a5581" notes="" modified-on="9/16/2015 6:35:31 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+          <amount mostRecent="0" notes="">
+            <year value="0;J;2000;J;False;;87590141722;Tessum, Christopher tess0050@umn.edu;9/16/2015 6:35:37 PM;" year="0" />
+          </amount>
+        </output>
+      </stationary>
+      <transportation id="85174254" name="Multimode Transportation Test" notes="" picture="empty.png" modified-on="8/19/2015 7:52:21 PM" modified-by="Tessum, Christopher tess0050@umn.edu" urban_share="0;%;0;;True;;68764dce-7eab-489e-a80d-fb5b32f6f939;;;" moisture="0;%;0;%;True;;85174254365;;;">
+        <io-carbon-map>
+          <output id="7c41d1de-a5b9-4095-93f4-f627ea67a235">
+            <input id="d4e8a145-fa66-4f19-b2f5-726bdce5b784" ratio="1" />
+          </output>
+        </io-carbon-map>
+        <step dest_ref="56798416" origin_ref="45" ref="85004710" fuel_share_ref="1" back_haul="True" id="5a0eff16-d766-4818-8c32-229d325a1cb1">
+          <distance mostRecent="0" notes="">
+            <year value="0;mi;10000;mi;False;;85174254366;Tessum, Christopher tess0050@umn.edu;8/19/2015 7:30:22 PM;" year="0" />
+          </distance>
+          <share mostRecent="0" notes="">
+            <year value="0;%;0.2;%;False;;85174254367;Tessum, Christopher tess0050@umn.edu;8/19/2015 7:30:27 PM;" year="0" />
+          </share>
+          <urban_share mostRecent="0" notes="">
+            <year value="0;%;0;%;True;;85174254368;;;" year="0" />
+          </urban_share>
+        </step>
+        <step dest_ref="56798416" origin_ref="45" ref="84888143" fuel_share_ref="1" back_haul="True" id="1b3559f1-c534-49f9-b079-750fea6c3398">
+          <distance mostRecent="0" notes="">
+            <year value="0;mi;50000;mi;False;;85174254369;Tessum, Christopher tess0050@umn.edu;8/19/2015 7:52:03 PM;" year="0" />
+          </distance>
+          <share mostRecent="0" notes="">
+            <year value="0;%;0.8;%;False;;85174254370;Tessum, Christopher tess0050@umn.edu;8/19/2015 7:51:57 PM;" year="0" />
+          </share>
+          <urban_share mostRecent="0" notes="">
+            <year value="0;%;0;%;True;;85174254371;;;" year="0" />
+          </urban_share>
+        </step>
+        <step dest_ref="46" origin_ref="56798416" ref="85004568" fuel_share_ref="1" back_haul="True" id="032f7300-2ba1-49b3-afa6-34067f3135b6">
+          <distance mostRecent="0" notes="">
+            <year value="0;mi;20000;mi;False;;1d18746d-e6de-4a24-8fe9-79e268fa4762;Tessum, Christopher tess0050@umn.edu;8/19/2015 7:51:42 PM;" year="0" />
+          </distance>
+          <share mostRecent="0" notes="">
+            <year value="0;%;1;%;False;;85175437175;Tessum, Christopher tess0050@umn.edu;8/19/2015 7:51:13 PM;" year="0" />
+          </share>
+          <urban_share mostRecent="0" notes="">
+            <year value="0;%;0;%;True;;85175437176;;;" year="0" />
+          </urban_share>
+        </step>
+        <step dest_ref="47" origin_ref="46" ref="85004568" fuel_share_ref="1" back_haul="True" id="81e7edc6-4011-45c6-9c95-06eb694d0acd">
+          <distance mostRecent="0" notes="">
+            <year value="0;mi;10000;mi;False;;85175440422;Tessum, Christopher tess0050@umn.edu;8/19/2015 7:51:23 PM;" year="0" />
+          </distance>
+          <share mostRecent="0" notes="">
+            <year value="0;%;1;%;False;;85175440423;Tessum, Christopher tess0050@umn.edu;8/19/2015 7:51:28 PM;" year="0" />
+          </share>
+          <urban_share mostRecent="0" notes="">
+            <year value="0;%;0;%;True;;85175440424;;;" year="0" />
+          </urban_share>
+        </step>
+        <output ref="84887947" id="7c41d1de-a5b9-4095-93f4-f627ea67a235" notes="" modified-on="" modified-by="">
+          <amount mostRecent="0" notes="">
+            <year value="1;g;0;g;True;;85174254373;;;" year="0" />
+          </amount>
+        </output>
+        <input source="Previous" ref="84887947" id="d4e8a145-fa66-4f19-b2f5-726bdce5b784" notes="" modified-on="" modified-by="">
+          <amount mostRecent="0" notes="">
+            <year value="1;g;0;g;True;;85174254372;;;" year="0" />
+          </amount>
+        </input>
+      </transportation>
+      <transportation id="85005143" name="Rail Transportation Test" notes="" picture="empty.png" modified-on="8/17/2015 9:17:07 PM" modified-by="Tessum, Christopher tess0050@umn.edu" urban_share="0;%;0;;True;;cfa4bcb3-d0d0-4534-a938-035a011d9498;;;" moisture="0;%;0;%;True;;85005143105;;;">
+        <io-carbon-map>
+          <output id="b801fe5c-60ae-4738-86a7-ff8993bd24a5">
+            <input id="1ce15711-00b4-414f-9eee-ceb785114e77" ratio="1" />
+          </output>
+        </io-carbon-map>
+        <step dest_ref="56798416" origin_ref="45" ref="85004710" fuel_share_ref="1" back_haul="True" id="79157853-df48-48ea-8c40-0fd3d1f818ba">
+          <distance mostRecent="0" notes="">
+            <year value="0;mi;200000;mi;False;;85005143106;Tessum, Christopher tess0050@umn.edu;8/17/2015 8:31:45 PM;" year="0" />
+          </distance>
+          <share mostRecent="0" notes="">
+            <year value="0;%;1;%;False;;85005143107;Tessum, Christopher tess0050@umn.edu;8/17/2015 8:31:49 PM;" year="0" />
+          </share>
+          <urban_share mostRecent="0" notes="">
+            <year value="0;%;0;%;True;;85005143108;;;" year="0" />
+          </urban_share>
+        </step>
+        <output ref="84887947" id="b801fe5c-60ae-4738-86a7-ff8993bd24a5" notes="" modified-on="" modified-by="">
+          <amount mostRecent="0" notes="">
+            <year value="1;g;0;g;True;;85005143110;;;" year="0" />
+          </amount>
+        </output>
+        <input source="Previous" ref="84887947" id="1ce15711-00b4-414f-9eee-ceb785114e77" notes="" modified-on="" modified-by="">
+          <amount mostRecent="0" notes="">
+            <year value="1;g;0;g;True;;85005143109;;;" year="0" />
+          </amount>
+        </input>
+      </transportation>
+      <transportation id="85005255" name="Pipeline Transportation Test" notes="" picture="empty.png" modified-on="8/17/2015 9:16:17 PM" modified-by="Tessum, Christopher tess0050@umn.edu" urban_share="0;%;0;;True;;b9a64a2a-637b-4b41-8259-1a03f614f31b;;;" moisture="0;%;0;%;True;;85005255034;;;">
+        <io-carbon-map>
+          <output id="9ce0fb79-a1c7-4f82-81dd-4e996042edff">
+            <input id="158b2270-30e6-494b-a8c5-5188ac4c53a0" ratio="1" />
+          </output>
+        </io-carbon-map>
+        <step dest_ref="56798416" origin_ref="45" ref="85004640" fuel_share_ref="1" back_haul="False" id="6208d79e-c37e-4c26-8512-739a9387f817">
+          <distance mostRecent="0" notes="">
+            <year value="0;mi;120000;mi;False;;85005255035;Tessum, Christopher tess0050@umn.edu;8/17/2015 8:34:01 PM;" year="0" />
+          </distance>
+          <share mostRecent="0" notes="">
+            <year value="0;%;1;%;False;;85005255036;Tessum, Christopher tess0050@umn.edu;8/17/2015 8:34:04 PM;" year="0" />
+          </share>
+          <urban_share mostRecent="0" notes="">
+            <year value="0;%;0;%;True;;85005255037;;;" year="0" />
+          </urban_share>
+        </step>
+        <output ref="84887947" id="9ce0fb79-a1c7-4f82-81dd-4e996042edff" notes="" modified-on="" modified-by="">
+          <amount mostRecent="0" notes="">
+            <year value="1;g;0;g;True;;85005255039;;;" year="0" />
+          </amount>
+        </output>
+        <input source="Previous" ref="84887947" id="158b2270-30e6-494b-a8c5-5188ac4c53a0" notes="" modified-on="" modified-by="">
+          <amount mostRecent="0" notes="">
+            <year value="1;g;0;g;True;;85005255038;;;" year="0" />
+          </amount>
+        </input>
+      </transportation>
+      <stationary id="88270726" name="Efficiency Group Test" notes="" picture="empty.png" modified-on="11/6/2015 12:56:32 PM" modified-by="Tessum, Christopher tess0050@umn.edu" urban_share="0;%;0;%;True;;ef801550-ae34-4df8-8db9-247e743d4a96;;;" autoCMatrix="True">
+        <io-carbon-map>
+          <output id="4e946b90-2dac-4c5b-b324-a22dbe712dd4">
+            <input id="a801114f-c956-4a71-bc6e-803dd5223b7c" ratio="1" />
+          </output>
+        </io-carbon-map>
+        <group type="efficiency">
+          <efficiency mostRecent="0" notes="">
+            <year value="0.6;%;0;%;True;2011 T&amp;D loss data obtained from the World Bank: http://data.worldbank.org/indicator/EG.ELC.LOSS.ZS;20d5fc03-abe5-4347-945e-db51f99b589b;Zhang, Qizhi qzhang@anl.gov;9/24/2015 3:38:24 PM;" year="2011" />
+          </efficiency>
+          <shares>
+            <input source="Previous" ref="84887947" id="a801114f-c956-4a71-bc6e-803dd5223b7c" notes="" modified-on="" modified-by="">
+              <share mostRecent="0" notes="">
+                <year value="1;%;0;%;True;;0a99dfab-94d3-4080-acad-5c32bde31ffa;;;" year="0" />
+              </share>
+              <technology ref="84888048" account_in_balance="True">
+                <share mostRecent="0" notes="">
+                  <year value="0;%;1;%;False;;054ec462-7696-4090-9bdb-a1a69b93dc8d;Tessum, Christopher tess0050@umn.edu;11/4/2015 8:49:22 PM;" year="0" />
+                </share>
+              </technology>
+            </input>
+          </shares>
+        </group>
+        <output ref="84887947" id="4e946b90-2dac-4c5b-b324-a22dbe712dd4" notes="" modified-on="" modified-by="">
+          <amount mostRecent="0" notes="">
+            <year value="1055055852.62;Btu;1;J;False;;57a7b011-459b-40bd-ba46-234c58910976;Tessum, Christopher tess0050@umn.edu;11/4/2015 8:49:37 PM;" year="0" />
+          </amount>
+        </output>
+      </stationary>
+      <stationary id="91622146" name="Energy Allocation Test" notes="" picture="empty.png" modified-on="11/2/2015 10:35:46 AM" modified-by="Tessum, Christopher tess0050@umn.edu" urban_share="0;%;0;%;True;;be270698-81eb-4a00-bb02-a818dab6192d;;;" autoCMatrix="True">
+        <coproducts allocation_method="Energy">
+          <coproduct ref="87590001" method="allocation" id="c92f3103-3166-437e-a11a-0ea2bee939d3" notes="">
+            <amount>
+              <year value="0;J;150;J;False;;18290145-4cf4-4734-bb23-e9a372a115e7;Tessum, Christopher tess0050@umn.edu;9/16/2015 8:54:52 PM;" year="0" />
+            </amount>
+            <conventional_products />
+          </coproduct>
+        </coproducts>
+        <io-carbon-map>
+          <output id="c92f3103-3166-437e-a11a-0ea2bee939d3">
+            <input id="aca3644c-cc31-4927-a154-ed9c65136290" ratio="0" />
+          </output>
+          <output id="fcedd94c-6ca6-4733-9659-dd9694694328">
+            <input id="aca3644c-cc31-4927-a154-ed9c65136290" ratio="0" />
+          </output>
+        </io-carbon-map>
+        <input source="Well" ref="84887947" id="aca3644c-cc31-4927-a154-ed9c65136290" notes="" modified-on="9/16/2015 7:59:12 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+          <technology ref="84888048" account_in_balance="True">
+            <share mostRecent="0" notes="">
+              <year value="0;%;1;%;False;;8699c2de-9050-410a-b207-054e165d4001;Tessum, Christopher tess0050@umn.edu;9/16/2015 8:35:31 PM;" year="0" />
+            </share>
+          </technology>
+          <amount mostRecent="0" notes="">
+            <year value="0;J;1000;J;False;;d44b7478-98c6-4e8a-b938-b3d7c6d79741;Tessum, Christopher tess0050@umn.edu;9/16/2015 7:59:39 PM;" year="0" />
+          </amount>
+        </input>
+        <output ref="84887947" id="fcedd94c-6ca6-4733-9659-dd9694694328" notes="" modified-on="9/16/2015 7:59:21 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+          <amount mostRecent="0" notes="">
+            <year value="0;J;750;J;False;;58865caf-4db8-4152-ac18-e03dc912d766;Tessum, Christopher tess0050@umn.edu;9/16/2015 7:59:46 PM;" year="0" />
+          </amount>
+        </output>
+      </stationary>
+      <stationary id="87595890" name="Displacement Test" notes="" picture="empty.png" modified-on="9/16/2015 8:33:57 PM" modified-by="Tessum, Christopher tess0050@umn.edu" urban_share="0;%;0;%;True;;87595890673;;;" autoCMatrix="True">
+        <coproducts allocation_method="">
+          <coproduct ref="87590001" method="displacement" id="942b4e6b-dfb7-47da-9dae-7e4b0009d46d" notes="">
+            <amount>
+              <year value="0;J;200;J;False;;87595890675;Tessum, Christopher tess0050@umn.edu;9/16/2015 8:15:29 PM;" year="0" />
+            </amount>
+            <conventional_products>
+              <product ref="87590001" pathway="87596181" ratio="0;%;1.5;%;False;;87596136951;Tessum, Christopher tess0050@umn.edu;9/16/2015 8:16:54 PM;" />
+            </conventional_products>
+          </coproduct>
+        </coproducts>
+        <io-carbon-map>
+          <output id="942b4e6b-dfb7-47da-9dae-7e4b0009d46d">
+            <input id="ccbb25de-3ab5-45b8-9cbe-7e6cf9bf7050" ratio="0" />
+          </output>
+          <output id="85874faf-bd8f-4d32-93e3-6f5a8cb89841">
+            <input id="ccbb25de-3ab5-45b8-9cbe-7e6cf9bf7050" ratio="0" />
+          </output>
+        </io-carbon-map>
+        <input source="Well" ref="84887947" id="ccbb25de-3ab5-45b8-9cbe-7e6cf9bf7050" notes="" modified-on="9/16/2015 8:09:48 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+          <technology ref="84888048" account_in_balance="True">
+            <share mostRecent="0" notes="">
+              <year value="0;%;1;%;False;;87597228653;Tessum, Christopher tess0050@umn.edu;9/16/2015 8:33:52 PM;" year="0" />
+            </share>
+          </technology>
+          <amount mostRecent="0" notes="">
+            <year value="0;J;1000;J;False;;87595890672;Tessum, Christopher tess0050@umn.edu;9/16/2015 8:09:53 PM;" year="0" />
+          </amount>
+        </input>
+        <output ref="84887947" id="85874faf-bd8f-4d32-93e3-6f5a8cb89841" notes="" modified-on="9/16/2015 8:10:46 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+          <amount mostRecent="0" notes="">
+            <year value="0;J;500;J;False;;87595890674;Tessum, Christopher tess0050@umn.edu;9/16/2015 8:10:52 PM;" year="0" />
+          </amount>
+        </output>
+      </stationary>
+      <stationary id="87596012" name="Resource 2 Source" notes="" picture="empty.png" modified-on="9/16/2015 8:15:03 PM" modified-by="Tessum, Christopher tess0050@umn.edu" urban_share="0;%;0;%;True;;87596012318;;;" autoCMatrix="True">
+        <io-carbon-map>
+          <output id="57ac6d90-af1e-4fc8-9526-2d8df2aaa904">
+            <input id="b24dbbed-6499-4429-8680-60dc29b42af2" ratio="0" />
+          </output>
+        </io-carbon-map>
+        <input source="Well" ref="87590001" id="b24dbbed-6499-4429-8680-60dc29b42af2" notes="" modified-on="9/16/2015 8:13:00 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+          <technology ref="87596072" account_in_balance="True">
+            <share mostRecent="0" notes="">
+              <year value="0;%;1;%;False;;techref_87596072_share;Tessum, Christopher tess0050@umn.edu;9/16/2015 8:14:56 PM;" year="0" />
+            </share>
+          </technology>
+          <amount mostRecent="0" notes="">
+            <year value="0;J;1000;J;False;;87596012317;Tessum, Christopher tess0050@umn.edu;9/16/2015 8:13:10 PM;" year="0" />
+          </amount>
+        </input>
+        <output ref="87590001" id="57ac6d90-af1e-4fc8-9526-2d8df2aaa904" notes="" modified-on="9/16/2015 8:13:24 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+          <amount mostRecent="0" notes="">
+            <year value="0;J;750;J;False;;87596012319;Tessum, Christopher tess0050@umn.edu;9/16/2015 8:15:00 PM;" year="0" />
+          </amount>
+        </output>
+      </stationary>
+      <stationary id="91978316" name="Input Test" notes="" picture="empty.png" modified-on="11/6/2015 1:50:14 PM" modified-by="Tessum, Christopher tess0050@umn.edu" urban_share="0;%;0;;True;;ba9ea15a-6ce5-4d76-b88d-74273b5a8d50;;;" autoCMatrix="True">
+        <io-carbon-map>
+          <output id="658125cb-70de-45e1-a6fe-d9f6bad3fed4">
+            <input id="0df6f6c3-b6f9-40fc-81b5-0736f58ff5aa" ratio="1" />
+          </output>
+        </io-carbon-map>
+        <input source="Previous" ref="84887947" id="0df6f6c3-b6f9-40fc-81b5-0736f58ff5aa" notes="" modified-on="11/6/2015 1:31:17 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+          <technology ref="84888048" account_in_balance="True">
+            <share mostRecent="0" notes="">
+              <year value="0;%;1;%;False;;cea04341-f6de-48cc-85f1-434136dcfa43;Tessum, Christopher tess0050@umn.edu;11/6/2015 1:50:09 PM;" year="0" />
+            </share>
+          </technology>
+          <amount mostRecent="0" notes="">
+            <year value="0;J;3;kg;False;;c3fa67f9-f78e-4414-8c19-57d70782f4cd;Tessum, Christopher tess0050@umn.edu;11/6/2015 1:31:48 PM;" year="0" />
+          </amount>
+        </input>
+        <output ref="84887947" id="658125cb-70de-45e1-a6fe-d9f6bad3fed4" notes="" modified-on="11/6/2015 1:31:33 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+          <amount mostRecent="0" notes="">
+            <year value="0;J;1;kg;False;;54edf1e7-3acb-46a6-a594-67d91b5c1a77;Tessum, Christopher tess0050@umn.edu;11/6/2015 1:31:44 PM;" year="0" />
+          </amount>
+        </output>
+      </stationary>
+      <transportation id="85005334" name="Truck Transportation Test Process" notes="" picture="empty.png" modified-on="8/17/2015 9:18:18 PM" modified-by="Tessum, Christopher tess0050@umn.edu" urban_share="0;%;0;;True;;3a4e2fc1-a451-44ef-aa4d-7b1505a45892;;;" moisture="0;%;0;%;True;;85005334580;;;">
+        <io-carbon-map>
+          <output id="adfec6ab-cf89-4897-9b28-e65ef2d9a38f">
+            <input id="19d1d762-84a1-491b-a518-b904396df971" ratio="1" />
+          </output>
+        </io-carbon-map>
+        <step dest_ref="56798416" origin_ref="45" ref="85004568" fuel_share_ref="1" back_haul="True" id="2bbbc664-96bd-429c-8a4d-bf53c6fe38fc">
+          <distance mostRecent="0" notes="">
+            <year value="0;mi;5000000;mi;False;;85005334581;Tessum, Christopher tess0050@umn.edu;8/17/2015 8:35:27 PM;" year="0" />
+          </distance>
+          <share mostRecent="0" notes="">
+            <year value="0;%;1;%;False;;85005334582;Tessum, Christopher tess0050@umn.edu;8/17/2015 8:35:31 PM;" year="0" />
+          </share>
+          <urban_share mostRecent="0" notes="">
+            <year value="0;%;0;%;True;;85005334583;;;" year="0" />
+          </urban_share>
+        </step>
+        <output ref="84887947" id="adfec6ab-cf89-4897-9b28-e65ef2d9a38f" notes="" modified-on="" modified-by="">
+          <amount mostRecent="0" notes="">
+            <year value="1;g;0;g;True;;85005334585;;;" year="0" />
+          </amount>
+        </output>
+        <input source="Previous" ref="84887947" id="19d1d762-84a1-491b-a518-b904396df971" notes="" modified-on="" modified-by="">
+          <amount mostRecent="0" notes="">
+            <year value="1;g;0;g;True;;85005334584;;;" year="0" />
+          </amount>
+        </input>
+      </transportation>
+      <transportation id="86536943" name="Multimode Test" notes="" picture="empty.png" modified-on="" modified-by="" urban_share="0;%;0;;True;;de37d45a-79f8-4efe-b5df-5c48bce1aa65;;;" moisture="0;%;0;%;True;;86536944019;;;">
+        <io-carbon-map>
+          <output id="5bc6a939-801b-486b-8a6f-53581377d300">
+            <input id="d09f82be-e991-4f2e-b2dd-70a596b0d9ab" ratio="1" />
+          </output>
+        </io-carbon-map>
+        <step dest_ref="46" origin_ref="45" ref="7" fuel_share_ref="1" back_haul="True" id="3d9e3502-08d3-4753-a951-69bf48b3d57c">
+          <distance mostRecent="0" notes="">
+            <year value="0;mi;0;mi;True;;86536944020;;;" year="0" />
+          </distance>
+          <share mostRecent="0" notes="">
+            <year value="0;%;0.4;%;False;;86536944021;Tessum, Christopher tess0050@umn.edu;9/4/2015 2:01:25 PM;" year="0" />
+          </share>
+          <urban_share mostRecent="0" notes="">
+            <year value="0;%;0;%;True;;86536944022;;;" year="0" />
+          </urban_share>
+        </step>
+        <step dest_ref="46" origin_ref="56798416" ref="84888143" fuel_share_ref="1" back_haul="True" id="390bddf7-2f9a-4d46-97c5-38e550b32c2a">
+          <distance mostRecent="0" notes="">
+            <year value="0;mi;100000;mi;False;;86536944023;Tessum, Christopher tess0050@umn.edu;9/4/2015 2:02:17 PM;" year="0" />
+          </distance>
+          <share mostRecent="0" notes="">
+            <year value="0;%;0.6;%;False;;86536944024;Tessum, Christopher tess0050@umn.edu;9/4/2015 2:01:57 PM;" year="0" />
+          </share>
+          <urban_share mostRecent="0" notes="">
+            <year value="0;%;0;%;True;;86536944025;;;" year="0" />
+          </urban_share>
+        </step>
+        <output ref="84887947" id="5bc6a939-801b-486b-8a6f-53581377d300" notes="" modified-on="" modified-by="">
+          <amount mostRecent="0" notes="">
+            <year value="1;g;0;g;True;;86536944027;;;" year="0" />
+          </amount>
+        </output>
+        <input source="Previous" ref="84887947" id="d09f82be-e991-4f2e-b2dd-70a596b0d9ab" notes="" modified-on="" modified-by="">
+          <amount mostRecent="0" notes="">
+            <year value="1;g;0;g;True;;86536944026;;;" year="0" />
+          </amount>
+        </input>
+      </transportation>
+      <stationary id="84888653" name="Test Resource Source" notes="" picture="empty.png" modified-on="8/16/2015 12:10:53 PM" modified-by="Tessum, Christopher tess0050@umn.edu" urban_share="0;%;0;%;True;;84888653079;;;" autoCMatrix="True">
+        <io-carbon-map>
+          <output id="986a10b8-cc35-4900-9480-dd57894bed6c">
+            <input id="3393cffd-302c-42d7-98d8-a4ba9fa312b2" ratio="0" />
+          </output>
+        </io-carbon-map>
+        <input source="Well" ref="84887947" id="3393cffd-302c-42d7-98d8-a4ba9fa312b2" notes="" modified-on="8/16/2015 12:10:17 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+          <amount mostRecent="0" notes="">
+            <year value="0;J;1;J;False;;84888653067;Tessum, Christopher tess0050@umn.edu;8/16/2015 12:10:27 PM;" year="0" />
+          </amount>
+        </input>
+        <output ref="84887947" id="986a10b8-cc35-4900-9480-dd57894bed6c" notes="" modified-on="8/16/2015 12:10:44 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+          <amount mostRecent="0" notes="">
+            <year value="0;J;0.5;J;False;;84888653091;Tessum, Christopher tess0050@umn.edu;8/16/2015 12:10:49 PM;" year="0" />
+          </amount>
+        </output>
+      </stationary>
+    </processes>
+    <technologies>
+      <technology id="84888048" name="Test Technology 1" notes="" picture="empty.png" inputRef="84887947" outputRef="-1" massTransfer="" basetech="-1" mostRecent="0" modified-on="8/16/2015 5:44:57 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+        <year value="2015" notes="">
+          <emission ref="84908646" factor="0;kg/J;1;kg/J;False;;84908693348;Tessum, Christopher tess0050@umn.edu;8/16/2015 5:44:57 PM;" />
+        </year>
+      </technology>
+      <technology id="85051562" name="Test Technology 2" notes="" picture="empty.png" inputRef="84887947" outputRef="-1" massTransfer="" basetech="-1" mostRecent="0" modified-on="8/18/2015 9:26:02 AM" modified-by="Tessum, Christopher tess0050@umn.edu">
+        <year value="2005" notes="">
+          <emission ref="84908646" factor="0;kg/J;3;kg/J;False;;85051562075;Tessum, Christopher tess0050@umn.edu;8/18/2015 9:25:55 AM;" />
+        </year>
+        <year value="2010" notes="">
+          <emission ref="84908646" factor="0;kg/J;2;kg/J;False;;85051562074;Tessum, Christopher tess0050@umn.edu;8/18/2015 9:25:44 AM;" />
+        </year>
+        <year value="2015" notes="">
+          <emission ref="84908646" factor="0;kg/J;1;kg/J;False;;85051562073;Tessum, Christopher tess0050@umn.edu;8/16/2015 5:44:57 PM;" />
+        </year>
+      </technology>
+      <technology id="87596072" name="Resource 2 Technology" notes="" picture="empty.png" inputRef="87590001" outputRef="-1" massTransfer="" basetech="-1" mostRecent="0" modified-on="9/16/2015 8:53:57 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+        <year value="2015" notes="">
+          <emission ref="84908646" factor="0;kg/J;5;kg/J;False;;87596072406;Tessum, Christopher tess0050@umn.edu;9/16/2015 8:53:53 PM;" />
+        </year>
+      </technology>
+    </technologies>
+    <modes>
+      <mode notes="" modified-on="8/17/2015 8:25:10 PM" modified-by="Tessum, Christopher tess0050@umn.edu" type="4" id="85004710" name="Test Mode Rail" picture="empty.png">
+        <ei mostRecent="0" notes="">
+          <year value="0;Btu/(mi ton);1000;Btu/(mi ton);False;;rail_85004667_ei;Tessum, Christopher tess0050@umn.edu;8/17/2015 8:24:47 PM;" year="0" />
+        </ei>
+        <average_speed mostRecent="0" notes="">
+          <year value="0;mi/h;2;mi/h;False;;rail_85004667_AverageSpeed;Tessum, Christopher tess0050@umn.edu;8/17/2015 8:24:41 PM;" year="0" />
+        </average_speed>
+        <fuel_shares>
+          <share name="Default" id="1" notes="">
+            <fuel fuel_ref="84887947" pathway="84888718" share="0;%;1;%;False;;85004692411;Tessum, Christopher tess0050@umn.edu;8/17/2015 8:25:06 PM;" notes="" tech_to="84888048" tech_from="84888048" />
+          </share>
+        </fuel_shares>
+      </mode>
+      <mode notes="" modified-on="8/17/2015 8:30:19 PM" modified-by="Tessum, Christopher tess0050@umn.edu" type="3" id="85004640" name="Test Mode Pipeline" picture="empty.png">
+        <fuel_shares>
+          <share name="Default" id="1" notes="">
+            <fuel fuel_ref="84887947" pathway="84888718" share="0;%;1;%;False;;85004613697;Tessum, Christopher tess0050@umn.edu;8/17/2015 8:30:16 PM;" notes="" tech_to="84888048" tech_from="84888048" />
+          </share>
+        </fuel_shares>
+        <energy_intensity>
+          <material_transported name="Test Resource Liquid" ref="84887947">
+            <ei mostRecent="0" notes="">
+              <year value="0;Btu/(mi ton);30;Btu/(mi ton);False;;85004601132;Tessum, Christopher tess0050@umn.edu;8/17/2015 8:23:27 PM;" year="0" />
+            </ei>
+          </material_transported>
+        </energy_intensity>
+      </mode>
+      <mode notes="" modified-on="8/16/2015 5:39:57 PM" modified-by="Tessum, Christopher tess0050@umn.edu" type="1" id="84888143" name="Test Mode Tanker" picture="empty.png">
+        <hp_factor mostRecent="0" notes="">
+          <year value="0.081885607720870612;W/g;80;W/g;False;;vessel_84888103_hpf;Tessum, Christopher tess0050@umn.edu;8/16/2015 12:14:16 PM;" year="0" />
+        </hp_factor>
+        <typical_hp mostRecent="0" notes="">
+          <year value="6670973.6625;W;10000;W;False;;vessel_84888103_hp;Tessum, Christopher tess0050@umn.edu;8/16/2015 12:14:29 PM;" year="0" />
+        </typical_hp>
+        <typical_fc mostRecent="0" notes="">
+          <year value="0.000000041666666666666663;kg/J;50;kg/J;False;;vessel_84888103_fc;Tessum, Christopher tess0050@umn.edu;8/16/2015 12:14:18 PM;" year="0" />
+        </typical_fc>
+        <load_factor_to mostRecent="0" notes="">
+          <year value="0;%;1;%;False;;vessel_84888103loadto;Tessum, Christopher tess0050@umn.edu;8/16/2015 12:13:31 PM;" year="0" />
+        </load_factor_to>
+        <load_factor_from mostRecent="0" notes="">
+          <year value="0;%;1;%;False;;vessel_84888103_loadfrom;Tessum, Christopher tess0050@umn.edu;8/16/2015 12:13:35 PM;" year="0" />
+        </load_factor_from>
+        <average_speed mostRecent="0" notes="">
+          <year value="0;mi/h;10;mi/h;False;;vessel_84888103_AverageSpeed;Tessum, Christopher tess0050@umn.edu;8/16/2015 12:13:27 PM;" year="0" />
+        </average_speed>
+        <bsfc_adjustment mostRecent="0" notes="">
+          <year value="0;g/kWh;0;;True;;ad07f18e-45b8-4cae-bb63-27fde9dd39c1;;;" year="0" />
+        </bsfc_adjustment>
+        <fuel_shares>
+          <share name="Default" id="1" notes="">
+            <fuel fuel_ref="84887947" pathway="84888718" share="0;%;1;%;False;;84908373236;Tessum, Christopher tess0050@umn.edu;8/16/2015 5:39:52 PM;" notes="" tech_to="84888048" tech_from="84888048" />
+          </share>
+        </fuel_shares>
+        <payload>
+          <material_transported notes="" payload="0;g;10000;g;False;;84888880476;Tessum, Christopher tess0050@umn.edu;8/16/2015 12:14:49 PM;" ref="84887947" />
+        </payload>
+      </mode>
+      <mode notes="" modified-on="8/18/2015 1:59:53 PM" modified-by="Tessum, Christopher tess0050@umn.edu" type="2" id="85004568" name="Test Mode Truck" picture="empty.png">
+        <fuel_economy_to mostRecent="0" notes="">
+          <year value="0;mi/gal;2;mi/gal;False;;truck_85004492_fe_to;Tessum, Christopher tess0050@umn.edu;8/17/2015 8:21:57 PM;" year="0" />
+        </fuel_economy_to>
+        <fuel_economy_from mostRecent="0" notes="">
+          <year value="0;mi/gal;2;mi/gal;False;;truck_85004492_fe_from;Tessum, Christopher tess0050@umn.edu;8/17/2015 8:21:59 PM;" year="0" />
+        </fuel_economy_from>
+        <fuel_shares>
+          <share name="Default" id="1" notes="">
+            <fuel fuel_ref="84887947" pathway="84888718" share="0;%;1;%;False;;85004545062;Tessum, Christopher tess0050@umn.edu;8/17/2015 8:28:22 PM;" notes="" tech_to="85051562" tech_from="84888048" />
+          </share>
+        </fuel_shares>
+        <payload>
+          <material_transported notes="" payload="0;g;1000;g;False;;85004530867;Tessum, Christopher tess0050@umn.edu;8/17/2015 8:22:22 PM;" ref="84887947" />
+        </payload>
+      </mode>
+      <mode notes="" modified-on="" modified-by="" type="5" id="7" name="Connector" picture="states.png">
+        <fuel_shares>
+          <share name="Default" id="1" notes="" />
+        </fuel_shares>
+      </mode>
+    </modes>
+    <locations>
+      <groups>
+        <group id="1" name="Plants" notes="" />
+        <group id="2" name="Wells and Fields" notes="" />
+        <group id="3" name="Stations, Terminals, Storages" notes="" />
+        <group id="4" name="Geographical" notes="" />
+      </groups>
+      <location name="Test Location 2" picture="empty.png" id="56798416" notes="">
+        <membership group_id="3" />
+      </location>
+      <location name="Test Location 1" picture="empty.png" id="45" notes="">
+        <membership group_id="3" />
+      </location>
+      <location name="Test Location 3" picture="empty.png" id="46" notes="">
+        <membership group_id="3" />
+      </location>
+      <location name="Test Location 4" picture="empty.png" id="47" notes="">
+        <membership group_id="3" />
+      </location>
+    </locations>
+    <gases>
+      <groups>
+        <group id="1" name="Greenhouse Gas" notes="" />
+        <group id="2" name="Criteria Pollutant" notes="" showInResults="False" />
+        <group id="3" name="Emission Gas" notes="" showInResults="False" />
+        <group id="4" name="From Combustion" notes="" showInResults="False" />
+        <group id="5" name="Vehicle Specific Emission" notes="" showInResults="False" />
+        <group id="6" name="Non-Balanced Vehicle Emission" notes="" showInResults="False" />
+        <group id="7" name="Upstream Emission" notes="" showInResults="False" />
+        <group id="8" name="Grid-Connected Vehicle Specific Emissions" notes="" showInResults="False" />
+      </groups>
+      <gases>
+        <gas name="Test Gas 1" picture="empty.png" id="84908646" c_ratio="0;%;0;%;True;;84908646967;;;" s_ratio="0;%;0;%;True;;84908646973;;;" notes="" showInResults="False" global_warming_potential="0;%;0;%;True;;84908646961;;;" global_warming_potential20="0;%;0;;True;;gas_84908646_gwp20_default;;;" co2dissoc="False" modified-on="8/16/2015 5:44:06 PM" modified-by="Tessum, Christopher tess0050@umn.edu" />
+        <gas name="VOC_evap" picture="voc.png" id="14" c_ratio="0.85;%;0;%;True;;res_14cratio;;;" s_ratio="0;%;0;%;True;;res_14sratio;;;" notes="" showInResults="False" global_warming_potential="3.11666;%;0;%;True;Account VOC in GHG because of oxydation of VOCs in the athmosphere after about 10 days;gas_14_gwp_default;Dieffenthaler, David ddieffenthaler@anl.gov;12/11/2013 5:06:30 PM;" global_warming_potential20="0;%;0;;True;;gas_14_gwp20_default;;;" co2dissoc="False" modified-on="" modified-by="">
+          <membership group_id="2" />
+          <membership group_id="5" />
+          <membership group_id="6" />
+          <membership group_id="1" />
+        </gas>
+      </gases>
+      <balanced>
+        <balance type="carbon" gas="9" notes="The gas ID for which the factor can be calculated from a carbon balance">
+          <parameter ref="1" />
+          <parameter ref="14" />
+          <parameter ref="2" />
+          <parameter ref="7" />
+        </balance>
+        <balance type="sulfur" gas="6" notes="The gas ID for which the factor can be calculated from a sulfur balance" />
+        <balance type="biogenic" gas="9" notes="The gas ID for which the factor can be calculated from a biogenic carbon balance" />
+        <balance type="oxydation" gas="16" notes="The gas ID for which the factor can be calculated from oxydation of VOC and CO">
+          <parameter ref="1" />
+          <parameter ref="2" />
+          <parameter ref="14" />
+        </balance>
+      </balanced>
+    </gases>
+    <inputs />
+    <vehicles>
+      <vehicle_technology_lag value="5;;0;;True;;veh_techlag;;;" />
+    </vehicles>
+    <mixes>
+      <mix id="93465461" name="Test Mix Mass" notes="" help="" use_default_values="False" share_type="mass" created_resource="84887947" modified-on="11/23/2015 6:37:43 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+        <pathway ref="87589674" output="f98f3c39-2d89-44dc-9db5-f691289b6d51" notes="">
+          <shares mostRecent="0" notes="">
+            <year value="0;%;0.5;%;False;;d72829f0-ed62-4629-85f0-8de820c4031c;Tessum, Christopher tess0050@umn.edu;11/4/2015 11:23:20 AM;" year="0" />
+          </shares>
+        </pathway>
+        <pathway ref="84888718" output="4d29c70e-a053-45dd-8dd6-f27092a9b57a" notes="">
+          <shares mostRecent="0" notes="">
+            <year value="0;%;0.5;%;False;;2c87564b-5545-44cb-9797-d5a8d504f675;Tessum, Christopher tess0050@umn.edu;11/6/2015 12:47:17 PM;" year="0" />
+          </shares>
+        </pathway>
+        <prefered_functional_unit unit="kg" amount="1" enabled="True" />
+        <output id="53f5604f-252f-4aff-b83f-0b0946f08870" resource="84887947" location="0,0" notes="" />
+      </mix>
+      <mix id="93465484" name="Test Mix Volume" notes="" help="" use_default_values="False" share_type="volume" created_resource="84887947" modified-on="11/23/2015 6:38:07 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+        <pathway ref="87589674" output="f98f3c39-2d89-44dc-9db5-f691289b6d51" notes="">
+          <shares mostRecent="0" notes="">
+            <year value="0;%;0.5;%;False;;8695f28b-3f1f-4ce0-9695-f7568b22fc82;Tessum, Christopher tess0050@umn.edu;11/4/2015 11:23:20 AM;" year="0" />
+          </shares>
+        </pathway>
+        <pathway ref="84888718" output="4d29c70e-a053-45dd-8dd6-f27092a9b57a" notes="">
+          <shares mostRecent="0" notes="">
+            <year value="0;%;0.5;%;False;;5925c5e2-a097-4bd9-9185-345b6c70eccc;Tessum, Christopher tess0050@umn.edu;11/6/2015 12:47:17 PM;" year="0" />
+          </shares>
+        </pathway>
+        <prefered_functional_unit unit="kg" amount="1" enabled="True" />
+        <output id="68b4fec5-6b0b-483c-b22c-6b1655c6d363" resource="84887947" location="0,0" notes="" />
+      </mix>
+      <mix id="91797813" name="Test Mix Energy" notes="" help="" use_default_values="False" share_type="energy" created_resource="84887947" modified-on="11/6/2015 12:47:20 PM" modified-by="Tessum, Christopher tess0050@umn.edu">
+        <pathway ref="87589674" output="f98f3c39-2d89-44dc-9db5-f691289b6d51" notes="">
+          <shares mostRecent="0" notes="">
+            <year value="0;%;0.5;%;False;;57eab71f-fcab-49f0-a32e-5aa51fbf48c8;Tessum, Christopher tess0050@umn.edu;11/4/2015 11:23:20 AM;" year="0" />
+          </shares>
+        </pathway>
+        <pathway ref="84888718" output="4d29c70e-a053-45dd-8dd6-f27092a9b57a" notes="">
+          <shares mostRecent="0" notes="">
+            <year value="0;%;0.5;%;False;;21eb98d3-4102-493f-a0d1-c1ba29bfcfc8;Tessum, Christopher tess0050@umn.edu;11/6/2015 12:47:17 PM;" year="0" />
+          </shares>
+        </pathway>
+        <prefered_functional_unit unit="kg" amount="1" enabled="True" />
+        <output id="44bbd63d-6dbe-4037-94b7-4ba95265305e" resource="84887947" location="0,0" notes="" />
+      </mix>
+    </mixes>
+  </data>
+  <pictures>
+    <picture name="empty.png" base64="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" />
+  </pictures>
+  <plugins>
+    <Charting />
+    <MarinePlugin />
+    <PlanePlugin />
+    <StLibPlugin>
+      <Configuration>
+        <StLibConfig xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+          <DesiredSamples>1000</DesiredSamples>
+          <DesiredSamplingMethod>MonteCarloSamling</DesiredSamplingMethod>
+          <DistributedParameters>
+            <item>
+              <key>
+                <string>res_23_cratio</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>0.0084</A>
+                  <B>0.0087</B>
+                  <C>0.00853</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>sproc_9651491_group_eff_0</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="NormalDistribution">
+                  <Notes />
+                  <Mean>316516.75578600005</Mean>
+                  <StandardDeviation>24697.932278497763</StandardDeviation>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>sproc_600_group_eff_2010</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="NormalDistribution">
+                  <Notes />
+                  <Mean>28334579.977962721</Mean>
+                  <StandardDeviation>5704318.41201159</StandardDeviation>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_33_density</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>958.93446015530117</A>
+                  <B>1019.9582042500335</B>
+                  <C>991.17675087202019</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>Reused_Fuel_Specifications!C13</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>784.868467885084</A>
+                  <B>792.00203056282453</B>
+                  <C>789.353430558713</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>Reused_Fuel_Specifications!B4</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>31439195249.130657</A>
+                  <B>36957777393.924866</B>
+                  <C>34655581004.227882</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_55_density</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>587.77731291245607</A>
+                  <B>600.4552782654705</B>
+                  <C>595.19339292396864</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_30_density</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>820.006561272965</A>
+                  <B>859.87682000152563</B>
+                  <C>846.95165198146083</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>Reused_Fuel_Specifications!A13</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>21118331773.285725</A>
+                  <B>21921034630.710335</B>
+                  <C>21274412884.451622</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_59_hhv</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>39689196.839328058</A>
+                  <B>41166393.0700053</B>
+                  <C>40581088.903133184</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_54_hhv</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>26372133461.637787</A>
+                  <B>28916813006.181786</B>
+                  <C>27470275565.197849</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_62_density</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>0.85814640133217279</A>
+                  <B>1.29957973535078</B>
+                  <C>1.1583210684648255</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>sproc_5150_group_eff_2010</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>0.38</A>
+                  <B>0.47</B>
+                  <C>0.43</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>1</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>67.592272104929151</A>
+                  <B>68.157306772472978</B>
+                  <C>67.804160105258092</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_49_hhv</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>10037409029.316864</A>
+                  <B>10041311057.09601</B>
+                  <C>10039360043.206438</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_31_density</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>659.88986235773575</A>
+                  <B>760.006942513156</B>
+                  <C>725.1513664590467</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>sproc_5_group_eff_2010</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="NormalDistribution">
+                  <Notes />
+                  <Mean>0.957</Mean>
+                  <StandardDeviation>0.0078030410166330319</StandardDeviation>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>CG_Refining_Efficiencies!C1</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="NormalDistribution">
+                  <Notes />
+                  <Mean>0.89730999999999994</Mean>
+                  <StandardDeviation>0.011704561524949548</StandardDeviation>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_33_cratio</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>0.86</A>
+                  <B>0.875</B>
+                  <C>0.868</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_62_hhv</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>45124164.103140548</A>
+                  <B>64857276.014828928</B>
+                  <C>59032105.973101713</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>Reused_Fuel_Specifications!B7</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>30226779474.895561</A>
+                  <B>30290884216.981556</B>
+                  <C>30260225427.288258</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>Reused_Fuel_Specifications!B2</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>41096714002.520523</A>
+                  <B>42671460927.676445</B>
+                  <C>41838099280.558533</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>CG_Refining_Efficiencies!B1</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="NormalDistribution">
+                  <Notes />
+                  <Mean>0.89931</Mean>
+                  <StandardDeviation>0.013265169728276155</StandardDeviation>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_49_density</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>70.805906776584621</A>
+                  <B>71.053109443635037</B>
+                  <C>70.805906776584621</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_30_hhv</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>38462845251.596016</A>
+                  <B>38797304775.522934</B>
+                  <C>38599416223.86618</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>Reused_Fuel_Specifications!B6</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>29075681280.047073</A>
+                  <B>29192742113.421497</B>
+                  <C>29134211696.734283</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_23_hhv</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>38184128981.656914</A>
+                  <B>39103892672.455948</B>
+                  <C>38560395946.0747</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>Reused_Fuel_Specifications!B13</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>23317403143.105236</A>
+                  <B>24184210742.615841</B>
+                  <C>23559886297.952255</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_35_hhv</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>17826692625.304935</A>
+                  <B>18963855006.656471</B>
+                  <C>18172300800.029419</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_32_cratio</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>0.841</A>
+                  <B>0.84200000000000008</B>
+                  <C>0.84200000000000008</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_62_lhv</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>41054906.56202966</A>
+                  <B>59728896.647949465</B>
+                  <C>54321801.011130892</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_67_cratio</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>0.4</A>
+                  <B>0.45799999999999996</B>
+                  <C>0.426</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_54_lhv</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>23810730940.897446</A>
+                  <B>25633535346.299168</B>
+                  <C>25101187270.715485</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_55_hhv</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>28370529117.101147</A>
+                  <B>29017150863.359863</B>
+                  <C>28710562966.426849</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_40_hhv</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>23930578936.971256</A>
+                  <B>26617403779.184196</B>
+                  <C>25477454235.13327</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>sproc_116_group_eff_2010</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="WeibullDistribution">
+                  <Notes />
+                  <Scale>11058719.587405302</Scale>
+                  <Shape>9.1759037403687156</Shape>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_32_hhv</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>33139364495.759174</A>
+                  <B>33596459178.4593</B>
+                  <C>33373486162.508018</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_30_cratio</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>0.87</A>
+                  <B>0.873</B>
+                  <C>0.871</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_23_lhv</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>35954398822.144104</A>
+                  <B>36233115092.083206</B>
+                  <C>36141138723.003296</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_45_hhv</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>35815040687.174553</A>
+                  <B>36957777393.924866</B>
+                  <C>36241476580.181374</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_45_density</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>770.07162252878027</A>
+                  <B>849.8474546526229</B>
+                  <C>797.01671323727589</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_23_density</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>834.76809196254737</A>
+                  <B>851.96633465591219</B>
+                  <C>846.669134647689</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_45_cratio</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>0.84900000000000009</A>
+                  <B>0.86</B>
+                  <C>0.853</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>Reused_Fuel_Specifications!C4</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>718.79472644917871</A>
+                  <B>779.81847054391108</B>
+                  <C>744.71569182275141</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_40_lhv</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>22380916476.109856</A>
+                  <B>24108957349.732281</B>
+                  <C>23676947131.326675</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_42_hhv</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>20870274293.039925</A>
+                  <B>21207520979.666237</B>
+                  <C>21073737170.095467</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_32_lhv</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>30853891082.258541</A>
+                  <B>31232945209.375721</B>
+                  <C>31082438423.608604</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>Reused_Fuel_Specifications!A1</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>33613182154.655647</A>
+                  <B>39187507553.437683</B>
+                  <C>35801104873.6776</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>Reused_Fuel_Specifications!A4</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>30101357153.422966</A>
+                  <B>34421459337.479042</B>
+                  <C>32356171777.230297</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_59_cratio</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>0.721</A>
+                  <B>0.7390000000000001</B>
+                  <C>0.72400000000000009</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_31_hhv</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>33590884853.060516</A>
+                  <B>35488942651.345795</B>
+                  <C>34861831043.982819</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_35_lhv</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>15661067207.878117</A>
+                  <B>16781506613.033304</B>
+                  <C>15956506454.013563</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_27_cratio</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>0.84</A>
+                  <B>0.873</B>
+                  <C>0.865</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_64_cratio</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="UniformDistribution">
+                  <Notes />
+                  <Min>0.52916</Min>
+                  <Max>0.69559</Max>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>Reused_Fuel_Specifications!C5</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>740.47793181617271</A>
+                  <B>744.96289448980178</B>
+                  <C>742.596811819462</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_72_hhv</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>26532682</A>
+                  <B>31896438</B>
+                  <C>29865456.209999997</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>Reused_Fuel_Specifications!A5</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>26059971239.305996</A>
+                  <B>26093417191.698685</B>
+                  <C>26071119890.103558</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>sproc_200_group_eff_2010</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>0.97</A>
+                  <B>0.99</B>
+                  <C>0.98</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_27_density</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>779.81847054391108</A>
+                  <B>886.82191071002137</B>
+                  <C>836.63976929878618</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_67_hhv</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>17503673.349999998</A>
+                  <B>18742082.27</B>
+                  <C>18122877.81</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_55_lhv</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>26199329374.275547</A>
+                  <B>26940714652.313553</B>
+                  <C>26678721358.5708</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_41_density</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>419.7854433183349</A>
+                  <B>440.65641135073463</B>
+                  <C>428.22564866477063</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_42_lhv</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>19002875284.447945</A>
+                  <B>19342909133.773647</B>
+                  <C>19211912486.902267</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_31_cratio</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>0.848</A>
+                  <B>0.853</B>
+                  <C>0.85</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_41_hhv</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>23453974115.375393</A>
+                  <B>23913855960.774914</B>
+                  <C>23640714016.234596</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_31_lhv</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>31467066876.124561</A>
+                  <B>33167236122.753082</B>
+                  <C>32587506281.279755</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>Reused_Fuel_Specifications!A6</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>26907268699.920864</A>
+                  <B>27007606557.098942</B>
+                  <C>26957437628.5099</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_59_lhv</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>35815040.687174544</A>
+                  <B>37152878.782882236</B>
+                  <C>36623317.869997941</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>sproc_166_group_eff_2010</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="NormalDistribution">
+                  <Notes />
+                  <Mean>0.965</Mean>
+                  <StandardDeviation>0.0078030410166330319</StandardDeviation>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>sproc_3_group_eff_2010</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="NormalDistribution">
+                  <Notes />
+                  <Mean>0.957</Mean>
+                  <StandardDeviation>0.0078030410166330319</StandardDeviation>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>sproc_4_group_eff_2010</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="NormalDistribution">
+                  <Notes />
+                  <Mean>0.975</Mean>
+                  <StandardDeviation>0.017822749428722869</StandardDeviation>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_45_lhv</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>33111492868.765263</A>
+                  <B>36001780588.033745</B>
+                  <C>34468841103.36869</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_64_hhv</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="WeibullDistribution">
+                  <Notes />
+                  <Scale>12379000</Scale>
+                  <Shape>8.6475</Shape>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>sproc_512_group_eff_2010</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="WeibullDistribution">
+                  <Notes />
+                  <Scale>0.33285</Scale>
+                  <Shape>19.186</Shape>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>sproc_513_group_eff_2010</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="NormalDistribution">
+                  <Notes />
+                  <Mean>0.32612</Mean>
+                  <StandardDeviation>0.0005299</StandardDeviation>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_49_lhv</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>8389359725.1669569</A>
+                  <B>8612332741.1182365</B>
+                  <C>8500846233.1425972</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>sproc_514_group_eff_2010</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="WeibullDistribution">
+                  <Notes />
+                  <Scale>0.49596</Scale>
+                  <Shape>10.789</Shape>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_59_density</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>0.7486709344955581</A>
+                  <B>0.77692266787274888</B>
+                  <C>0.77692266787274888</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>Reused_Fuel_Specifications!C6</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>739.94821181535042</A>
+                  <B>745.2454118235737</B>
+                  <C>742.31429448569008</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>Reused_Fuel_Specifications!A7</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>27969177688.38884</A>
+                  <B>28038856755.873615</B>
+                  <C>28005410803.480927</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>Reused_Fuel_Specifications!B1</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>35854060964.966019</A>
+                  <B>41250007950.98703</B>
+                  <C>38290041164.233765</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>sproc_601_group_eff_2010</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="NormalDistribution">
+                  <Notes />
+                  <Mean>50019142.916861579</Mean>
+                  <StandardDeviation>6780720.9916961053</StandardDeviation>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_35_density</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>786.45762788755087</A>
+                  <B>809.9418812573407</B>
+                  <C>794.08559589939239</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_41_lhv</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>18952706355.858902</A>
+                  <B>23002453758.074051</B>
+                  <C>20825679689.849667</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>Reused_Fuel_Specifications!D4</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>0.85</A>
+                  <B>0.88</B>
+                  <C>0.863</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_41_cratio</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>0.74</A>
+                  <B>0.7609999999999999</B>
+                  <C>0.75</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>Reused_Fuel_Specifications!C7</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>768.72966519336364</A>
+                  <B>769.78910519500823</B>
+                  <C>769.54190252795786</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_54_density</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>548.96649418554011</A>
+                  <B>562.95110220724962</B>
+                  <C>559.52557953526514</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>Reused_Fuel_Specifications!B5</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>28122471636.855347</A>
+                  <B>28250681121.027332</B>
+                  <C>28186576378.941338</C>
+                </ADistribution>
+              </value>
+            </item>
+            <item>
+              <key>
+                <string>res_42_density</string>
+              </key>
+              <value>
+                <ADistribution xsi:type="TriangularDistribution">
+                  <Notes />
+                  <A>660.94930235938045</A>
+                  <B>668.89510237171532</B>
+                  <C>665.187062365959</C>
+                </ADistribution>
+              </value>
+            </item>
+          </DistributedParameters>
+          <ShowWarningPDFEditorChange>true</ShowWarningPDFEditorChange>
+          <ExportResultsLAfterCalculations>false</ExportResultsLAfterCalculations>
+          <ExecuteCommandAfterCalculations>false</ExecuteCommandAfterCalculations>
+          <CommandToExecuteAfterCalculations />
+          <FilnameForXMLExport />
+          <ShowCheckIntegrityDistributionOverFormula>false</ShowCheckIntegrityDistributionOverFormula>
+          <UniformScrambling>true</UniformScrambling>
+        </StLibConfig>
+      </Configuration>
+    </StLibPlugin>
+  </plugins>
+</greet>
