@@ -22,6 +22,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"reflect"
 	"strconv"
@@ -43,6 +44,8 @@ import (
 type DB struct {
 	LCADB
 
+	*http.ServeMux
+
 	// Chemical, spatial, and temporal (CST) configuration
 	CSTConfig *CSTConfig
 }
@@ -60,7 +63,6 @@ func LoadDB(lca LCADB, cstConfigFile io.Reader) (*DB, error) {
 	if err := db.CSTConfig.Setup(); err != nil {
 		return nil, err
 	}
-
 	return db, nil
 }
 
