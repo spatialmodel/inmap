@@ -20,14 +20,13 @@ package slca
 import (
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"path/filepath"
-	"reflect"
 	"runtime"
 	"strconv"
 	"sync"
-	"text/template"
 	"time"
 
 	"github.com/ctessum/unit"
@@ -35,8 +34,12 @@ import (
 )
 
 // RegisterHTTPHandlers configures the HTML user interface.
-// Prefix is a URL prefix: e.g. xxx.com/prefix/xxx.html
-func (db *DB) RegisterHTTPHandlers(prefix string) {
+// Prefix is a URL prefix: e.g. xxx.com/prefix/xxx.html.
+// staticFileDir is the path to the directory containing the static files,
+// i.e. this directory.
+func (db *DB) RegisterHTTPHandlers(prefix, staticFileDir string) {
+	db.ServeMux = http.NewServeMux()
+
 	resultRequestChan := make(chan *resultRequest)
 	cacheChan := resultCache(resultRequestChan)
 	mapDataRequestChan := make(chan *mapDataRequest)
@@ -46,14 +49,19 @@ func (db *DB) RegisterHTTPHandlers(prefix string) {
 		go db.mapDataServer(resultRequestChan, mapDataCacheChan)
 	}
 
-	http.HandleFunc(prefix+"/js/vis.min.js", serveVisJS)
-	http.HandleFunc(prefix+"/index.html", db.resultPageHandler(prefix))
-	http.HandleFunc(prefix+"/results", db.resultsGraphHandler(resultRequestChan))
+	templates := template.Must(template.ParseFiles(
+		filepath.Join(staticFileDir, "results.html"),
+		filepath.Join(staticFileDir, "results.js")),
+	)
 
-	http.HandleFunc(prefix+"/maptile", db.resultsMapTileHandler(mapDataRequestChan))
-	http.HandleFunc(prefix+"/maplegend", db.resultsMapLegendHandler(mapDataRequestChan))
+	db.ServeMux.HandleFunc(prefix+"/js/vis.min.js", serveVisJS)
+	db.ServeMux.HandleFunc(prefix+"/index.html", db.resultPageHandler(prefix, templates))
+	db.ServeMux.HandleFunc(prefix+"/results", db.resultsGraphHandler(resultRequestChan))
 
-	http.HandleFunc(prefix+"/results.js", func(w http.ResponseWriter, r *http.Request) {
+	db.ServeMux.HandleFunc(prefix+"/maptile", db.resultsMapTileHandler(mapDataRequestChan))
+	db.ServeMux.HandleFunc(prefix+"/maplegend", db.resultsMapLegendHandler(mapDataRequestChan))
+
+	db.ServeMux.HandleFunc(prefix+"/results.js", func(w http.ResponseWriter, r *http.Request) {
 		err := templates.ExecuteTemplate(w, "results.js", prefix)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -70,38 +78,21 @@ func (db *DB) RegisterHTTPHandlers(prefix string) {
 	}
 
 	for _, fname := range staticFiles {
-		http.HandleFunc(prefix+fname, func(w http.ResponseWriter, r *http.Request) {
-			http.ServeFile(w, r, filepath.Join(pkgdir, r.URL.Path[len(prefix):len(r.URL.Path)]))
+		db.ServeMux.HandleFunc(prefix+fname, func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFile(w, r, filepath.Join(staticFileDir, r.URL.Path[len(prefix):len(r.URL.Path)]))
 		})
 	}
 
 	// Report status of spatial surrogate creation
-	http.HandleFunc(prefix+"/srgstatus", func(w http.ResponseWriter, r *http.Request) {
+	db.ServeMux.HandleFunc(prefix+"/srgstatus", func(w http.ResponseWriter, r *http.Request) {
 		e := json.NewEncoder(w)
 		if err := e.Encode(db.CSTConfig.sp.SrgSpecs.Status()); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	})
-
 }
 
-var templates *template.Template
-var pkgdir string
-
-func init() {
-	fmt.Println(reflect.TypeOf(DB{}).PkgPath())
-	/*p, err := build.Import("github.com/spatialmodel/inmap/emissions/slca", build.Default.GOPATH, build.FindOnly)
-	if err != nil {
-		panic(err)
-	}*/
-	p := "../"
-	templates = template.Must(template.ParseFiles(
-		filepath.Join(p, "results.html"),
-		filepath.Join(p, "results.js")))
-	pkgdir = p
-}
-
-func (db *DB) resultPageHandler(prefix string) http.HandlerFunc {
+func (db *DB) resultPageHandler(prefix string, templates *template.Template) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		paths, ids := db.EndUses()
 		type pathid struct {

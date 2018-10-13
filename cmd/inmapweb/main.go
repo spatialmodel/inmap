@@ -28,6 +28,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -37,7 +38,9 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/spatialmodel/inmap/cloud"
+	"github.com/spatialmodel/inmap/emissions/slca"
 	"github.com/spatialmodel/inmap/emissions/slca/eieio"
+	"github.com/spatialmodel/inmap/emissions/slca/greet"
 	"github.com/spatialmodel/inmap/epi"
 	"github.com/spatialmodel/inmap/inmaputil"
 	"golang.org/x/crypto/acme/autocert"
@@ -50,6 +53,7 @@ import (
 
 var (
 	config     = flag.String("config", "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/eieio/data/test_config.toml", "Path to the configuration file")
+	staticRoot = flag.String("static_root", "${GOPATH}/src/github.com/spatialmodel/inmap", "Path to the root directory containing InMAP source code")
 	production = flag.Bool("production", false, "Is this a production setting?")
 	host       = flag.String("host", "", "Address to serve from")
 	tlsPort    = flag.String("tls-port", "10000", "Port to listen for encrypted requests")
@@ -148,12 +152,16 @@ func main() {
 		}
 	}
 
+	_, greet := initCSTDB()
+	greet.RegisterHTTPHandlers("greet", filepath.Join(os.ExpandEnv(*staticRoot), "emissions", "slca", "greet"))
+
 	mx := http.NewServeMux()
 	mx.HandleFunc("/cloudrpc.CloudRPC/", func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		r = r.WithContext(context.WithValue(ctx, "user", "default_user"))
 		inmapServer.ServeHTTP(w, r)
 	})
+	mx.Handle("/greet/", greet)
 	mx.Handle("/", s)
 
 	var m *autocert.Manager
@@ -217,4 +225,48 @@ func main() {
 	if err != nil {
 		log.Fatalf("httpSrv.ListenAndServe() failed with %s", err)
 	}
+}
+
+// Copied from github.com/spatialmodel/inmap/emissions/slca/greet/cst_test.go
+func initCSTDB() (*greet.DB, *slca.DB) {
+	dir := filepath.Join(os.ExpandEnv(*staticRoot), "emissions", "slca")
+	f1, err := os.Open(dir + "/greet/default.greet")
+	if err != nil {
+		panic(err)
+	}
+	f2, err := os.Open(dir + "/eieio/data/test_config.toml")
+	if err != nil {
+		panic(err)
+	}
+	f3, err := os.Open(dir + "/greet/scc/GREET to SCC.csv")
+	if err != nil {
+		panic(err)
+	}
+
+	f4, err := os.Open(dir + "/greet/scc/GREET vehicle SCC.csv")
+	if err != nil {
+		panic(err)
+	}
+
+	f5, err := os.Open(dir + "/greet/scc/GREET technology SCC.csv")
+	if err != nil {
+		panic(err)
+	}
+
+	lcadb := greet.Load(f1)
+	if err = lcadb.AddSCCs(f3, f4, f5); err != nil {
+		panic(err)
+	}
+
+	slcadb, err := slca.LoadDB(lcadb, f2)
+	if err != nil {
+		panic(err)
+	}
+	f1.Close()
+	f2.Close()
+	f3.Close()
+	f4.Close()
+	f5.Close()
+
+	return lcadb, slcadb
 }
