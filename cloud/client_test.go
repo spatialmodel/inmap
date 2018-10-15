@@ -31,6 +31,11 @@ import (
 	"github.com/spatialmodel/inmap/inmaputil"
 )
 
+// Set up directory location for configuration files.
+func init() {
+	os.Setenv("INMAP_ROOT_DIR", "../")
+}
+
 func TestClient_fake(t *testing.T) {
 	checkConfig := func(cmd []string) {
 		wantCmd := []string{"inmap", "run", "steady",
@@ -96,7 +101,7 @@ func TestClient_fake(t *testing.T) {
 			t.Fatal(err)
 		}
 		wantStatus := &cloudrpc.JobStatus{
-		//	Status: "&JobStatus{Conditions:[],StartTime:<nil>,CompletionTime:<nil>,Active:0,Succeeded:0,Failed:0,}",
+			//	Status: "&JobStatus{Conditions:[],StartTime:<nil>,CompletionTime:<nil>,Active:0,Succeeded:0,Failed:0,}",
 		}
 		if !reflect.DeepEqual(wantStatus, status) {
 			t.Errorf("status:\n%+v\n!=\n%+v", status, wantStatus)
@@ -112,7 +117,7 @@ func TestClient_fake(t *testing.T) {
 			t.Fatal(err)
 		}
 		wantStatus := &cloudrpc.JobStatus{
-		//	Status: "&JobStatus{Conditions:[],StartTime:<nil>,CompletionTime:<nil>,Active:0,Succeeded:0,Failed:0,}",
+			//	Status: "&JobStatus{Conditions:[],StartTime:<nil>,CompletionTime:<nil>,Active:0,Succeeded:0,Failed:0,}",
 		}
 		if !reflect.DeepEqual(wantStatus, status) {
 			t.Errorf("status:\n%+v\n!=\n%+v", status, wantStatus)

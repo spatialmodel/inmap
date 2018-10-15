@@ -1,11 +1,11 @@
 # InMAPData is the path to location of baseline meteorology and pollutant data.
 # The path can include environment variables.
-InMAPData = "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/testInMAPInputData.ncf"
+InMAPData = "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testInMAPInputData.ncf"
 
 # VariableGridData is the path to the location of the variable-resolution gridded
 # InMAP data, or the location where it should be created if it doesn't already
 # exist. The path can include environment variables.
-VariableGridData = "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/inmapVarGrid.gob"
+VariableGridData = "${INMAP_ROOT_DIR}/cmd/inmap/testdata/inmapVarGrid.gob"
 
 # EmissionsShapefiles are the paths to any emissions shapefiles.
 # Can be elevated or ground level; elevated files need to have columns
@@ -16,7 +16,7 @@ VariableGridData = "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testda
 # shapefile must be the same as the projection InMAP uses.
 # Can include environment variables.
 EmissionsShapefiles = [
-	"${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/testEmis.shp"
+	"${INMAP_ROOT_DIR}/cmd/inmap/testdata/testEmis.shp"
 ]
 
 # EmissionUnits gives the units that the input emissions are in.
@@ -32,7 +32,7 @@ HTTPAddress = ":8080"
 
 # OutputFile is the path to the desired output shapefile location. It can
 # include environment variables.
-OutputFile = "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/output_${InMAPRunType}.shp"
+OutputFile = "${INMAP_ROOT_DIR}/cmd/inmap/testdata/output_${InMAPRunType}.shp"
 
 # LogFile is the path to the desired logfile location. It can include
 # environment variables. If LogFile is left blank, the logfile will be saved in
@@ -66,7 +66,7 @@ WindSpeed = "WindSpeed"
 [SR]
 # OutputFile is the path where the output file is or should be created
 # when creating a source-receptor matrix. It can contain environment variables.
-OutputFile = "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/testSR.ncf"
+OutputFile = "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testSR.ncf"
 
 
 
@@ -121,7 +121,7 @@ PopThreshold= 25000.0
 PopConcThreshold= 0.00000000001
 
 # CensusFile is the path to the shapefile holding population information.
-CensusFile= "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/testPopulation.shp"
+CensusFile= "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testPopulation.shp"
 
 # CensusPopColumns is a list of the data fields in CensusFile that should
 # be included as population estimates in the model. They can be population
@@ -136,7 +136,7 @@ PopGridColumn= "TotalPop"
 
 # MortalityRateFile is the path to the shapefile containing baseline
 # mortality rate data.
-MortalityRateFile= "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/testMortalityRate.shp"
+MortalityRateFile= "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testMortalityRate.shp"
 
 # MortalityRateColumns maps the names of each input population group to the name
 # of the field in MortalityRateFile that contains its respective baseline

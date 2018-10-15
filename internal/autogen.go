@@ -32,6 +32,11 @@ import (
 	"github.com/spf13/cobra/doc"
 )
 
+// Set up directory location for configuration files.
+func init() {
+	os.Setenv("INMAP_ROOT_DIR", ".")
+}
+
 func main() {
 	cfg := inmaputil.InitializeConfig()
 

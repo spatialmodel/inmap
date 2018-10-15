@@ -5,7 +5,7 @@ Start simulations to create an SR matrix
 ### Synopsis
 
 start starts the InMAP simulations necessary to create
-a source-receptor matrix.
+	a source-receptor matrix.
 
 ```
 inmap sr start [flags]
@@ -16,12 +16,12 @@ inmap sr start [flags]
 ```
       --InMAPData string                      
                                                             InMAPData is the path to location of baseline meteorology and pollutant data.
-                                                            The path can include environment variables. (default "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/testInMAPInputData.ncf")
+                                                            The path can include environment variables. (default "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testInMAPInputData.ncf")
       --NumIterations int                     
                                                             NumIterations is the number of iterations to calculate. If < 1, convergence
                                                             is automatically calculated.
       --VarGrid.CensusFile string             
-                                                            VarGrid.CensusFile is the path to the shapefile holding population information. (default "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/testPopulation.shp")
+                                                            VarGrid.CensusFile is the path to the shapefile holding population information. (default "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testPopulation.shp")
       --VarGrid.CensusPopColumns strings      
                                                             VarGrid.CensusPopColumns is a list of the data fields in CensusFile that should
                                                             be included as population estimates in the model. They can be population
@@ -40,7 +40,7 @@ inmap sr start [flags]
                                                              (default "{\"AllCause\":\"TotalPop\",\"AsianMort\":\"Asian\",\"BlackMort\":\"Black\",\"LatinoMort\":\"Latino\",\"NativeMort\":\"Native\",\"WhNoLMort\":\"WhiteNoLat\"}\n")
       --VarGrid.MortalityRateFile string      
                                                             VarGrid.MortalityRateFile is the path to the shapefile containing baseline
-                                                            mortality rate data. (default "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/testMortalityRate.shp")
+                                                            mortality rate data. (default "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testMortalityRate.shp")
       --VarGrid.PopConcThreshold float        
                                                             PopConcThreshold is the limit for
                                                             Σ(|ΔConcentration|)*combinedVolume*|ΔPopulation| / {Σ(|totalMass|)*totalPopulation}.
@@ -85,7 +85,7 @@ inmap sr start [flags]
       --VariableGridData string               
                                                             VariableGridData is the path to the location of the variable-resolution gridded
                                                             InMAP data, or the location where it should be created if it doesn't already
-                                                            exist. The path can include environment variables. (default "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/inmapVarGrid.gob")
+                                                            exist. The path can include environment variables. (default "${INMAP_ROOT_DIR}/cmd/inmap/testdata/inmapVarGrid.gob")
       --cmds strings                          
                                               							cmds specifies the inmap subcommands to run. (default [run,steady])
       --creategrid                            

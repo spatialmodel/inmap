@@ -15,7 +15,7 @@ inmap sr save [flags]
 ```
       --SR.OutputFile string   
                                              SR.OutputFile is the path where the output file is or should be created
-                                              when creating a source-receptor matrix. It can contain environment variables. (default "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/output_${InMAPRunType}.shp")
+                                              when creating a source-receptor matrix. It can contain environment variables. (default "${INMAP_ROOT_DIR}/cmd/inmap/testdata/output_${InMAPRunType}.shp")
   -h, --help                   help for save
 ```
 

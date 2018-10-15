@@ -38,6 +38,11 @@ import (
 	"github.com/spatialmodel/inmap/sr"
 )
 
+// Set up directory location for configuration files.
+func init() {
+	os.Setenv("INMAP_ROOT_DIR", "../")
+}
+
 // TestSaveSRGrid checks the ability to save a grid file
 // for SR matrix generation tests.
 func saveSRGrid(t *testing.T, filename string) {

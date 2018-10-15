@@ -1,6 +1,6 @@
-InMAPData= "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/preproc/inmapData_GEOSChem.ncf"
+InMAPData= "${INMAP_ROOT_DIR}/cmd/inmap/testdata/preproc/inmapData_GEOSChem.ncf"
 
-OutputFile= "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/preproc/xxx.shp"
+OutputFile= "${INMAP_ROOT_DIR}/cmd/inmap/testdata/preproc/xxx.shp"
 
 EmissionUnits= "tons/year"
 
@@ -23,13 +23,13 @@ CtmGridDx= 12000.0
 CtmGridDy= 12000.0
 
 [Preproc.GEOSChem]
-GEOSA1= "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/preproc/GEOSFP.[DATE].A1.2x25.nc"
-GEOSA3Cld= "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/preproc/GEOSFP.[DATE].A3cld.2x25.nc"
-GEOSA3Dyn= "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/preproc/GEOSFP.[DATE].A3dyn.2x25.nc"
-GEOSI3= "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/preproc/GEOSFP.[DATE].I3.2x25.nc"
-GEOSA3MstE= "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/preproc/GEOSFP.[DATE].A3mstE.2x25.nc"
-GEOSChem= "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/preproc/gc_output.[DATE].nc"
-VegTypeGlobal= "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/preproc/vegtype.global.txt"
+GEOSA1= "${INMAP_ROOT_DIR}/cmd/inmap/testdata/preproc/GEOSFP.[DATE].A1.2x25.nc"
+GEOSA3Cld= "${INMAP_ROOT_DIR}/cmd/inmap/testdata/preproc/GEOSFP.[DATE].A3cld.2x25.nc"
+GEOSA3Dyn= "${INMAP_ROOT_DIR}/cmd/inmap/testdata/preproc/GEOSFP.[DATE].A3dyn.2x25.nc"
+GEOSI3= "${INMAP_ROOT_DIR}/cmd/inmap/testdata/preproc/GEOSFP.[DATE].I3.2x25.nc"
+GEOSA3MstE= "${INMAP_ROOT_DIR}/cmd/inmap/testdata/preproc/GEOSFP.[DATE].A3mstE.2x25.nc"
+GEOSChem= "${INMAP_ROOT_DIR}/cmd/inmap/testdata/preproc/gc_output.[DATE].nc"
+VegTypeGlobal= "${INMAP_ROOT_DIR}/cmd/inmap/testdata/preproc/vegtype.global.txt"
 Dash= true
 ChemRecordInterval= "3h"
 ChemFileInterval= "3h"

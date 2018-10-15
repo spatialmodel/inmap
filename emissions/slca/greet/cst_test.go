@@ -8,8 +8,14 @@ import (
 
 	"github.com/spatialmodel/inmap/emissions/slca"
 
+	"github.com/BurntSushi/toml"
 	"github.com/ctessum/unit"
 )
+
+// Set up directory location for configuration file.
+func init() {
+	os.Setenv("INMAP_ROOT_DIR", "../../../")
+}
 
 func initCSTDB() (*DB, *slca.DB) {
 	f1, err := os.Open("default.greet")
@@ -40,10 +46,19 @@ func initCSTDB() (*DB, *slca.DB) {
 		panic(err)
 	}
 
-	slcadb, err := slca.LoadDB(lcadb, f2)
-	if err != nil {
+	cstConfig := new(slca.CSTConfig)
+	if _, err := toml.DecodeReader(f2, cstConfig); err != nil {
 		panic(err)
 	}
+	if err := cstConfig.Setup(); err != nil {
+		panic(err)
+	}
+
+	slcadb := &slca.DB{
+		LCADB:     lcadb,
+		CSTConfig: cstConfig,
+	}
+
 	f1.Close()
 	f2.Close()
 	f3.Close()
@@ -80,7 +95,7 @@ func TestSpatial(t *testing.T) {
 		// The functional unit is 1 of whatever the output units are.
 		functionalUnit := unit.New(1, outputAmount.Dimensions())
 
-		wtpResults := slca.SolveGraph(pathway, functionalUnit, lcadb)
+		wtpResults := slca.SolveGraph(pathway, functionalUnit, &slca.DB{LCADB: lcadb})
 		sum := wtpResults.Sum()
 		if _, ok := sum.Emissions[polgas]; !ok {
 			continue

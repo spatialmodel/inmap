@@ -9,9 +9,14 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"github.com/spatialmodel/inmap/epi"
 	"github.com/spatialmodel/inmap/emissions/slca/eieio/eieiorpc"
+	"github.com/spatialmodel/inmap/epi"
 )
+
+// Set up directory location for configuration files.
+func init() {
+	os.Setenv("INMAP_ROOT_DIR", "../../")
+}
 
 func TestPopulationIncidence(t *testing.T) {
 	f, err := os.Open("testdata/test_config.toml")

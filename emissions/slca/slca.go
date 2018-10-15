@@ -21,7 +21,6 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"reflect"
@@ -33,7 +32,6 @@ import (
 	"github.com/spatialmodel/inmap/epi"
 
 	"bitbucket.org/ctessum/cdf"
-	"github.com/BurntSushi/toml"
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/index/rtree"
 	"github.com/ctessum/requestcache"
@@ -48,22 +46,6 @@ type DB struct {
 
 	// Chemical, spatial, and temporal (CST) configuration
 	CSTConfig *CSTConfig
-}
-
-// LoadDB loads the LCA database and chemical, spatial, and
-// temporal (CST) information.
-func LoadDB(lca LCADB, cstConfigFile io.Reader) (*DB, error) {
-	db := new(DB)
-	db.LCADB = lca
-	db.CSTConfig = &CSTConfig{}
-
-	if _, err := toml.DecodeReader(cstConfigFile, db.CSTConfig); err != nil {
-		return nil, err
-	}
-	if err := db.CSTConfig.Setup(); err != nil {
-		return nil, err
-	}
-	return db, nil
 }
 
 // CSTConfig holds Chemical, spatial, and temporal (CST) configuration
@@ -288,7 +270,6 @@ func (c *CSTConfig) Geometry() ([]geom.Polygonal, error) {
 		return nil, err
 	}
 	return iface.([]geom.Polygonal), nil
-
 }
 
 // geometry returns the air quality model grid cell geometry.

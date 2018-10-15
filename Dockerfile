@@ -17,5 +17,7 @@ RUN go install github.com/spatialmodel/inmap/cmd/...
 # This step installs ssl certificates for testing.
 RUN go get google.golang.org/grpc/testdata
 
+ENV INMAP_ROOT_DIR /go/src/github.com/spatialmodel/inmap/
+
 EXPOSE 10000
 EXPOSE 8080

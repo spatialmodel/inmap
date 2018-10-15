@@ -1,6 +1,6 @@
-InMAPData= "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/preproc/inmapData_WRFChem.ncf"
+InMAPData= "${INMAP_ROOT_DIR}/cmd/inmap/testdata/preproc/inmapData_WRFChem.ncf"
 
-OutputFile= "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/preproc/xxx.shp"
+OutputFile= "${INMAP_ROOT_DIR}/cmd/inmap/testdata/preproc/xxx.shp"
 
 EmissionUnits= "tons/year"
 
@@ -21,4 +21,4 @@ CtmGridDx= 12000.0
 CtmGridDy= 12000.0
 
 [Preproc.WRFChem]
-WRFOut= "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/preproc/wrfout_d01_[DATE]"
+WRFOut= "${INMAP_ROOT_DIR}/cmd/inmap/testdata/preproc/wrfout_d01_[DATE]"

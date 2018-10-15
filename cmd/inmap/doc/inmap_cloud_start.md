@@ -15,7 +15,7 @@ inmap cloud start [flags]
 ```
       --InMAPData string                      
                                                             InMAPData is the path to location of baseline meteorology and pollutant data.
-                                                            The path can include environment variables. (default "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/testInMAPInputData.ncf")
+                                                            The path can include environment variables. (default "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testInMAPInputData.ncf")
       --NumIterations int                     
                                                             NumIterations is the number of iterations to calculate. If < 1, convergence
                                                             is automatically calculated.
@@ -26,7 +26,7 @@ inmap cloud start [flags]
                                                             OutputVariables specifies which model variables should be included in the
                                                             output file. It can include environment variables. (default "{\"TotalPM25\":\"PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA\",\"TotalPopD\":\"(exp(log(1.078)/10 * TotalPM25) - 1) * TotalPop * AllCause / 100000\"}\n")
       --VarGrid.CensusFile string             
-                                                            VarGrid.CensusFile is the path to the shapefile holding population information. (default "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/testPopulation.shp")
+                                                            VarGrid.CensusFile is the path to the shapefile holding population information. (default "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testPopulation.shp")
       --VarGrid.CensusPopColumns strings      
                                                             VarGrid.CensusPopColumns is a list of the data fields in CensusFile that should
                                                             be included as population estimates in the model. They can be population
@@ -45,7 +45,7 @@ inmap cloud start [flags]
                                                              (default "{\"AllCause\":\"TotalPop\",\"AsianMort\":\"Asian\",\"BlackMort\":\"Black\",\"LatinoMort\":\"Latino\",\"NativeMort\":\"Native\",\"WhNoLMort\":\"WhiteNoLat\"}\n")
       --VarGrid.MortalityRateFile string      
                                                             VarGrid.MortalityRateFile is the path to the shapefile containing baseline
-                                                            mortality rate data. (default "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/testMortalityRate.shp")
+                                                            mortality rate data. (default "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testMortalityRate.shp")
       --VarGrid.PopConcThreshold float        
                                                             PopConcThreshold is the limit for
                                                             Σ(|ΔConcentration|)*combinedVolume*|ΔPopulation| / {Σ(|totalMass|)*totalPopulation}.

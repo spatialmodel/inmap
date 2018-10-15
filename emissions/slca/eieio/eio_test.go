@@ -22,12 +22,18 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"os"
 	"testing"
 
 	"github.com/spatialmodel/inmap/emissions/slca/eieio/eieiorpc"
 )
 
 const tolerance = 1.e-10 // tolerance for float comparison
+
+// Set up directory location for configuration file.
+func init() {
+	os.Setenv("INMAP_ROOT_DIR", "../../../")
+}
 
 func different(a, b float64) bool {
 	if math.IsNaN(a) || math.IsNaN(b) || math.IsInf(a, 0) || math.IsInf(b, 0) {
