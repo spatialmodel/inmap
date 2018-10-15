@@ -52,8 +52,8 @@ import (
 )
 
 var (
-	config     = flag.String("config", "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/eieio/data/test_config.toml", "Path to the configuration file")
-	staticRoot = flag.String("static_root", "${GOPATH}/src/github.com/spatialmodel/inmap", "Path to the root directory containing InMAP source code")
+	config     = flag.String("config", "${INMAP_ROOT_DIR}/emissions/slca/eieio/data/test_config.toml", "Path to the configuration file")
+	staticRoot = flag.String("static_root", "${INMAP_ROOT_DIR}", "Path to the root directory containing InMAP source code")
 	production = flag.Bool("production", false, "Is this a production setting?")
 	host       = flag.String("host", "", "Address to serve from")
 	tlsPort    = flag.String("tls-port", "10000", "Port to listen for encrypted requests")
@@ -152,8 +152,8 @@ func main() {
 		}
 	}
 
-	_, greet := initCSTDB()
-	greet.RegisterHTTPHandlers("greet", filepath.Join(os.ExpandEnv(*staticRoot), "emissions", "slca", "greet"))
+	_, greet := initCSTDB(&s.SpatialEIO.CSTConfig)
+	greet.RegisterHTTPHandlers("/greet/", filepath.Join(os.ExpandEnv(*staticRoot), "emissions", "slca"))
 
 	mx := http.NewServeMux()
 	mx.HandleFunc("/cloudrpc.CloudRPC/", func(w http.ResponseWriter, r *http.Request) {
@@ -228,13 +228,9 @@ func main() {
 }
 
 // Copied from github.com/spatialmodel/inmap/emissions/slca/greet/cst_test.go
-func initCSTDB() (*greet.DB, *slca.DB) {
+func initCSTDB(c *slca.CSTConfig) (*greet.DB, *slca.DB) {
 	dir := filepath.Join(os.ExpandEnv(*staticRoot), "emissions", "slca")
 	f1, err := os.Open(dir + "/greet/default.greet")
-	if err != nil {
-		panic(err)
-	}
-	f2, err := os.Open(dir + "/eieio/data/test_config.toml")
 	if err != nil {
 		panic(err)
 	}
@@ -258,12 +254,11 @@ func initCSTDB() (*greet.DB, *slca.DB) {
 		panic(err)
 	}
 
-	slcadb, err := slca.LoadDB(lcadb, f2)
-	if err != nil {
-		panic(err)
+	slcadb := &slca.DB{
+		LCADB:     lcadb,
+		CSTConfig: c,
 	}
 	f1.Close()
-	f2.Close()
 	f3.Close()
 	f4.Close()
 	f5.Close()

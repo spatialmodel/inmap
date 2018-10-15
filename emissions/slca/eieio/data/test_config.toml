@@ -1,32 +1,33 @@
-SCCMapFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/eieio/data/scc-io_small_test.xlsx"
-SCCDescriptionFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/aep/data/nei2014/sccdesc_2014platform_09sep2016_v0.txt"
+SCCMapFile = "${INMAP_ROOT_DIR}/emissions/slca/eieio/data/scc-io_small_test.xlsx"
+SCCDescriptionFile = "${INMAP_ROOT_DIR}/emissions/aep/data/nei2014/sccdesc_2014platform_09sep2016_v0.txt"
 MemCacheSize = 1000
 
-IOAggregatorFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/eieio/data/aggregates.xlsx"
-SCCAggregatorFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/eieio/data/aggregates_small_test.xlsx"
-StaticDir = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/eieio"
+IOAggregatorFile = "${INMAP_ROOT_DIR}/emissions/slca/eieio/data/aggregates.xlsx"
+SCCAggregatorFile = "${INMAP_ROOT_DIR}/emissions/slca/eieio/data/aggregates_small_test.xlsx"
+StaticDir = "${INMAP_ROOT_DIR}/emissions/slca/eieio"
+CESDataDir = "${INMAP_ROOT_DIR}/emissions/slca/eieio/ces"
 DefaultYear = 2011
 
 [Config]
   Years = [2007, 2011, 2015]
   DetailYear = 2007
-  UseSummary = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/eieio/data/IOUse_Before_Redefinitions_PRO_1997-2015_Summary.xlsx"
-  UseDetail = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/eieio/data/IOUse_Before_Redefinitions_PRO_2007_Detail.xlsx"
-  ImportsSummary = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/eieio/data/ImportMatrices_Before_Redefinitions_SUM_1997-2016.xlsx"
-  ImportsDetail = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/eieio/data/ImportMatrices_Before_Redefinitions_DET_2007.xlsx"
-  TotalRequirementsSummary = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/eieio/data/IxC_TR_1997-2015_Summary.xlsx"
-  TotalRequirementsDetail =     "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/eieio/data/IxC_TR_2007_Detail.xlsx"
-  DomesticRequirementsSummary = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/eieio/data/IxC_Domestic_1997-2015_Summary.xlsx"
-  DomesticRequirementsDetail =  "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/eieio/data/IxC_Domestic_2007_Detail.xlsx"
+  UseSummary = "${INMAP_ROOT_DIR}/emissions/slca/eieio/data/IOUse_Before_Redefinitions_PRO_1997-2015_Summary.xlsx"
+  UseDetail = "${INMAP_ROOT_DIR}/emissions/slca/eieio/data/IOUse_Before_Redefinitions_PRO_2007_Detail.xlsx"
+  ImportsSummary = "${INMAP_ROOT_DIR}/emissions/slca/eieio/data/ImportMatrices_Before_Redefinitions_SUM_1997-2016.xlsx"
+  ImportsDetail = "${INMAP_ROOT_DIR}/emissions/slca/eieio/data/ImportMatrices_Before_Redefinitions_DET_2007.xlsx"
+  TotalRequirementsSummary = "${INMAP_ROOT_DIR}/emissions/slca/eieio/data/IxC_TR_1997-2015_Summary.xlsx"
+  TotalRequirementsDetail =     "${INMAP_ROOT_DIR}/emissions/slca/eieio/data/IxC_TR_2007_Detail.xlsx"
+  DomesticRequirementsSummary = "${INMAP_ROOT_DIR}/emissions/slca/eieio/data/IxC_Domestic_1997-2015_Summary.xlsx"
+  DomesticRequirementsDetail =  "${INMAP_ROOT_DIR}/emissions/slca/eieio/data/IxC_Domestic_2007_Detail.xlsx"
 
 [SpatialEIO]
   EIEIOCache = ""
 
-  SRFile = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/testdata/testSR.ncf"
+  SRFile = "${INMAP_ROOT_DIR}/emissions/slca/testdata/testSR.ncf"
 
   NEIBaseYear = 2014
-  NEITrends = "$GOPATH/src/github.com/spatialmodel/inmap/emissions/aep/aeputil/testdata/state_tier1_90-16.xlsx"
-  SCCReference = "$GOPATH/src/github.com/spatialmodel/inmap/emissions/aep/aeputil/testdata/SCCDownload-2017-0622-080147.csv"
+  NEITrends = "${INMAP_ROOT_DIR}/emissions/aep/aeputil/testdata/state_tier1_90-16.xlsx"
+  SCCReference = "${INMAP_ROOT_DIR}/emissions/aep/aeputil/testdata/SCCDownload-2017-0622-080147.csv"
   ConcentrationCache = ""
   HealthCache = ""
   SpatialCache = ""
@@ -34,20 +35,20 @@ DefaultYear = 2011
   DefaultFIPS = "00000"
 
   FugitiveDustSectors = ["test_adj"]
-  FugitiveDustAdjustment = "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/testdata/fugitive_dust_adj.csv"
+  FugitiveDustAdjustment = "${INMAP_ROOT_DIR}/emissions/slca/testdata/fugitive_dust_adj.csv"
 
   CensusPopColumns = ["TotalPop", "WhiteNoLat", "Black", "Native", "Asian", "Latino"]
 
   # CensusFile is the path to the shapefile holding population information.
   [SpatialEIO.CensusFile]
-    2011 = "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/testPopulation.shp"
-    2014 = "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/testPopulation.shp"
+    2011 = "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testPopulation.shp"
+    2014 = "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testPopulation.shp"
 
   # MortalityRateFile is the path to the shapefile containing baseline
   # mortality rate data.
   [SpatialEIO.MortalityRateFile]
-    2011 = "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/testMortalityRate.shp"
-    2014 = "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/testMortalityRate.shp"
+    2011 = "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testMortalityRate.shp"
+    2014 = "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testMortalityRate.shp"
 
 
   # MortalityRateColumns maps the names of each input population group to the name
@@ -63,11 +64,11 @@ DefaultYear = 2011
     LatinoMort = "Latino"
 
 [SpatialEIO.SpatialConfig]
-  SrgSpec = "$GOPATH/src/github.com/spatialmodel/inmap/emissions/aep/aeputil/testdata/surrogate_specification.csv"
-  SrgShapefileDirectory = "$GOPATH/src/github.com/spatialmodel/inmap/emissions/aep/testdata/"
+  SrgSpec = "${INMAP_ROOT_DIR}/emissions/aep/aeputil/testdata/surrogate_specification.csv"
+  SrgShapefileDirectory = "${INMAP_ROOT_DIR}/emissions/aep/testdata/"
   SCCExactMatch = true
   GridRef = [
-    "$GOPATH/src/github.com/spatialmodel/inmap/emissions/aep/aeputil/testdata/gridref.txt",
+    "${INMAP_ROOT_DIR}/emissions/aep/aeputil/testdata/gridref.txt",
   ]
   OutputSR = "+proj=lcc +lat_1=33.000000 +lat_2=45.000000 +lat_0=40.000000 +lon_0=-97.000000 +x_0=0 +y_0=0 +a=6370997.000000 +b=6370997.000000 +to_meter=1"
   InputSR = "+proj=longlat"
@@ -81,7 +82,7 @@ DefaultYear = 2011
 
   [SpatialEIO.InventoryConfig.NEIFiles]
     test = [
-      "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/eieio/data/testemis.csv",
+      "${INMAP_ROOT_DIR}/emissions/slca/eieio/data/testemis.csv",
     ]
 
 
@@ -132,7 +133,7 @@ DefaultYear = 2011
 
     [SpatialEIO.EvaluationInventoryConfig.NEIFiles]
       test = [
-        "${GOPATH}/src/github.com/spatialmodel/inmap/emissions/slca/eieio/data/testemis.csv",
+        "${INMAP_ROOT_DIR}/emissions/slca/eieio/data/testemis.csv",
       ]
 
     [SpatialEIO.EvaluationInventoryConfig.PolsToKeep]

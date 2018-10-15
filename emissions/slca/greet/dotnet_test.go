@@ -81,7 +81,7 @@ func (gt greetTest) calcWTP(db *DB) (results *slca.OnsiteResultsNoSubprocess, ru
 	pathway, err := db.GetPathwayMixOrVehicleFromName(gt.Pathway)
 	handle(err)
 	amount := getFunctionalUnit(gt.FunctionalUnit)
-	wtpResults := slca.SolveGraph(pathway, amount, db)
+	wtpResults := slca.SolveGraph(pathway, amount, &slca.DB{LCADB: db})
 	//f, err := os.Create("corn_emissionsOnly.csv")
 	//handle(err)
 	//w := csv.NewWriter(f)

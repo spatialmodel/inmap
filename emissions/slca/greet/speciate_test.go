@@ -5,8 +5,8 @@ import (
 	"math"
 	"testing"
 
-	"github.com/spatialmodel/inmap/emissions/slca"
 	"github.com/ctessum/unit"
+	"github.com/spatialmodel/inmap/emissions/slca"
 )
 
 func TestSpeciate(t *testing.T) {
@@ -27,7 +27,7 @@ func TestSpeciate(t *testing.T) {
 		// The functional unit is 1 of whatever the output units are.
 		functionalUnit := unit.New(1, outputAmount.Dimensions())
 
-		wtpResults := slca.SolveGraph(pathway, functionalUnit, lcadb)
+		wtpResults := slca.SolveGraph(pathway, functionalUnit, &slca.DB{LCADB: lcadb})
 
 		specResults, err := slcadb.Speciate(wtpResults)
 		if err != nil {

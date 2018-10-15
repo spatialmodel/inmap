@@ -99,6 +99,10 @@ type ServerConfig struct {
 
 	// DefaultYear specifies the default analysis year.
 	DefaultYear Year
+
+	// CESDataDir is the path to the directory holding CES data,
+	// e.g. ${INMAP_ROOT_DIR}/emissions/slca/eieio/ces/data
+	CESDataDir string
 }
 
 // NewServer creates a new EIO-LCA server, where hr represents the hazard ratio
@@ -124,7 +128,7 @@ func NewServer(c *ServerConfig, hr ...epi.HRer) (*Server, error) {
 		defaultYear: c.DefaultYear,
 		Log:         logrus.StandardLogger(),
 	}
-	model.CES, err = ces.NewCES(model)
+	model.CES, err = ces.NewCES(model, c.CESDataDir)
 	if err != nil {
 		return nil, fmt.Errorf("eioserve: loading demographic consumption: %v", err)
 	}

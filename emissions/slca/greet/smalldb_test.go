@@ -491,7 +491,7 @@ func runTestDB(pathname string) (float64, float64, float64) {
 	testDB := initTestDB()
 	path, err := testDB.GetPathwayMixOrVehicleFromName(pathname)
 	handle(err)
-	r := slca.SolveGraph(path, unit.New(1, unit.Kilogram), testDB)
+	r := slca.SolveGraph(path, unit.New(1, unit.Kilogram), &slca.DB{LCADB: testDB})
 	sum := r.Sum()
 	g, err := testDB.GetGas("Test Gas 1")
 	handle(err)

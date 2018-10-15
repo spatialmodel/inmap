@@ -76,7 +76,7 @@ var nodeColor = function(val, isExpanded, procType) {
 };
 
 var newNetwork = function(s) {
-  $.getJSON("{{.}}/results?pathselect=" + s.pathID + "&amt=" + s.amt + "&units=" + s.units, function(result) {
+  $.getJSON("results?pathselect=" + s.pathID + "&amt=" + s.amt + "&units=" + s.units, function(result) {
     lcaData = result;
     updateResultOptions();
     updateNetwork(s);
@@ -112,7 +112,7 @@ var amtUnits = function(results, varname) {
   var amt = 0;
   var units = "";
   if (varname in results) {
-    amt = results[varname].Value;
+    amt = results[varname].Amount;
     units = results[varname].Units;
   }
   return [amt, units];
@@ -130,7 +130,7 @@ var updateNetwork = function(s) {
   var edges = new vis.DataSet();
   for (var i in lcaData.Nodes) {
     var node = lcaData.Nodes[i];
-    var amtunits = amtUnits(node.Results, s.resultVar);
+    var amtunits = amtUnits(node.Values, s.resultVar);
     var amt = amtunits[0];
     var units = amtunits[1];
     nodes.add({
@@ -144,7 +144,7 @@ var updateNetwork = function(s) {
   }
   for (var i in lcaData.Edges) {
     var edge = lcaData.Edges[i];
-    var amtunits = amtUnits(edge.Results, s.resultVar);
+    var amtunits = amtUnits(edge.Values, s.resultVar);
     edges.add({
       from: edge.FromID,
       to: edge.ToID,

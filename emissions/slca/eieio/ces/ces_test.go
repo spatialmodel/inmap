@@ -30,6 +30,11 @@ import (
 	"github.com/spatialmodel/inmap/epi"
 )
 
+// Set up directory location
+func init() {
+	os.Setenv("INMAP_ROOT_DIR", "../../../../")
+}
+
 func TestCES(t *testing.T) {
 	f, err := os.Open("../data/test_config.toml")
 	if err != nil {
@@ -48,7 +53,7 @@ func TestCES(t *testing.T) {
 		t.Fatalf("failed to create server: %v", err)
 	}
 
-	c, err := ces.NewCES(s)
+	c, err := ces.NewCES(s, ".")
 	if err != nil {
 		t.Fatal(err)
 	}

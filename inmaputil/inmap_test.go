@@ -26,6 +26,11 @@ import (
 	"testing"
 )
 
+// Set up directory location for configuration files.
+func init() {
+	os.Setenv("INMAP_ROOT_DIR", "../")
+}
+
 func TestCreateGrid(t *testing.T) {
 	cfg := InitializeConfig()
 	cfg.Set("config", "../cmd/inmap/configExample.toml")

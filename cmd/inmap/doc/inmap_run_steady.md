@@ -5,7 +5,7 @@ Run InMAP in steady-state mode.
 ### Synopsis
 
 steady runs InMAP in steady-state mode to calculate annual average
-concentrations with no temporal variability.
+	concentrations with no temporal variability.
 
 ```
 inmap run steady [flags]
@@ -34,10 +34,10 @@ inmap run steady [flags]
                                                             Emissions will be allocated from the geometries in the shape file
                                                             to the InMAP computational grid, but the mapping projection of the
                                                             shapefile must be the same as the projection InMAP uses.
-                                                            Can include environment variables. (default [${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/testEmis.shp])
+                                                            Can include environment variables. (default [${INMAP_ROOT_DIR}/cmd/inmap/testdata/testEmis.shp])
       --InMAPData string                      
                                                             InMAPData is the path to location of baseline meteorology and pollutant data.
-                                                            The path can include environment variables. (default "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/testInMAPInputData.ncf")
+                                                            The path can include environment variables. (default "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testInMAPInputData.ncf")
       --LogFile string                        
                                                             LogFile is the path to the desired logfile location. It can include
                                                             environment variables. If LogFile is left blank, the logfile will be saved in
@@ -52,7 +52,7 @@ inmap run steady [flags]
                                                             OutputVariables specifies which model variables should be included in the
                                                             output file. It can include environment variables. (default "{\"TotalPM25\":\"PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA\",\"TotalPopD\":\"(exp(log(1.078)/10 * TotalPM25) - 1) * TotalPop * AllCause / 100000\"}\n")
       --VarGrid.CensusFile string             
-                                                            VarGrid.CensusFile is the path to the shapefile holding population information. (default "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/testPopulation.shp")
+                                                            VarGrid.CensusFile is the path to the shapefile holding population information. (default "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testPopulation.shp")
       --VarGrid.CensusPopColumns strings      
                                                             VarGrid.CensusPopColumns is a list of the data fields in CensusFile that should
                                                             be included as population estimates in the model. They can be population
@@ -71,7 +71,7 @@ inmap run steady [flags]
                                                              (default "{\"AllCause\":\"TotalPop\",\"AsianMort\":\"Asian\",\"BlackMort\":\"Black\",\"LatinoMort\":\"Latino\",\"NativeMort\":\"Native\",\"WhNoLMort\":\"WhiteNoLat\"}\n")
       --VarGrid.MortalityRateFile string      
                                                             VarGrid.MortalityRateFile is the path to the shapefile containing baseline
-                                                            mortality rate data. (default "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/testMortalityRate.shp")
+                                                            mortality rate data. (default "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testMortalityRate.shp")
       --VarGrid.PopConcThreshold float        
                                                             PopConcThreshold is the limit for
                                                             Σ(|ΔConcentration|)*combinedVolume*|ΔPopulation| / {Σ(|totalMass|)*totalPopulation}.
@@ -116,7 +116,7 @@ inmap run steady [flags]
       --VariableGridData string               
                                                             VariableGridData is the path to the location of the variable-resolution gridded
                                                             InMAP data, or the location where it should be created if it doesn't already
-                                                            exist. The path can include environment variables. (default "${GOPATH}/src/github.com/spatialmodel/inmap/cmd/inmap/testdata/inmapVarGrid.gob")
+                                                            exist. The path can include environment variables. (default "${INMAP_ROOT_DIR}/cmd/inmap/testdata/inmapVarGrid.gob")
       --config string                         
                                                             config specifies the configuration file location.
       --creategrid                            

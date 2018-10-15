@@ -51,40 +51,25 @@ func (db *DB) RegisterHTTPHandlers(prefix, staticFileDir string) {
 
 	templates := template.Must(template.ParseFiles(
 		filepath.Join(staticFileDir, "results.html"),
-		filepath.Join(staticFileDir, "results.js")),
-	)
+	))
 
-	db.ServeMux.HandleFunc(prefix+"/js/vis.min.js", serveVisJS)
-	db.ServeMux.HandleFunc(prefix+"/index.html", db.resultPageHandler(prefix, templates))
-	db.ServeMux.HandleFunc(prefix+"/results", db.resultsGraphHandler(resultRequestChan))
+	db.ServeMux.HandleFunc(prefix+"js/vis.min.js", serveVisJS)
+	db.ServeMux.HandleFunc(prefix, db.resultPageHandler(prefix, templates))
+	db.ServeMux.HandleFunc(prefix+"results", db.resultsGraphHandler(resultRequestChan))
 
-	db.ServeMux.HandleFunc(prefix+"/maptile", db.resultsMapTileHandler(mapDataRequestChan))
-	db.ServeMux.HandleFunc(prefix+"/maplegend", db.resultsMapLegendHandler(mapDataRequestChan))
+	db.ServeMux.HandleFunc(prefix+"maptile", db.resultsMapTileHandler(mapDataRequestChan))
+	db.ServeMux.HandleFunc(prefix+"maplegend", db.resultsMapLegendHandler(mapDataRequestChan))
 
-	db.ServeMux.HandleFunc(prefix+"/results.js", func(w http.ResponseWriter, r *http.Request) {
-		err := templates.ExecuteTemplate(w, "results.js", prefix)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
+	db.ServeMux.HandleFunc(prefix+"results.js", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(staticFileDir, "results.js"))
 	})
 
-	staticFiles := []string{
-		"/css/bootstrap.min.css",
-		"/js/bootstrap.min.js",
-		"/sidebar.css",
-		"/fonts/glyphicons-halflings-regular.woff2",
-		"/fonts/glyphicons-halflings-regular.woff",
-		"/fonts/glyphicons-halflings-regular.ttf",
-	}
-
-	for _, fname := range staticFiles {
-		db.ServeMux.HandleFunc(prefix+fname, func(w http.ResponseWriter, r *http.Request) {
-			http.ServeFile(w, r, filepath.Join(staticFileDir, r.URL.Path[len(prefix):len(r.URL.Path)]))
-		})
-	}
+	db.ServeMux.HandleFunc(prefix+"sidebar.css", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(staticFileDir, "sidebar.css"))
+	})
 
 	// Report status of spatial surrogate creation
-	db.ServeMux.HandleFunc(prefix+"/srgstatus", func(w http.ResponseWriter, r *http.Request) {
+	db.ServeMux.HandleFunc(prefix+"srgstatus", func(w http.ResponseWriter, r *http.Request) {
 		e := json.NewEncoder(w)
 		if err := e.Encode(db.CSTConfig.sp.SrgSpecs.Status()); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -191,7 +176,7 @@ func (db *DB) resultsServer(resultRequestChan chan *resultRequest) {
 			r := SolveGraph(path, amt, db)
 			resultChan <- r
 		}()
-		timer := time.NewTimer(30 * time.Second)
+		timer := time.NewTimer(180 * time.Second)
 		select {
 		case request.Results = <-resultChan:
 			timer.Stop()
@@ -221,15 +206,96 @@ func getResults(resultRequestChan chan *resultRequest,
 	return result
 }
 
-func (db *DB) resultsGraphHandler(
-	resultRequestChan chan *resultRequest) http.HandlerFunc {
+func (db *DB) resultsGraphHandler(resultRequestChan chan *resultRequest) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/json")
 
 		result := getResults(resultRequestChan, r)
-		handleErrHTTP(result.Err, w)
+		if result.Err != nil {
+			handleErrHTTP(result.Err, w)
+			return
+		}
+		type value struct {
+			Amount float64
+			Units  string
+		}
+		type node struct {
+			ID       string
+			PathName string
+			ProcName string
+			ProcType ProcessType
+			Values   map[string]value // A value for each resource/emission.
+			Color    string
+		}
+		type edge struct {
+			ToID, FromID string
+			Values       map[string]value // A value for each resource/emission.
+		}
+		type nameIDValUnits struct {
+			Name  string
+			ID    string
+			Value float64
+			Units string
+		}
+		data := &struct {
+			Emissions []nameIDValUnits
+			Resources []nameIDValUnits
+			Nodes     []node
+			Edges     []edge
+		}{}
+		sum := result.Results.Sum()
+		for g, v := range sum.Emissions {
+			data.Emissions = append(data.Emissions, nameIDValUnits{
+				Name:  g.GetName(),
+				ID:    g.GetID(),
+				Value: v.Value(),
+				Units: v.Dimensions().String(),
+			})
+		}
+		for r, v := range sum.Resources {
+			data.Resources = append(data.Resources, nameIDValUnits{
+				Name:  r.GetName(),
+				ID:    r.GetID(),
+				Value: v.Value(),
+				Units: v.Dimensions().String(),
+			})
+		}
+
+		for _, n := range result.Results.Nodes {
+			or := result.Results.SumFor(n).FlattenSubprocess()
+			vals := make(map[string]value)
+			for g, v := range or.Emissions {
+				vals[g.GetID()] = value{Amount: v.Value(), Units: v.Dimensions().String()}
+			}
+			for r, v := range or.Resources {
+				vals[r.GetID()] = value{Amount: v.Value(), Units: v.Dimensions().String()}
+			}
+			data.Nodes = append(data.Nodes, node{
+				ID:       n.ID,
+				PathName: n.Pathway.GetName(),
+				ProcName: n.Process.GetName(),
+				ProcType: n.Process.Type(),
+				Values:   vals,
+			})
+		}
+		for _, e := range result.Results.Edges {
+			or := e.FromResults.FlattenSubprocess()
+			vals := make(map[string]value)
+			for g, v := range or.Emissions {
+				vals[g.GetID()] = value{Amount: v.Value(), Units: v.Dimensions().String()}
+			}
+			for r, v := range or.Resources {
+				vals[r.GetID()] = value{Amount: v.Value(), Units: v.Dimensions().String()}
+			}
+			data.Edges = append(data.Edges, edge{
+				ToID:   e.ToID,
+				FromID: e.FromID,
+				Values: vals,
+			})
+		}
+
 		e := json.NewEncoder(w)
-		err := e.Encode(result.Results)
+		err := e.Encode(data)
 		log.Printf("ResultsGraphHandler sent results for %v", r.URL)
 		handleErrHTTP(err, w)
 	}

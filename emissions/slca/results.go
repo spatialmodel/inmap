@@ -272,10 +272,10 @@ func (r Results) Sum() *OnsiteResultsNoSubprocess {
 // SolveGraph calculates the life cycle resource use and emissions
 // of the specified amount of the specified pathway, using a graph-based
 // solving method.
-func SolveGraph(path Pathway, amount *unit.Unit, db LCADB) *Results {
-	proc, output := path.MainProcessAndOutput(db)
-	r := NewResults(db)
-	amt := output.GetResource(db).ConvertToDefaultUnits(amount, db)
+func SolveGraph(path Pathway, amount *unit.Unit, db *DB) *Results {
+	proc, output := path.MainProcessAndOutput(db.LCADB)
+	r := NewResults(db.LCADB)
+	amt := output.GetResource(db.LCADB).ConvertToDefaultUnits(amount, db.LCADB)
 	r.wtp(proc, endUse(0), path, path, output, output, amt, 0)
 	return r
 }

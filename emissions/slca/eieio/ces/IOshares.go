@@ -23,7 +23,6 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"go/build"
 	"math"
 	"os"
 	"path/filepath"
@@ -36,17 +35,6 @@ import (
 
 	"github.com/tealeg/xlsx"
 )
-
-// Filedir specifies the directory of the CES data files.
-var Filedir string
-
-func init() {
-	cespkg, err := build.Import("github.com/spatialmodel/inmap/emissions/slca/eieio/ces", "", build.FindOnly)
-	if err != nil {
-		panic(err)
-	}
-	Filedir = filepath.Join(cespkg.SrcRoot, cespkg.ImportPath)
-}
 
 // CES holds the fractions of personal expenditures that are incurred by
 // non-hispanic white people by year and 389-sector EIO category.
@@ -138,10 +126,11 @@ func dataToXlsxFile(d map[string]float64, xlsxFile *xlsx.File, sheet string) {
 }
 
 // NewCES loads data into a new CES object.
-func NewCES(eio eieiorpc.EIEIOrpcServer) (*CES, error) {
+func NewCES(eio eieiorpc.EIEIOrpcServer, dataDir string) (*CES, error) {
+	dataDir = os.ExpandEnv(dataDir)
 	// Create map of IO categories to CE categories
 	ioCEMap := make(map[string][]string)
-	ioCEXLSXPath := filepath.Join(Filedir, "IO-CEcrosswalk.xlsx")
+	ioCEXLSXPath := filepath.Join(dataDir, "IO-CEcrosswalk.xlsx")
 	ioCEXLSX, err := xlsx.OpenFile(ioCEXLSXPath)
 	if err != nil {
 		return nil, err
@@ -171,7 +160,7 @@ func NewCES(eio eieiorpc.EIEIOrpcServer) (*CES, error) {
 		}
 	}
 
-	ceKeys, err := txtToSlice(filepath.Join(Filedir, "CEkeys.txt"))
+	ceKeys, err := txtToSlice(filepath.Join(dataDir, "CEkeys.txt"))
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +187,7 @@ func NewCES(eio eieiorpc.EIEIOrpcServer) (*CES, error) {
 		black := make(map[string][]float64)
 
 		// Open raw CE data files
-		inputFileName := filepath.Join(Filedir, fmt.Sprintf("hispanic%d.xlsx", year))
+		inputFileName := filepath.Join(dataDir, fmt.Sprintf("hispanic%d.xlsx", year))
 		var inputFile *xlsx.File
 		inputFile, err = xlsx.OpenFile(inputFileName)
 		if err != nil {

@@ -57,7 +57,10 @@ func (db *DB) mapDataServer(resultRequestChan chan *resultRequest,
 		panic(fmt.Errorf("slca: while creating transform: %v", err))
 	}
 
-	srCells := db.CSTConfig.sr.Geometry()
+	srCells, err := db.CSTConfig.Geometry()
+	if err != nil {
+		panic(err)
+	}
 	cells := make([]geom.Geom, len(srCells))
 	for i, c := range srCells {
 		cells[i], err = c.Transform(webMapTrans)
