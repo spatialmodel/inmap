@@ -1,25 +1,49 @@
-## inmap sr start
+---
+id: inmap_run
+title: inmap run
+sidebar_label: inmap run
+---
 
-Start simulations to create an SR matrix
+## inmap run
+
+Run the model.
 
 ### Synopsis
 
-start starts the InMAP simulations necessary to create
-	a source-receptor matrix.
-
-```
-inmap sr start [flags]
-```
+run runs an InMAP simulation. Use the subcommands specified below to
+	choose a run mode. (Currently 'steady' is the only available run mode.)
 
 ### Options
 
 ```
+      --EmissionUnits string                  
+                                                            EmissionUnits gives the units that the input emissions are in.
+                                                            Acceptable values are 'tons/year', 'kg/year', 'ug/s', and 'μg/s'. (default "tons/year")
+      --EmissionsShapefiles strings           
+                                                            EmissionsShapefiles are the paths to any emissions shapefiles.
+                                                            Can be elevated or ground level; elevated files need to have columns
+                                                            labeled "height", "diam", "temp", and "velocity" containing stack
+                                                            information in units of m, m, K, and m/s, respectively.
+                                                            Emissions will be allocated from the geometries in the shape file
+                                                            to the InMAP computational grid, but the mapping projection of the
+                                                            shapefile must be the same as the projection InMAP uses.
+                                                            Can include environment variables. (default [${INMAP_ROOT_DIR}/cmd/inmap/testdata/testEmis.shp])
       --InMAPData string                      
                                                             InMAPData is the path to location of baseline meteorology and pollutant data.
                                                             The path can include environment variables. (default "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testInMAPInputData.ncf")
-      --NumIterations int                     
-                                                            NumIterations is the number of iterations to calculate. If < 1, convergence
-                                                            is automatically calculated.
+      --LogFile string                        
+                                                            LogFile is the path to the desired logfile location. It can include
+                                                            environment variables. If LogFile is left blank, the logfile will be saved in
+                                                            the same location as the OutputFile.
+      --OutputAllLayers                       
+                                                            If OutputAllLayers is true, output data for all model layers. If false, only output
+                                                            the lowest layer.
+      --OutputFile string                     
+                                                            OutputFile is the path to the desired output shapefile location. It can
+                                                            include environment variables. (default "inmap_output.shp")
+      --OutputVariables string                
+                                                            OutputVariables specifies which model variables should be included in the
+                                                            output file. It can include environment variables. (default "{\"TotalPM25\":\"PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA\",\"TotalPopD\":\"(exp(log(1.078)/10 * TotalPM25) - 1) * TotalPop * AllCause / 100000\"}\n")
       --VarGrid.CensusFile string             
                                                             VarGrid.CensusFile is the path to the shapefile holding population information. (default "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testPopulation.shp")
       --VarGrid.CensusPopColumns strings      
@@ -86,16 +110,12 @@ inmap sr start [flags]
                                                             VariableGridData is the path to the location of the variable-resolution gridded
                                                             InMAP data, or the location where it should be created if it doesn't already
                                                             exist. The path can include environment variables. (default "${INMAP_ROOT_DIR}/cmd/inmap/testdata/inmapVarGrid.gob")
-      --cmds strings                          
-                                              							cmds specifies the inmap subcommands to run. (default [run,steady])
       --creategrid                            
                                                             creategrid specifies whether to create the
                                                             variable-resolution grid as specified in the configuration file before starting
                                                             the simulation instead of reading it from a file. If --static is false, then
                                                             this flag will also be automatically set to false.
-  -h, --help                                  help for start
-      --memory_gb int                         
-                                              							memory_gb specifies the gigabytes of RAM memory required for this job. (default 20)
+  -h, --help                                  help for run
   -s, --static                                
                                                             static specifies whether to run with a static grid that
                                                             is determined before the simulation starts. If false, the
@@ -107,24 +127,12 @@ inmap sr start [flags]
 ### Options inherited from parent commands
 
 ```
-      --addr string       
-                          							addr specifies the URL to connect to for running cloud jobs (default "inmap.run:443")
-      --begin int         
-                                        begin specifies the beginning grid index (inclusive) for SR
-                                        matrix generation.
-      --config string     
-                                        config specifies the configuration file location.
-      --end int           
-                                        end specifies the ending grid index (exclusive) for SR matrix
-                                        generation. The default is -1 which represents the last row. (default -1)
-      --job_name string   
-                          							job_name specifies the name of a cloud job (default "test_job")
-      --layers ints       
-                                        layers specifies a list of vertical layer numbers to
-                                        be included in the SR matrix. (default [0,2,4,6])
+      --config string   
+                                      config specifies the configuration file location.
 ```
 
 ### SEE ALSO
 
-* [inmap sr](inmap_sr.md)	 - Interact with an SR matrix.
+* [inmap](inmap)	 - A reduced-form air quality model.
+* [inmap run steady](inmap_run_steady)	 - Run InMAP in steady-state mode.
 

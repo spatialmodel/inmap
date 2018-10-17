@@ -1,3 +1,9 @@
+---
+id: inmap_preproc
+title: inmap preproc
+sidebar_label: inmap preproc
+---
+
 ## inmap preproc
 
 Preprocess CTM output
@@ -93,5 +99,5 @@ inmap preproc [flags]
 
 ### SEE ALSO
 
-* [inmap](inmap.md)	 - A reduced-form air quality model.
+* [inmap](inmap)	 - A reduced-form air quality model.
 

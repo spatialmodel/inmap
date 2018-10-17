@@ -1,19 +1,25 @@
-## inmap cloud output
+---
+id: inmap_cloud_delete
+title: inmap cloud delete
+sidebar_label: inmap cloud delete
+---
 
-Retrieve and save the output of a job on a Kubernetes cluster.
+## inmap cloud delete
+
+Delete a cloud job.
 
 ### Synopsis
 
-The files will be saved in 'current_dir/job_name', where current_dir is the directory the command is run in.
+Delete a cloud job.
 
 ```
-inmap cloud output [flags]
+inmap cloud delete [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for output
+  -h, --help   help for delete
 ```
 
 ### Options inherited from parent commands
@@ -29,5 +35,5 @@ inmap cloud output [flags]
 
 ### SEE ALSO
 
-* [inmap cloud](inmap_cloud.md)	 - Interact with a Kubernetes cluster.
+* [inmap cloud](inmap_cloud)	 - Interact with a Kubernetes cluster.
 

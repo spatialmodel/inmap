@@ -1,3 +1,9 @@
+---
+id: inmap_sr_save
+title: inmap sr save
+sidebar_label: inmap sr save
+---
+
 ## inmap sr save
 
 Save simulation results to create an SR matrix
@@ -41,5 +47,5 @@ inmap sr save [flags]
 
 ### SEE ALSO
 
-* [inmap sr](inmap_sr.md)	 - Interact with an SR matrix.
+* [inmap sr](inmap_sr)	 - Interact with an SR matrix.
 

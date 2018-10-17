@@ -1,19 +1,25 @@
-## inmap cloud status
+---
+id: inmap_cloud_output
+title: inmap cloud output
+sidebar_label: inmap cloud output
+---
 
-Check the status of a job on a Kubernetes cluster.
+## inmap cloud output
+
+Retrieve and save the output of a job on a Kubernetes cluster.
 
 ### Synopsis
 
-Check the status of a job on a Kubernetes cluster.
+The files will be saved in 'current_dir/job_name', where current_dir is the directory the command is run in.
 
 ```
-inmap cloud status [flags]
+inmap cloud output [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for status
+  -h, --help   help for output
 ```
 
 ### Options inherited from parent commands
@@ -29,5 +35,5 @@ inmap cloud status [flags]
 
 ### SEE ALSO
 
-* [inmap cloud](inmap_cloud.md)	 - Interact with a Kubernetes cluster.
+* [inmap cloud](inmap_cloud)	 - Interact with a Kubernetes cluster.
 

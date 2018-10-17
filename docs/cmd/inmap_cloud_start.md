@@ -1,3 +1,9 @@
+---
+id: inmap_cloud_start
+title: inmap cloud start
+sidebar_label: inmap cloud start
+---
+
 ## inmap cloud start
 
 Start a job on a Kubernetes cluster.
@@ -118,5 +124,5 @@ inmap cloud start [flags]
 
 ### SEE ALSO
 
-* [inmap cloud](inmap_cloud.md)	 - Interact with a Kubernetes cluster.
+* [inmap cloud](inmap_cloud)	 - Interact with a Kubernetes cluster.
 

@@ -1,19 +1,25 @@
-## inmap cloud delete
+---
+id: inmap_cloud_status
+title: inmap cloud status
+sidebar_label: inmap cloud status
+---
 
-Delete a cloud job.
+## inmap cloud status
+
+Check the status of a job on a Kubernetes cluster.
 
 ### Synopsis
 
-Delete a cloud job.
+Check the status of a job on a Kubernetes cluster.
 
 ```
-inmap cloud delete [flags]
+inmap cloud status [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for delete
+  -h, --help   help for status
 ```
 
 ### Options inherited from parent commands
@@ -29,5 +35,5 @@ inmap cloud delete [flags]
 
 ### SEE ALSO
 
-* [inmap cloud](inmap_cloud.md)	 - Interact with a Kubernetes cluster.
+* [inmap cloud](inmap_cloud)	 - Interact with a Kubernetes cluster.
 

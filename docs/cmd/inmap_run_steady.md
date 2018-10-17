@@ -1,20 +1,46 @@
-## inmap grid
+---
+id: inmap_run_steady
+title: inmap run steady
+sidebar_label: inmap run steady
+---
 
-Create a variable resolution grid
+## inmap run steady
+
+Run InMAP in steady-state mode.
 
 ### Synopsis
 
-grid creates and saves a variable resolution grid as specified by the
-	information in the configuration file. The saved data can then be loaded
-	for future InMAP simulations.
+steady runs InMAP in steady-state mode to calculate annual average
+	concentrations with no temporal variability.
 
 ```
-inmap grid [flags]
+inmap run steady [flags]
 ```
 
 ### Options
 
 ```
+      --NumIterations int   
+                                          NumIterations is the number of iterations to calculate. If < 1, convergence
+                                          is automatically calculated.
+  -h, --help                help for steady
+```
+
+### Options inherited from parent commands
+
+```
+      --EmissionUnits string                  
+                                                            EmissionUnits gives the units that the input emissions are in.
+                                                            Acceptable values are 'tons/year', 'kg/year', 'ug/s', and 'μg/s'. (default "tons/year")
+      --EmissionsShapefiles strings           
+                                                            EmissionsShapefiles are the paths to any emissions shapefiles.
+                                                            Can be elevated or ground level; elevated files need to have columns
+                                                            labeled "height", "diam", "temp", and "velocity" containing stack
+                                                            information in units of m, m, K, and m/s, respectively.
+                                                            Emissions will be allocated from the geometries in the shape file
+                                                            to the InMAP computational grid, but the mapping projection of the
+                                                            shapefile must be the same as the projection InMAP uses.
+                                                            Can include environment variables. (default [${INMAP_ROOT_DIR}/cmd/inmap/testdata/testEmis.shp])
       --InMAPData string                      
                                                             InMAPData is the path to location of baseline meteorology and pollutant data.
                                                             The path can include environment variables. (default "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testInMAPInputData.ncf")
@@ -22,6 +48,15 @@ inmap grid [flags]
                                                             LogFile is the path to the desired logfile location. It can include
                                                             environment variables. If LogFile is left blank, the logfile will be saved in
                                                             the same location as the OutputFile.
+      --OutputAllLayers                       
+                                                            If OutputAllLayers is true, output data for all model layers. If false, only output
+                                                            the lowest layer.
+      --OutputFile string                     
+                                                            OutputFile is the path to the desired output shapefile location. It can
+                                                            include environment variables. (default "inmap_output.shp")
+      --OutputVariables string                
+                                                            OutputVariables specifies which model variables should be included in the
+                                                            output file. It can include environment variables. (default "{\"TotalPM25\":\"PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA\",\"TotalPopD\":\"(exp(log(1.078)/10 * TotalPM25) - 1) * TotalPop * AllCause / 100000\"}\n")
       --VarGrid.CensusFile string             
                                                             VarGrid.CensusFile is the path to the shapefile holding population information. (default "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testPopulation.shp")
       --VarGrid.CensusPopColumns strings      
@@ -88,17 +123,22 @@ inmap grid [flags]
                                                             VariableGridData is the path to the location of the variable-resolution gridded
                                                             InMAP data, or the location where it should be created if it doesn't already
                                                             exist. The path can include environment variables. (default "${INMAP_ROOT_DIR}/cmd/inmap/testdata/inmapVarGrid.gob")
-  -h, --help                                  help for grid
-```
-
-### Options inherited from parent commands
-
-```
-      --config string   
-                                      config specifies the configuration file location.
+      --config string                         
+                                                            config specifies the configuration file location.
+      --creategrid                            
+                                                            creategrid specifies whether to create the
+                                                            variable-resolution grid as specified in the configuration file before starting
+                                                            the simulation instead of reading it from a file. If --static is false, then
+                                                            this flag will also be automatically set to false.
+  -s, --static                                
+                                                            static specifies whether to run with a static grid that
+                                                            is determined before the simulation starts. If false, the
+                                                            simulation runs with a dynamic grid that changes resolution
+                                                            depending on spatial gradients in population density and
+                                                            concentration.
 ```
 
 ### SEE ALSO
 
-* [inmap](inmap.md)	 - A reduced-form air quality model.
+* [inmap run](inmap_run)	 - Run the model.
 

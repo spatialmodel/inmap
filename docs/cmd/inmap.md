@@ -1,3 +1,9 @@
+---
+id: inmap
+title: inmap
+sidebar_label: inmap
+---
+
 ## inmap
 
 A reduced-form air quality model.
@@ -26,11 +32,11 @@ InMAP is a reduced-form air quality model for fine particulate matter (PM2.5).
 
 ### SEE ALSO
 
-* [inmap cloud](inmap_cloud.md)	 - Interact with a Kubernetes cluster.
-* [inmap grid](inmap_grid.md)	 - Create a variable resolution grid
-* [inmap preproc](inmap_preproc.md)	 - Preprocess CTM output
-* [inmap run](inmap_run.md)	 - Run the model.
-* [inmap sr](inmap_sr.md)	 - Interact with an SR matrix.
-* [inmap srpredict](inmap_srpredict.md)	 - Predict concentrations
-* [inmap version](inmap_version.md)	 - Print the version number
+* [inmap cloud](inmap_cloud)	 - Interact with a Kubernetes cluster.
+* [inmap grid](inmap_grid)	 - Create a variable resolution grid
+* [inmap preproc](inmap_preproc)	 - Preprocess CTM output
+* [inmap run](inmap_run)	 - Run the model.
+* [inmap sr](inmap_sr)	 - Interact with an SR matrix.
+* [inmap srpredict](inmap_srpredict)	 - Predict concentrations
+* [inmap version](inmap_version)	 - Print the version number
 

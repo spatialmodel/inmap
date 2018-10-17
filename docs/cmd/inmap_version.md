@@ -1,3 +1,9 @@
+---
+id: inmap_version
+title: inmap version
+sidebar_label: inmap version
+---
+
 ## inmap version
 
 Print the version number
@@ -25,5 +31,5 @@ inmap version [flags]
 
 ### SEE ALSO
 
-* [inmap](inmap.md)	 - A reduced-form air quality model.
+* [inmap](inmap)	 - A reduced-form air quality model.
 

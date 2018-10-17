@@ -1,3 +1,9 @@
+---
+id: inmap_srpredict
+title: inmap srpredict
+sidebar_label: inmap srpredict
+---
+
 ## inmap srpredict
 
 Predict concentrations
@@ -59,5 +65,5 @@ inmap srpredict [flags]
 
 ### SEE ALSO
 
-* [inmap](inmap.md)	 - A reduced-form air quality model.
+* [inmap](inmap)	 - A reduced-form air quality model.
 
