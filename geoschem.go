@@ -356,9 +356,9 @@ func (gc *GEOSChem) readApBp(varName string) NextData {
 
 func (gc *GEOSChem) readChemGroupAlt(varGroup map[string]float64) NextData {
 	if gc.noChemHour {
-		return nextDataGroupAltNCF(gc.geosChem, geosChemFormat, gc.aVOC, gc.ALT(), gc.start, gc.end, gc.chemRecordDeltaInterval, gc.chemFileDeltaInterval, readNCFNoHour, gc.msgChan)
+		return nextDataGroupAltNCF(gc.geosChem, geosChemFormat, varGroup, gc.ALT(), gc.start, gc.end, gc.chemRecordDeltaInterval, gc.chemFileDeltaInterval, readNCFNoHour, gc.msgChan)
 	}
-	return nextDataGroupAltNCF(gc.geosChem, geosChemFormat, gc.aVOC, gc.ALT(), gc.start, gc.end, gc.chemRecordDeltaInterval, gc.chemFileDeltaInterval, readNCF, gc.msgChan)
+	return nextDataGroupAltNCF(gc.geosChem, geosChemFormat, varGroup, gc.ALT(), gc.start, gc.end, gc.chemRecordDeltaInterval, gc.chemFileDeltaInterval, readNCF, gc.msgChan)
 }
 
 var geosLayerConvert = func(nz int) func(NextData) NextData {
