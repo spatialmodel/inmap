@@ -498,8 +498,6 @@ func (srg *SrgSpec) getSrgData(gridData *GridDef, tol float64) (*rtree.Rtree, er
 	return srgData, nil
 }
 
-type empty struct{}
-
 func genSrgWorker(singleShapeChan, griddedSrgChan chan *GriddedSrgData,
 	errchan chan error, gridData *GridDef, srgData *rtree.Rtree) {
 	var err error
@@ -511,8 +509,7 @@ func genSrgWorker(singleShapeChan, griddedSrgChan chan *GriddedSrgData,
 	for data = range singleShapeChan {
 		if first {
 			d := &srgGenWorkerInitData{srgData, gridData}
-			e := new(empty)
-			err = s.Initialize(d, e) // Load data (only do once)
+			err = s.Initialize(d) // Load data (only do once)
 			if err != nil {
 				errchan <- err
 				return
@@ -529,7 +526,7 @@ func genSrgWorker(singleShapeChan, griddedSrgChan chan *GriddedSrgData,
 	errchan <- err
 }
 
-func (s *srgGenWorker) Initialize(data *srgGenWorkerInitData, _ *empty) error {
+func (s *srgGenWorker) Initialize(data *srgGenWorkerInitData) error {
 	s.surrogates = data.Surrogates
 	s.GridCells = data.GridCells
 	return nil
@@ -703,13 +700,4 @@ func (s *srgGenWorker) intersections2(data *GriddedSrgData,
 		}
 	}
 	return
-}
-
-func handle(err error, cmd string) error {
-	err2 := err.Error()
-	buf := make([]byte, 5000)
-	runtime.Stack(buf, false)
-	err2 += "\n" + cmd + "\n" + string(buf)
-	err3 := fmt.Errorf(err2)
-	return err3
 }
