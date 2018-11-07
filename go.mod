@@ -83,9 +83,9 @@ require (
 	gopkg.in/gemnasium/logrus-airbrake-hook.v2 v2.1.2 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	honnef.co/go/js/dom v0.0.0-20180323154144-6da835bec70f
-	k8s.io/api v0.0.0-20180925152912-a191abe0b71e
-	k8s.io/apimachinery v0.0.0-20180904193909-def12e63c512
-	k8s.io/client-go v8.0.0+incompatible
-	k8s.io/kube-openapi v0.0.0-20180731170545-e3762e86a74c // indirect
+	k8s.io/api v0.0.0-20181107015507-4af2133c62e9
+	k8s.io/apimachinery v0.0.0-20181101131016-0aa9751e8aaf
+	k8s.io/client-go v9.0.0+incompatible
+	k8s.io/kube-openapi v0.0.0-20181106182614-a9a16210091c // indirect
 	rsc.io/pdf v0.1.1 // indirect
 )
