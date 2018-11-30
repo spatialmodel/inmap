@@ -3,7 +3,7 @@ module github.com/spatialmodel/inmap
 require (
 	bitbucket.org/ctessum/cdf v0.0.0-20161214184548-ca25c8d1d911
 	bitbucket.org/ctessum/sparse v0.0.0-20170227043230-b9009f0cad79
-	cloud.google.com/go v0.25.0
+	cloud.google.com/go v0.33.1
 	github.com/BurntSushi/toml v0.3.0
 	github.com/GaryBoone/GoStats v0.0.0-20130122001700-1993eafbef57
 	github.com/Knetic/govaluate v3.0.0+incompatible
@@ -71,7 +71,7 @@ require (
 	github.com/spf13/jwalterweatherman v0.0.0-20170901151539-12bd96e66386 // indirect
 	github.com/spf13/pflag v1.0.1
 	github.com/tealeg/xlsx v1.0.3
-	golang.org/x/crypto v0.0.0-20180411161317-d6449816ce06
+	golang.org/x/crypto v0.0.0-20181127143415-eb0de9b17e85
 	golang.org/x/exp v0.0.0-20180907224206-e88728d35e99 // indirect
 	golang.org/x/image v0.0.0-20171013013600-f7e31b4ea2e3 // indirect
 	golang.org/x/net v0.0.0-20180906233101-161cd47e91fd
