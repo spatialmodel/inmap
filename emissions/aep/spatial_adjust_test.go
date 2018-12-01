@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"bitbucket.org/ctessum/sparse"
+	"github.com/ctessum/sparse"
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/proj"
 	"github.com/ctessum/unit"

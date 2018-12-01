@@ -19,7 +19,7 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package aep
 
 import (
-	"bitbucket.org/ctessum/sparse"
+	"github.com/ctessum/sparse"
 )
 
 // SpatialAdjustRecord wraps around a Record to provide a spatially-explicit

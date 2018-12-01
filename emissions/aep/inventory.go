@@ -30,7 +30,7 @@ import (
 	"github.com/ctessum/unit"
 	"github.com/ctessum/unit/badunit"
 
-	"bitbucket.org/ctessum/sparse"
+	"github.com/ctessum/sparse"
 )
 
 const (

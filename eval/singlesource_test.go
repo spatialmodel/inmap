@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"bitbucket.org/ctessum/cdf"
+	"github.com/ctessum/cdf"
 	"github.com/GaryBoone/GoStats/stats"
 
 	"github.com/ctessum/atmos/evalstats"

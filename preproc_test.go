@@ -28,7 +28,7 @@ import (
 	"reflect"
 	"testing"
 
-	"bitbucket.org/ctessum/sparse"
+	"github.com/ctessum/sparse"
 )
 
 var regenGoldenFiles bool

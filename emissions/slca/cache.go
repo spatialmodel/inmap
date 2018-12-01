@@ -21,7 +21,7 @@ import (
 	"encoding/gob"
 	"fmt"
 
-	"bitbucket.org/ctessum/sparse"
+	"github.com/ctessum/sparse"
 )
 
 type requestPayload struct {

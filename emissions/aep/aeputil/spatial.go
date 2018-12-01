@@ -23,7 +23,7 @@ import (
 	"os"
 	"sync"
 
-	"bitbucket.org/ctessum/sparse"
+	"github.com/ctessum/sparse"
 
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/proj"

@@ -1,7 +1,3 @@
-bitbucket.org/ctessum/cdf v0.0.0-20161214184548-ca25c8d1d911 h1:VaVBDILTDHVfnkznfetMh/GNhKqP6fuhSdb8r88UIhc=
-bitbucket.org/ctessum/cdf v0.0.0-20161214184548-ca25c8d1d911/go.mod h1:oBkSMx0Z3ad/GWaSR+QdJ7qKYti05+Jbhf4ipZd3rRw=
-bitbucket.org/ctessum/sparse v0.0.0-20170227043230-b9009f0cad79 h1:zCZ3ErwSLPh6+oHXL5CWCLVPQ7uRAy3otMRaQGGoBgc=
-bitbucket.org/ctessum/sparse v0.0.0-20170227043230-b9009f0cad79/go.mod h1:/HbQs8FZgYIq2NK5e68MGku6dvt5Ktxn2hQK3dikEAg=
 cloud.google.com/go v0.25.0 h1:6vD6xZTc8Jo6To8gHxFDRVsMvWFDgY3rugNszcDalN8=
 cloud.google.com/go v0.25.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 cloud.google.com/go v0.33.1 h1:fmJQWZ1w9PGkHR1YL/P7HloDvqlmKQ4Vpb7PC2e+aCk=
@@ -29,6 +25,8 @@ github.com/cpuguy83/go-md2man v1.0.7 h1:DVS0EPFHUiaJSaX2EKlaf65HUmk9PXhOl/Xa3Go2
 github.com/cpuguy83/go-md2man v1.0.7/go.mod h1:N6JayAiVKtlHSnuTCeuLSQVs75hb8q+dYQLjr7cDsKY=
 github.com/ctessum/atmos v0.0.0-20170526022537-cba69f7ca647 h1:lUT29TZ1puayHZ2KLFupuYnMcHtFbFxdNeou/Ra+SHM=
 github.com/ctessum/atmos v0.0.0-20170526022537-cba69f7ca647/go.mod h1:sPaXeGajd2kT9U0BHxsZRfon2LjMH3Ohs2VOF+ACNSY=
+github.com/ctessum/cdf v0.0.0-20181201011353-edced208ea9d h1:mIQwc9ihMh23CRrvN5Vyv2T5E73NVALNguZizrV9XoI=
+github.com/ctessum/cdf v0.0.0-20181201011353-edced208ea9d/go.mod h1:E45T61NEPsdFg0n3CqBwcG7jbwHTRdhOufhVTm3/Dtc=
 github.com/ctessum/geom v0.0.0-20171214065257-1cd0f1efc691 h1:c3bk1LC2taWAkfvx23gF31YQd2a1MeyOhO2YucueZ/8=
 github.com/ctessum/geom v0.0.0-20171214065257-1cd0f1efc691/go.mod h1:g1tjsrPbpOzKgP0aJ4Cod/lUz74l0BkRf2bpCoUHTEU=
 github.com/ctessum/go-leaflet v0.0.0-20170724133759-2f9e4c38fb5e h1:IV59uAui/Q61m9UyCjpOCEl0Bg1g9kwsgxcF5Zt8yTQ=
@@ -41,6 +39,8 @@ github.com/ctessum/polyclip-go v0.0.0-20180821205400-6614925d6d70 h1:eLtDUl8TQ00
 github.com/ctessum/polyclip-go v0.0.0-20180821205400-6614925d6d70/go.mod h1:SD0O6gO+//zcwVFZTBwD46M8YLMP1dlm4U4wX+utHSs=
 github.com/ctessum/requestcache v0.0.0-20180628165226-f806c589cca6 h1:9IVQ8uaURLhXrC86A2FTwwsIvQ9XJkrvWYvtVRSlZX4=
 github.com/ctessum/requestcache v0.0.0-20180628165226-f806c589cca6/go.mod h1:HsO142p4v1RYD6e02LEYA6kFTeMNbTjJdLtWtd9ctnw=
+github.com/ctessum/sparse v0.0.0-20181201011727-57d6234a2c9d h1:R6rUEdBcieof5DgG6UGkRH6FPBcfI60qRD6KusHIv+c=
+github.com/ctessum/sparse v0.0.0-20181201011727-57d6234a2c9d/go.mod h1:UGiTsb4CQb8URion27d8H9aXu3UTbtCI0AgV1frKZsA=
 github.com/ctessum/unit v0.0.0-20160621200450-755774ac2fcb h1:/S9w9JroTJ0Zo70VXUutYAI6YVBDwuYMUZt73fBq5r0=
 github.com/ctessum/unit v0.0.0-20160621200450-755774ac2fcb/go.mod h1:5birOIWwcQdSJgf67bFwEzqi+tNA5DzVeErR5SRExjg=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
@@ -250,11 +250,15 @@ honnef.co/go/js/dom v0.0.0-20180323154144-6da835bec70f h1:8wvPTUK0UjW0bwvb0Q2mdh
 honnef.co/go/js/dom v0.0.0-20180323154144-6da835bec70f/go.mod h1:sUMDUKNB2ZcVjt92UnLy3cdGs+wDAcrPdV3JP6sVgA4=
 k8s.io/api v0.0.0-20181107015507-4af2133c62e9 h1:Ggm/9nHM8wLIhyDI7mBgekJf/ccE6qFi/OVNLyKCQvc=
 k8s.io/api v0.0.0-20181107015507-4af2133c62e9/go.mod h1:iuAfoD4hCxJ8Onx9kaTIt30j7jUFS00AXQi6QMi99vA=
-k8s.io/apimachinery v0.0.0-20181101131016-0aa9751e8aaf h1:Qsp/DuvFWmfTAfp4tcX402hdFfowyhIIBdRGWGCiWlY=
-k8s.io/apimachinery v0.0.0-20181101131016-0aa9751e8aaf/go.mod h1:ccL7Eh7zubPUSh9A3USN90/OzHNSVN6zxzde07TDCL0=
+k8s.io/apimachinery v0.0.0-20181130031032-af2f90f9922d h1:tW7GBma5Mf0QbhdEKmLmfwp+MMxbMJ+FcHmXmK4To4U=
+k8s.io/apimachinery v0.0.0-20181130031032-af2f90f9922d/go.mod h1:ccL7Eh7zubPUSh9A3USN90/OzHNSVN6zxzde07TDCL0=
 k8s.io/client-go v9.0.0+incompatible h1:2kqW3X2xQ9SbFvWZjGEHBLlWc1LG9JIJNXWkuqwdZ3A=
 k8s.io/client-go v9.0.0+incompatible/go.mod h1:7vJpHMYJwNQCWgzmNV+VYUl1zCObLyodBc8nIyt8L5s=
+k8s.io/klog v0.1.0 h1:I5HMfc/DtuVaGR1KPwUrTc476K8NCqNBldC7H4dYEzk=
+k8s.io/klog v0.1.0/go.mod h1:Gq+BEi5rUBO/HRz0bTSXDUcqjScdoY3a9IHpCEIOOfk=
 k8s.io/kube-openapi v0.0.0-20181106182614-a9a16210091c h1:TW3ZCoKGrU0Bz5qHnS+clzOevVwX/VzyM9jyXDjPjys=
 k8s.io/kube-openapi v0.0.0-20181106182614-a9a16210091c/go.mod h1:BXM9ceUBTj2QnfH2MK1odQs778ajze1RxcmP6S8RVVc=
 rsc.io/pdf v0.1.1 h1:k1MczvYDUvJBe93bYd7wrZLLUEcLZAuF824/I4e5Xr4=
 rsc.io/pdf v0.1.1/go.mod h1:n8OzWcQ6Sp37PL01nO98y4iUCRdTGarVfzxY20ICaU4=
+sigs.k8s.io/yaml v1.1.0 h1:4A07+ZFc2wgJwo8YNlQpr1rVlgUDlxXHhPJciaPY5gs=
+sigs.k8s.io/yaml v1.1.0/go.mod h1:UJmg0vDUVViEyp3mgSv9WPwZCDxu4rQW1olrI1uml+o=

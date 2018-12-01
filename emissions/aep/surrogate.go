@@ -28,7 +28,7 @@ import (
 	"strings"
 	"sync"
 
-	"bitbucket.org/ctessum/sparse"
+	"github.com/ctessum/sparse"
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/encoding/shp"
 	"github.com/ctessum/geom/index/rtree"
