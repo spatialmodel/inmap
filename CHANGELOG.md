@@ -1,5 +1,7 @@
-# Release 1.5 (?)
-* Add emissions processors
+# Release 1.5.0 (2018-11-30)
+* Add emissions processing tools and user interfaces
+* Add the capability to run simulations in the cloud
+* Many minor changes and bug fixes
 
 # Release 1.4.2 (2018-5-16)
 * Fixed configuration bugs
