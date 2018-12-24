@@ -27,8 +27,8 @@ import (
 	"strconv"
 	"strings"
 
-	"bitbucket.org/ctessum/cdf"
-	"bitbucket.org/ctessum/sparse"
+	"github.com/ctessum/cdf"
+	"github.com/ctessum/sparse"
 
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/encoding/shp"

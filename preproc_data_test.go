@@ -18,7 +18,7 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 
 package inmap
 
-import "bitbucket.org/ctessum/sparse"
+import "github.com/ctessum/sparse"
 
 var (
 	h2o2    []*sparse.DenseArray

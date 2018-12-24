@@ -25,7 +25,7 @@ import (
 	"runtime"
 	"sync"
 
-	"bitbucket.org/ctessum/cdf"
+	"github.com/ctessum/cdf"
 	"github.com/ctessum/geom"
 	"github.com/ctessum/requestcache"
 	"github.com/gonum/floats"

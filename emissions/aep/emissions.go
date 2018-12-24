@@ -160,7 +160,7 @@ func (e *Emissions) DropPols(polsToKeep Speciation) map[Pollutant]*unit.Unit {
 	}
 	droppedTotals := make(map[Pollutant]*unit.Unit)
 	var iToDelete []int
-	unitsToDelete := make(map[Pollutant]empty)
+	unitsToDelete := make(map[Pollutant]struct{})
 	for i, em := range e.e {
 		if _, ok := polsToKeep[em.Pollutant.Name]; !ok {
 			iToDelete = append(iToDelete, i)
@@ -175,7 +175,7 @@ func (e *Emissions) DropPols(polsToKeep Speciation) map[Pollutant]*unit.Unit {
 			} else {
 				droppedTotals[em.Pollutant].Add(v)
 			}
-			unitsToDelete[em.Pollutant] = empty{}
+			unitsToDelete[em.Pollutant] = struct{}{}
 		}
 	}
 	for p := range unitsToDelete {

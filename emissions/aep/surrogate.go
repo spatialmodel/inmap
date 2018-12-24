@@ -28,7 +28,7 @@ import (
 	"strings"
 	"sync"
 
-	"bitbucket.org/ctessum/sparse"
+	"github.com/ctessum/sparse"
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/encoding/shp"
 	"github.com/ctessum/geom/index/rtree"
@@ -380,12 +380,10 @@ func (srg *SrgSpec) getSrgData(gridData *GridDef, tol float64) (*rtree.Rtree, er
 	srgData := rtree.NewTree(25, 50)
 	var recGeom geom.Geom
 	var data map[string]string
-	var intersects bool
 	var keepFeature bool
 	var featureVal string
 	var size float64
 	var more bool
-	gridBounds := gridData.Extent.Bounds()
 	for {
 		recGeom, data, more = srgShp.DecodeRowFields(fieldNames...)
 		if !more {
@@ -427,68 +425,65 @@ func (srg *SrgSpec) getSrgData(gridData *GridDef, tol float64) (*rtree.Rtree, er
 					srgH.Geom = srgH.Geom.(geom.Simplifier).Simplify(tol)
 				}
 			}
-			intersects = srgH.Geom.Bounds().Overlaps(gridBounds)
-			if intersects {
-				if len(srg.WeightColumns) != 0 {
-					weightval := 0.
-					for i, name := range srg.WeightColumns {
-						var v float64
-						vstring := data[name]
-						if strings.Contains(vstring, "\x00\x00\x00\x00\x00\x00") || strings.Contains(vstring, "***") || vstring == "" {
-							// null value
-							v = 0.
-						} else {
-							v, err = strconv.ParseFloat(data[name], 64)
-							if err != nil {
-								return srgData, fmt.Errorf("aep.getSrgData: shapefile %s column %s, %v", srg.WEIGHTSHAPEFILE, name, err)
-							}
-							v = math.Max(v, 0) // Get rid of any negative weights.
+			if len(srg.WeightColumns) != 0 {
+				weightval := 0.
+				for i, name := range srg.WeightColumns {
+					var v float64
+					vstring := data[name]
+					if strings.Contains(vstring, "\x00\x00\x00\x00\x00\x00") || strings.Contains(vstring, "***") || vstring == "" {
+						// null value
+						v = 0.
+					} else {
+						v, err = strconv.ParseFloat(data[name], 64)
+						if err != nil {
+							return srgData, fmt.Errorf("aep.getSrgData: shapefile %s column %s, %v", srg.WEIGHTSHAPEFILE, name, err)
 						}
-						weightval += v * srg.WeightFactors[i]
+						v = math.Max(v, 0) // Get rid of any negative weights.
 					}
-					switch srgH.Geom.(type) {
-					case geom.Polygonal:
-						size = srgH.Geom.(geom.Polygonal).Area()
-						if size == 0. {
-							if tol > 0 {
-								// We probably simplified the shape down to zero area.
-								continue
-							} else {
-								// TODO: Is it okay for input shapes to have zero area? Probably....
-								continue
-								//err = fmt.Errorf("Area should not equal "+
-								//	"zero in %v", srg.WEIGHTSHAPEFILE)
-								//return srgData, err
-							}
-						} else if size < 0 {
-							panic(fmt.Errorf("negative area: %g, geom:%#v", size, srgH.Geom))
+					weightval += v * srg.WeightFactors[i]
+				}
+				switch srgH.Geom.(type) {
+				case geom.Polygonal:
+					size = srgH.Geom.(geom.Polygonal).Area()
+					if size == 0. {
+						if tol > 0 {
+							// We probably simplified the shape down to zero area.
+							continue
+						} else {
+							// TODO: Is it okay for input shapes to have zero area? Probably....
+							continue
+							//err = fmt.Errorf("Area should not equal "+
+							//	"zero in %v", srg.WEIGHTSHAPEFILE)
+							//return srgData, err
 						}
-						srgH.Weight = weightval / size
-					case geom.Linear:
-						size = srgH.Geom.(geom.Linear).Length()
-						if size == 0. {
-							err = fmt.Errorf("Length should not equal "+
-								"zero in %v", srg.WEIGHTSHAPEFILE)
-							return srgData, err
-						}
-						srgH.Weight = weightval / size
-					case geom.Point:
-						srgH.Weight = weightval
-					default:
-						err = fmt.Errorf("aep: in file %s, unsupported geometry type %#v",
-							srg.WEIGHTSHAPEFILE, srgH.Geom)
+					} else if size < 0 {
+						panic(fmt.Errorf("negative area: %g, geom:%#v", size, srgH.Geom))
+					}
+					srgH.Weight = weightval / size
+				case geom.Linear:
+					size = srgH.Geom.(geom.Linear).Length()
+					if size == 0. {
+						err = fmt.Errorf("Length should not equal "+
+							"zero in %v", srg.WEIGHTSHAPEFILE)
 						return srgData, err
 					}
-				} else {
-					srgH.Weight = 1.
-				}
-				if srgH.Weight < 0. || math.IsInf(srgH.Weight, 0) ||
-					math.IsNaN(srgH.Weight) {
-					err = fmt.Errorf("Surrogate weight is %v, which is not acceptable.", srgH.Weight)
+					srgH.Weight = weightval / size
+				case geom.Point:
+					srgH.Weight = weightval
+				default:
+					err = fmt.Errorf("aep: in file %s, unsupported geometry type %#v",
+						srg.WEIGHTSHAPEFILE, srgH.Geom)
 					return srgData, err
-				} else if srgH.Weight != 0. {
-					srgData.Insert(srgH)
 				}
+			} else {
+				srgH.Weight = 1.
+			}
+			if srgH.Weight < 0. || math.IsInf(srgH.Weight, 0) ||
+				math.IsNaN(srgH.Weight) {
+				err = fmt.Errorf("Surrogate weight is %v, which is not acceptable.", srgH.Weight)
+				return srgData, err
+			} else if srgH.Weight != 0. {
+				srgData.Insert(srgH)
 			}
 		}
 	}
@@ -497,8 +492,6 @@ func (srg *SrgSpec) getSrgData(gridData *GridDef, tol float64) (*rtree.Rtree, er
 	}
 	return srgData, nil
 }
-
-type empty struct{}
 
 func genSrgWorker(singleShapeChan, griddedSrgChan chan *GriddedSrgData,
 	errchan chan error, gridData *GridDef, srgData *rtree.Rtree) {
@@ -511,8 +504,7 @@ func genSrgWorker(singleShapeChan, griddedSrgChan chan *GriddedSrgData,
 	for data = range singleShapeChan {
 		if first {
 			d := &srgGenWorkerInitData{srgData, gridData}
-			e := new(empty)
-			err = s.Initialize(d, e) // Load data (only do once)
+			err = s.Initialize(d) // Load data (only do once)
 			if err != nil {
 				errchan <- err
 				return
@@ -529,7 +521,7 @@ func genSrgWorker(singleShapeChan, griddedSrgChan chan *GriddedSrgData,
 	errchan <- err
 }
 
-func (s *srgGenWorker) Initialize(data *srgGenWorkerInitData, _ *empty) error {
+func (s *srgGenWorker) Initialize(data *srgGenWorkerInitData) error {
 	s.surrogates = data.Surrogates
 	s.GridCells = data.GridCells
 	return nil
@@ -703,13 +695,4 @@ func (s *srgGenWorker) intersections2(data *GriddedSrgData,
 		}
 	}
 	return
-}
-
-func handle(err error, cmd string) error {
-	err2 := err.Error()
-	buf := make([]byte, 5000)
-	runtime.Stack(buf, false)
-	err2 += "\n" + cmd + "\n" + string(buf)
-	err3 := fmt.Errorf(err2)
-	return err3
 }

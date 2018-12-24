@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"strings"
 
-	"bitbucket.org/ctessum/cdf"
+	"github.com/ctessum/cdf"
 	"github.com/GaryBoone/GoStats/stats"
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/carto"

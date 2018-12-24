@@ -4,7 +4,7 @@
 [[projects]]
   branch = "default"
   digest = "1:dea7fc4e81bec3a66fd2a2410c278815df95d27ebf4f55084cae79af71099a4e"
-  name = "bitbucket.org/ctessum/cdf"
+  name = "github.com/ctessum/cdf"
   packages = ["."]
   pruneopts = ""
   revision = "ca25c8d1d9116cd0c62596ab37fc3e80f26aee79"
@@ -12,7 +12,7 @@
 [[projects]]
   branch = "default"
   digest = "1:c6321469033b37eb7a55adf7187e352dbb035907d85ce9e37b9eae66249fdfbc"
-  name = "bitbucket.org/ctessum/sparse"
+  name = "github.com/ctessum/sparse"
   packages = ["."]
   pruneopts = ""
   revision = "b9009f0cad794ee9aae14510928b9713b073b50d"
@@ -1166,8 +1166,8 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "bitbucket.org/ctessum/cdf",
-    "bitbucket.org/ctessum/sparse",
+    "github.com/ctessum/cdf",
+    "github.com/ctessum/sparse",
     "cloud.google.com/go/storage",
     "github.com/BurntSushi/toml",
     "github.com/GaryBoone/GoStats/stats",

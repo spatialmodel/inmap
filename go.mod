@@ -1,9 +1,7 @@
 module github.com/spatialmodel/inmap
 
 require (
-	bitbucket.org/ctessum/cdf v0.0.0-20161214184548-ca25c8d1d911
-	bitbucket.org/ctessum/sparse v0.0.0-20170227043230-b9009f0cad79
-	cloud.google.com/go v0.25.0
+	cloud.google.com/go v0.33.1
 	github.com/BurntSushi/toml v0.3.0
 	github.com/GaryBoone/GoStats v0.0.0-20130122001700-1993eafbef57
 	github.com/Knetic/govaluate v3.0.0+incompatible
@@ -12,12 +10,14 @@ require (
 	github.com/cenkalti/backoff v2.0.0+incompatible
 	github.com/cpuguy83/go-md2man v1.0.7 // indirect
 	github.com/ctessum/atmos v0.0.0-20170526022537-cba69f7ca647
+	github.com/ctessum/cdf v0.0.0-20181201011353-edced208ea9d
 	github.com/ctessum/geom v0.0.0-20171214065257-1cd0f1efc691
 	github.com/ctessum/go-leaflet v0.0.0-20170724133759-2f9e4c38fb5e
 	github.com/ctessum/gobra v0.0.0-20180516235632-ddfa5eeb3017
 	github.com/ctessum/plotextra v0.0.0-20180623195436-96488e3f1996
 	github.com/ctessum/polyclip-go v0.0.0-20180821205400-6614925d6d70 // indirect
 	github.com/ctessum/requestcache v0.0.0-20180628165226-f806c589cca6
+	github.com/ctessum/sparse v0.0.0-20181201011727-57d6234a2c9d
 	github.com/ctessum/unit v0.0.0-20160621200450-755774ac2fcb
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
@@ -71,7 +71,7 @@ require (
 	github.com/spf13/jwalterweatherman v0.0.0-20170901151539-12bd96e66386 // indirect
 	github.com/spf13/pflag v1.0.1
 	github.com/tealeg/xlsx v1.0.3
-	golang.org/x/crypto v0.0.0-20180411161317-d6449816ce06
+	golang.org/x/crypto v0.0.0-20181127143415-eb0de9b17e85
 	golang.org/x/exp v0.0.0-20180907224206-e88728d35e99 // indirect
 	golang.org/x/image v0.0.0-20171013013600-f7e31b4ea2e3 // indirect
 	golang.org/x/net v0.0.0-20180906233101-161cd47e91fd
@@ -83,9 +83,11 @@ require (
 	gopkg.in/gemnasium/logrus-airbrake-hook.v2 v2.1.2 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	honnef.co/go/js/dom v0.0.0-20180323154144-6da835bec70f
-	k8s.io/api v0.0.0-20180925152912-a191abe0b71e
-	k8s.io/apimachinery v0.0.0-20180904193909-def12e63c512
-	k8s.io/client-go v8.0.0+incompatible
-	k8s.io/kube-openapi v0.0.0-20180731170545-e3762e86a74c // indirect
+	k8s.io/api v0.0.0-20181107015507-4af2133c62e9
+	k8s.io/apimachinery v0.0.0-20181130031032-af2f90f9922d
+	k8s.io/client-go v9.0.0+incompatible
+	k8s.io/klog v0.1.0 // indirect
+	k8s.io/kube-openapi v0.0.0-20181106182614-a9a16210091c // indirect
 	rsc.io/pdf v0.1.1 // indirect
+	sigs.k8s.io/yaml v1.1.0 // indirect
 )

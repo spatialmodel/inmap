@@ -36,7 +36,7 @@ import (
 	"github.com/ctessum/requestcache"
 	"github.com/spatialmodel/inmap/epi"
 
-	"bitbucket.org/ctessum/sparse"
+	"github.com/ctessum/sparse"
 )
 
 func init() {

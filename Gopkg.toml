@@ -23,11 +23,11 @@
 
 [[constraint]]
   branch = "default"
-  name = "bitbucket.org/ctessum/cdf"
+  name = "github.com/ctessum/cdf"
 
 [[constraint]]
   branch = "default"
-  name = "bitbucket.org/ctessum/sparse"
+  name = "github.com/ctessum/sparse"
 
 [[constraint]]
   name = "github.com/BurntSushi/toml"

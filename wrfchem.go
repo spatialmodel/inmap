@@ -26,7 +26,7 @@ import (
 	"github.com/ctessum/atmos/seinfeld"
 	"github.com/ctessum/atmos/wesely1989"
 
-	"bitbucket.org/ctessum/sparse"
+	"github.com/ctessum/sparse"
 )
 
 // WRF variables currently used:

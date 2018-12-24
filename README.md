@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.com/spatialmodel/inmap.svg?branch=master)](https://travis-ci.com/spatialmodel/inmap) [![Coverage Status](https://coveralls.io/repos/github/spatialmodel/inmap/badge.svg?branch=master)](https://coveralls.io/github/spatialmodel/inmap?branch=master) [![GoDoc](http://godoc.org/github.com/spatialmodel/inmap?status.svg)](http://godoc.org/github.com/spatialmodel/inmap) [![Go Report Card](https://goreportcard.com/badge/github.com/spatialmodel/inmap)](https://goreportcard.com/report/github.com/spatialmodel/inmap)
 
-_Note: This is the documentation for the development version of InMAP. Documentation for other versions is available [here](https://github.com/spatialmodel/inmap/releases)._
+_Note: This is the documentation for InMAP v1.5. Documentation for other versions is available [here](https://github.com/spatialmodel/inmap/releases)._
 
 ## About InMAP
 
@@ -22,7 +22,7 @@ You can also compile InMAP from its source code. The instructions here are speci
 
 1. Install the [Go compiler](http://golang.org/doc/install), version 1.11 or higher. Make sure you install the correct version (64 bit) for your system. It may be useful to go through one of the tutorials to make sure the compiler is correctly installed.
 
-3. Install the [git](http://git-scm.com/) and [mercurial](http://mercurial.selenic.com/) version control programs, if they are not already installed. If you are using a shared system or cluster, you may just need to load them with the commands `module load git` and `module load hg`.
+3. Install the [git](http://git-scm.com/) version control program, if it is are not already installed.
 
 4. Download and install the main program:
 

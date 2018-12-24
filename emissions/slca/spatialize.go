@@ -32,7 +32,7 @@ import (
 	"github.com/spatialmodel/inmap/emissions/aep"
 	"github.com/spatialmodel/inmap/emissions/aep/aeputil"
 
-	"bitbucket.org/ctessum/sparse"
+	"github.com/ctessum/sparse"
 
 	"github.com/ctessum/geom"
 	"github.com/ctessum/requestcache"

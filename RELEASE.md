@@ -4,7 +4,7 @@ This file contains a checklist for steps to take to release a new version of InM
 
 1. Update vendored packages using `dep ensure -update`.
 
-1. Update the version number in `framework.go` and in `inmap/build.sh`.
+1. Update the version number in `framework.go` and in `cmd/inmap/build.sh`.
 
 1. Update the version number in `README.md`. Make sure the README and other documentation is up to date.
 
@@ -14,7 +14,7 @@ This file contains a checklist for steps to take to release a new version of InM
 
 1. Commit the results.
 
-1. Run `inmap/build.sh` to create executables for different platforms.
+1. Run `cmd/inmap/build.sh` to create executables for different platforms.
 
 1. Tag the release version using `git tag v${version}` and push it using `git push origin v${version}`.
 

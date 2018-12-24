@@ -28,7 +28,7 @@ import (
 	"strings"
 	"testing"
 
-	"bitbucket.org/ctessum/cdf"
+	"github.com/ctessum/cdf"
 	"github.com/BurntSushi/toml"
 	"github.com/gonum/floats"
 	"github.com/spatialmodel/inmap"

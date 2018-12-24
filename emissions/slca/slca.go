@@ -31,7 +31,7 @@ import (
 	"github.com/spatialmodel/inmap/emissions/aep/aeputil"
 	"github.com/spatialmodel/inmap/epi"
 
-	"bitbucket.org/ctessum/cdf"
+	"github.com/ctessum/cdf"
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/index/rtree"
 	"github.com/ctessum/requestcache"

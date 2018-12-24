@@ -25,7 +25,7 @@ import (
 
 	"golang.org/x/net/context"
 
-	"bitbucket.org/ctessum/sparse"
+	"github.com/ctessum/sparse"
 )
 
 // SpatialResults is a wrapper for Results that can do spatial calculations.

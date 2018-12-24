@@ -32,8 +32,8 @@ import (
 	"github.com/ctessum/atmos/seinfeld"
 	"github.com/ctessum/atmos/wesely1989"
 
-	"bitbucket.org/ctessum/cdf"
-	"bitbucket.org/ctessum/sparse"
+	"github.com/ctessum/cdf"
+	"github.com/ctessum/sparse"
 )
 
 // physical constants
