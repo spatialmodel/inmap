@@ -40,7 +40,7 @@ require (
 	github.com/gorilla/websocket v1.2.0
 	github.com/gregjones/httpcache v0.0.0-20180305231024-9cad4c3443a7 // indirect
 	github.com/hashicorp/hcl v0.0.0-20171017181929-23c074d0eceb // indirect
-	github.com/improbable-eng/grpc-web v0.0.0-20180415100421-58d1f6c3d97b
+	github.com/improbable-eng/grpc-web v0.0.0-20190113155728-0c7a81a25d11
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/johanbrandhorst/protobuf v0.6.1
 	github.com/jonas-p/go-shp v0.0.0-20171012111128-5b9c3047ce59
