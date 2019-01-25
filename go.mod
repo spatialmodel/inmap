@@ -5,7 +5,6 @@ require (
 	github.com/BurntSushi/toml v0.3.0
 	github.com/GaryBoone/GoStats v0.0.0-20130122001700-1993eafbef57
 	github.com/Knetic/govaluate v3.0.0+incompatible
-	github.com/ajstarks/svgo v0.0.0-20170524223713-fec71ff44529 // indirect
 	github.com/aws/aws-sdk-go v1.15.15
 	github.com/cenkalti/backoff v2.0.0+incompatible
 	github.com/cpuguy83/go-md2man v1.0.7 // indirect
@@ -26,7 +25,6 @@ require (
 	github.com/go-ini/ini v1.38.1 // indirect
 	github.com/gogo/protobuf v1.1.1 // indirect
 	github.com/golang/build v0.0.0-20180621153413-767337190e59
-	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/groupcache v0.0.0-20170421005642-b710c8433bd1
 	github.com/golang/protobuf v1.2.0
 	github.com/gonum/floats v0.0.0-20170731225635-f74b330d45c5
@@ -47,11 +45,7 @@ require (
 	github.com/johanbrandhorst/protobuf v0.6.1
 	github.com/jonas-p/go-shp v0.0.0-20171012111128-5b9c3047ce59
 	github.com/json-iterator/go v1.1.5 // indirect
-	github.com/jung-kurt/gofpdf v1.0.0 // indirect
-	github.com/kr/pretty v0.0.0-20160823170715-cfb55aafdaf3
-	github.com/kr/text v0.0.0-20160504234017-7cafcd837844 // indirect
-	github.com/llgcode/draw2d v0.0.0-20170513092631-dcbfbe505d35 // indirect
-	github.com/llgcode/ps v0.0.0-20150911083025-f1443b32eedb // indirect
+	github.com/kr/pretty v0.1.0
 	github.com/lnashier/viper v0.0.0-20180730210402-cc7336125d12
 	github.com/magiconair/properties v1.7.3 // indirect
 	github.com/mitchellh/mapstructure v0.0.0-20171017171808-06020f85339e // indirect
@@ -70,16 +64,18 @@ require (
 	github.com/spf13/cobra v0.0.0-20180531180338-1e58aa3361fd
 	github.com/spf13/jwalterweatherman v0.0.0-20170901151539-12bd96e66386 // indirect
 	github.com/spf13/pflag v1.0.1
+	github.com/stretchr/testify v1.2.2 // indirect
 	github.com/tealeg/xlsx v1.0.3
 	golang.org/x/crypto v0.0.0-20181127143415-eb0de9b17e85
 	golang.org/x/exp v0.0.0-20180907224206-e88728d35e99 // indirect
-	golang.org/x/image v0.0.0-20171013013600-f7e31b4ea2e3 // indirect
 	golang.org/x/net v0.0.0-20180906233101-161cd47e91fd
 	golang.org/x/time v0.0.0-20180412165947-fbb02b2291d2 // indirect
-	gonum.org/v1/gonum v0.0.0-20180622153253-e9e56344e335
-	gonum.org/v1/plot v0.0.0-20180613020117-3f55ce2422a7
+	gonum.org/v1/gonum v0.0.0-20180816165407-929014505bf4
+	gonum.org/v1/netlib v0.0.0-20190119082159-9be13e02fd56 // indirect
+	gonum.org/v1/plot v0.0.0-20190117111959-11e716203838
 	google.golang.org/grpc v1.13.0
 	gopkg.in/airbrake/gobrake.v2 v2.0.9 // indirect
+	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/gemnasium/logrus-airbrake-hook.v2 v2.1.2 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	honnef.co/go/js/dom v0.0.0-20180323154144-6da835bec70f
@@ -88,6 +84,5 @@ require (
 	k8s.io/client-go v9.0.0+incompatible
 	k8s.io/klog v0.1.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20181106182614-a9a16210091c // indirect
-	rsc.io/pdf v0.1.1 // indirect
 	sigs.k8s.io/yaml v1.1.0 // indirect
 )
