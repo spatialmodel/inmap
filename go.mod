@@ -67,10 +67,10 @@ require (
 	github.com/stretchr/testify v1.2.2 // indirect
 	github.com/tealeg/xlsx v1.0.3
 	golang.org/x/crypto v0.0.0-20181127143415-eb0de9b17e85
-	golang.org/x/exp v0.0.0-20180907224206-e88728d35e99 // indirect
+	golang.org/x/exp v0.0.0-20190125153040-c74c464bbbf2 // indirect
 	golang.org/x/net v0.0.0-20180906233101-161cd47e91fd
 	golang.org/x/time v0.0.0-20180412165947-fbb02b2291d2 // indirect
-	gonum.org/v1/gonum v0.0.0-20180816165407-929014505bf4
+	gonum.org/v1/gonum v0.0.0-20190123113241-dd4cc715c58a
 	gonum.org/v1/netlib v0.0.0-20190119082159-9be13e02fd56 // indirect
 	gonum.org/v1/plot v0.0.0-20190117111959-11e716203838
 	google.golang.org/grpc v1.13.0

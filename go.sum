@@ -204,8 +204,8 @@ golang.org/x/crypto v0.0.0-20181127143415-eb0de9b17e85 h1:et7+NAX3lLIk5qUCTA9Qel
 golang.org/x/crypto v0.0.0-20181127143415-eb0de9b17e85/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
 golang.org/x/exp v0.0.0-20180321215751-8460e604b9de/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
 golang.org/x/exp v0.0.0-20180807140117-3d87b88a115f/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
-golang.org/x/exp v0.0.0-20180907224206-e88728d35e99 h1:7IN8+ZMp04l/19EF+wsr7NM1jyvcadKINimAtWRyQk8=
-golang.org/x/exp v0.0.0-20180907224206-e88728d35e99/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
+golang.org/x/exp v0.0.0-20190125153040-c74c464bbbf2 h1:y102fOLFqhV41b+4GPiJoa0k/x+pJcEi2/HB1Y5T6fU=
+golang.org/x/exp v0.0.0-20190125153040-c74c464bbbf2/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
 golang.org/x/image v0.0.0-20180708004352-c73c2afc3b81 h1:00VmoueYNlNz/aHIilyyQz/MHSqGoWJzpFv/HW8xpzI=
 golang.org/x/image v0.0.0-20180708004352-c73c2afc3b81/go.mod h1:ux5Hcp/YLpHSI86hEcLt0YII63i6oz57MZXIpbrjZUs=
 golang.org/x/net v0.0.0-20180702212446-ed29d75add3d h1:B2RL9y12DFXBWEdHqZW1ts6ymJLN0FdBwL2mOY5zbCs=
@@ -229,6 +229,8 @@ golang.org/x/tools v0.0.0-20180314180217-d853e8088c62/go.mod h1:n7NCudcB/nEzxVGm
 golang.org/x/tools v0.0.0-20180525024113-a5b4c53f6e8b/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
 gonum.org/v1/gonum v0.0.0-20180816165407-929014505bf4 h1:nYxTaCPaVoJbxx+vMVnsFb6kw5+6aJCx52m/lmM/Vog=
 gonum.org/v1/gonum v0.0.0-20180816165407-929014505bf4/go.mod h1:Y+Yx5eoAFn32cQvJDxZx5Dpnq+c3wtXuadVZAcxbbBo=
+gonum.org/v1/gonum v0.0.0-20190123113241-dd4cc715c58a h1:UV4wOFiqGrhrhqKz9xyqaiQjNuRoA72AfvOynbja8IY=
+gonum.org/v1/gonum v0.0.0-20190123113241-dd4cc715c58a/go.mod h1:Y+Yx5eoAFn32cQvJDxZx5Dpnq+c3wtXuadVZAcxbbBo=
 gonum.org/v1/netlib v0.0.0-20190119082159-9be13e02fd56 h1:sWo7pRubEwovyVnbgs3VJpe4ppUGSLbu/zNPyCBXtHE=
 gonum.org/v1/netlib v0.0.0-20190119082159-9be13e02fd56/go.mod h1:wa6Ws7BG/ESfp6dHfk7C6KdzKA7wR7u/rKwOGE66zvw=
 gonum.org/v1/plot v0.0.0-20190117111959-11e716203838 h1:rioOXXoz00RiPGMadBoV5xpBu0BEKkqMIxP+t5Qs3mA=
