@@ -34,7 +34,7 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/BurntSushi/toml"
-	"github.com/golang/build/autocertcache"
+	"golang.org/x/build/autocertcache"
 	"github.com/sirupsen/logrus"
 
 	"github.com/spatialmodel/inmap/cloud"

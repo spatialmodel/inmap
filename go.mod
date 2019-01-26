@@ -18,13 +18,9 @@ require (
 	github.com/ctessum/requestcache v0.0.0-20180628165226-f806c589cca6
 	github.com/ctessum/sparse v0.0.0-20181201011727-57d6234a2c9d
 	github.com/ctessum/unit v0.0.0-20160621200450-755774ac2fcb
-	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-humble/detect v0.1.2 // indirect
 	github.com/go-humble/router v0.5.0
 	github.com/go-ini/ini v1.38.1 // indirect
-	github.com/gogo/protobuf v1.1.1 // indirect
-	github.com/golang/build v0.0.0-20180621153413-767337190e59
 	github.com/golang/groupcache v0.0.0-20170421005642-b710c8433bd1
 	github.com/golang/protobuf v1.2.0
 	github.com/gonum/floats v0.0.0-20170731225635-f74b330d45c5
@@ -32,13 +28,10 @@ require (
 	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c // indirect
 	github.com/google/go-cloud v0.1.1
 	github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf // indirect
-	github.com/google/martian v2.1.0+incompatible // indirect
-	github.com/googleapis/gax-go v2.0.0+incompatible // indirect
 	github.com/googleapis/gnostic v0.2.0 // indirect
-	github.com/gopherjs/gopherjs v0.0.0-20180424202546-8dffc02ea1cb
+	github.com/gopherjs/gopherjs v0.0.0-20181017120253-0766667cb4d1
 	github.com/gopherjs/vecty v0.0.0-20180525005238-a3bd138280bf
 	github.com/gorilla/websocket v1.2.0
-	github.com/gregjones/httpcache v0.0.0-20180305231024-9cad4c3443a7 // indirect
 	github.com/hashicorp/hcl v0.0.0-20171017181929-23c074d0eceb // indirect
 	github.com/improbable-eng/grpc-web v0.0.0-20190113155728-0c7a81a25d11
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
@@ -56,7 +49,6 @@ require (
 	github.com/pelletier/go-toml v1.0.1 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/rs/cors v1.3.0 // indirect
-	github.com/russross/blackfriday v0.0.0-20170728175326-4048872b16cc // indirect
 	github.com/sirupsen/logrus v1.0.5
 	github.com/skratchdot/open-golang v0.0.0-20160302144031-75fb7ed4208c
 	github.com/spf13/afero v1.0.0 // indirect
@@ -64,20 +56,18 @@ require (
 	github.com/spf13/cobra v0.0.0-20180531180338-1e58aa3361fd
 	github.com/spf13/jwalterweatherman v0.0.0-20170901151539-12bd96e66386 // indirect
 	github.com/spf13/pflag v1.0.1
-	github.com/stretchr/testify v1.2.2 // indirect
 	github.com/tealeg/xlsx v1.0.3
+	golang.org/x/build v0.0.0-20190125231735-47e1a6101d0b
 	golang.org/x/crypto v0.0.0-20181127143415-eb0de9b17e85
 	golang.org/x/exp v0.0.0-20190125153040-c74c464bbbf2 // indirect
-	golang.org/x/net v0.0.0-20180906233101-161cd47e91fd
-	golang.org/x/time v0.0.0-20180412165947-fbb02b2291d2 // indirect
+	golang.org/x/net v0.0.0-20181029044818-c44066c5c816
 	gonum.org/v1/gonum v0.0.0-20190123113241-dd4cc715c58a
 	gonum.org/v1/netlib v0.0.0-20190119082159-9be13e02fd56 // indirect
 	gonum.org/v1/plot v0.0.0-20190117111959-11e716203838
-	google.golang.org/grpc v1.13.0
+	google.golang.org/grpc v1.16.0
 	gopkg.in/airbrake/gobrake.v2 v2.0.9 // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/gemnasium/logrus-airbrake-hook.v2 v2.1.2 // indirect
-	gopkg.in/inf.v0 v0.9.1 // indirect
 	honnef.co/go/js/dom v0.0.0-20180323154144-6da835bec70f
 	k8s.io/api v0.0.0-20181107015507-4af2133c62e9
 	k8s.io/apimachinery v0.0.0-20181130031032-af2f90f9922d

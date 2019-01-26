@@ -287,7 +287,7 @@
 [[projects]]
   branch = "master"
   digest = "1:923196c962b3b24df0100369736afdc521ae11a8ddadca4d8796e647064bb40a"
-  name = "github.com/golang/build"
+  name = "golang.org/x/build"
   packages = ["autocertcache"]
   pruneopts = ""
   revision = "767337190e5911af68ee322b08b978b344bf03bf"
@@ -1197,7 +1197,7 @@
     "github.com/ctessum/unit",
     "github.com/ctessum/unit/badunit",
     "github.com/go-humble/router",
-    "github.com/golang/build/autocertcache",
+    "golang.org/x/build/autocertcache",
     "github.com/golang/groupcache/lru",
     "github.com/golang/protobuf/proto",
     "github.com/gonum/floats",
