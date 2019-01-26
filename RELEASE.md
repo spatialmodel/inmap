@@ -2,8 +2,6 @@
 
 This file contains a checklist for steps to take to release a new version of InMAP.
 
-1. Update vendored packages using `dep ensure -update`.
-
 1. Update the version number in `framework.go` and in `cmd/inmap/build.sh`.
 
 1. Update the version number in `README.md`. Make sure the README and other documentation is up to date.
