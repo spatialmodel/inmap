@@ -28,7 +28,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/google/go-cloud/blob"
+	"gocloud.dev/blob"
 	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/cloud"
 )

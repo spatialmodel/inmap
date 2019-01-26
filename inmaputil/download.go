@@ -121,7 +121,7 @@ func downloadBlob(ctx context.Context, path string, c chan string) string {
 		}
 		bucketPath := strings.TrimPrefix(url.Path, "/")
 		bucketPath = bucketPath[0:len(bucketPath)-4] + filepath.Ext(fname)
-		r, err := bucket.NewReader(ctx, bucketPath)
+		r, err := bucket.NewReader(ctx, bucketPath, nil)
 		if err != nil {
 			c <- err.Error()
 			return path

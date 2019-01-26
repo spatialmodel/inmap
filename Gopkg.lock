@@ -361,7 +361,7 @@
 
 [[projects]]
   digest = "1:8ac282ba346fd14a21c5b75d90e4030e706092c91f8cc9367719bf2073471324"
-  name = "github.com/google/go-cloud"
+  name = "gocloud.dev"
   packages = [
     "blob",
     "blob/driver",
@@ -1201,11 +1201,11 @@
     "github.com/golang/groupcache/lru",
     "github.com/golang/protobuf/proto",
     "github.com/gonum/floats",
-    "github.com/google/go-cloud/blob",
-    "github.com/google/go-cloud/blob/fileblob",
-    "github.com/google/go-cloud/blob/gcsblob",
-    "github.com/google/go-cloud/blob/s3blob",
-    "github.com/google/go-cloud/gcp",
+    "gocloud.dev/blob",
+    "gocloud.dev/blob/fileblob",
+    "gocloud.dev/blob/gcsblob",
+    "gocloud.dev/blob/s3blob",
+    "gocloud.dev/gcp",
     "github.com/gopherjs/gopherjs/js",
     "github.com/gopherjs/vecty",
     "github.com/gopherjs/vecty/elem",

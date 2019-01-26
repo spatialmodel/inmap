@@ -27,14 +27,14 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/google/go-cloud/blob"
 	"github.com/spatialmodel/inmap/cloud/cloudrpc"
+	"gocloud.dev/blob"
 )
 
 // readBlob reads the given blob from the given bucket.
 func readBlob(ctx context.Context, bucket *blob.Bucket, key string) ([]byte, error) {
 	var b bytes.Buffer
-	r, err := bucket.NewReader(ctx, key)
+	r, err := bucket.NewReader(ctx, key, nil)
 	if err != nil {
 		return nil, err
 	}

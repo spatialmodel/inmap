@@ -27,8 +27,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/go-cloud/blob"
-	"github.com/google/go-cloud/blob/fileblob"
+	"gocloud.dev/blob"
+	"gocloud.dev/blob/fileblob"
 )
 
 func helperLog(t *testing.T) chan string {
@@ -74,7 +74,7 @@ func TestMaybeDownload_bucket(t *testing.T) {
 		t.Error(err)
 	}
 	defer os.RemoveAll(dir)
-	bucket, err := fileblob.NewBucket(dir)
+	bucket, err := fileblob.OpenBucket(dir, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -27,11 +27,11 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/google/go-cloud/blob"
-	"github.com/google/go-cloud/blob/fileblob"
-	"github.com/google/go-cloud/blob/gcsblob"
-	"github.com/google/go-cloud/blob/s3blob"
-	"github.com/google/go-cloud/gcp"
+	"gocloud.dev/blob"
+	"gocloud.dev/blob/fileblob"
+	"gocloud.dev/blob/gcsblob"
+	"gocloud.dev/blob/s3blob"
+	"gocloud.dev/gcp"
 )
 
 // OpenBucket returns the blob storage bucket specified by bucketName,
@@ -48,7 +48,7 @@ func OpenBucket(ctx context.Context, bucketName string) (*blob.Bucket, error) {
 	}
 	switch url.Scheme {
 	case "file":
-		return fileblob.NewBucket(url.Hostname())
+		return fileblob.OpenBucket(url.Hostname(), nil)
 	case "gs":
 		return gsBucket(ctx, url.Hostname())
 	case "s3":
@@ -69,7 +69,7 @@ func gsBucket(ctx context.Context, name string) (*blob.Bucket, error) {
 	if err != nil {
 		return nil, err
 	}
-	return gcsblob.OpenBucket(ctx, name, c)
+	return gcsblob.OpenBucket(ctx, c, name, nil)
 }
 
 // s3Bucket opens an s3 storage bucket. It assumes the following
@@ -85,5 +85,5 @@ func s3Bucket(ctx context.Context, name string) (*blob.Bucket, error) {
 		Credentials: credentials.NewEnvCredentials(),
 	}
 	s := session.Must(session.NewSession(c))
-	return s3blob.OpenBucket(ctx, s, name)
+	return s3blob.OpenBucket(ctx, s, name, nil)
 }
