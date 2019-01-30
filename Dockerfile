@@ -1,20 +1,11 @@
-FROM golang
+FROM golang:1.11
 
-WORKDIR /go/src/github.com/spatialmodel
+WORKDIR /app
 
 RUN git clone --depth=1 https://github.com/spatialmodel/inmap.git
 
-WORKDIR /go/src/github.com/spatialmodel/inmap
+WORKDIR /app/inmap
 
-RUN curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-RUN dep ensure
+RUN go install ./...
 
-RUN go install github.com/spatialmodel/inmap/cmd/...
-
-# This step installs ssl certificates for testing.
-RUN go get google.golang.org/grpc/testdata
-
-ENV INMAP_ROOT_DIR /go/src/github.com/spatialmodel/inmap/
-
-EXPOSE 10000
-EXPOSE 8080
+ENV INMAP_ROOT_DIR /app/inmap/
