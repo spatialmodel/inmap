@@ -80,6 +80,8 @@ type Server struct {
 	staticServer http.Handler
 
 	Log logrus.FieldLogger
+
+	prefix string
 }
 
 type ServerConfig struct {
@@ -107,7 +109,7 @@ type ServerConfig struct {
 
 // NewServer creates a new EIO-LCA server, where hr represents the hazard ratio
 // functions to be used.
-func NewServer(c *ServerConfig, hr ...epi.HRer) (*Server, error) {
+func NewServer(c *ServerConfig, prefix string, hr ...epi.HRer) (*Server, error) {
 	s, err := NewSpatial(&c.SpatialConfig, hr...)
 	if err != nil {
 		return nil, fmt.Errorf("eioserve: creating server: %v", err)
@@ -127,6 +129,7 @@ func NewServer(c *ServerConfig, hr ...epi.HRer) (*Server, error) {
 		SpatialEIO:  s,
 		defaultYear: c.DefaultYear,
 		Log:         logrus.StandardLogger(),
+		prefix:      prefix,
 	}
 	model.CES, err = ces.NewCES(model, c.CESDataDir)
 	if err != nil {
@@ -171,6 +174,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			"url":  r.URL.String(),
 			"addr": r.RemoteAddr,
 		}).Info("eioserve static request")
+		r.URL.Path = r.URL.Path[len(s.prefix):]
 		s.staticServer.ServeHTTP(w, r)
 	} else {
 		fmt.Fprint(w, `<!DOCTYPE html>

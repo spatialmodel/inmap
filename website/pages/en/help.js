@@ -24,17 +24,17 @@ class Help extends React.Component {
     const supportLinks = [
       {
         content: `Learn more using the [documentation on this site.](${docUrl(
-          'doc1.html',
+          'quickstart.html',
           language,
         )})`,
         title: 'Browse Docs',
       },
       {
-        content: 'Ask questions about the documentation and project',
+        content: 'Ask questions about InMAP <a href=https://groups.google.com/forum/#!forum/inmap-users>here.</a>',
         title: 'Join the community',
       },
       {
-        content: "Find out what's new with this project",
+        content: "Find out what's new with InMAP <a href=https://groups.google.com/forum/#!forum/inmap-users>here.</a>  ",
         title: 'Stay up to date',
       },
     ];

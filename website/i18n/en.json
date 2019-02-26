@@ -3,7 +3,7 @@
   "localized-strings": {
     "next": "Next",
     "previous": "Previous",
-    "tagline": "A website for testing",
+    "tagline": "INTERVENTION MODEL FOR AIR POLLUTION",
     "docs": {
       "cmd/inmap_cloud_delete": {
         "title": "inmap cloud delete",
@@ -96,6 +96,7 @@
     },
     "links": {
       "Docs": "Docs",
+      "EIEIO": "EIEIO",
       "API": "API",
       "Help": "Help",
       "Blog": "Blog"

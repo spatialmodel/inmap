@@ -229,7 +229,7 @@ func (c *GUI) Mount() {
 	go func() {
 		check(c.LoadMap("eiomap"))
 		c.router = router.New()
-		c.router.HandleFunc("/{query}", func(ctx *router.Context) {
+		c.router.HandleFunc("/eieio/{query}", func(ctx *router.Context) {
 			go func() { c.update(ctx.Params["query"]) }()
 		})
 		c.router.InterceptLinks()
@@ -238,7 +238,7 @@ func (c *GUI) Mount() {
 		url, err := url.Parse(c.doc.BaseURI())
 		check(err)
 
-		c.router.Navigate(url.RawQuery)
+		c.router.Navigate("/eieio/" + url.RawQuery)
 	}()
 }
 
@@ -262,7 +262,7 @@ func (s *selector) Render() vecty.ComponentOrHTML {
 				prop.ID(s.id),
 				event.Change(func(e *vecty.Event) {
 					sel := selectionFromForm()
-					s.c.router.Navigate(fmt.Sprintf("/%s", queryFromSelection(sel).Encode()))
+					s.c.router.Navigate(fmt.Sprintf("/eieio/%s", queryFromSelection(sel).Encode()))
 				}),
 			),
 		),

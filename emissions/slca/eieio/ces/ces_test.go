@@ -48,7 +48,7 @@ func TestCES(t *testing.T) {
 	}
 	cfg.Config.Years = []eieio.Year{2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015}
 
-	s, err := eieio.NewServer(&cfg, epi.NasariACS)
+	s, err := eieio.NewServer(&cfg, "", epi.NasariACS)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}

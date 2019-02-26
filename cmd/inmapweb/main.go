@@ -34,8 +34,8 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/BurntSushi/toml"
-	"golang.org/x/build/autocertcache"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/build/autocertcache"
 
 	"github.com/spatialmodel/inmap/cloud"
 	"github.com/spatialmodel/inmap/emissions/slca"
@@ -122,7 +122,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	s, err := eieio.NewServer(&c, epi.NasariACS, epi.Krewski2009, epi.Krewski2009Ecologic, epi.Lepeule2012)
+	const eieioPrefix = "/eieio/"
+	s, err := eieio.NewServer(&c, eieioPrefix, epi.NasariACS, epi.Krewski2009, epi.Krewski2009Ecologic, epi.Lepeule2012)
 	if err != nil {
 		logger.WithError(err).Fatal("failed to create server")
 	}
@@ -162,7 +163,8 @@ func main() {
 		inmapServer.ServeHTTP(w, r)
 	})
 	mx.Handle("/greet/", greet)
-	mx.Handle("/", s)
+	mx.Handle(eieioPrefix, s)
+	mx.Handle("/eieiorpc.EIEIOrpc/", s)
 
 	var m *autocert.Manager
 

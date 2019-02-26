@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0">
+    <channel>
+        <title>InMAP Blog</title>
+        <link>https://inmap.run/blog</link>
+        <description>The best place to stay up-to-date with the latest InMAP news and events.</description>
+        <lastBuildDate>Mon, 25 Sep 2017 06:00:00 GMT</lastBuildDate>
+        <docs>http://blogs.law.harvard.edu/tech/rss</docs>
+        <generator>Feed for Node.js</generator>
+        <image>
+            <title>InMAP Blog</title>
+            <url>https://inmap.run/img/textLogo.svg</url>
+            <link>https://inmap.run/blog</link>
+        </image>
+        <copyright>Copyright © 2019 the InMAP authors.</copyright>
+        <item>
+            <title><![CDATA[Adding RSS Support - RSS Truncation Test]]></title>
+            <link>https://inmap.run/blog/2017/09/25/testing-rss.html</link>
+            <guid>https://inmap.run/blog/2017/09/25/testing-rss.html</guid>
+            <pubDate>Mon, 25 Sep 2017 06:00:00 GMT</pubDate>
+            <description><![CDATA[<p>Test blog post.</p>
+<p>This should be truncated.</p>
+]]></description>
+        </item>
+    </channel>
+</rss>
