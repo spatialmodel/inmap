@@ -5,7 +5,7 @@ require (
 	github.com/BurntSushi/toml v0.3.0
 	github.com/GaryBoone/GoStats v0.0.0-20130122001700-1993eafbef57
 	github.com/Knetic/govaluate v3.0.0+incompatible
-	github.com/aws/aws-sdk-go v1.15.57
+	github.com/aws/aws-sdk-go v1.17.6
 	github.com/cenkalti/backoff v2.0.0+incompatible
 	github.com/cpuguy83/go-md2man v1.0.7 // indirect
 	github.com/ctessum/atmos v0.0.0-20170526022537-cba69f7ca647
@@ -18,6 +18,7 @@ require (
 	github.com/ctessum/requestcache v0.0.0-20180628165226-f806c589cca6
 	github.com/ctessum/sparse v0.0.0-20181201011727-57d6234a2c9d
 	github.com/ctessum/unit v0.0.0-20160621200450-755774ac2fcb
+	github.com/evanphx/json-patch v4.1.0+incompatible // indirect
 	github.com/go-humble/detect v0.1.2 // indirect
 	github.com/go-humble/router v0.5.0
 	github.com/golang/groupcache v0.0.0-20180924190550-6f2cf27854a4
@@ -48,7 +49,6 @@ require (
 	github.com/rs/cors v1.3.0 // indirect
 	github.com/sirupsen/logrus v1.1.1
 	github.com/skratchdot/open-golang v0.0.0-20160302144031-75fb7ed4208c
-	github.com/smartystreets/goconvey v0.0.0-20181108003508-044398e4856c // indirect
 	github.com/spf13/afero v1.0.0 // indirect
 	github.com/spf13/cast v1.2.0
 	github.com/spf13/cobra v0.0.0-20180531180338-1e58aa3361fd
@@ -64,11 +64,10 @@ require (
 	gonum.org/v1/netlib v0.0.0-20190119082159-9be13e02fd56 // indirect
 	gonum.org/v1/plot v0.0.0-20190117111959-11e716203838
 	google.golang.org/grpc v1.16.0
-	gopkg.in/ini.v1 v1.41.0 // indirect
 	honnef.co/go/js/dom v0.0.0-20180323154144-6da835bec70f
-	k8s.io/api v0.0.0-20181107015507-4af2133c62e9
-	k8s.io/apimachinery v0.0.0-20181130031032-af2f90f9922d
-	k8s.io/client-go v9.0.0+incompatible
+	k8s.io/api v0.0.0-20190111032252-67edc246be36
+	k8s.io/apimachinery v0.0.0-20190223094358-dcb391cde5ca
+	k8s.io/client-go v10.0.0+incompatible
 	k8s.io/klog v0.1.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20181106182614-a9a16210091c // indirect
 	sigs.k8s.io/yaml v1.1.0 // indirect
