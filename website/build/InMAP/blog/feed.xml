@@ -4,7 +4,7 @@
         <title>InMAP Blog</title>
         <link>https://inmap.run/blog</link>
         <description>The best place to stay up-to-date with the latest InMAP news and events.</description>
-        <lastBuildDate>Mon, 25 Sep 2017 06:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Mon, 04 Mar 2019 06:00:00 GMT</lastBuildDate>
         <docs>http://blogs.law.harvard.edu/tech/rss</docs>
         <generator>Feed for Node.js</generator>
         <image>
@@ -14,12 +14,12 @@
         </image>
         <copyright>Copyright © 2019 the InMAP authors.</copyright>
         <item>
-            <title><![CDATA[Adding RSS Support - RSS Truncation Test]]></title>
-            <link>https://inmap.run/blog/2017/09/25/testing-rss.html</link>
-            <guid>https://inmap.run/blog/2017/09/25/testing-rss.html</guid>
-            <pubDate>Mon, 25 Sep 2017 06:00:00 GMT</pubDate>
-            <description><![CDATA[<p>Test blog post.</p>
-<p>This should be truncated.</p>
+            <title><![CDATA[Tutorial: Estimating health impacts of the Volkswagen emissions scandal]]></title>
+            <link>https://inmap.run/blog/2019/03/04/tutorial.html</link>
+            <guid>https://inmap.run/blog/2019/03/04/tutorial.html</guid>
+            <pubDate>Mon, 04 Mar 2019 06:00:00 GMT</pubDate>
+            <description><![CDATA[<p>This blog post contains a step-by-step example of how to create an emissions
+scenario and use the InMAP model to estimate the resulting health impacts.</p>
 ]]></description>
         </item>
     </channel>

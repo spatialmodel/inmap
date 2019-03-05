@@ -2,24 +2,24 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://inmap.run/blog</id>
     <title>InMAP Blog</title>
-    <updated>2017-09-25T06:00:00Z</updated>
+    <updated>2019-03-04T06:00:00Z</updated>
     <generator>Feed for Node.js</generator>
     <link rel="alternate" href="https://inmap.run/blog"/>
     <subtitle>The best place to stay up-to-date with the latest InMAP news and events.</subtitle>
     <logo>https://inmap.run/img/textLogo.svg</logo>
     <rights>Copyright © 2019 the InMAP authors.</rights>
     <entry>
-        <title type="html"><![CDATA[Adding RSS Support - RSS Truncation Test]]></title>
-        <id>https://inmap.run/blog/2017/09/25/testing-rss.html</id>
-        <link href="https://inmap.run/blog/2017/09/25/testing-rss.html">
+        <title type="html"><![CDATA[Tutorial: Estimating health impacts of the Volkswagen emissions scandal]]></title>
+        <id>https://inmap.run/blog/2019/03/04/tutorial.html</id>
+        <link href="https://inmap.run/blog/2019/03/04/tutorial.html">
         </link>
-        <updated>2017-09-25T06:00:00Z</updated>
-        <summary type="html"><![CDATA[<p>Test blog post.</p>
-<p>This should be truncated.</p>
+        <updated>2019-03-04T06:00:00Z</updated>
+        <summary type="html"><![CDATA[<p>This blog post contains a step-by-step example of how to create an emissions
+scenario and use the InMAP model to estimate the resulting health impacts.</p>
 ]]></summary>
         <author>
-            <name>Eric Nakagawa</name>
-            <uri>http://twitter.com/ericnakagawa</uri>
+            <name>Xinyu Zhang</name>
+            <uri>xyzhang8@uw.edu</uri>
         </author>
     </entry>
 </feed>
