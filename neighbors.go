@@ -51,7 +51,7 @@ func (d *InMAP) neighbors(c *Cell) {
 	b := c.Bounds()
 
 	// Horizontal
-	westbox := newNeighborRect(b, west)
+	westbox := newNeighborRect(b, west, d)
 	c.west = getCells(d.index, westbox, c.Layer)
 	for _, w := range *c.west {
 		if w.east.len() == 1 && (*w.east)[0].boundary {
@@ -62,7 +62,7 @@ func (d *InMAP) neighbors(c *Cell) {
 		neighborInfoEastWest(w, w.Cell.east.ref(c))
 	}
 
-	eastbox := newNeighborRect(b, east)
+	eastbox := newNeighborRect(b, east, d)
 	c.east = getCells(d.index, eastbox, c.Layer)
 	for _, e := range *c.east {
 		if e.west.len() == 1 && (*e.west)[0].boundary {
@@ -73,7 +73,7 @@ func (d *InMAP) neighbors(c *Cell) {
 		neighborInfoEastWest(e, e.Cell.west.ref(c))
 	}
 
-	southbox := newNeighborRect(b, south)
+	southbox := newNeighborRect(b, south, d)
 	c.south = getCells(d.index, southbox, c.Layer)
 	for _, s := range *c.south {
 		if s.north.len() == 1 && (*s.north)[0].boundary {
@@ -84,7 +84,7 @@ func (d *InMAP) neighbors(c *Cell) {
 		neighborInfoSouthNorth(s, s.Cell.north.ref(c))
 	}
 
-	northbox := newNeighborRect(b, north)
+	northbox := newNeighborRect(b, north, d)
 	c.north = getCells(d.index, northbox, c.Layer)
 	for _, n := range *c.north {
 		if n.south.len() == 1 && (*n.south)[0].boundary {
@@ -96,7 +96,7 @@ func (d *InMAP) neighbors(c *Cell) {
 	}
 
 	// Above
-	abovebelowbox := newNeighborRect(b, aboveBelow)
+	abovebelowbox := newNeighborRect(b, aboveBelow, d)
 	c.above = getCells(d.index, abovebelowbox, c.Layer+1)
 	for _, a := range *c.above {
 		if a.below.len() == 1 && (*a.below)[0] == a {
@@ -274,7 +274,7 @@ func (c *Cell) dereferenceNeighbors(d *InMAP) {
 
 	// Dereference the cells that this cell is the ground level for.
 	if c.Layer == 0 {
-		r := newNeighborRect(c.Bounds(), aboveBelow)
+		r := newNeighborRect(c.Bounds(), aboveBelow, d)
 		for _, ccI := range d.index.SearchIntersect(r) {
 			cc := ccI.(*Cell)
 			if cc.Layer > 0 {
@@ -299,7 +299,7 @@ const (
 
 // newNeighborRect returns a rectangle that should overlap all of the neighbors
 // of a cell with the given alignment a.
-func newNeighborRect(b *geom.Bounds, a neighborAlignment) *geom.Bounds {
+func newNeighborRect(b *geom.Bounds, a neighborAlignment, d *InMAP) *geom.Bounds {
 
 	// bboxOffset is a number significantly less than the smallest grid size
 	// but not small enough to be confused with zero.
@@ -330,6 +330,22 @@ func newNeighborRect(b *geom.Bounds, a neighborAlignment) *geom.Bounds {
 	default:
 		o.Min.X = b.Min.X + offsetX
 		o.Max.X = b.Max.X - offsetX
+	}
+	if !math.IsNaN(d.HorizontalWrap) {
+		// Wrap bounding box.
+		w := math.Abs(d.HorizontalWrap)
+		if o.Min.X > w {
+			o.Min.X -= 2 * w
+		}
+		if o.Max.X > w {
+			o.Max.X -= 2 * w
+		}
+		if o.Min.X < -w {
+			o.Min.X += 2 * w
+		}
+		if o.Max.X < -w {
+			o.Max.X += 2 * w
+		}
 	}
 
 	// Set y extents

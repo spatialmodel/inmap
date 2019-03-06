@@ -1,6 +1,7 @@
 package inmap
 
 import (
+	"math"
 	"reflect"
 	"testing"
 
@@ -8,17 +9,19 @@ import (
 )
 
 func TestNewNeighborRect(t *testing.T) {
+	d := new(InMAP)
+	d.HorizontalWrap = math.NaN()
 
 	smallb := &geom.Bounds{
 		Min: geom.Point{X: 0, Y: 0},
 		Max: geom.Point{X: 1.0e-10, Y: 1.0e-10},
 	}
 
-	w := newNeighborRect(smallb, west)
-	e := newNeighborRect(smallb, east)
-	n := newNeighborRect(smallb, north)
-	s := newNeighborRect(smallb, south)
-	a := newNeighborRect(smallb, aboveBelow)
+	w := newNeighborRect(smallb, west, d)
+	e := newNeighborRect(smallb, east, d)
+	n := newNeighborRect(smallb, north, d)
+	s := newNeighborRect(smallb, south, d)
+	a := newNeighborRect(smallb, aboveBelow, d)
 
 	want := []*geom.Bounds{
 		{Min: geom.Point{X: -1.0000000000000001e-20, Y: 5.0000000000000005e-21}, Max: geom.Point{X: -5.0000000000000005e-21, Y: 9.999999999500001e-11}},
@@ -39,11 +42,11 @@ func TestNewNeighborRect(t *testing.T) {
 		Max: geom.Point{X: 2e20, Y: 2e20},
 	}
 
-	w = newNeighborRect(largeb, west)
-	e = newNeighborRect(largeb, east)
-	n = newNeighborRect(largeb, north)
-	s = newNeighborRect(largeb, south)
-	a = newNeighborRect(largeb, aboveBelow)
+	w = newNeighborRect(largeb, west, d)
+	e = newNeighborRect(largeb, east, d)
+	n = newNeighborRect(largeb, north, d)
+	s = newNeighborRect(largeb, south, d)
+	a = newNeighborRect(largeb, aboveBelow, d)
 
 	want = []*geom.Bounds{
 		{Min: geom.Point{X: 9.999999997e+19, Y: 1.00000000015e+20}, Max: geom.Point{X: 9.9999999985e+19, Y: 1.99999999985e+20}},
@@ -64,11 +67,11 @@ func TestNewNeighborRect(t *testing.T) {
 		Max: geom.Point{X: 0, Y: 0},
 	}
 
-	w = newNeighborRect(negativeb, west)
-	e = newNeighborRect(negativeb, east)
-	n = newNeighborRect(negativeb, north)
-	s = newNeighborRect(negativeb, south)
-	a = newNeighborRect(negativeb, aboveBelow)
+	w = newNeighborRect(negativeb, west, d)
+	e = newNeighborRect(negativeb, east, d)
+	n = newNeighborRect(negativeb, north, d)
+	s = newNeighborRect(negativeb, south, d)
+	a = newNeighborRect(negativeb, aboveBelow, d)
 
 	want = []*geom.Bounds{
 		{Min: geom.Point{X: -1.0000000001, Y: -0.99999999995}, Max: geom.Point{X: -1.00000000005, Y: -5e-11}},
@@ -89,11 +92,11 @@ func TestNewNeighborRect(t *testing.T) {
 		Max: geom.Point{X: 1, Y: 1},
 	}
 
-	w = newNeighborRect(centeredb, west)
-	e = newNeighborRect(centeredb, east)
-	n = newNeighborRect(centeredb, north)
-	s = newNeighborRect(centeredb, south)
-	a = newNeighborRect(centeredb, aboveBelow)
+	w = newNeighborRect(centeredb, west, d)
+	e = newNeighborRect(centeredb, east, d)
+	n = newNeighborRect(centeredb, north, d)
+	s = newNeighborRect(centeredb, south, d)
+	a = newNeighborRect(centeredb, aboveBelow, d)
 
 	want = []*geom.Bounds{
 		{Min: geom.Point{X: -1.0000000002, Y: -0.9999999999}, Max: geom.Point{X: -1.0000000001, Y: 0.9999999999}},

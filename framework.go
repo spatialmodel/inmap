@@ -88,6 +88,13 @@ type InMAP struct {
 	index *rtree.Rtree
 
 	cellLock sync.Mutex
+
+	// HorizontalWrap is the X coordinate value at which the grid
+	// should wrap. For example, for a latitude-longitude grid,
+	// the value should be 180.
+	// To prevent the grid from wrapping, set HorizontalWrap to
+	// NaN.
+	HorizontalWrap float64
 }
 
 // Init initializes the simulation by running d.InitFuncs.
