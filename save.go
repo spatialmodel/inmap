@@ -41,8 +41,9 @@ type versionCells struct {
 	// DataVersion holds the variable grid data version of the software
 	// that saved this data, if any, and should match the VarGridDataVersion
 	// global variable.
-	DataVersion string
-	Cells       []*Cell
+	DataVersion    string
+	Cells          []*Cell
+	HorizontalWrap float64
 }
 
 // Save returns a function that saves the data in d to a gob file
@@ -56,8 +57,9 @@ func Save(w io.Writer) DomainManipulator {
 
 		// Set the data version so it can be checked when the data is loaded.
 		data := versionCells{
-			DataVersion: VarGridDataVersion,
-			Cells:       d.cells.array(),
+			DataVersion:    VarGridDataVersion,
+			Cells:          d.cells.array(),
+			HorizontalWrap: d.HorizontalWrap,
 		}
 
 		e := gob.NewEncoder(w)
@@ -81,6 +83,7 @@ func Load(r io.Reader, config *VarGridConfig, emis *Emissions, m Mechanism) Doma
 		if err := d.initFromCells(data.Cells, emis, config, m); err != nil {
 			return err
 		}
+		d.HorizontalWrap = data.HorizontalWrap
 		if data.DataVersion != VarGridDataVersion {
 			return fmt.Errorf("InMAP variable grid data version %s is not compatible with "+
 				"the required version %s", data.DataVersion, VarGridDataVersion)

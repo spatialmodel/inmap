@@ -869,6 +869,51 @@ func TestCombineCTMData(t *testing.T) {
 	compareCTMData(goldenData, combined, tolerance, t)
 }
 
+// TestWrapGrid checks whether a lat-lon grid wraps around at 180/-180 degrees.
+func TestWrapGrid(t *testing.T) {
+	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridTestData()
+
+	cfg.VariableGridXo = -180
+	cfg.VariableGridYo = -5
+	cfg.VariableGridDx = 10
+	cfg.VariableGridDy = 10
+	cfg.Xnests = []int{36}
+	cfg.Ynests = []int{1}
+	ctmdata.xo = -180
+	ctmdata.yo = 180
+	ctmdata.dx = 180
+	ctmdata.dy = 10
+	cfg.GridProj = "+proj=longlat"
+
+	emis := &Emissions{
+		data: rtree.NewTree(25, 50),
+	}
+
+	var m Mech
+	d := &InMAP{
+		InitFuncs: []DomainManipulator{
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis, m),
+		},
+	}
+	if err := d.Init(); err != nil {
+		t.Error(err)
+	}
+	cells := d.Cells()
+	first := cells[0]
+	var last *Cell
+	for _, last = range cells {
+		if last.Polygonal.Bounds().Max.X > 175 && last.Layer == 0 {
+			break
+		}
+	}
+	if !reflect.DeepEqual(first.west.array()[0], last) {
+		t.Errorf("last cell is not to the East of the first cell")
+	}
+	if !reflect.DeepEqual(last.east.array()[0], first) {
+		t.Errorf("first cell is not to the West of the last cell")
+	}
+}
+
 func different(a, b, tolerance float64) bool {
 	if 2*math.Abs(a-b)/math.Abs(a+b) > tolerance || math.IsNaN(a) || math.IsNaN(b) {
 		return true

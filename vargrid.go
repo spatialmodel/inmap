@@ -458,6 +458,11 @@ func (config *VarGridConfig) RegularGrid(data *CTMData, pop *Population, popInde
 		if err != nil {
 			return err
 		}
+		if notMeters {
+			d.HorizontalWrap = 180 // Assume grid is degrees longitude.
+		} else {
+			d.HorizontalWrap = math.NaN()
+		}
 
 		d.PopIndices = (map[string]int)(popIndex)
 		d.mortIndices = (map[string]int)(mortIndex)
