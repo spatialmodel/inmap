@@ -56,6 +56,12 @@ type Client struct {
 	// Image holds the container image to be used.
 	// The default is "inmap/inmap:latest".
 	Image string
+
+	// Volumes specifies any Kubernetes volumes that are to be
+	// mounted in the containers that are created.
+	// Each volume will be mounted at /data/volumeName
+	// with read-only access.
+	Volumes []core.Volume
 }
 
 // NewClient creates a new distributed InMAP Kubernetes client.
@@ -118,7 +124,7 @@ func (c *Client) RunJob(ctx context.Context, job *cloudrpc.JobSpec) (*cloudrpc.J
 	}
 	k8sJob := createJob(userJobName(user, job.Name), job.Cmd, job.Args, c.Image, core.ResourceList{
 		core.ResourceMemory: resource.MustParse(fmt.Sprintf("%dGi", job.MemoryGB)),
-	})
+	}, c.Volumes)
 	_, err = c.jobControl.Create(k8sJob)
 	if err != nil {
 		return nil, err
@@ -205,7 +211,18 @@ func (c *Client) Status(ctx context.Context, job *cloudrpc.JobName) (*cloudrpc.J
 // createJob creates a Kubernetes job specification with the given name that executes the
 // given command with the given command-line arguments on the given container
 // image. resources specifies the minimum required resources for execution.
-func createJob(name string, command, args []string, image string, resources core.ResourceList) *batch.Job {
+// volumes holds the list of k8s volumes to mount, with all volumes assumed to
+// be read-only.
+func createJob(name string, command, args []string, image string, resources core.ResourceList, volumes []core.Volume) *batch.Job {
+	volumeMounts := make([]core.VolumeMount, len(volumes))
+	for i, v := range volumes {
+		volumeMounts[i] = core.VolumeMount{
+			Name:      v.Name,
+			ReadOnly:  true,
+			MountPath: "/data/" + v.Name,
+		}
+	}
+
 	return &batch.Job{
 		TypeMeta: meta.TypeMeta{
 			Kind:       "Job",
@@ -230,8 +247,10 @@ func createJob(name string, command, args []string, image string, resources core
 							Resources: core.ResourceRequirements{
 								Requests: resources,
 							},
+							VolumeMounts: volumeMounts,
 						},
 					},
+					Volumes:       volumes,
 					RestartPolicy: core.RestartPolicyOnFailure,
 				},
 			},
