@@ -1,0 +1,240 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Tutorial: Estimating health impacts of the Volkswagen emissions scandal · InMAP</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="This blog post contains a step-by-step example of how to create an emissions"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Tutorial: Estimating health impacts of the Volkswagen emissions scandal · InMAP"/><meta property="og:type" content="website"/><meta property="og:url" content="https://inmap.run/blog/2019/03/04/tutorial"/><meta property="og:description" content="This blog post contains a step-by-step example of how to create an emissions"/><meta property="og:image" content="https://inmap.run/img/logo.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://inmap.run/img/logo.svg"/><link rel="shortcut icon" href="/img/favicon/favicon.ico"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://inmap.run/blog/atom.xml" title="InMAP Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://inmap.run/blog/feed.xml" title="InMAP Blog RSS Feed"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/textLogo.svg" alt="InMAP"/></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/docs/quickstart" target="_self">Docs</a></li><li class=""><a href="https://inmap.run/eieio" target="_self">EIEIO</a></li><li class=""><a href="https://godoc.org/github.com/spatialmodel/inmap" target="_self">API</a></li><li class=""><a href="/help" target="_self">Help</a></li><li class="siteNavGroupActive"><a href="/blog/" target="_self">Blog</a></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="container docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><i></i></div><h2><i>›</i><span>Recent Posts</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Recent Posts</h3><ul class=""><li class="navListItem navListItemActive"><a class="navItem" href="/blog/2019/03/04/tutorial">Tutorial: Estimating health impacts of the Volkswagen emissions scandal</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              const headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                if (event.target.tagName === 'A') {
+                  document.body.classList.remove('tocActive');
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer postContainer blogContainer"><div class="wrapper"><div class="lonePost"><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/blog/2019/03/04/tutorial">Tutorial: Estimating health impacts of the Volkswagen emissions scandal</a></h1><p class="post-meta">March 4, 2019</p><div class="authorBlock"><p class="post-authorName"><a href="xyzhang8@uw.edu" target="_blank" rel="noreferrer noopener">Xinyu Zhang</a></p></div></header><div><span><p>This blog post contains a step-by-step example of how to create an emissions
+scenario and use the InMAP model to estimate the resulting health impacts.</p>
+<!--truncate-->
+<h2><a class="anchor" aria-hidden="true" id="1-introduction"></a><a href="#1-introduction" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>1. Introduction</h2>
+<p>The Volkswagen emissions defeat device was exposed in September 2015, when the Volkswagen Group of America (VW) admitted to violating the Clean Air Act (CAA) by installing emissions control system &quot;defeat devices&quot; designed to circumvent emissions tests<sup>1</sup>. The United States Environmental Protection Agency had found that the affected VW vehicles output NO<sub>x</sub> emissions at rates up to 40 times more than the EPA standard during on-road emissions testing. A couple of researchers have published the estimated exposure and health impact of the excess pollution emissions caused by the defeat devices. Several different chemical transport models were used in their studies, such as the GEOS-Chem adjoint model (Barrett et al., 2015)<sup>2</sup> and the MIROC-ESM-CHEM model (Holland et al., 2015)<sup>3</sup>. In this blog post, we will repeat the excersize using InMAP.</p>
+<p>The Intervention Model for Air Pollution (InMAP)<sup>4</sup> is a reduced-complexity air quality model designed to provide estimates of air pollution health impacts resulting caused by emissions of PM<sub>2.5</sub> and its precursors. To run InMAP, users need a shapefile or set of shapefiles containing locations of changes in annual total emissions of VOCs, SO<sub>x</sub>, NO<sub>x</sub>, NH<sub>3</sub>, and primary fine particulate matter (PM<sub>2.5</sub>).</p>
+<p>This tutorial will walk through the entire process of running the model step by step, taking the VW excess emissions as an example. We will start by explaining how to prepare the inputs with QGIS. Then we will display the process of installing the InMAP and running the model with our input file. Finally, the results will be compared with past studies on VW excess emissions in the USA.</p>
+<h2><a class="anchor" aria-hidden="true" id="2-preparing-inputs-on-gis"></a><a href="#2-preparing-inputs-on-gis" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>2. Preparing Inputs on GIS</h2>
+<h3><a class="anchor" aria-hidden="true" id="21-getting-emissions-data"></a><a href="#21-getting-emissions-data" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>2.1 Getting Emissions Data</h3>
+<p>Generally, the required user-inputs for running InMAP model are a set of shapefiles containing the annual total emissions of various pollutants. In the VW case, we will use excess NO<sub>x</sub> emissions to estimate the exposures of PM<sub>2.5</sub> and the resulting health effects. To create the feasible input files for running the model, we need the emission rate of VW vehicles in each year we interested and an on-road emission locations shapefile provided by NEI (National Emissions Inventory). For the former, we can use the estimated total excess NO<sub>x</sub> emission in the study by Barrett et al. (2015) as follows:</p>
+<p style="text-align: center; font-weight: bold">
+Table. 1 Annual excess VW light duty diesel vehicle NO<sub>x</sub> emissions in kilotonnes (million kg) from 2008 to 2015
+</p>
+<table style="margin: 0px auto;">
+  <tr>
+    <th>Year</th>
+    <th>2008</th>
+    <th>2009</th>
+    <th>2010</th>
+    <th>2011</th>
+    <th>2012</th>
+    <th>2013</th>
+    <th>2014</th>
+    <th>2015</th>
+  </tr>
+  <tr>
+    <td>NO<sub>x</sub> emission rate (ktonnes/year)</td>
+    <td>0.2</td>
+    <td>1</td>
+    <td>1.2</td>
+    <td>2.8</td>
+    <td>4.7</td>
+    <td>6.7</td>
+    <td>9.2</td>
+    <td>10.1</td>
+  </tr>
+</table>
+<p>For the on-road total emission shapefile, it can be download from here: <a href="https://my.pcloud.com/publink/show?code=kZe8uh7ZYU6MWRSeaABsCJ6v2AzpLRHHOx7X">https://my.pcloud.com/publink/show?code=kZe8uh7ZYU6MWRSeaABsCJ6v2AzpLRHHOx7X</a>. The shapefile can be open and edit on a bunch of GIS software. For individual users, QGIS is one of the most generally used GIS application since it is free and includes most of commonly used functions. It is compatible with Windows, Mac and Linux system. This tutorial will demonstrate all the operations need to be done on a GIS platform, including the data preparing and post-process.</p>
+<h3><a class="anchor" aria-hidden="true" id="22-renormalize-data"></a><a href="#22-renormalize-data" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>2.2 Renormalize Data</h3>
+<p>Next, we need to spatially allocate the VW NO<sub>x</sub> emission rates to the on-road emissions locations. To do this, open the on-road emissions shapefile mentioned before. What we are going to do is to renormalize the existing emissions so that their sum will equal to the emissions sum from the paper. The formula is given by:</p>
+<p style="text-align: center; font-style: italic;">
+new\_emissions = existing\_emissions / sum(existing\_emissions) \* emissions\_total\_from\_paper
+</p>
+<p>Usually, this can be done by using the filed calculator tool in the menu bar as showed below.</p>
+<p style="text-align: center;">
+<img src="/img/blog/2019-03-04-tutorial/image001.jpg" width="80%"/>
+</p>
+<p style="text-align: center; font-weight: bold">
+Figure 1. Creating new emission field using field calculator
+</p>
+<p>However, since there are too much point features in this case (1168664 points). The calculating would be extremely slow when GIS processing large shapefile so that it is hardly to get the result using this method without a program crash. Fortunately, there is another trick to do the renormalization instead of using the field calculator directly. We will need to export the shapefile data as spatialite database. The data processing in the format of spatialite database is much faster than it is in shapefile, it will still take minutes to calculate due to the large size of data though. To convert the format of the original data, you can right click on the &quot;onroad&quot; shp data in the table of contents window (aka. layer tree) as shown in Figure 2.</p>
+<p style="text-align: center;">
+<img src="/img/blog/2019-03-04-tutorial/image002.png" width="80%"/>
+</p>
+<p style="text-align: center; font-weight: bold">
+Figure 2. Exporting layer data as SpatiaLite database
+</p>
+<p>In the popped-up window, choose the location you want to save your spatialite data. The on-road data contains varieties of pollutant's concentration. Since many of them are ones will not be used, it would be better to delete some of them. In this study, only the emission of NO<sub>x</sub> is required so that other fields will be deleted. You can do this in the &quot;Save vector layer as…&quot; window by selecting fields to be exported.</p>
+<p style="text-align: center;">
+<img src="/img/blog/2019-03-04-tutorial/image003.jpg" width="80%"/>
+</p>
+<p style="text-align: center; font-weight: bold">
+Figure 3. Saving layer options
+</p>
+<p>Alternatively, you can also delete redundant fields in the properties window of the layer file. As shown in Figure 4, in the source filed bar, click &quot;Toggle editing mode&quot; button first. Then choose the fields you intend to delete and click &quot;Delete field&quot; button to remove it.</p>
+<p style="text-align: center;">
+<img src="/img/blog/2019-03-04-tutorial/image004.png" width="80%"/>
+</p>
+<p style="text-align: center; font-weight: bold">
+Figure 4. Removing fields in properties window
+</p>
+<p>After the onroad emission data is converted, we may now use the calculator to create the renormalized emission in the opened &quot;.sqlite&quot; file. What should also be mentioned here is that do not use the field calculator with the attribute table open, which would also significantly decrease the running speed. Otherwise, the QGIS will have a great chance to crash. Recall that the unit of the data from the paper is ktonnes/year, which is not one of the input unit values that InMAP supports. So it is important to convert to the appropriate unit when calculating. You would need to repeat the last step, the standardizing, for eight times to get the feasible input data of each year between 2008-2015.</p>
+<p>Don't forget that the appropriate format of InMAP model input is shapefile. Therefore, after creating the spatialite data, it is important to convert them back to shapefile format. The final version of data for InMAP model input would be eight standardized shapefiles. In this study, the data used is official published dataset without incorrect data or &quot;NULL&quot; data. If you intend to run the InMAP model with your own data in the future, some data cleaning may be needed.</p>
+<h2><a class="anchor" aria-hidden="true" id="3-getting-started-with-inmap"></a><a href="#3-getting-started-with-inmap" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>3. Getting Started with InMAP</h2>
+<p>You can install InMAP by following the instructions <a href="/docs/install">here</a>.</p>
+<h2><a class="anchor" aria-hidden="true" id="4-modeling"></a><a href="#4-modeling" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>4. Modeling</h2>
+<h3><a class="anchor" aria-hidden="true" id="41-configuration"></a><a href="#41-configuration" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>4.1 Configuration</h3>
+<p>The first step of setting up an InMAP model simulation is to configure the emission scenario. Emissions files should be in shapefile format where the attribute columns correspond to the names of emitted pollutants. The acceptable pollutant names are VOC, NO<sub>x</sub>, NH3, SOx, and PM2_5. The model can handle multiple input files, for example, the shapefiles of different elevation. In this case, we only concern the ground level emission.</p>
+<p>Then make a copy of the configuration file template and you are going to edit it to meet our scenario condition. The interface of the configuration file should be like below (Figure 5). As seen in the interface, there are a series of parameters you can determine. First, set the <code>evaldata</code> environment variable to the directory you downloaded the evaluation data to, or replace all instances of <code>${evaldata}</code> in the configuration file with the path to that directory. You must also ensure that the directory <code>OutputFile</code> is to go in exists. Second, choose an emission unit of the input. It should be consistent with the unit in your emission shapefile. Next, set the path of the output file and the log file. Finally, you can look at the output variables (Figure 6) to see which are the output you want to generate. Details about the built-in and calculated variables can be found <a href="/docs/results">here</a>. It is also worth mentioning here that in most recent version of model, the variable named &quot;PM25Emiss&quot; is no longer valid. If you keep it, it may cause error when running model. So be sure to remove this variable, or just comment it out.</p>
+<p style="text-align: center;">
+<img src="/img/blog/2019-03-04-tutorial/image005.png" width="80%"/>
+</p>
+<p style="text-align: center; font-weight: bold">
+Figure 5. Model Configuration (1)
+</p>
+<p style="text-align: center;">
+<img src="/img/blog/2019-03-04-tutorial/image006.png" width="80%"/>
+</p>
+<p style="text-align: center; font-weight: bold">
+Figure 6. Model Configuration (2)
+</p>
+<h3><a class="anchor" aria-hidden="true" id="42-running-inmap"></a><a href="#42-running-inmap" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>4.2 Running InMAP</h3>
+<p>Now you are all set to run the model, using the command below:</p>
+<pre><code class="hljs">inmapX<span class="hljs-selector-class">.X</span><span class="hljs-selector-class">.X</span> run steady -s --config=/path/to/configfile<span class="hljs-selector-class">.toml</span>
+</code></pre>
+<p>where <code>inmapX.X.X</code> is the name of the executable binary file you have downloaded or compiled on your system. Refer <a href="/docs/run_config">here</a> for more information.</p>
+<p>InMAP can run with either a <a href="/docs/variable_grid/#static-grid-resolution-algorithm">static</a> or <a href="/docs/variable_grid/#dynamic-grid-resolution-algorithm">dynamically changing</a> grid. Depending on the simulation being run and the configuration settings being used, one or the other grid type may work best; refer <a href="/docs/variable_grid">here</a> for further discussion. For this tutorial, we will use the static grid as specified by the <code>-s</code> flag above.</p>
+<p>You should model the health impact year by year for total 8 times to get the output from 2008-2015.</p>
+<h2><a class="anchor" aria-hidden="true" id="5-results-and-post-processing"></a><a href="#5-results-and-post-processing" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>5. Results and post-processing</h2>
+<h3><a class="anchor" aria-hidden="true" id="51-post-processing"></a><a href="#51-post-processing" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>5.1 Post-processing</h3>
+<p>The raw output would be like figure 7 below, taking the 2008 data as an example.</p>
+<p style="text-align: center;">
+<img src="/img/blog/2019-03-04-tutorial/image007.png" width="80%"/>
+</p>
+<p style="text-align: center; font-weight: bold">
+Figure 7. An InMAP output shapefile
+</p>
+<p>Open the attribute table to see all the desired variables we have. We will focus on the &quot;TotalPM25&quot; field.</p>
+<p style="text-align: center;">
+<img src="/img/blog/2019-03-04-tutorial/image008.png" width="80%"/>
+</p>
+<p style="text-align: center; font-weight: bold">
+Figure 8. Attribute table of the 2008 output
+</p>
+<p>The features are not symbolized correctly yet. We cannot tell any useful information from the raw output map. Now we are going to make the output more visual. In the menu bar, go to Vector -&amp;gt; Geometry tools -&amp;gt; Centroids. Setting the input layer to your output shapefile and run the tool. After this is accomplished, there will be a new layer in the table of contents, which is a point layer that could be symbolled as a heatmap. Open the properties window of the new layer, choose heatmap as its symbol, set other options as below.</p>
+<p style="text-align: center;">
+<img src="/img/blog/2019-03-04-tutorial/image009.png" width="80%"/>
+</p>
+<p style="text-align: center; font-weight: bold">
+Figure 9. Options for heatmap
+</p>
+<p style="text-align: center;">
+<img src="/img/blog/2019-03-04-tutorial/image010.png" width="80%"/>
+</p>
+<p style="text-align: center; font-weight: bold">
+Figure 10. Heatmap for total PM<sub>2.5</sub>
+</p>
+<p>Now the heatmap has been created successfully. But it is still hard to tell the areas with high exposure level belong to which part of U.S. So you need a U.S. states boundary map which you can download here:</p>
+<p><a href="https://www.arcgis.com/home/item.html?id=f7f805eb65eb4ab787a0a3e1116ca7e5">https://www.arcgis.com/home/item.html?id=f7f805eb65eb4ab787a0a3e1116ca7e5</a>. Open it and move this layer above the heatmap layer. In the properties window, set the fill color to transparent.</p>
+<p style="text-align: center;">
+<img src="/img/blog/2019-03-04-tutorial/image011.png" width="80%"/>
+</p>
+<p style="text-align: center; font-weight: bold">
+Figure 11. Symbolizing the boundary of the state
+</p>
+<p>Your map now should look like this:</p>
+<p style="text-align: center;">
+<img src="/img/blog/2019-03-04-tutorial/image012.png" width="80%"/>
+</p>
+<p style="text-align: center; font-weight: bold">
+Figure 12. Improved output map
+</p>
+<p>Put the outputs from 2008 to 2015 together to see the variation:</p>
+<p style="text-align: center;">
+<img src="/img/blog/2019-03-04-tutorial/image013.png" width="80%"/>
+</p>
+<p style="text-align: center; font-weight: bold">
+Figure 13. Total PM<sub>2.5</sub> from 2008 to 2015
+</p>
+<h3><a class="anchor" aria-hidden="true" id="52-compare-with-existing-studies"></a><a href="#52-compare-with-existing-studies" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>5.2 Compare with Existing Studies</h3>
+<p>There has been some previous research on the health impacts of the excess emissions caused by the VW defeat devices. Barrett et al. (2015)<sup>2</sup> and Holland et al. (2015)<sup>3</sup> published estimates of additional emissions of NO<sub>x</sub> and subsequent health damages due to the using of defeat devices committed by Volkswagen Group in the USA. And Oldenkamp et al. (2016)<sup>5</sup> further considered the damages due to ozone formation in addition to PM<sub>2.5</sub>. We can compare our results with theirs. First, we  export each output data to the format of CSV. The data processing is much faster in excel than it is in QGIS. We are interested in the comparison of the total early death from 2008 to 2015 between our model and theirs. So we need to calculate the sum of &quot;TotalPopD&quot; field for each year then sum them together. Table 2 shows the comparison of our result and one from other researches.</p>
+<p style="text-align: center; font-weight: bold">
+Table 2. The comparison of early deaths among studies. (\*95% confidence interval in brackets)
+</p>
+<table style="margin: 0px auto;">
+  <tr>
+    <th>Studies</th>
+    <th>Total emissions (ktonnes)</th>
+    <th>Early deaths (incidences)</th>
+  </tr>
+  <tr>
+    <td>This study</td>
+    <td>36.7 (Data from Barrett el al.)</td>
+    <td>85.2</td>
+  </tr>
+  <tr>
+    <td>Barrett et al. (2015)</td>
+    <td>36.7 (12.3-61.2)*</td>
+    <td>59 (9.7-150)*</td>
+  </tr>
+  <tr>
+    <td>Holland et al. (2015)</td>
+    <td>45.1</td>
+    <td>46.1</td>
+  </tr>
+  <tr>
+    <td>Rik et al. (2016)</td>
+    <td>33.8</td>
+    <td>59.2</td>
+  </tr>
+</table>
+<h3><a class="anchor" aria-hidden="true" id="53-conclusion"></a><a href="#53-conclusion" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>5.3 Conclusion</h3>
+<p>Our analysis provides an estimate of the public health consequences caused by the additional emissions from Volkswagen defeat devices. The result shows an increase in PM<sub>2.5</sub> over time and a spatial distribution that the higher exposure concentration appears at the Eastern and Western coast, Midwest, and Texas. According to the output, there would be average 85 deaths in the U.S.A from 2008 to 2015 due to the extra emission, which is similar to the findings of the previous studies.</p>
+<h2><a class="anchor" aria-hidden="true" id="references"></a><a href="#references" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>References</h2>
+<p><sup>1</sup>Wikipedia contributors. (2018, December 6). Volkswagen emissions scandal. In <em>Wikipedia, The Free Encyclopedia</em>. Retrieved December 13, 2018, from <a href="https://en.wikipedia.org/w/index.php?title=Volkswagen_emissions_scandal&amp;amp;oldid=872379047">https://en.wikipedia.org/w/index.php?title=Volkswagen_emissions_scandal&amp;oldid=872379047</a></p>
+<p><sup>2</sup>Barrett, S. R., Speth, R. L., Eastham, S. D., Dedoussi, I. C., Ashok, A., Malina, R., &amp; Keith, D. W. (2015). Impact of the Volkswagen emissions control defeat device on US public health. <em>Environmental Research Letters</em>, 10(11), 114005.</p>
+<p><sup>3</sup>Holland, S. P., Mansur, E. T., Muller, N. Z., &amp; Yates, A. J. (2016). Response to Comment on &quot;Damages and expected deaths due to excess NO x emissions from 2009–2015 Volkswagen diesel vehicles&quot;. <em>Environmental science &amp; technology</em>, 50(7), 4137-4138.</p>
+<p><sup>4</sup>Tessum, C. W., Hill, J. D., &amp; Marshall, J. D. (2017). InMAP: A model for air pollution interventions. <em>PloS one</em>, 12(4), e0176131.</p>
+<p><sup>5</sup>Oldenkamp, R., van Zelm, R., &amp; Huijbregts, M. A. (2016). Valuing the human health damage caused by the fraud of Volkswagen. <em>Environmental Pollution</em>, 212, 121-127.</p>
+</span></div></div><div class="blogSocialSection"></div></div><div class="blog-recent"><a class="button" href="/blog">Recent Posts</a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#1-introduction">1. Introduction</a></li><li><a href="#2-preparing-inputs-on-gis">2. Preparing Inputs on GIS</a><ul class="toc-headings"><li><a href="#21-getting-emissions-data">2.1 Getting Emissions Data</a></li><li><a href="#22-renormalize-data">2.2 Renormalize Data</a></li></ul></li><li><a href="#3-getting-started-with-inmap">3. Getting Started with InMAP</a></li><li><a href="#4-modeling">4. Modeling</a><ul class="toc-headings"><li><a href="#41-configuration">4.1 Configuration</a></li><li><a href="#42-running-inmap">4.2 Running InMAP</a></li></ul></li><li><a href="#5-results-and-post-processing">5. Results and post-processing</a><ul class="toc-headings"><li><a href="#51-post-processing">5.1 Post-processing</a></li><li><a href="#52-compare-with-existing-studies">5.2 Compare with Existing Studies</a></li><li><a href="#53-conclusion">5.3 Conclusion</a></li></ul></li><li><a href="#references">References</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/textLogo.svg" alt="InMAP" width="66" height="58"/></a><div><h5>Docs</h5><a href="/docs/en/quickstart.html">Getting Started</a><a href="https://scholar.google.com/scholar?cites=13697507566681577142&amp;as_sdt=5,48&amp;sciodt=0,48&amp;hl=en">Papers</a><a href="https://godoc.org/github.com/spatialmodel/inmap">API Reference</a></div><div><h5>Community</h5><a href="/en/users.html">User Showcase</a><a href="http://stackoverflow.com/questions/tagged/inmap" target="_blank" rel="noreferrer noopener">Stack Overflow</a></div><div><h5>More</h5><a href="/blog">Blog</a><a href="https://github.com/spatialmodel/inmap">GitHub</a><a class="github-button" href="https://github.com/spatialmodel/inmap" data-icon="octicon-star" data-count-href="/spatialmodel/inmap/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2019 the InMAP authors.</section></footer></div></body></html>

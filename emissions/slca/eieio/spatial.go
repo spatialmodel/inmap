@@ -228,7 +228,7 @@ func matrixMarshal(data interface{}) ([]byte, error) {
 
 // matrixMarshal converts a byte array to a matrix after storing it in a cache.
 func matrixUnmarshal(b []byte) (interface{}, error) {
-	m := mat.NewDense(0, 0, nil)
+	m := new(mat.Dense)
 	err := m.UnmarshalBinary(b)
 	return m, err
 }
@@ -242,7 +242,7 @@ func vectorMarshal(data interface{}) ([]byte, error) {
 
 // matrixMarshal converts a byte array to a matrix after storing it in a cache.
 func vectorUnmarshal(b []byte) (interface{}, error) {
-	m := mat.NewVecDense(0, nil)
+	m := new(mat.VecDense)
 	m.Reset()
 	err := m.UnmarshalBinary(b)
 	return m, err

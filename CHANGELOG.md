@@ -1,3 +1,6 @@
+# Release 1.5.1 (2019-1-25)
+* Update go.mod dependencies
+
 # Release 1.5.0 (2018-11-30)
 * Add emissions processing tools and user interfaces
 * Add the capability to run simulations in the cloud

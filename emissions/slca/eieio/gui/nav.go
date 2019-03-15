@@ -47,22 +47,31 @@ func (n *Navigator) Render() vecty.ComponentOrHTML {
 					elem.Span(vecty.Markup(vecty.Class("icon-bar"))),
 					elem.Span(vecty.Markup(vecty.Class("icon-bar"))),
 				),
+				elem.Anchor(vecty.Markup(vecty.Class("navbar-brand"), prop.Href("/")),
+					elem.Image(vecty.Markup(prop.Src("/img/textLogo.svg"))),
+				),
 				elem.Anchor(vecty.Markup(vecty.Class("navbar-brand"), prop.Href("#")),
 					vecty.Text(n.Title),
 				),
 			),
 			elem.Div(vecty.Markup(prop.ID("navbar"), vecty.Class("collapse", "navbar-collapse")),
 				elem.UnorderedList(
-					vecty.Markup(vecty.Class("nav", "navbar-nav")),
+					vecty.Markup(vecty.Class("nav", "navbar-nav", "navbar-right")),
+					elem.ListItem(
+						elem.Anchor(vecty.Markup(prop.Href("/docs/quickstart")), vecty.Text("Docs")),
+					),
 					elem.ListItem(
 						vecty.Markup(vecty.Class("active")),
-						elem.Anchor(vecty.Markup(prop.Href("#")), vecty.Text("Home")),
+						elem.Anchor(vecty.Markup(prop.Href("#")), vecty.Text("EIEIO")),
 					),
 					elem.ListItem(
-						elem.Anchor(vecty.Markup(prop.Href("#about")), vecty.Text("About")),
+						elem.Anchor(vecty.Markup(prop.Href("https://godoc.org/github.com/spatialmodel/inmap")), vecty.Text("API")),
 					),
 					elem.ListItem(
-						elem.Anchor(vecty.Markup(prop.Href("#contact")), vecty.Text("Contact")),
+						elem.Anchor(vecty.Markup(prop.Href("/help")), vecty.Text("Help")),
+					),
+					elem.ListItem(
+						elem.Anchor(vecty.Markup(prop.Href("/blog")), vecty.Text("Blog")),
 					),
 				),
 			),

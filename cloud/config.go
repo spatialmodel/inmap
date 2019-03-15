@@ -74,7 +74,7 @@ func (c *Client) checkOutputs(ctx context.Context, name string, cmd []string) er
 			if err != nil {
 				return err
 			}
-			r, err := bucket.NewReader(ctx, strings.TrimLeft(url.Path, "/"))
+			r, err := bucket.NewReader(ctx, strings.TrimLeft(url.Path, "/"), nil)
 			if err != nil {
 				return err
 			}

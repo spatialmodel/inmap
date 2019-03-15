@@ -43,7 +43,7 @@ func TestServer_grpc(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s, err := NewServer(&c, epi.NasariACS)
+	s, err := NewServer(&c, "", epi.NasariACS)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}

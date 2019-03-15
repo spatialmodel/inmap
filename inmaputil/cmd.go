@@ -722,7 +722,7 @@ func InitializeConfig() *Cfg {
               Can include environment variables.`,
 			defaultVal:  []string{"${INMAP_ROOT_DIR}/cmd/inmap/testdata/testEmis.shp"},
 			isInputFile: true,
-			flagsets:    []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.srPredictCmd.Flags()},
+			flagsets:    []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.srPredictCmd.Flags(), cfg.cloudStartCmd.Flags()},
 		},
 		{
 			name: "EmissionUnits",
@@ -730,7 +730,7 @@ func InitializeConfig() *Cfg {
               EmissionUnits gives the units that the input emissions are in.
               Acceptable values are 'tons/year', 'kg/year', 'ug/s', and 'μg/s'.`,
 			defaultVal: "tons/year",
-			flagsets:   []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.srPredictCmd.Flags()},
+			flagsets:   []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.srPredictCmd.Flags(), cfg.cloudStartCmd.Flags()},
 		},
 		{
 			name: "OutputFile",
@@ -784,8 +784,9 @@ func InitializeConfig() *Cfg {
               SR.OutputFile is the path where the output file is or should be created
                when creating a source-receptor matrix. It can contain environment variables.`,
 			defaultVal:   "${INMAP_ROOT_DIR}/cmd/inmap/testdata/output_${InMAPRunType}.shp",
-			isOutputFile: true,
-			flagsets:     []*pflag.FlagSet{cfg.srSaveCmd.Flags(), cfg.srPredictCmd.Flags()},
+			isOutputFile: false,
+			isInputFile:  false,
+			flagsets:     []*pflag.FlagSet{cfg.srSaveCmd.Flags(), cfg.srPredictCmd.Flags(), cfg.cloudStartCmd.Flags()},
 		},
 		{
 			name: "Preproc.CTMType",
