@@ -152,9 +152,15 @@ func SRPredict(EmissionUnits, SROutputFile, OutputFile string, EmissionsShapefil
 		PNH4, PNO3, PSO4, SOA, PrimaryPM25, TotalPM25 float64
 	}
 
-	o, err := shp.NewEncoder(OutputFile, rec{})
+	var upload uploader
+
+	o, err := shp.NewEncoder(upload.maybeUpload(OutputFile), rec{})
 	if err != nil {
 		return err
+	}
+
+	if upload.err != nil {
+		return upload.err
 	}
 
 	g := r.Geometry()
@@ -181,12 +187,16 @@ func SRPredict(EmissionUnits, SROutputFile, OutputFile string, EmissionsShapefil
 	// matches the InMAPProj configuration variable.
 	const proj4 = `PROJCS["Lambert_Conformal_Conic",GEOGCS["GCS_unnamed ellipse",DATUM["D_unknown",SPHEROID["Unknown",6370997,0]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],PROJECTION["Lambert_Conformal_Conic"],PARAMETER["standard_parallel_1",33],PARAMETER["standard_parallel_2",45],PARAMETER["latitude_of_origin",40],PARAMETER["central_meridian",-97],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]`
 	// Create .prj file
-	f, err = os.Create(OutputFile[0:len(OutputFile)-len(filepath.Ext(OutputFile))] + ".prj")
+	f, err = os.Create(upload.maybeUpload(OutputFile[0:len(OutputFile)-len(filepath.Ext(OutputFile))] + ".prj"))
 	if err != nil {
 		return fmt.Errorf("error creating output prj file: %v", err)
 	}
 	fmt.Fprint(f, proj4)
 	f.Close()
+
+	if err := upload.uploadOutput(nil); err != nil {
+		return err
+	}
 
 	return nil
 }
