@@ -117,6 +117,14 @@ func InitializeConfig() *Cfg {
 		Long: `run runs an InMAP simulation. Use the subcommands specified below to
 	choose a run mode. (Currently 'steady' is the only available run mode.)`,
 		DisableAutoGenTag: true,
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			outputFile, err := checkOutputFile(cfg.GetString("OutputFile"))
+			if err != nil {
+				return err
+			}
+			cfg.Set("LogFile", checkLogFile(cfg.GetString("LogFile"), outputFile))
+			return nil
+		},
 	}
 
 	// steadyCmd is a command that runs a steady-state simulation.
@@ -153,7 +161,7 @@ func InitializeConfig() *Cfg {
 
 			return Run(
 				cmd,
-				checkLogFile(cfg.GetString("LogFile"), outputFile),
+				cfg.GetString("LogFile"),
 				outputFile,
 				cfg.GetBool("OutputAllLayers"),
 				outputVars,

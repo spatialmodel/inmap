@@ -73,8 +73,7 @@ var DefaultScienceFuncs = []inmap.CellManipulator{
 // It is needed to print certain outputs to the web interface.
 //
 // LogFile is the path to the desired logfile location. It can include
-// environment variables. If LogFile is left blank, the logfile will be saved in
-// the same location as the OutputFile.
+// environment variables.
 //
 // OutputFile is the path to the desired output shapefile location. It can
 // include environment variables.

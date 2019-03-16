@@ -42,7 +42,7 @@ func TestClient_fake(t *testing.T) {
 			"--EmissionUnits=tons/year",
 			"--EmissionsShapefiles=file://test/test_user/test_job/258bbcefe8c0073d6f323351463be9e9685e74bb92e367ca769b9536ed247213.shp",
 			"--InMAPData=file://test/test_user/test_job/434bf26e3fda1ef9cef7e1fa6cc6b5174d11a22b19cbe10d256adc83b2a97d44.ncf",
-			"--LogFile=file://test/test_user/test_job/log.txt",
+			"--LogFile=file://test/test_user/test_job/LogFile",
 			"--NumIterations=0",
 			"--OutputFile=file://test/test_user/test_job/OutputFile.shp",
 			"--OutputVariables={\"TotalPM25\":\"PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA\",\"TotalPopD\":\"(exp(log(1.078)/10 * TotalPM25) - 1) * TotalPop * AllCause / 100000\"}\n",
@@ -133,7 +133,7 @@ func TestClient_fake(t *testing.T) {
 			t.Fatal(err)
 		}
 		wantFiles := map[string]int{
-			"log.txt":        94100,
+			"LogFile":        94100,
 			"OutputFile.shp": 2276,
 			"OutputFile.dbf": 465,
 			"OutputFile.shx": 228,
@@ -144,7 +144,7 @@ func TestClient_fake(t *testing.T) {
 		}
 		for name, data := range output.Files {
 			if wantLen, ok := wantFiles[name]; ok {
-				if len(data) != wantLen && name != "log.txt" {
+				if len(data) != wantLen && name != "LogFile" {
 					t.Errorf("wrong file length for %s: %d != %d", name, len(data), wantLen)
 				}
 			} else {
