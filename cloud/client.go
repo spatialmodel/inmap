@@ -102,15 +102,17 @@ func (c *Client) RunJob(ctx context.Context, job *cloudrpc.JobSpec) (*cloudrpc.J
 	}
 
 	status, err := c.Status(ctx, &cloudrpc.JobName{Name: job.Name, Version: job.Version})
-	if err != nil {
+	if status.Status != cloudrpc.Status_Missing && err != nil {
 		return nil, err
 	}
-	if status.Status != cloudrpc.Status_Failed { //TODO:  status.Status != cloudrpc.Status_Missing && {
+	if status.Status != cloudrpc.Status_Failed && status.Status != cloudrpc.Status_Missing {
 		// Only create the job if it is missing or failed.
 		return status, nil
 	}
 	// TODO: Is this necessary?
-	c.Delete(ctx, &cloudrpc.JobName{Name: job.Name, Version: job.Version})
+	if status.Status != cloudrpc.Status_Missing {
+		c.Delete(ctx, &cloudrpc.JobName{Name: job.Name, Version: job.Version})
+	}
 
 	if err := c.stageInputs(ctx, job); err != nil {
 		return nil, err
@@ -179,7 +181,7 @@ func userJobName(user, name string) string {
 // Status returns the status of the given job.
 func (c *Client) Status(ctx context.Context, job *cloudrpc.JobName) (*cloudrpc.JobStatus, error) {
 	s := new(cloudrpc.JobStatus)
-	/*k8sJob, err := c.getk8sJob(ctx, job)
+	k8sJob, err := c.getk8sJob(ctx, job)
 	if err != nil {
 		return &cloudrpc.JobStatus{
 			Status:  cloudrpc.Status_Missing,
@@ -198,9 +200,8 @@ func (c *Client) Status(ctx context.Context, job *cloudrpc.JobName) (*cloudrpc.J
 	if k8sJob.Status.Active > 0 {
 		s.Status = cloudrpc.Status_Running
 		s.StartTime = k8sJob.Status.StartTime.Time.Unix()
-	}*/
-	//TODO: err = c.checkOutputs(ctx, name, k8sJob.Spec.Template.Spec.Containers[0].Command)
-	err := c.checkOutputs(ctx, job.Name, []string{"inmap", "run", "steady"})
+	}
+	err = c.checkOutputs(ctx, job.Name, k8sJob.Spec.Template.Spec.Containers[0].Command)
 	if err != nil {
 		s.Status = cloudrpc.Status_Failed
 		s.Message = fmt.Sprintf("job completed but the following error occurred when checking outputs: %s", err)
