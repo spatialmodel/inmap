@@ -54,8 +54,6 @@ func (c *Client) jobOutputAddresses(ctx context.Context, name string, cmd []stri
 			o[f.Name] = fmt.Sprintf("%s/%s/%s/%s%s", c.bucketName, user, name, strings.Replace(f.Name, ".", "_", -1), ext)
 		}
 	})
-	// Set the location of the LogFile.
-	o["LogFile"] = c.bucketName + "/" + user + "/" + name + "/" + "log.txt"
 	return o, nil
 }
 

@@ -36,11 +36,14 @@ func readBlob(ctx context.Context, bucket *blob.Bucket, key string) ([]byte, err
 	var b bytes.Buffer
 	r, err := bucket.NewReader(ctx, key, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reading blob key %s: %v", key, err)
 	}
 	defer r.Close()
 	_, err = io.Copy(&b, r)
-	return b.Bytes(), err
+	if err != nil {
+		return nil, fmt.Errorf("Reading blob key %s: %v", key, err)
+	}
+	return b.Bytes(), nil
 }
 
 // writeBlob writes the given data to the given bucket.
@@ -69,12 +72,11 @@ func (c *Client) Output(ctx context.Context, job *cloudrpc.JobName) (*cloudrpc.J
 	o := &cloudrpc.JobOutput{
 		Files: make(map[string][]byte),
 	}
-	//TODO: k8sJob, err := c.getk8sJob(ctx, job)
+	k8sJob, err := c.getk8sJob(ctx, job)
 	if err != nil {
 		return nil, err
 	}
-	//TODO: addrs, err := c.jobOutputAddresses(ctx, job.Name, k8sJob.Spec.Template.Spec.Containers[0].Command)
-	addrs, err := c.jobOutputAddresses(ctx, job.Name, []string{"inmap", "run", "steady"})
+	addrs, err := c.jobOutputAddresses(ctx, job.Name, k8sJob.Spec.Template.Spec.Containers[0].Command)
 	if err != nil {
 		return nil, err
 	}

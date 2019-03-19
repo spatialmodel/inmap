@@ -53,7 +53,7 @@ func TestCloud(t *testing.T) {
 		}
 
 		wantStatus := &cloudrpc.JobStatus{
-		// Status: "&JobStatus{Conditions:[],StartTime:<nil>,CompletionTime:<nil>,Active:0,Succeeded:0,Failed:0,}",
+			// Status: "&JobStatus{Conditions:[],StartTime:<nil>,CompletionTime:<nil>,Active:0,Succeeded:0,Failed:0,}",
 		}
 		if !reflect.DeepEqual(status, wantStatus) {
 			t.Errorf("wrong status: %v != %v", status, wantStatus)
@@ -71,7 +71,7 @@ func TestCloud(t *testing.T) {
 			"OutputFile.prj": 431,
 			"OutputFile.shp": 2276,
 			"OutputFile.shx": 228,
-			"log.txt":        94169,
+			"LogFile":        94169,
 		}
 		files, err := ioutil.ReadDir("test_job")
 		if err != nil {
@@ -82,7 +82,7 @@ func TestCloud(t *testing.T) {
 		}
 		for _, file := range files {
 			if wantLen, ok := wantFiles[file.Name()]; ok {
-				if file.Size() != wantLen && file.Name() != "log.txt" {
+				if file.Size() != wantLen && file.Name() != "LogFile" {
 					t.Errorf("%s: wrong file size: %d != %d", file.Name(), file.Size(), wantLen)
 				}
 			} else {

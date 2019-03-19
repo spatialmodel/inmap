@@ -41,16 +41,19 @@ import (
 // and after executing the inmap command, respectively.
 func NewFakeClient(checkConfig func([]string), checkRun func([]byte, error), bucket string, root *cobra.Command, config *viper.Viper, inputFileArgs, outputFileArgs []string) (*Client, error) {
 	k8sClient := fake.NewSimpleClientset()
-	k8sClient.Fake.PrependReactor("create", "jobs", fakeRun(checkConfig, checkRun))
+	jobs := make([]batch.Job, 0, 1000)
+	k8sClient.Fake.PrependReactor("create", "jobs", fakeRun(checkConfig, checkRun, &jobs))
+	k8sClient.Fake.PrependReactor("list", "jobs", fakeList(&jobs))
 	return NewClient(k8sClient, root, config, bucket, inputFileArgs, outputFileArgs)
 }
 
 // fakeRun runs the InMAP simulation specified by the job.
 // The InMAP command must be compiled for it to work,
 // e.g., `go install github.com/spatialmodel/inmap/cmd/inmap`.
-func fakeRun(checkConfig func([]string), checkRun func([]byte, error)) func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+func fakeRun(checkConfig func([]string), checkRun func([]byte, error), jobs *[]batch.Job) func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
 	return func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
 		job := action.(k8stesting.CreateAction).GetObject().(*batch.Job)
+		*jobs = append(*jobs, *job)
 		cmd := job.Spec.Template.Spec.Containers[0].Command
 		args := job.Spec.Template.Spec.Containers[0].Args
 		for i := 0; i < len(args); i += 2 {
@@ -67,6 +70,13 @@ func fakeRun(checkConfig func([]string), checkRun func([]byte, error)) func(acti
 			checkRun(o, err)
 		}
 		return false, job, nil
+	}
+}
+
+// fakeList returns the job that was most recently run, if any.
+func fakeList(jobs *[]batch.Job) func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+	return func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+		return true, &batch.JobList{Items: *jobs}, nil
 	}
 }
 
