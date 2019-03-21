@@ -124,6 +124,7 @@ func TestRunInputFromViper(t *testing.T) {
 
 func TestSRPredictInputFromViper(t *testing.T) {
 	cfg := inmaputil.InitializeConfig()
+	cfg.Set("OutputVariables", "{\"PrimPM25\":\"PrimaryPM25\"}")
 	js, err := cloud.JobSpec(cfg.Root, cfg.Viper, "test_job", []string{"srpredict"}, cfg.InputFiles(), 1)
 	if err != nil {
 		t.Fatal(err)
@@ -140,6 +141,7 @@ func TestSRPredictInputFromViper(t *testing.T) {
 		"--EmissionUnits":       "tons/year",
 		"--EmissionsShapefiles": "258bbcefe8c0073d6f323351463be9e9685e74bb92e367ca769b9536ed247213.shp",
 		"--OutputFile":          "inmap_output.shp",
+		"--OutputVariables":     "{\"PrimPM25\":\"PrimaryPM25\"}",
 		"--SR.OutputFile":       "${INMAP_ROOT_DIR}/cmd/inmap/testdata/output_${InMAPRunType}.shp",
 		"--VarGrid.GridProj":    "+proj=lcc +lat_1=33.000000 +lat_2=45.000000 +lat_0=40.000000 +lon_0=-97.000000 +x_0=0 +y_0=0 +a=6370997.000000 +b=6370997.000000 +to_meter=1",
 	}

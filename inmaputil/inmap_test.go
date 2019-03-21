@@ -24,6 +24,8 @@ import (
 	"os"
 	"reflect"
 	"testing"
+
+	"github.com/spatialmodel/inmap"
 )
 
 // Set up directory location for configuration files.
@@ -47,7 +49,8 @@ func TestInMAPStaticCreateGrid(t *testing.T) {
 	os.Setenv("InMAPRunType", "static")
 	cfg.Set("config", "../cmd/inmap/configExample.toml")
 	cfg.Root.SetArgs([]string{"run", "steady"})
-	defer os.Remove("../cmd/inmap/testdata/output_static.log")
+	defer os.Remove("inmap_output.log")
+	defer inmap.DeleteShapefile(cfg.GetString("OutputFile"))
 	if err := cfg.Root.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -60,7 +63,8 @@ func TestInMAPStaticLoadGrid(t *testing.T) {
 	os.Setenv("InMAPRunType", "staticLoadGrid")
 	cfg.Set("config", "../cmd/inmap/configExample.toml")
 	cfg.Root.SetArgs([]string{"run", "steady"})
-	defer os.Remove("../cmd/inmap/testdata/output_staticLoadGrid.log")
+	defer os.Remove("inmap_output.log")
+	defer inmap.DeleteShapefile(cfg.GetString("OutputFile"))
 	if err := cfg.Root.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -73,7 +77,8 @@ func TestInMAPDynamic(t *testing.T) {
 	os.Setenv("InMAPRunType", "dynamic")
 	cfg.Set("config", "../cmd/inmap/configExample.toml")
 	cfg.Root.SetArgs([]string{"run", "steady"})
-	defer os.Remove("../cmd/inmap/testdata/output_dynamic.log")
+	defer os.Remove("inmap_output.log")
+	defer inmap.DeleteShapefile(cfg.GetString("OutputFile"))
 	if err := cfg.Root.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +99,8 @@ func TestInMAPDynamicRemote_http(t *testing.T) {
 	os.Setenv("InMAPRunType", "dynamic")
 	cfg.Set("config", "../cmd/inmap/configExampleRemote.toml")
 	cfg.Root.SetArgs([]string{"run", "steady"})
-	defer os.Remove("../cmd/inmap/testdata/output_dynamic.log")
+	defer os.Remove("inmap_output.log")
+	defer inmap.DeleteShapefile(cfg.GetString("OutputFile"))
 	if err := cfg.Root.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -113,7 +119,8 @@ func TestInMAPDynamicRemote_bucket(t *testing.T) {
 	os.Setenv("InMAPRunType", "dynamic")
 	cfg.Set("config", "../cmd/inmap/configExampleRemote.toml")
 	cfg.Root.SetArgs([]string{"run", "steady"})
-	defer os.Remove("../cmd/inmap/testdata/output_dynamic.log")
+	defer os.Remove("inmap_output.log")
+	defer inmap.DeleteShapefile(cfg.GetString("OutputFile"))
 	if err := cfg.Root.Execute(); err != nil {
 		t.Fatal(err)
 	}

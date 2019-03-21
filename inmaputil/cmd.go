@@ -430,16 +430,8 @@ func InitializeConfig() *Cfg {
 	from the emissions specified in the EmissionsShapefiles field in the configuration
 	file, outputting the results in the shapefile specified in OutputFile field.
 	of the configuration file. The EmissionUnits field in the configuration
-	file specifies the units of the emissions. Output units are μg particulate
-	matter per m³ air.
-
-		Output variables:
-		PNH4: Particulate ammonium
-		PNO3: Particulate nitrate
-		PSO4: Particulate sulfate
-		SOA: Secondary organic aerosol
-		PrimaryPM25: Primarily emitted PM2.5
-		TotalPM25: The sum of the above components`,
+	file specifies the units of the emissions. The OutputVariables configuration
+	variable specifies the information to be output.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			outChan := outChan()
 
@@ -448,6 +440,10 @@ func InitializeConfig() *Cfg {
 				return err
 			}
 			outputFile, err := checkOutputFile(cfg.GetString("OutputFile"))
+			if err != nil {
+				return err
+			}
+			outputVars, err := checkOutputVars(GetStringMapString("OutputVariables", cfg.Viper))
 			if err != nil {
 				return err
 			}
@@ -466,6 +462,7 @@ func InitializeConfig() *Cfg {
 				emisUnits,
 				os.ExpandEnv(cfg.GetString("SR.OutputFile")),
 				outputFile,
+				outputVars,
 				shapeFiles,
 				vgc,
 			)
@@ -776,7 +773,7 @@ func InitializeConfig() *Cfg {
 				"TotalPM25": "PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA",
 				"TotalPopD": "(exp(log(1.078)/10 * TotalPM25) - 1) * TotalPop * AllCause / 100000",
 			},
-			flagsets: []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.cloudStartCmd.Flags()},
+			flagsets: []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.cloudStartCmd.Flags(), cfg.srPredictCmd.Flags()},
 		},
 		{
 			name: "NumIterations",

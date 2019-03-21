@@ -162,7 +162,7 @@ func SteadyStateConvergenceCheck(numIterations int, popGridColumn string, m Mech
 	iteration := 0
 
 	return func(d *InMAP) error {
-		popIndex := d.popIndices[popGridColumn]
+		popIndex := d.PopIndices[popGridColumn]
 
 		if d.Dt == 0 {
 			return fmt.Errorf("inmap: timestep is zero")

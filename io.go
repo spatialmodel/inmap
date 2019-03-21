@@ -868,7 +868,7 @@ func (d *InMAP) toArray(varName string, layer int, m Mechanism) []float64 {
 			return o
 		}
 		if layer < 0 || c.Layer == layer {
-			o = append(o, c.getValue(varName, d.popIndices, d.mortIndices, m))
+			o = append(o, c.getValue(varName, d.PopIndices, d.mortIndices, m))
 		}
 		c.mutex.RUnlock()
 	}
@@ -882,15 +882,15 @@ func (c *Cell) getValue(varName string, popIndices, mortIndices map[string]int, 
 	if err == nil {
 		return v
 	}
-	if polConv, ok := baselinePolLabels[varName]; ok { // Baseline concentrations
+	if i, ok := popIndices[varName]; ok { // Population
+		return c.PopData[i]
+
+	} else if polConv, ok := baselinePolLabels[varName]; ok { // Baseline concentrations
 		var o float64
 		for i, ii := range polConv.index {
 			o += c.CBaseline[ii] * polConv.conversion[i]
 		}
 		return o
-
-	} else if i, ok := popIndices[varName]; ok { // Population
-		return c.PopData[i]
 
 	} else if i, ok := mortIndices[varName]; ok { // Mortality rate
 		return c.MortData[i]
@@ -919,11 +919,11 @@ func (d *InMAP) getUnits(varName string, m Mechanism) string {
 	}
 	if _, ok := baselinePolLabels[varName]; ok { // Concentrations
 		return "μg/m³"
-	} else if _, ok := d.popIndices[varName]; ok { // Population
+	} else if _, ok := d.PopIndices[varName]; ok { // Population
 		return "people/grid cell"
 	} else if _, ok := d.mortIndices[varName]; ok { // Mortality Rate
 		return "deaths/100,000"
-	} else if _, ok := d.popIndices[strings.Replace(varName, " deaths", "", 1)]; ok {
+	} else if _, ok := d.PopIndices[strings.Replace(varName, " deaths", "", 1)]; ok {
 		// Mortalities
 		return "deaths/grid cell"
 	}
@@ -964,7 +964,7 @@ func (d *InMAP) OutputOptions(m Mechanism) (names []string, descriptions []strin
 
 	// Population
 	var tempPop []string
-	for pop := range d.popIndices {
+	for pop := range d.PopIndices {
 		tempPop = append(tempPop, pop)
 	}
 	sort.Strings(tempPop)
