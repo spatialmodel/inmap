@@ -92,9 +92,9 @@ func Load(r io.Reader, config *VarGridConfig, emis *Emissions, m Mechanism) Doma
 func (d *InMAP) initFromCells(cells []*Cell, emis *Emissions, config *VarGridConfig, m Mechanism) error {
 	d.init()
 	// Create a list of array indices for each population type.
-	d.popIndices = make(map[string]int)
+	d.PopIndices = make(map[string]int)
 	for i, p := range config.CensusPopColumns {
-		d.popIndices[p] = i
+		d.PopIndices[p] = i
 	}
 	d.mortIndices = make(map[string]int)
 	mortRateColumns := make([]string, len(config.MortalityRateColumns))

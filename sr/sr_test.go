@@ -28,8 +28,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ctessum/cdf"
 	"github.com/BurntSushi/toml"
+	"github.com/ctessum/cdf"
 	"github.com/gonum/floats"
 	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/cloud"

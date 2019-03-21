@@ -76,9 +76,9 @@ type InMAP struct {
 	// boundary cells; assume bottom boundary is the same as lowest layer
 	topBoundary *cellList
 
-	// popIndices gives the array index of each population type in the PopData
+	// PopIndices gives the array index of each population type in the PopData
 	// field in each Cell.
-	popIndices map[string]int
+	PopIndices map[string]int
 
 	// mortIndices gives the array index of each mortality rate in the mortData
 	// field in each Cell.
@@ -476,7 +476,7 @@ func (d *InMAP) VerticalProfile(variable string, p geom.Point, m Mechanism) (hei
 	}
 	i := 0
 	for !c.boundary {
-		vals[i] = c.getValue(variable, d.popIndices, d.mortIndices, m)
+		vals[i] = c.getValue(variable, d.PopIndices, d.mortIndices, m)
 		height[i] = c.LayerHeight + c.Dz/2.
 		c = (*c.above)[0].Cell
 		i++

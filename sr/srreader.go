@@ -23,10 +23,13 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
+	"strings"
 	"sync"
 
+	"github.com/Knetic/govaluate"
 	"github.com/ctessum/cdf"
 	"github.com/ctessum/geom"
+	"github.com/ctessum/geom/proj"
 	"github.com/ctessum/requestcache"
 	"github.com/gonum/floats"
 	"github.com/spatialmodel/inmap"
@@ -39,8 +42,7 @@ type Reader struct {
 	d                 inmap.InMAP
 	indices           map[*inmap.Cell]int
 	layers            []int // layers are the vertical layers that are represented in the SR matrix.
-	extraData         map[string][]float64
-	nCellsGroundLevel int // number of cells in the lowest model layer
+	nCellsGroundLevel int   // number of cells in the lowest model layer
 
 	// CacheSize specifies the number of records to be held in the memory cache.
 	// Larger numbers lead to faster operation but greater memory use.
@@ -136,18 +138,30 @@ func NewReader(r cdf.ReaderWriterAt) (*Reader, error) {
 		sr.d.InsertCell(cell, m)
 	}
 
-	// Read in extra data that wasn't able to be saved into the cells.
-	sr.extraData = make(map[string][]float64)
+	// Read in extra data that wasn't yet able to be saved into the cells,
+	// and save it as PopData.
+	sr.d.PopIndices = make(map[string]int)
+	var popI int
 	for _, v := range sr.File.Header.Variables() {
 		if sr.File.Header.Dimensions(v)[0] != "allcells" {
 			continue // We're only interested in the InMAP variables.
 		}
 		if _, ok := cellVarMap[v]; !ok {
-			var err error
-			sr.extraData[v], err = sr.readFullVar64(v)
-			if err != nil {
-				return nil, err
-			}
+			sr.d.PopIndices[v] = popI
+			popI++
+		}
+	}
+	for _, c := range cells {
+		c.PopData = make([]float64, len(sr.d.PopIndices))
+	}
+
+	for v, popI := range sr.d.PopIndices {
+		data, err := sr.readFullVar64(v)
+		if err != nil {
+			return nil, err
+		}
+		for i, c := range cells {
+			c.PopData[popI] = data[i]
 		}
 	}
 
@@ -192,8 +206,13 @@ func (sr *Reader) Variables(names ...string) (map[string][]float64, error) {
 	for _, name := range names {
 		n := make(map[string]string)
 		n[name] = name
-		if d, ok := sr.extraData[name]; ok {
-			r[name] = d[0:sr.nCellsGroundLevel] // only return ground-level data.
+		if i, ok := sr.d.PopIndices[name]; ok {
+			o := make([]float64, sr.nCellsGroundLevel)
+			cells := sr.d.Cells()
+			for j := 0; j < sr.nCellsGroundLevel; j++ {
+				o[j] = cells[j].PopData[i]
+			}
+			r[name] = o // only return ground-level data.
 		} else {
 			o, err := inmap.NewOutputter("", false, n, nil, m)
 			if err != nil {
@@ -232,7 +251,7 @@ func (c *Concentrations) TotalPM25() []float64 {
 // matrix, the function will allocate the emissions to the top layer
 // and an error of type AboveTopErr will be returned. In some cases it
 // may be appropriate to ignore errors of this type.
-// As specified in the EmisRecord documentation
+// As specified in the EmisRecord documentation,
 // emission units should be in μg/s.
 func (sr *Reader) Concentrations(emis ...*inmap.EmisRecord) (*Concentrations, error) {
 
@@ -311,6 +330,60 @@ func (sr *Reader) Concentrations(emis ...*inmap.EmisRecord) (*Concentrations, er
 		}
 	}
 	return out, stickyErr
+}
+
+// SetConcentrations set the `Cf` concentration field of the underlying
+// InMAP data structure to the specified values. This is not
+// concurrency-safe.
+func (sr *Reader) SetConcentrations(c *Concentrations) error {
+	m := simplechem.Mechanism{}
+	nSpec := m.Len()
+	speciesIndex := make(map[string]int)
+	for i, s := range m.Species() {
+		sl := strings.ToLower(s)
+		if _, ok := speciesIndex[sl]; ok {
+			return fmt.Errorf("sr: there is more than one (case-insensitive) instance of species `%s` in this mechanism", sl)
+		}
+		speciesIndex[sl] = i
+	}
+	cVal := reflect.ValueOf(c).Elem()
+	cType := cVal.Type()
+	for i := 0; i < cVal.NumField(); i++ {
+		fieldT := cType.Field(i)
+		fieldV := cVal.Field(i)
+		iPol, ok := speciesIndex[strings.ToLower(fieldT.Name)]
+		if !ok {
+			return fmt.Errorf("sr: this mechanism does not contain case-insensitive species `%s`", fieldT.Name)
+		}
+		cells := sr.d.Cells()
+		for i := 0; i < fieldV.Len(); i++ {
+			c := cells[i]
+			c.Cf = make([]float64, nSpec)
+			c.Cf[iPol] = fieldV.Index(i).Float()
+		}
+	}
+	return nil
+}
+
+// Output writes out the results specified by variables.
+// See the documenation for inmap.Outputter for more information.
+// This function assumes that concentrations have already been set using
+// SetConcentrations.
+// Note that because the SR matrix does not save gas-phase concentrations,
+// attempts to output gas-phase equations will result in all zeros.
+func (sr *Reader) Output(shapefilePath string, variables map[string]string, funcs map[string]govaluate.ExpressionFunction, sRef *proj.SR) error {
+	m := simplechem.Mechanism{}
+	o, err := inmap.NewOutputter(shapefilePath, false, variables, funcs, m)
+	if err != nil {
+		return err
+	}
+	if err := o.CheckOutputVars(m)(&sr.d); err != nil {
+		return err
+	}
+	if err := o.Output(sRef)(&sr.d); err != nil {
+		return err
+	}
+	return nil
 }
 
 // polNames lists the pollutant names.

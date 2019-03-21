@@ -66,6 +66,8 @@ func TestSRPredict(t *testing.T) {
 	cfg := InitializeConfig()
 	cfg.Set("SR.OutputFile", "../cmd/inmap/testdata/testSR_golden.ncf")
 	cfg.Set("OutputFile", "../cmd/inmap/testdata/output_SRPredict.shp")
+	cfg.Set("OutputVariables", `{"TotalPM25": "PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA",
+"TotalPopD": "(exp(log(1.078)/10 * TotalPM25) - 1) * TotalPop * allcause / 100000"}`)
 	cfg.Set("EmissionsShapefiles", []string{"../cmd/inmap/testdata/testEmisSR.shp"})
 
 	cfg.Set("config", "../cmd/inmap/configExample.toml")
@@ -80,12 +82,22 @@ func TestSRPredictAboveTop(t *testing.T) {
 	cfg.Set("config", "../cmd/inmap/configExample.toml")
 	cfg.Set("SR.OutputFile", "../cmd/inmap/testdata/testSR_golden.ncf")
 	cfg.Set("OutputFile", "../cmd/inmap/testdata/output_SRPredict.shp")
+	cfg.Set("OutputVariables", `{"PNH4": "pNH4",
+	"PNO3": "pNO3",
+	"PSO4": "pSO4",
+	"SOA": "SOA",
+	"PrimPM25": "PrimaryPM25",
+	"TotalPM25": "PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA"}`)
 	cfg.Set("EmissionsShapefiles", []string{"../cmd/inmap/testdata/testEmis.shp"})
+	outputVars, err := checkOutputVars(GetStringMapString("OutputVariables", cfg.Viper))
+	if err != nil {
+		t.Fatal(err)
+	}
 	vcfg, err := VarGridConfig(cfg.Viper)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := SRPredict(cfg.GetString("EmissionUnits"), cfg.GetString("SR.OutputFile"), cfg.GetString("OutputFile"), cfg.GetStringSlice("EmissionsShapefiles"), vcfg); err != nil {
+	if err := SRPredict(cfg.GetString("EmissionUnits"), cfg.GetString("SR.OutputFile"), cfg.GetString("OutputFile"), outputVars, cfg.GetStringSlice("EmissionsShapefiles"), vcfg); err != nil {
 		t.Fatal(err)
 	}
 }
