@@ -15,16 +15,8 @@ predict uses the SR matrix specified in the configuration file
 	from the emissions specified in the EmissionsShapefiles field in the configuration
 	file, outputting the results in the shapefile specified in OutputFile field.
 	of the configuration file. The EmissionUnits field in the configuration
-	file specifies the units of the emissions. Output units are μg particulate
-	matter per m³ air.
-
-		Output variables:
-		PNH4: Particulate ammonium
-		PNO3: Particulate nitrate
-		PSO4: Particulate sulfate
-		SOA: Secondary organic aerosol
-		PrimaryPM25: Primarily emitted PM2.5
-		TotalPM25: The sum of the above components
+	file specifies the units of the emissions. The OutputVariables configuration
+	variable specifies the information to be output.
 
 ```
 inmap srpredict [flags]
@@ -48,6 +40,9 @@ inmap srpredict [flags]
       --OutputFile string             
                                                     OutputFile is the path to the desired output shapefile location. It can
                                                     include environment variables. (default "inmap_output.shp")
+      --OutputVariables string        
+                                                    OutputVariables specifies which model variables should be included in the
+                                                    output file. It can include environment variables. (default "{\"TotalPM25\":\"PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA\",\"TotalPopD\":\"(exp(log(1.078)/10 * TotalPM25) - 1) * TotalPop * AllCause / 100000\"}\n")
       --SR.OutputFile string          
                                                     SR.OutputFile is the path where the output file is or should be created
                                                      when creating a source-receptor matrix. It can contain environment variables. (default "${INMAP_ROOT_DIR}/cmd/inmap/testdata/output_${InMAPRunType}.shp")

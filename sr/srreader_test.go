@@ -28,6 +28,8 @@ import (
 	"testing"
 
 	"github.com/ctessum/geom"
+	"github.com/ctessum/geom/encoding/shp"
+	"github.com/ctessum/geom/proj"
 	"github.com/spatialmodel/inmap"
 )
 
@@ -359,4 +361,137 @@ func BenchmarkConcentrations(b *testing.B) {
 			}
 		})
 	}
+}
+
+func TestOutput(t *testing.T) {
+	r, err := os.Open("../cmd/inmap/testdata/testSR_golden.ncf")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sr, err := NewReader(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	e := []*inmap.EmisRecord{
+		{
+			Geom: geom.Point{X: -3500, Y: -3500},
+			PM25: 1,
+		},
+		{
+			Geom: geom.Point{X: -3500, Y: -3500},
+			SOx:  1,
+		},
+		{
+			Geom: geom.Point{X: -3500, Y: -3500},
+			NH3:  1,
+		},
+		{
+			Geom: geom.Point{X: -3500, Y: -3500},
+			NOx:  1,
+		},
+		{
+			Geom: geom.Point{X: -3500, Y: -3500},
+			VOC:  1,
+		},
+	}
+
+	want := []float64{2.9263678846952468e-06, 1.3441159679404568e-06, 3.748907457020584e-07,
+		9.058931188191816e-07, 6.482636361240107e-07, 4.4067922261390585e-08, 1.850026504143787e-07,
+		1.659181141800553e-07, 3.440830131625286e-08, 1.2629582981423665e-08}
+
+	c, err := sr.Concentrations(e...)
+	if err != nil {
+		t.Fatalf("calculating concentrations: %v", err)
+	}
+	totalPM25 := c.TotalPM25()
+	t.Run("check concentrations", func(t *testing.T) {
+		if !reflect.DeepEqual(want, totalPM25) {
+			for j, v := range totalPM25 {
+				w := want[j]
+				if math.Abs(w-v)*2/(w+v) > 1.e-8 {
+					t.Errorf("row %d: want %v but have %v", j, w, v)
+				}
+			}
+		}
+	})
+	if err = sr.SetConcentrations(c); err != nil {
+		t.Fatalf("setting concentrations: %v", err)
+	}
+
+	sRef, err := proj.Parse("+proj=lcc +lat_1=33.000000 +lat_2=45.000000 +lat_0=40.000000 +lon_0=-97.000000 +x_0=0 +y_0=0 +a=6370997.000000 +b=6370997.000000 +to_meter=1")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	const TestOutputFilename = "testOutput.shp"
+
+	if err = sr.Output(TestOutputFilename, map[string]string{
+		"TotalPop":   "TotalPop",
+		"WhiteNoLat": "WhiteNoLat",
+		"NPctWNoLat": "{sum(WhiteNoLat) / sum(TotalPop)}",
+		"NPctOther":  "{(sum(TotalPop) - sum(WhiteNoLat)) / sum(TotalPop)}",
+		"NPctRatio":  "NPctWNoLat / NPctOther",
+		"TotalPopD":  "(exp(log(1.078)/10 * TotalPM25) - 1) * TotalPop * allcause / 100000",
+		"TotalPM25":  "PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA",
+		"BasePM25":   "BaselineTotalPM25",
+		"WindSpeed":  "WindSpeed"},
+		nil, sRef); err != nil {
+		t.Fatal(err)
+	}
+
+	type outData struct {
+		BaselineTotalPM25 float64 `shp:"BasePM25"`
+		TotalPM25         float64
+		TotalPop          float64
+		WhiteNoLat        float64
+		NPctWNoLat        float64
+		NPctOther         float64
+		NPctRatio         float64
+		Deaths            float64 `shp:"TotalPopD"`
+		WindSpeed         float64
+	}
+	dec, err := shp.NewDecoder(TestOutputFilename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var recs []outData
+	for {
+		var rec outData
+		if more := dec.DecodeRow(&rec); !more {
+			break
+		}
+		recs = append(recs, rec)
+	}
+	if err := dec.Error(); err != nil {
+		t.Fatal(err)
+	}
+
+	shpWant := []outData{
+		outData{BaselineTotalPM25: 4.90770054, TotalPM25: 2.291747478e-06, TotalPop: 100000, WhiteNoLat: 50000, NPctWNoLat: 0.5, NPctOther: 0.5, NPctRatio: 1, Deaths: 1.37701889e-05, WindSpeed: 2.16334701},
+		outData{BaselineTotalPM25: 4.90770054, TotalPM25: 1.0526232472e-06, TotalPop: 0, WhiteNoLat: 0, NPctWNoLat: 0.5, NPctOther: 0.5, NPctRatio: 1, Deaths: 0, WindSpeed: 2.16334701},
+		outData{BaselineTotalPM25: 4.90770054, TotalPM25: 2.935857708e-07, TotalPop: 0, WhiteNoLat: 0, NPctWNoLat: 0.5, NPctOther: 0.5, NPctRatio: 1, Deaths: 0, WindSpeed: 2.16334701},
+		outData{BaselineTotalPM25: 4.90770054, TotalPM25: 7.094353691e-07, TotalPop: 0, WhiteNoLat: 0, NPctWNoLat: 0.5, NPctOther: 0.5, NPctRatio: 1, Deaths: 0, WindSpeed: 2.16334701},
+		outData{BaselineTotalPM25: 4.90770054, TotalPM25: 5.076742582e-07, TotalPop: 0, WhiteNoLat: 0, NPctWNoLat: 0.5, NPctOther: 0.5, NPctRatio: 1, Deaths: 0, WindSpeed: 2.16334701},
+		outData{BaselineTotalPM25: 10.34742928, TotalPM25: 3.37434365e-08, TotalPop: 0, WhiteNoLat: 0, NPctWNoLat: 0.5, NPctOther: 0.5, NPctRatio: 1, Deaths: 0, WindSpeed: 1.88434911},
+		outData{BaselineTotalPM25: 4.90770054, TotalPM25: 1.448786691e-07, TotalPop: 0, WhiteNoLat: 0, NPctWNoLat: 0.5, NPctOther: 0.5, NPctRatio: 1, Deaths: 0, WindSpeed: 2.16334701},
+		outData{BaselineTotalPM25: 4.90770054, TotalPM25: 1.299305268e-07, TotalPop: 0, WhiteNoLat: 0, NPctWNoLat: 0.5, NPctOther: 0.5, NPctRatio: 1, Deaths: 0, WindSpeed: 2.16334701},
+		outData{BaselineTotalPM25: 4.2574172, TotalPM25: 2.9874716e-08, TotalPop: 0, WhiteNoLat: 0, NPctWNoLat: 0.5, NPctOther: 0.5, NPctRatio: 1, Deaths: 0, WindSpeed: 2.7272017},
+		outData{BaselineTotalPM25: 5.36232233, TotalPM25: 1.05310143e-08, TotalPop: 0, WhiteNoLat: 0, NPctWNoLat: 0.5, NPctOther: 0.5, NPctRatio: 1, Deaths: 0, WindSpeed: 2.56135321},
+	}
+
+	if len(recs) != len(shpWant) {
+		t.Errorf("want %d records but have %d", len(shpWant), len(recs))
+	}
+	for i, w := range shpWant {
+		if i >= len(recs) {
+			continue
+		}
+		h := recs[i]
+		if !reflect.DeepEqual(w, h) {
+			t.Errorf("record %d: want %+v but have %+v", i, w, h)
+		}
+	}
+	dec.Close()
+	inmap.DeleteShapefile(TestOutputFilename)
 }

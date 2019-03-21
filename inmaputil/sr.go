@@ -23,10 +23,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 
-	"github.com/ctessum/geom"
-	"github.com/ctessum/geom/encoding/shp"
 	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/cloud/cloudrpc"
 	"github.com/spatialmodel/inmap/sr"
@@ -112,9 +109,10 @@ func CleanSR(ctx context.Context, jobName, VariableGridData string, VarGrid *inm
 // SRPredict uses the SR matrix specified in SROutputFile
 // to predict concentrations resulting
 // from the emissions in EmissionsShapefiles, outputting the
-// results in OutputFile. EmissionUnits specifies the units
+// results specified by outputVaraibles in OutputFile.
+// EmissionUnits specifies the units
 // of the emissions. VarGrid specifies the variable resolution grid.
-func SRPredict(EmissionUnits, SROutputFile, OutputFile string, EmissionsShapefiles []string, VarGrid *inmap.VarGridConfig) error {
+func SRPredict(EmissionUnits, SROutputFile, OutputFile string, outputVariables map[string]string, EmissionsShapefiles []string, VarGrid *inmap.VarGridConfig) error {
 	msgLog := make(chan string)
 	go func() {
 		for {
@@ -147,52 +145,19 @@ func SRPredict(EmissionUnits, SROutputFile, OutputFile string, EmissionsShapefil
 			return err
 		}
 	}
-	type rec struct {
-		geom.Polygon
-		PNH4, PNO3, PSO4, SOA, PrimaryPM25, TotalPM25 float64
-	}
-
-	var upload uploader
-
-	o, err := shp.NewEncoder(upload.maybeUpload(OutputFile), rec{})
-	if err != nil {
+	if err = r.SetConcentrations(conc); err != nil {
 		return err
 	}
 
+	var upload uploader
+	o := upload.maybeUpload(OutputFile)
 	if upload.err != nil {
 		return upload.err
 	}
 
-	g := r.Geometry()
-
-	for i, tpm := range conc.TotalPM25() {
-		r := rec{
-			Polygon:     g[i].(geom.Polygon),
-			PNH4:        conc.PNH4[i],
-			PNO3:        conc.PNO3[i],
-			PSO4:        conc.PSO4[i],
-			PrimaryPM25: conc.PrimaryPM25[i],
-			SOA:         conc.SOA[i],
-			TotalPM25:   tpm,
-		}
-		err = o.Encode(r)
-		if err != nil {
-			return err
-		}
+	if err = r.Output(o, outputVariables, nil, vgsr); err != nil {
+		return err
 	}
-	o.Close()
-	// Projection definition. This may need to be changed for a different
-	// spatial domain.
-	// TODO: Make this settable by the user, or at least check to make sure it
-	// matches the InMAPProj configuration variable.
-	const proj4 = `PROJCS["Lambert_Conformal_Conic",GEOGCS["GCS_unnamed ellipse",DATUM["D_unknown",SPHEROID["Unknown",6370997,0]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],PROJECTION["Lambert_Conformal_Conic"],PARAMETER["standard_parallel_1",33],PARAMETER["standard_parallel_2",45],PARAMETER["latitude_of_origin",40],PARAMETER["central_meridian",-97],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]`
-	// Create .prj file
-	f, err = os.Create(upload.maybeUpload(OutputFile[0:len(OutputFile)-len(filepath.Ext(OutputFile))] + ".prj"))
-	if err != nil {
-		return fmt.Errorf("error creating output prj file: %v", err)
-	}
-	fmt.Fprint(f, proj4)
-	f.Close()
 
 	if err := upload.uploadOutput(nil); err != nil {
 		return err

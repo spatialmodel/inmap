@@ -351,7 +351,7 @@ func (config *VarGridConfig) RegularGrid(data *CTMData, pop *Population, popInde
 			return err
 		}
 
-		d.popIndices = (map[string]int)(popIndex)
+		d.PopIndices = (map[string]int)(popIndex)
 		d.mortIndices = (map[string]int)(mortIndex)
 
 		nz := data.Data["UAvg"].Data.Shape[0]
@@ -386,7 +386,7 @@ func (config *VarGridConfig) RegularGrid(data *CTMData, pop *Population, popInde
 // totalMassPopulation calculates the total pollution mass in the domain and the
 // total population of group popGridColumn.
 func (d *InMAP) totalMassPopulation(popGridColumn string) (totalMass, totalPopulation float64, err error) {
-	iPop, ok := d.popIndices[popGridColumn]
+	iPop, ok := d.PopIndices[popGridColumn]
 	if !ok {
 		return math.Inf(-1), math.Inf(-1), fmt.Errorf("inmap: PopGridColumn '%s' does not exist in census file", popGridColumn)
 	}
@@ -501,7 +501,7 @@ func (d *InMAP) addCells(config *VarGridConfig, newCellIndices [][][2]int,
 				if conc != nil {
 					conci = conc[i]
 				}
-				cell, err2 := config.createCell(data, pop, d.popIndices, mortRates, d.mortIndices, ii,
+				cell, err2 := config.createCell(data, pop, d.PopIndices, mortRates, d.mortIndices, ii,
 					newCellLayers[i], conci, webMapTrans, m, notMeters)
 				cellErrChan <- cellErr{cell: cell, err: err2}
 			}

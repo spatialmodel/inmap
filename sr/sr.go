@@ -35,8 +35,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ctessum/cdf"
 	"github.com/cenkalti/backoff"
+	"github.com/ctessum/cdf"
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/encoding/shp"
 	"github.com/lnashier/viper"
