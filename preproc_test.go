@@ -174,16 +174,16 @@ func TestGEOSChemToInMAP_new(t *testing.T) {
 	const tolerance = 1.0e-6
 
 	gc, err := NewGEOSChem(
-		"cmd/inmap/testdata/preproc/geoschem-new/GEOSFP.[DATE].A1.2x25.nc",
-		"cmd/inmap/testdata/preproc/geoschem-new/GEOSFP.[DATE].A3cld.2x25.nc",
-		"cmd/inmap/testdata/preproc/geoschem-new/GEOSFP.[DATE].A3dyn.2x25.nc",
-		"cmd/inmap/testdata/preproc/geoschem-new/GEOSFP.[DATE].I3.2x25.nc",
-		"cmd/inmap/testdata/preproc/geoschem-new/GEOSFP.[DATE].A3mstE.2x25.nc",
+		"cmd/inmap/testdata/preproc/geoschem-new/MERRA2.[DATE].A1.2x25.nc3",
+		"cmd/inmap/testdata/preproc/geoschem-new/MERRA2.[DATE].A3cld.2x25.nc3",
+		"cmd/inmap/testdata/preproc/geoschem-new/MERRA2.[DATE].A3dyn.2x25.nc3",
+		"cmd/inmap/testdata/preproc/geoschem-new/MERRA2.[DATE].I3.2x25.nc3",
+		"cmd/inmap/testdata/preproc/geoschem-new/MERRA2.[DATE].A3mstE.2x25.nc3",
 		"cmd/inmap/testdata/preproc/geoschem-new/GEOSFP.ApBp.nc",
 		"cmd/inmap/testdata/preproc/geoschem-new/ts.[DATE].nc",
 		"cmd/inmap/testdata/preproc/geoschem-new/vegtype.global",
-		"20150102",
-		"20150103",
+		"20160102",
+		"20160103",
 		false,
 		"3h",
 		"24h",
