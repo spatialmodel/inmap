@@ -188,13 +188,17 @@ func (c *Client) Status(ctx context.Context, job *cloudrpc.JobName) (*cloudrpc.J
 			Message: err.Error(),
 		}, nil
 	}
-	for _, c := range k8sJob.Status.Conditions {
+	for i, c := range k8sJob.Status.Conditions {
+		if i != len(k8sJob.Status.Conditions)-1 {
+			continue
+		}
 		if c.Type == batch.JobComplete && c.Status == core.ConditionTrue {
 			s.Status = cloudrpc.Status_Complete
 			s.StartTime = k8sJob.Status.StartTime.Time.Unix()
 			s.CompletionTime = k8sJob.Status.CompletionTime.Time.Unix()
 		} else if c.Type == batch.JobFailed && c.Status == core.ConditionTrue {
 			s.Status = cloudrpc.Status_Failed
+			s.Message = c.Message
 		}
 	}
 	if k8sJob.Status.Active > 0 {
