@@ -101,7 +101,9 @@ func TestClient_fake(t *testing.T) {
 			t.Fatal(err)
 		}
 		wantStatus := &cloudrpc.JobStatus{
-			//	Status: "&JobStatus{Conditions:[],StartTime:<nil>,CompletionTime:<nil>,Active:0,Succeeded:0,Failed:0,}",
+			Status:         cloudrpc.Status_Complete,
+			StartTime:      1359849600,
+			CompletionTime: 1359936000,
 		}
 		if !reflect.DeepEqual(wantStatus, status) {
 			t.Errorf("status:\n%+v\n!=\n%+v", status, wantStatus)
@@ -117,7 +119,9 @@ func TestClient_fake(t *testing.T) {
 			t.Fatal(err)
 		}
 		wantStatus := &cloudrpc.JobStatus{
-			//	Status: "&JobStatus{Conditions:[],StartTime:<nil>,CompletionTime:<nil>,Active:0,Succeeded:0,Failed:0,}",
+			Status:         cloudrpc.Status_Complete,
+			StartTime:      1359849600,
+			CompletionTime: 1359936000,
 		}
 		if !reflect.DeepEqual(wantStatus, status) {
 			t.Errorf("status:\n%+v\n!=\n%+v", status, wantStatus)

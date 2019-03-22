@@ -22,12 +22,15 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"time"
 
 	"github.com/lnashier/viper"
 	"github.com/spatialmodel/inmap/cloud/cloudrpc"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 	batch "k8s.io/api/batch/v1"
+	core "k8s.io/api/core/v1"
+	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"
@@ -53,7 +56,6 @@ func NewFakeClient(checkConfig func([]string), checkRun func([]byte, error), buc
 func fakeRun(checkConfig func([]string), checkRun func([]byte, error), jobs *[]batch.Job) func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
 	return func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
 		job := action.(k8stesting.CreateAction).GetObject().(*batch.Job)
-		*jobs = append(*jobs, *job)
 		cmd := job.Spec.Template.Spec.Containers[0].Command
 		args := job.Spec.Template.Spec.Containers[0].Args
 		for i := 0; i < len(args); i += 2 {
@@ -69,6 +71,27 @@ func fakeRun(checkConfig func([]string), checkRun func([]byte, error), jobs *[]b
 		if checkRun != nil {
 			checkRun(o, err)
 		}
+
+		// Set status.
+		job.Status.Conditions = []batch.JobCondition{{
+			Type:   batch.JobComplete,
+			Status: core.ConditionTrue,
+		}}
+		start, err := time.Parse("2006-Jan-02", "2013-Feb-03")
+		if err != nil {
+			panic(err)
+		}
+		end, err := time.Parse("2006-Jan-02", "2013-Feb-04")
+		if err != nil {
+			panic(err)
+		}
+		s := meta.NewTime(start)
+		c := meta.NewTime(end)
+		job.Status.StartTime = &s
+		job.Status.CompletionTime = &c
+		job.Status.Succeeded = 1
+
+		*jobs = append(*jobs, *job)
 		return false, job, nil
 	}
 }

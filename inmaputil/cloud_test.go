@@ -53,7 +53,9 @@ func TestCloud(t *testing.T) {
 		}
 
 		wantStatus := &cloudrpc.JobStatus{
-			// Status: "&JobStatus{Conditions:[],StartTime:<nil>,CompletionTime:<nil>,Active:0,Succeeded:0,Failed:0,}",
+			Status:         cloudrpc.Status_Complete,
+			StartTime:      1359849600,
+			CompletionTime: 1359936000,
 		}
 		if !reflect.DeepEqual(status, wantStatus) {
 			t.Errorf("wrong status: %v != %v", status, wantStatus)
