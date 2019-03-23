@@ -432,8 +432,13 @@ func TestOutput(t *testing.T) {
 		"NPctWNoLat": "{sum(WhiteNoLat) / sum(TotalPop)}",
 		"NPctOther":  "{(sum(TotalPop) - sum(WhiteNoLat)) / sum(TotalPop)}",
 		"NPctRatio":  "NPctWNoLat / NPctOther",
-		"TotalPopD":  "(exp(log(1.078)/10 * TotalPM25) - 1) * TotalPop * allcause / 100000",
 		"TotalPM25":  "PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA",
+		"TotalPopD":  "(exp(log(1.078)/10 * TotalPM25) - 1) * TotalPop * allcause / 100000",
+		"PrimPM25":   "PrimaryPM25",
+		"PNH4":       "pNH4",
+		"PSO4":       "pSO4",
+		"PNO3":       "pNO3",
+		"SOA":        "SOA",
 		"BasePM25":   "BaselineTotalPM25",
 		"WindSpeed":  "WindSpeed"},
 		nil, sRef); err != nil {
@@ -441,15 +446,16 @@ func TestOutput(t *testing.T) {
 	}
 
 	type outData struct {
-		BaselineTotalPM25 float64 `shp:"BasePM25"`
-		TotalPM25         float64
-		TotalPop          float64
-		WhiteNoLat        float64
-		NPctWNoLat        float64
-		NPctOther         float64
-		NPctRatio         float64
-		Deaths            float64 `shp:"TotalPopD"`
-		WindSpeed         float64
+		BasePM25                        float64 `shp:"BasePM25"`
+		TotalPM25                       float64
+		PrimPM25, PNH4, PSO4, PNO3, SOA float64
+		TotalPop                        float64
+		WhiteNoLat                      float64
+		NPctWNoLat                      float64
+		NPctOther                       float64
+		NPctRatio                       float64
+		Deaths                          float64 `shp:"TotalPopD"`
+		WindSpeed                       float64
 	}
 	dec, err := shp.NewDecoder(TestOutputFilename)
 	if err != nil {
@@ -468,16 +474,16 @@ func TestOutput(t *testing.T) {
 	}
 
 	shpWant := []outData{
-		outData{BaselineTotalPM25: 4.90770054, TotalPM25: 2.291747478e-06, TotalPop: 100000, WhiteNoLat: 50000, NPctWNoLat: 0.5, NPctOther: 0.5, NPctRatio: 1, Deaths: 1.37701889e-05, WindSpeed: 2.16334701},
-		outData{BaselineTotalPM25: 4.90770054, TotalPM25: 1.0526232472e-06, TotalPop: 0, WhiteNoLat: 0, NPctWNoLat: 0.5, NPctOther: 0.5, NPctRatio: 1, Deaths: 0, WindSpeed: 2.16334701},
-		outData{BaselineTotalPM25: 4.90770054, TotalPM25: 2.935857708e-07, TotalPop: 0, WhiteNoLat: 0, NPctWNoLat: 0.5, NPctOther: 0.5, NPctRatio: 1, Deaths: 0, WindSpeed: 2.16334701},
-		outData{BaselineTotalPM25: 4.90770054, TotalPM25: 7.094353691e-07, TotalPop: 0, WhiteNoLat: 0, NPctWNoLat: 0.5, NPctOther: 0.5, NPctRatio: 1, Deaths: 0, WindSpeed: 2.16334701},
-		outData{BaselineTotalPM25: 4.90770054, TotalPM25: 5.076742582e-07, TotalPop: 0, WhiteNoLat: 0, NPctWNoLat: 0.5, NPctOther: 0.5, NPctRatio: 1, Deaths: 0, WindSpeed: 2.16334701},
-		outData{BaselineTotalPM25: 10.34742928, TotalPM25: 3.37434365e-08, TotalPop: 0, WhiteNoLat: 0, NPctWNoLat: 0.5, NPctOther: 0.5, NPctRatio: 1, Deaths: 0, WindSpeed: 1.88434911},
-		outData{BaselineTotalPM25: 4.90770054, TotalPM25: 1.448786691e-07, TotalPop: 0, WhiteNoLat: 0, NPctWNoLat: 0.5, NPctOther: 0.5, NPctRatio: 1, Deaths: 0, WindSpeed: 2.16334701},
-		outData{BaselineTotalPM25: 4.90770054, TotalPM25: 1.299305268e-07, TotalPop: 0, WhiteNoLat: 0, NPctWNoLat: 0.5, NPctOther: 0.5, NPctRatio: 1, Deaths: 0, WindSpeed: 2.16334701},
-		outData{BaselineTotalPM25: 4.2574172, TotalPM25: 2.9874716e-08, TotalPop: 0, WhiteNoLat: 0, NPctWNoLat: 0.5, NPctOther: 0.5, NPctRatio: 1, Deaths: 0, WindSpeed: 2.7272017},
-		outData{BaselineTotalPM25: 5.36232233, TotalPM25: 1.05310143e-08, TotalPop: 0, WhiteNoLat: 0, NPctWNoLat: 0.5, NPctOther: 0.5, NPctRatio: 1, Deaths: 0, WindSpeed: 2.56135321},
+		outData{BasePM25: 4.90770054, TotalPM25: 3.469545779e-06, PrimPM25: 2.291747478e-06, PNH4: 6.5050267393e-07, PSO4: 1.2028916211e-11, PNO3: 5.1389395767e-07, SOA: 1.33896405075e-08, TotalPop: 100000, WhiteNoLat: 50000, NPctWNoLat: 0.5, NPctOther: 0.5, NPctRatio: 1, Deaths: 2.08471054e-05, WindSpeed: 2.16334701},
+		outData{BasePM25: 4.90770054, TotalPM25: 1.5936971091e-06, PrimPM25: 1.0526232472e-06, PNH4: 2.9882194853e-07, PSO4: 1.0620333732e-11, PNO3: 2.3615991004e-07, SOA: 6.0813829528e-09, TotalPop: 0, WhiteNoLat: 0, NPctWNoLat: 0.5, NPctOther: 0.5, NPctRatio: 1, Deaths: 0, WindSpeed: 2.16334701},
+		outData{BasePM25: 4.90770054, TotalPM25: 4.445776954e-07, PrimPM25: 2.935857708e-07, PNH4: 8.337668654e-08, PSO4: 6.971880546e-12, PNO3: 6.596691659e-08, SOA: 1.6413496118e-09, TotalPop: 0, WhiteNoLat: 0, NPctWNoLat: 0.5, NPctOther: 0.5, NPctRatio: 1, Deaths: 0, WindSpeed: 2.16334701},
+		outData{BasePM25: 4.90770054, TotalPM25: 1.0741111816e-06, PrimPM25: 7.094353691e-07, PNH4: 2.0140030508e-07, PSO4: 7.636063176e-12, PNO3: 1.5917513674e-07, SOA: 4.0927345957e-09, TotalPop: 0, WhiteNoLat: 0, NPctWNoLat: 0.5, NPctOther: 0.5, NPctRatio: 1, Deaths: 0, WindSpeed: 2.16334701},
+		outData{BasePM25: 4.90770054, TotalPM25: 7.68701342e-07, PrimPM25: 5.076742582e-07, PNH4: 1.441482973e-07, PSO4: 8.574668439e-12, PNO3: 1.1398479105e-07, SOA: 2.8854207912e-09, TotalPop: 0, WhiteNoLat: 0, NPctWNoLat: 0.5, NPctOther: 0.5, NPctRatio: 1, Deaths: 0, WindSpeed: 2.16334701},
+		outData{BasePM25: 10.34742928, TotalPM25: 5.12698596e-08, PrimPM25: 3.37434365e-08, PNH4: 1.142476057e-08, PSO4: 1.436590381e-12, PNO3: 6.00855123e-09, SOA: 9.16747095e-11, TotalPop: 0, WhiteNoLat: 0, NPctWNoLat: 0.5, NPctOther: 0.5, NPctRatio: 1, Deaths: 0, WindSpeed: 1.88434911},
+		outData{BasePM25: 4.90770054, TotalPM25: 2.193996952e-07, PrimPM25: 1.448786691e-07, PNH4: 4.114888116e-08, PSO4: 4.069126582e-12, PNO3: 3.256401804e-08, SOA: 8.040578203e-10, TotalPop: 0, WhiteNoLat: 0, NPctWNoLat: 0.5, NPctOther: 0.5, NPctRatio: 1, Deaths: 0, WindSpeed: 2.16334701},
+		outData{BasePM25: 4.90770054, TotalPM25: 1.967911361e-07, PrimPM25: 1.299305268e-07, PNH4: 3.691539657e-08, PSO4: 5.036470355e-12, PNO3: 2.923647861e-08, SOA: 7.036977112e-10, TotalPop: 0, WhiteNoLat: 0, NPctWNoLat: 0.5, NPctOther: 0.5, NPctRatio: 1, Deaths: 0, WindSpeed: 2.16334701},
+		outData{BasePM25: 4.2574172, TotalPM25: 3.68027015e-08, PrimPM25: 2.9874716e-08, PNH4: 5.18016325e-09, PSO4: 1.532541949e-12, PNO3: 1.60137982e-09, SOA: 1.44909848e-10, TotalPop: 0, WhiteNoLat: 0, NPctWNoLat: 0.5, NPctOther: 0.5, NPctRatio: 1, Deaths: 0, WindSpeed: 2.7272017},
+		outData{BasePM25: 5.36232233, TotalPM25: 1.41560025e-08, PrimPM25: 1.05310143e-08, PNH4: 2.29751725e-09, PSO4: 7.12812879e-13, PNO3: 1.31031694e-09, SOA: 1.6441239e-11, TotalPop: 0, WhiteNoLat: 0, NPctWNoLat: 0.5, NPctOther: 0.5, NPctRatio: 1, Deaths: 0, WindSpeed: 2.56135321},
 	}
 
 	if len(recs) != len(shpWant) {

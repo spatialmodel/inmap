@@ -348,6 +348,7 @@ func (sr *Reader) SetConcentrations(c *Concentrations) error {
 	}
 	cVal := reflect.ValueOf(c).Elem()
 	cType := cVal.Type()
+	cells := sr.d.Cells()
 	for i := 0; i < cVal.NumField(); i++ {
 		fieldT := cType.Field(i)
 		fieldV := cVal.Field(i)
@@ -355,10 +356,11 @@ func (sr *Reader) SetConcentrations(c *Concentrations) error {
 		if !ok {
 			return fmt.Errorf("sr: this mechanism does not contain case-insensitive species `%s`", fieldT.Name)
 		}
-		cells := sr.d.Cells()
 		for i := 0; i < fieldV.Len(); i++ {
 			c := cells[i]
-			c.Cf = make([]float64, nSpec)
+			if len(c.Cf) != nSpec {
+				c.Cf = make([]float64, nSpec)
+			}
 			c.Cf[iPol] = fieldV.Index(i).Float()
 		}
 	}
