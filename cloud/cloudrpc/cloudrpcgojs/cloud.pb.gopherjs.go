@@ -34,6 +34,7 @@ const (
 	Status_Failed   Status = 1
 	Status_Missing  Status = 2
 	Status_Running  Status = 3
+	Status_Waiting  Status = 4
 )
 
 var Status_name = map[int]string{
@@ -41,12 +42,14 @@ var Status_name = map[int]string{
 	1: "Failed",
 	2: "Missing",
 	3: "Running",
+	4: "Waiting",
 }
 var Status_value = map[string]int{
 	"Complete": 0,
 	"Failed":   1,
 	"Missing":  2,
 	"Running":  3,
+	"Waiting":  4,
 }
 
 func (x Status) String() string {

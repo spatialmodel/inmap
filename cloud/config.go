@@ -44,7 +44,7 @@ func (c *Client) jobOutputAddresses(ctx context.Context, name string, cmd []stri
 	o := make(map[string]string)
 	execCmd, _, err := c.root.Find(cmd[1:])
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cloud: couldn't find command %v: %v", cmd[1:], err)
 	}
 	flags := execCmd.InheritedFlags()
 	flags.AddFlagSet(execCmd.LocalFlags())
@@ -64,20 +64,21 @@ func (c *Client) checkOutputs(ctx context.Context, name string, cmd []string) er
 	}
 	bucket, err := OpenBucket(ctx, c.bucketName)
 	if err != nil {
-		return err
+		return fmt.Errorf("cloud: opening bucket %s: %v", c.bucketName, err)
 	}
 	for _, addr := range addrs {
 		for _, fname := range expandShp(addr) {
 			url, err := url.Parse(fname)
 			if err != nil {
-				return err
+				return fmt.Errorf("cloud: parsing URL %s: %v", fname, err)
 			}
-			r, err := bucket.NewReader(ctx, strings.TrimLeft(url.Path, "/"), nil)
+			key := strings.TrimLeft(url.Path, "/")
+			r, err := bucket.NewReader(ctx, key, nil)
 			if err != nil {
-				return err
+				return fmt.Errorf("cloud: opening reader for `%s`: %v", key, err)
 			}
 			if r.Size() == 0 {
-
+				return fmt.Errorf("cloud: output file `%s` is zero-length: %v", key, err)
 			}
 			r.Close()
 		}

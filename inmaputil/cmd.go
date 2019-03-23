@@ -384,11 +384,14 @@ func InitializeConfig() *Cfg {
 			}
 			ctx := context.Background()
 			status, err := CloudJobStatus(ctx, c, cfg)
+			if err != nil {
+				return err
+			}
 			fmt.Println(status.Status)
 			if status.Message != "" {
 				fmt.Println(status.Message)
 			}
-			return err
+			return nil
 		},
 		DisableAutoGenTag: true,
 	}

@@ -188,27 +188,32 @@ func (c *Client) Status(ctx context.Context, job *cloudrpc.JobName) (*cloudrpc.J
 			Message: err.Error(),
 		}, nil
 	}
-	for i, c := range k8sJob.Status.Conditions {
+	for i, cond := range k8sJob.Status.Conditions {
 		if i != len(k8sJob.Status.Conditions)-1 {
 			continue
 		}
-		if c.Type == batch.JobComplete && c.Status == core.ConditionTrue {
+		if cond.Type == batch.JobComplete && cond.Status == core.ConditionTrue {
 			s.Status = cloudrpc.Status_Complete
 			s.StartTime = k8sJob.Status.StartTime.Time.Unix()
 			s.CompletionTime = k8sJob.Status.CompletionTime.Time.Unix()
-		} else if c.Type == batch.JobFailed && c.Status == core.ConditionTrue {
+			err := c.checkOutputs(ctx, job.Name, k8sJob.Spec.Template.Spec.Containers[0].Command)
+			if err != nil {
+				s.Status = cloudrpc.Status_Failed
+				s.Message = fmt.Sprintf("job completed but the following error occurred when checking outputs: %s", err)
+				return s, nil
+			}
+		} else if cond.Type == batch.JobFailed && cond.Status == core.ConditionTrue {
 			s.Status = cloudrpc.Status_Failed
-			s.Message = c.Message
+			s.Message = cond.Message
 		}
 	}
-	if k8sJob.Status.Active > 0 {
-		s.Status = cloudrpc.Status_Running
-		s.StartTime = k8sJob.Status.StartTime.Time.Unix()
-	}
-	err = c.checkOutputs(ctx, job.Name, k8sJob.Spec.Template.Spec.Containers[0].Command)
-	if err != nil {
-		s.Status = cloudrpc.Status_Failed
-		s.Message = fmt.Sprintf("job completed but the following error occurred when checking outputs: %s", err)
+	if len(k8sJob.Status.Conditions) == 0 {
+		if k8sJob.Status.Active > 0 {
+			s.Status = cloudrpc.Status_Running
+			s.StartTime = k8sJob.Status.StartTime.Time.Unix()
+		} else {
+			s.Status = cloudrpc.Status_Waiting
+		}
 	}
 	return s, nil
 }

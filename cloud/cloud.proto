@@ -66,6 +66,7 @@ enum Status {
   Failed = 1;
   Missing = 2;
   Running = 3;
+  Waiting = 4;
 }
 
 message JobStatus {
