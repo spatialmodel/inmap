@@ -1,3 +1,8 @@
+# Release 1.6.0 (2019-4-3)
+* Update documentation
+* Add output variable capability to srpredict
+* Fix bugs in inmap cloud
+
 # Release 1.5.1 (2019-1-25)
 * Update go.mod dependencies
 

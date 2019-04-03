@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.com/spatialmodel/inmap.svg?branch=master)](https://travis-ci.com/spatialmodel/inmap) [![Coverage Status](https://coveralls.io/repos/github/spatialmodel/inmap/badge.svg?branch=master)](https://coveralls.io/github/spatialmodel/inmap?branch=master) [![GoDoc](http://godoc.org/github.com/spatialmodel/inmap?status.svg)](http://godoc.org/github.com/spatialmodel/inmap) [![Go Report Card](https://goreportcard.com/badge/github.com/spatialmodel/inmap)](https://goreportcard.com/report/github.com/spatialmodel/inmap)
 
-_Note: This is the documentation for InMAP v1.5.1. Documentation for other versions is available [here](https://github.com/spatialmodel/inmap/releases)._
+_Note: This is the documentation for InMAP v1.6.0. Documentation for other versions is available [here](https://github.com/spatialmodel/inmap/releases)._
 
 ## About InMAP
 
