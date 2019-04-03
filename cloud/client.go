@@ -143,7 +143,10 @@ func (c *Client) Delete(ctx context.Context, job *cloudrpc.JobName) (*cloudrpc.J
 	if err = deleteBlobDir(ctx, c.bucketName, user, job.Name); err != nil {
 		return nil, err
 	}
-	return job, c.jobControl.Delete(userJobName(user, job.Name), nil)
+	p := meta.DeletePropagationForeground
+	return job, c.jobControl.Delete(userJobName(user, job.Name), &meta.DeleteOptions{
+		PropagationPolicy: &p,
+	})
 }
 
 func (c *Client) getk8sJob(ctx context.Context, job *cloudrpc.JobName) (*batch.Job, error) {
