@@ -20,7 +20,9 @@ package cloud_test
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -40,23 +42,23 @@ func TestClient_fake(t *testing.T) {
 	checkConfig := func(cmd []string) {
 		wantCmd := []string{"inmap", "run", "steady",
 			"--EmissionUnits=tons/year",
-			"--EmissionsShapefiles=file://test/test_user/test_job/258bbcefe8c0073d6f323351463be9e9685e74bb92e367ca769b9536ed247213.shp",
-			"--InMAPData=file://test/test_user/test_job/434bf26e3fda1ef9cef7e1fa6cc6b5174d11a22b19cbe10d256adc83b2a97d44.ncf",
-			"--LogFile=file://test/test_user/test_job/LogFile",
+			"--EmissionsShapefiles=file://test/test/test_user/test_job/258bbcefe8c0073d6f323351463be9e9685e74bb92e367ca769b9536ed247213.shp",
+			"--InMAPData=file://test/test/test_user/test_job/434bf26e3fda1ef9cef7e1fa6cc6b5174d11a22b19cbe10d256adc83b2a97d44.ncf",
+			"--LogFile=file://test/test/test_user/test_job/LogFile",
 			"--NumIterations=0",
-			"--OutputFile=file://test/test_user/test_job/OutputFile.shp",
+			"--OutputFile=file://test/test/test_user/test_job/OutputFile.shp",
 			"--OutputVariables={\"TotalPM25\":\"PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA\",\"TotalPopD\":\"(exp(log(1.078)/10 * TotalPM25) - 1) * TotalPop * AllCause / 100000\"}\n",
-			"--VarGrid.CensusFile=file://test/test_user/test_job/72f6717ef5f6f9600378fe5b192776ba142b3e93311c3dfd0b67bfecbe399990.shp",
+			"--VarGrid.CensusFile=file://test/test/test_user/test_job/72f6717ef5f6f9600378fe5b192776ba142b3e93311c3dfd0b67bfecbe399990.shp",
 			"--VarGrid.CensusPopColumns=TotalPop,WhiteNoLat,Black,Native,Asian,Latino",
 			"--VarGrid.GridProj=+proj=lcc +lat_1=33.000000 +lat_2=45.000000 +lat_0=40.000000 +lon_0=-97.000000 +x_0=0 +y_0=0 +a=6370997.000000 +b=6370997.000000 +to_meter=1",
 			"--VarGrid.HiResLayers=1",
 			"--VarGrid.MortalityRateColumns={\"AllCause\":\"TotalPop\",\"AsianMort\":\"Asian\",\"BlackMort\":\"Black\",\"LatinoMort\":\"Latino\",\"NativeMort\":\"Native\",\"WhNoLMort\":\"WhiteNoLat\"}\n",
-			"--VarGrid.MortalityRateFile=file://test/test_user/test_job/764874ad5081665459c67d40607f68df6fc689aa695b4822e012aef84cba5394.shp",
+			"--VarGrid.MortalityRateFile=file://test/test/test_user/test_job/764874ad5081665459c67d40607f68df6fc689aa695b4822e012aef84cba5394.shp",
 			"--VarGrid.PopConcThreshold=1e-09", "--VarGrid.PopDensityThreshold=0.0055",
 			"--VarGrid.PopGridColumn=TotalPop", "--VarGrid.PopThreshold=40000", "--VarGrid.VariableGridDx=4000",
 			"--VarGrid.VariableGridDy=4000", "--VarGrid.VariableGridXo=-4000", "--VarGrid.VariableGridYo=-4000",
 			"--VarGrid.Xnests=2,2,2", "--VarGrid.Ynests=2,2,2",
-			"--VariableGridData=file://test/test_user/test_job/3c7e1a672dad2c3e41c76a2d3b1bf3b528510f354231cd06ddd374ebdf2a010d.gob",
+			"--VariableGridData=file://test/test/test_user/test_job/3c7e1a672dad2c3e41c76a2d3b1bf3b528510f354231cd06ddd374ebdf2a010d.gob",
 		}
 		if len(cmd) != len(wantCmd) {
 			t.Errorf("wrong command length: %d != %d", len(cmd), len(wantCmd))
@@ -82,7 +84,7 @@ func TestClient_fake(t *testing.T) {
 	}
 	cfg := inmaputil.InitializeConfig()
 
-	c, err := cloud.NewFakeClient(checkConfig, checkRun, "file://test", cfg.Root, cfg.Viper, cfg.InputFiles(), cfg.OutputFiles())
+	c, err := cloud.NewFakeClient(checkConfig, checkRun, "file://test/test", cfg.Root, cfg.Viper, cfg.InputFiles(), cfg.OutputFiles())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -154,6 +156,30 @@ func TestClient_fake(t *testing.T) {
 			} else {
 				t.Errorf("missing files '%s'", name)
 			}
+		}
+	})
+	t.Run("Delete", func(t *testing.T) {
+		_, err := c.Delete(ctx, &cloudrpc.JobName{
+			Version: inmap.Version,
+			Name:    "test_job",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Ensure the directory is empty
+		err = filepath.Walk("test", func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if info.IsDir() {
+				return nil
+			}
+			fmt.Println(path)
+			return fmt.Errorf("found file %s in directory that should have been deleted", path)
+		})
+		if err != nil {
+			t.Error(err)
 		}
 	})
 }

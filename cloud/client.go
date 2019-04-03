@@ -140,6 +140,9 @@ func (c *Client) Delete(ctx context.Context, job *cloudrpc.JobName) (*cloudrpc.J
 	if err != nil {
 		return nil, err
 	}
+	if err = deleteBlobDir(ctx, c.bucketName, user, job.Name); err != nil {
+		return nil, err
+	}
 	return job, c.jobControl.Delete(userJobName(user, job.Name), nil)
 }
 

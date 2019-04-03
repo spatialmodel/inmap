@@ -63,6 +63,39 @@ func writeBlob(ctx context.Context, bucket *blob.Bucket, key string, data []byte
 	return nil
 }
 
+// deleteBlobDir deletes all blobs in the the specified directory
+// of the specified bucket
+func deleteBlobDir(ctx context.Context, bucketName, user, jobName string) error {
+	bucket, err := OpenBucket(ctx, bucketName)
+	if err != nil {
+		return err
+	}
+
+	url, err := url.Parse(bucketName)
+	if err != nil {
+		return fmt.Errorf("cloud: parsing bucket name: %v", err)
+	}
+
+	prefix := fmt.Sprintf("%s/%s/%s/", strings.TrimLeft(url.Path, "/"), user, jobName)
+	iter := bucket.List(&blob.ListOptions{
+		Prefix:    prefix,
+		Delimiter: "/",
+	})
+	for {
+		obj, err := iter.Next(ctx)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("cloud: listing blob %s to delete: %v", obj.Key, err)
+		}
+		if err = bucket.Delete(ctx, obj.Key); err != nil {
+			return fmt.Errorf("cloud: deleting blob %s: %v", obj.Key, err)
+		}
+	}
+	return nil
+}
+
 // Output returns the output of the specified job.
 func (c *Client) Output(ctx context.Context, job *cloudrpc.JobName) (*cloudrpc.JobOutput, error) {
 	bucket, err := OpenBucket(ctx, c.bucketName)
