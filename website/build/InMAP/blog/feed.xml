@@ -4,7 +4,7 @@
         <title>InMAP Blog</title>
         <link>https://inmap.run/blog</link>
         <description>The best place to stay up-to-date with the latest InMAP news and events.</description>
-        <lastBuildDate>Mon, 04 Mar 2019 06:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Sat, 20 Apr 2019 06:00:00 GMT</lastBuildDate>
         <docs>http://blogs.law.harvard.edu/tech/rss</docs>
         <generator>Feed for Node.js</generator>
         <image>
@@ -13,6 +13,15 @@
             <link>https://inmap.run/blog</link>
         </image>
         <copyright>Copyright © 2019 the InMAP authors.</copyright>
+        <item>
+            <title><![CDATA[Working with source-receptor matrices using https://inmap.run and GeoPandas in Python]]></title>
+            <link>https://inmap.run/blog/2019/04/20/sr.html</link>
+            <guid>https://inmap.run/blog/2019/04/20/sr.html</guid>
+            <pubDate>Sat, 20 Apr 2019 06:00:00 GMT</pubDate>
+            <description><![CDATA[<p>Air pollution source-receptor matrices give relationships between emissions at source locations and concentrations at receptor locations.
+This tutorial demonstrates how to use source-receptor matrices to estimate health impacts of air pollution emissions.</p>
+]]></description>
+        </item>
         <item>
             <title><![CDATA[Tutorial: Estimating health impacts of the Volkswagen emissions scandal]]></title>
             <link>https://inmap.run/blog/2019/03/04/tutorial.html</link>

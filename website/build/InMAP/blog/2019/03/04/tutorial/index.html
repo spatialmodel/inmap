@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Tutorial: Estimating health impacts of the Volkswagen emissions scandal · InMAP</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="This blog post contains a step-by-step example of how to create an emissions"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Tutorial: Estimating health impacts of the Volkswagen emissions scandal · InMAP"/><meta property="og:type" content="website"/><meta property="og:url" content="https://inmap.run/blog/2019/03/04/tutorial"/><meta property="og:description" content="This blog post contains a step-by-step example of how to create an emissions"/><meta property="og:image" content="https://inmap.run/img/logo.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://inmap.run/img/logo.svg"/><link rel="shortcut icon" href="/img/favicon/favicon.ico"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://inmap.run/blog/atom.xml" title="InMAP Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://inmap.run/blog/feed.xml" title="InMAP Blog RSS Feed"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/textLogo.svg" alt="InMAP"/></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/docs/quickstart" target="_self">Docs</a></li><li class=""><a href="https://inmap.run/eieio" target="_self">EIEIO</a></li><li class=""><a href="https://godoc.org/github.com/spatialmodel/inmap" target="_self">API</a></li><li class=""><a href="/help" target="_self">Help</a></li><li class="siteNavGroupActive"><a href="/blog/" target="_self">Blog</a></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="container docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><i></i></div><h2><i>›</i><span>Recent Posts</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Recent Posts</h3><ul class=""><li class="navListItem navListItemActive"><a class="navItem" href="/blog/2019/03/04/tutorial">Tutorial: Estimating health impacts of the Volkswagen emissions scandal</a></li></ul></div></div></section></div><script>
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Tutorial: Estimating health impacts of the Volkswagen emissions scandal · InMAP</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="This blog post contains a step-by-step example of how to create an emissions"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Tutorial: Estimating health impacts of the Volkswagen emissions scandal · InMAP"/><meta property="og:type" content="website"/><meta property="og:url" content="https://inmap.run/blog/2019/03/04/tutorial"/><meta property="og:description" content="This blog post contains a step-by-step example of how to create an emissions"/><meta property="og:image" content="https://inmap.run/img/logo.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://inmap.run/img/logo.svg"/><link rel="shortcut icon" href="/img/favicon/favicon.ico"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://inmap.run/blog/atom.xml" title="InMAP Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://inmap.run/blog/feed.xml" title="InMAP Blog RSS Feed"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/textLogo.svg" alt="InMAP"/></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/docs/quickstart" target="_self">Docs</a></li><li class=""><a href="https://inmap.run/eieio" target="_self">EIEIO</a></li><li class=""><a href="https://godoc.org/github.com/spatialmodel/inmap" target="_self">API</a></li><li class=""><a href="/help" target="_self">Help</a></li><li class="siteNavGroupActive"><a href="/blog/" target="_self">Blog</a></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="container docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><i></i></div><h2><i>›</i><span>Recent Posts</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Recent Posts</h3><ul class=""><li class="navListItem"><a class="navItem" href="/blog/2019/04/20/sr">Working with source-receptor matrices using https://inmap.run and GeoPandas in Python</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/blog/2019/03/04/tutorial">Tutorial: Estimating health impacts of the Volkswagen emissions scandal</a></li></ul></div></div></section></div><script>
             var coll = document.getElementsByClassName('collapsible');
             var checkActiveCategory = true;
             for (var i = 0; i < coll.length; i++) {
@@ -48,7 +48,7 @@
                 };
               }
             });
-        </script></nav></div><div class="container mainContainer postContainer blogContainer"><div class="wrapper"><div class="lonePost"><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/blog/2019/03/04/tutorial">Tutorial: Estimating health impacts of the Volkswagen emissions scandal</a></h1><p class="post-meta">March 4, 2019</p><div class="authorBlock"><p class="post-authorName"><a href="xyzhang8@uw.edu" target="_blank" rel="noreferrer noopener">Xinyu Zhang</a></p></div></header><div><span><p>This blog post contains a step-by-step example of how to create an emissions
+        </script></nav></div><div class="container mainContainer postContainer blogContainer"><div class="wrapper"><div class="lonePost"><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/blog/2019/03/04/tutorial">Tutorial: Estimating health impacts of the Volkswagen emissions scandal</a></h1><p class="post-meta">March 4, 2019</p><div class="authorBlock"><p class="post-authorName"><a href="https://www.linkedin.com/in/xinyu-ryan-zhang/" target="_blank" rel="noreferrer noopener">Xinyu Zhang</a></p></div></header><div><span><p>This blog post contains a step-by-step example of how to create an emissions
 scenario and use the InMAP model to estimate the resulting health impacts.</p>
 <!--truncate-->
 <h2><a class="anchor" aria-hidden="true" id="1-introduction"></a><a href="#1-introduction" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>1. Introduction</h2>
@@ -93,28 +93,28 @@ new\_emissions = existing\_emissions / sum(existing\_emissions) \* emissions\_to
 </p>
 <p>Usually, this can be done by using the filed calculator tool in the menu bar as showed below.</p>
 <p style="text-align: center;">
-<img src="/img/blog/2019-03-04-tutorial/image001.jpg" width="80%"/>
+<img src="/blog/2019-03-04-tutorial/image001.jpg" width="80%"/>
 </p>
 <p style="text-align: center; font-weight: bold">
 Figure 1. Creating new emission field using field calculator
 </p>
 <p>However, since there are too much point features in this case (1168664 points). The calculating would be extremely slow when GIS processing large shapefile so that it is hardly to get the result using this method without a program crash. Fortunately, there is another trick to do the renormalization instead of using the field calculator directly. We will need to export the shapefile data as spatialite database. The data processing in the format of spatialite database is much faster than it is in shapefile, it will still take minutes to calculate due to the large size of data though. To convert the format of the original data, you can right click on the &quot;onroad&quot; shp data in the table of contents window (aka. layer tree) as shown in Figure 2.</p>
 <p style="text-align: center;">
-<img src="/img/blog/2019-03-04-tutorial/image002.png" width="80%"/>
+<img src="/blog/2019-03-04-tutorial/image002.png" width="80%"/>
 </p>
 <p style="text-align: center; font-weight: bold">
 Figure 2. Exporting layer data as SpatiaLite database
 </p>
 <p>In the popped-up window, choose the location you want to save your spatialite data. The on-road data contains varieties of pollutant's concentration. Since many of them are ones will not be used, it would be better to delete some of them. In this study, only the emission of NO<sub>x</sub> is required so that other fields will be deleted. You can do this in the &quot;Save vector layer as…&quot; window by selecting fields to be exported.</p>
 <p style="text-align: center;">
-<img src="/img/blog/2019-03-04-tutorial/image003.jpg" width="80%"/>
+<img src="/blog/2019-03-04-tutorial/image003.jpg" width="80%"/>
 </p>
 <p style="text-align: center; font-weight: bold">
 Figure 3. Saving layer options
 </p>
 <p>Alternatively, you can also delete redundant fields in the properties window of the layer file. As shown in Figure 4, in the source filed bar, click &quot;Toggle editing mode&quot; button first. Then choose the fields you intend to delete and click &quot;Delete field&quot; button to remove it.</p>
 <p style="text-align: center;">
-<img src="/img/blog/2019-03-04-tutorial/image004.png" width="80%"/>
+<img src="/blog/2019-03-04-tutorial/image004.png" width="80%"/>
 </p>
 <p style="text-align: center; font-weight: bold">
 Figure 4. Removing fields in properties window
@@ -128,13 +128,13 @@ Figure 4. Removing fields in properties window
 <p>The first step of setting up an InMAP model simulation is to configure the emission scenario. Emissions files should be in shapefile format where the attribute columns correspond to the names of emitted pollutants. The acceptable pollutant names are VOC, NO<sub>x</sub>, NH3, SOx, and PM2_5. The model can handle multiple input files, for example, the shapefiles of different elevation. In this case, we only concern the ground level emission.</p>
 <p>Then make a copy of the configuration file template and you are going to edit it to meet our scenario condition. The interface of the configuration file should be like below (Figure 5). As seen in the interface, there are a series of parameters you can determine. First, set the <code>evaldata</code> environment variable to the directory you downloaded the evaluation data to, or replace all instances of <code>${evaldata}</code> in the configuration file with the path to that directory. You must also ensure that the directory <code>OutputFile</code> is to go in exists. Second, choose an emission unit of the input. It should be consistent with the unit in your emission shapefile. Next, set the path of the output file and the log file. Finally, you can look at the output variables (Figure 6) to see which are the output you want to generate. Details about the built-in and calculated variables can be found <a href="/docs/results">here</a>. It is also worth mentioning here that in most recent version of model, the variable named &quot;PM25Emiss&quot; is no longer valid. If you keep it, it may cause error when running model. So be sure to remove this variable, or just comment it out.</p>
 <p style="text-align: center;">
-<img src="/img/blog/2019-03-04-tutorial/image005.png" width="80%"/>
+<img src="/blog/2019-03-04-tutorial/image005.png" width="80%"/>
 </p>
 <p style="text-align: center; font-weight: bold">
 Figure 5. Model Configuration (1)
 </p>
 <p style="text-align: center;">
-<img src="/img/blog/2019-03-04-tutorial/image006.png" width="80%"/>
+<img src="/blog/2019-03-04-tutorial/image006.png" width="80%"/>
 </p>
 <p style="text-align: center; font-weight: bold">
 Figure 6. Model Configuration (2)
@@ -150,27 +150,27 @@ Figure 6. Model Configuration (2)
 <h3><a class="anchor" aria-hidden="true" id="51-post-processing"></a><a href="#51-post-processing" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>5.1 Post-processing</h3>
 <p>The raw output would be like figure 7 below, taking the 2008 data as an example.</p>
 <p style="text-align: center;">
-<img src="/img/blog/2019-03-04-tutorial/image007.png" width="80%"/>
+<img src="/blog/2019-03-04-tutorial/image007.png" width="80%"/>
 </p>
 <p style="text-align: center; font-weight: bold">
 Figure 7. An InMAP output shapefile
 </p>
 <p>Open the attribute table to see all the desired variables we have. We will focus on the &quot;TotalPM25&quot; field.</p>
 <p style="text-align: center;">
-<img src="/img/blog/2019-03-04-tutorial/image008.png" width="80%"/>
+<img src="/blog/2019-03-04-tutorial/image008.png" width="80%"/>
 </p>
 <p style="text-align: center; font-weight: bold">
 Figure 8. Attribute table of the 2008 output
 </p>
 <p>The features are not symbolized correctly yet. We cannot tell any useful information from the raw output map. Now we are going to make the output more visual. In the menu bar, go to Vector -&amp;gt; Geometry tools -&amp;gt; Centroids. Setting the input layer to your output shapefile and run the tool. After this is accomplished, there will be a new layer in the table of contents, which is a point layer that could be symbolled as a heatmap. Open the properties window of the new layer, choose heatmap as its symbol, set other options as below.</p>
 <p style="text-align: center;">
-<img src="/img/blog/2019-03-04-tutorial/image009.png" width="80%"/>
+<img src="/blog/2019-03-04-tutorial/image009.png" width="80%"/>
 </p>
 <p style="text-align: center; font-weight: bold">
 Figure 9. Options for heatmap
 </p>
 <p style="text-align: center;">
-<img src="/img/blog/2019-03-04-tutorial/image010.png" width="80%"/>
+<img src="/blog/2019-03-04-tutorial/image010.png" width="80%"/>
 </p>
 <p style="text-align: center; font-weight: bold">
 Figure 10. Heatmap for total PM<sub>2.5</sub>
@@ -178,21 +178,21 @@ Figure 10. Heatmap for total PM<sub>2.5</sub>
 <p>Now the heatmap has been created successfully. But it is still hard to tell the areas with high exposure level belong to which part of U.S. So you need a U.S. states boundary map which you can download here:</p>
 <p><a href="https://www.arcgis.com/home/item.html?id=f7f805eb65eb4ab787a0a3e1116ca7e5">https://www.arcgis.com/home/item.html?id=f7f805eb65eb4ab787a0a3e1116ca7e5</a>. Open it and move this layer above the heatmap layer. In the properties window, set the fill color to transparent.</p>
 <p style="text-align: center;">
-<img src="/img/blog/2019-03-04-tutorial/image011.png" width="80%"/>
+<img src="/blog/2019-03-04-tutorial/image011.png" width="80%"/>
 </p>
 <p style="text-align: center; font-weight: bold">
 Figure 11. Symbolizing the boundary of the state
 </p>
 <p>Your map now should look like this:</p>
 <p style="text-align: center;">
-<img src="/img/blog/2019-03-04-tutorial/image012.png" width="80%"/>
+<img src="/blog/2019-03-04-tutorial/image012.png" width="80%"/>
 </p>
 <p style="text-align: center; font-weight: bold">
 Figure 12. Improved output map
 </p>
 <p>Put the outputs from 2008 to 2015 together to see the variation:</p>
 <p style="text-align: center;">
-<img src="/img/blog/2019-03-04-tutorial/image013.png" width="80%"/>
+<img src="/blog/2019-03-04-tutorial/image013.png" width="80%"/>
 </p>
 <p style="text-align: center; font-weight: bold">
 Figure 13. Total PM<sub>2.5</sub> from 2008 to 2015

@@ -1,0 +1,562 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Working with source-receptor matrices using https://inmap.run and GeoPandas in Python · InMAP</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="Air pollution source-receptor matrices give relationships between emissions at source locations and concentrations at receptor locations."/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Working with source-receptor matrices using https://inmap.run and GeoPandas in Python · InMAP"/><meta property="og:type" content="website"/><meta property="og:url" content="https://inmap.run/blog/2019/04/20/sr"/><meta property="og:description" content="Air pollution source-receptor matrices give relationships between emissions at source locations and concentrations at receptor locations."/><meta property="og:image" content="https://inmap.run/img/logo.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://inmap.run/img/logo.svg"/><link rel="shortcut icon" href="/img/favicon/favicon.ico"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://inmap.run/blog/atom.xml" title="InMAP Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://inmap.run/blog/feed.xml" title="InMAP Blog RSS Feed"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/textLogo.svg" alt="InMAP"/></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/docs/quickstart" target="_self">Docs</a></li><li class=""><a href="https://inmap.run/eieio" target="_self">EIEIO</a></li><li class=""><a href="https://godoc.org/github.com/spatialmodel/inmap" target="_self">API</a></li><li class=""><a href="/help" target="_self">Help</a></li><li class="siteNavGroupActive"><a href="/blog/" target="_self">Blog</a></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="container docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><i></i></div><h2><i>›</i><span>Recent Posts</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Recent Posts</h3><ul class=""><li class="navListItem navListItemActive"><a class="navItem" href="/blog/2019/04/20/sr">Working with source-receptor matrices using https://inmap.run and GeoPandas in Python</a></li><li class="navListItem"><a class="navItem" href="/blog/2019/03/04/tutorial">Tutorial: Estimating health impacts of the Volkswagen emissions scandal</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              const headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                if (event.target.tagName === 'A') {
+                  document.body.classList.remove('tocActive');
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer postContainer blogContainer"><div class="wrapper"><div class="lonePost"><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/blog/2019/04/20/sr">Working with source-receptor matrices using https://inmap.run and GeoPandas in Python</a></h1><p class="post-meta">April 20, 2019</p><div class="authorBlock"><p class="post-authorName"><a href="https://github.com/ctessum" target="_blank" rel="noreferrer noopener">Chris Tessum</a></p></div></header><div><span><p>Air pollution source-receptor matrices give relationships between emissions at source locations and concentrations at receptor locations.
+This tutorial demonstrates how to use source-receptor matrices to estimate health impacts of air pollution emissions.</p>
+<!--truncate-->
+<h2><a class="anchor" aria-hidden="true" id="introduction"></a><a href="#introduction" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Introduction</h2>
+<p>Source-receptor (SR) matrices can allow users to get results similar to those that would be produced by running an air quality model simulation, but without having to actually run an air quality model simulation. In this tutorial, we will learn how to work with the SR matrices described in these two papers:</p>
+<ul>
+<li><p>Jinhyok Heo, Peter J. Adams, H. Gao (2017) Public Health Costs Accounting of Inorganic PM<sub>2.5</sub> Pollution in Metropolitan Areas of the United States Using a Risk-Based Source-Receptor Model, <i>Environment International</i>, 106, 119–126. (<a href="https://barney.ce.cmu.edu/~jinhyok/apsca/">link</a>)</p></li>
+<li><p>Andrew L. Goodkind, Christopher W. Tessum, Jay S. Coggins, Jason D. Hill, Julian D. Marshall (2019) Fine-scale damage estimates of particulate matter air pollution reveal opportunities for location-specific mitigation of emissions. <i>Proceedings of the National Academy of Sciences</i>. (<a href="https://www.pnas.org/content/early/2019/04/02/1816102116.short">link</a>)</p></li>
+</ul>
+<p>We will refer to the SR matrix from the first paper as APSCA, and the one from the second paper as ISRM.</p>
+<p>Although SR matrices are typically easier to use than full air quality models, they are often made up of files that can be hundreds of gigabytes in size, and it can be complicated to get estimates of emissions into the correct format to use with the SR matrix.
+We have developed some tools to get around these limitations: the website <a href="https://inmap.run">https://inmap.run</a> hosts the SR matrices described in the two papers above and provides functionality for taking emissions in <a href="https://doc.arcgis.com/en/arcgis-online/reference/shapefiles.htm">shapefile</a> format, running them through an SR matrix, and returning the result as a shapefile.
+Additionally, the <a href="https://inmap.run/docs/cmd/inmap_cloud/"><code>inmap cloud</code></a> command-line tool allows users to interact with the <a href="https://inmap.run">https://inmap.run</a> website.</p>
+<p>Because not all users may be comfortable using command-line tools or shapefiles, we will demonstrate here how to use the <a href="http://geopandas.org/">GeoPandas</a> library in the <a href="https://www.python.org/">Python</a> scripting and programming language to interact with <a href="https://inmap.run">https://inmap.run</a>, which will hopefully provide an additional level of convenience.</p>
+<p>If you prefer, a working <a href="https://jupyter.org/">Jupyter notebook</a> version of this tutorial is available <a href="https://github.com/spatialmodel/inmap/blob/master/website/static/blog/2019-04-20-sr/sr_example.ipynb">here</a>.</p>
+<h2><a class="anchor" aria-hidden="true" id="set-up-environment"></a><a href="#set-up-environment" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Set up environment</h2>
+<p>The code below is some boilerplate to make this work with either Python version 2 or 3.</p>
+<pre><code class="hljs css language-python"><span class="hljs-keyword">from</span> __future__ <span class="hljs-keyword">import</span> (absolute_import, division,
+                        print_function, unicode_literals)
+<span class="hljs-keyword">from</span> builtins <span class="hljs-keyword">import</span> *
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="prepare-emissions"></a><a href="#prepare-emissions" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Prepare emissions</h2>
+<p>For this example, we are going to estimate the air pollution-related health impacts of electricity generation in the United States.
+To do this we will start with emissions data from the US EPA's <a href="https://www.epa.gov/air-emissions-modeling/emissions-modeling-platforms">National Emissions Inventory</a> for <a href="https://www.epa.gov/air-emissions-modeling/2016-alpha-platform">year 2016</a>.</p>
+<p>The tools at <a href="https://inmap.run">https://inmap.run</a> require input data containing:</p>
+<ul>
+<li>information on the location of the emissions source (required, in the form of either a point, line, or polygon geometry with a <a href="https://en.wikipedia.org/wiki/Spatial_reference_system">spatial reference</a> specified),</li>
+<li>amounts of emissions (optional, allowed emission types are VOC, NOx, NH3, SOx, and PM2_5; units must be either short tons per year, kilograms per year, or micrograms per second), and</li>
+<li>(smoke) stack parameters relevant to plume rise, which is how high up the emissions go immediately after they are released (optional; allowed parameters are &quot;height&quot;, &quot;diam&quot;, &quot;temp&quot;, and &quot;velocity&quot; in units of m, m, K, and m/s, respectively).</li>
+</ul>
+<p>The NEI data we are downloading includes, among other things, all of the information above. More information about the file format is available <a href="https://www.cmascenter.org/smoke/documentation/4.5/html/ch08s02s08.html#sect_input_ptinv_ff10">here</a>.</p>
+<p>Although there are a number of ways to process spatial data using Python, for this exercise we will use the <a href="http://geopandas.org/">GeoPandas</a> library. Instructions for installing GeoPandas are <a href="http://geopandas.org/install.html">here</a>.</p>
+<p>The code below downloads the emissions data from the EPA and converts it into a GeoPandas dataframe. Keep in mind that if you have a different type of emissions data that you want to use, you may want to use a different method for importing it.
+In general, the tools we work with here are for estimating the concentration and health impacts of pollutant emissions, not for estimating the emissions themselves.</p>
+<pre><code class="hljs css language-python"><span class="hljs-comment"># <span class="hljs-doctag">Note:</span> This step can take a while to run.</span>
+
+<span class="hljs-keyword">from</span> io <span class="hljs-keyword">import</span> BytesIO, TextIOWrapper
+<span class="hljs-keyword">from</span> zipfile <span class="hljs-keyword">import</span> ZipFile
+<span class="hljs-keyword">import</span> urllib.request
+<span class="hljs-keyword">import</span> csv
+<span class="hljs-keyword">from</span> shapely.geometry <span class="hljs-keyword">import</span> Point
+<span class="hljs-keyword">import</span> geopandas <span class="hljs-keyword">as</span> gpd
+
+<span class="hljs-comment"># Download file from EPA website.</span>
+url = urllib.request.urlopen(<span class="hljs-string">"ftp://newftp.epa.gov/air/emismod/2016/alpha/2016fd/emissions/2016fd_inputs_point.zip"</span>)
+
+VOC, NOx, NH3, SOx, PM2_5 = [], [], [], [], []
+height, diam, temp, velocity = [], [], [],  []
+coords = []
+
+<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">add_record</span><span class="hljs-params">(row)</span>:</span>
+    <span class="hljs-string">""" Process one row of the emissions file """</span>
+    pol = row[<span class="hljs-number">12</span>] <span class="hljs-comment"># The pollutant is in the 13th column of the CSV file</span>
+                  <span class="hljs-comment"># (In Python, the first column is called column 0.)</span>
+    emis = row[<span class="hljs-number">13</span>] <span class="hljs-comment"># We are only extracting annual total emissions here.</span>
+                   <span class="hljs-comment"># If monthly emissions are reported, we'll miss them.</span>
+                   <span class="hljs-comment"># Emissions are short tons/year.</span>
+    <span class="hljs-keyword">if</span> emis == <span class="hljs-string">''</span>: <span class="hljs-keyword">return</span>
+    <span class="hljs-keyword">if</span> pol <span class="hljs-keyword">in</span> [<span class="hljs-string">'VOC'</span>, <span class="hljs-string">'VOC_INV'</span>, <span class="hljs-string">'XYL'</span>, <span class="hljs-string">'TOL'</span>, <span class="hljs-string">'TERP'</span>, <span class="hljs-string">'PAR'</span>, <span class="hljs-string">'OLE'</span>, <span class="hljs-string">'NVOL'</span>, <span class="hljs-string">'MEOH'</span>,
+               <span class="hljs-string">'ISOP'</span>, <span class="hljs-string">'IOLE'</span>, <span class="hljs-string">'FORM'</span>, <span class="hljs-string">'ETOH'</span>, <span class="hljs-string">'ETHA'</span>, <span class="hljs-string">'ETH'</span>, <span class="hljs-string">'ALD2'</span>, <span class="hljs-string">'ALDX'</span>, <span class="hljs-string">'CB05_ALD2'</span>,
+               <span class="hljs-string">'CB05_ALDX'</span>, <span class="hljs-string">'CB05_BENZENE'</span>, <span class="hljs-string">'CB05_ETH'</span>, <span class="hljs-string">'CB05_ETHA'</span>, <span class="hljs-string">'CB05_ETOH'</span>,
+               <span class="hljs-string">'CB05_FORM'</span>, <span class="hljs-string">'CB05_IOLE'</span>, <span class="hljs-string">'CB05_ISOP'</span>, <span class="hljs-string">'CB05_MEOH'</span>, <span class="hljs-string">'CB05_OLE'</span>, <span class="hljs-string">'CB05_PAR'</span>,
+               <span class="hljs-string">'CB05_TERP'</span>, <span class="hljs-string">'CB05_TOL'</span>, <span class="hljs-string">'CB05_XYL'</span>, <span class="hljs-string">'ETHANOL'</span>, <span class="hljs-string">'NHTOG'</span>, <span class="hljs-string">'NMOG'</span>, <span class="hljs-string">'VOC_INV'</span>]:
+        VOC.append(float(emis))
+        NOx.append(<span class="hljs-number">0</span>)
+        NH3.append(<span class="hljs-number">0</span>)
+        SOx.append(<span class="hljs-number">0</span>)
+        PM2_5.append(<span class="hljs-number">0</span>)
+    <span class="hljs-keyword">elif</span> pol <span class="hljs-keyword">in</span> [<span class="hljs-string">'PM25-PRI'</span>, <span class="hljs-string">'PM2_5'</span>, <span class="hljs-string">'DIESEL-PM25'</span>, <span class="hljs-string">'PAL'</span>, <span class="hljs-string">'PCA'</span>, <span class="hljs-string">'PCL'</span>, <span class="hljs-string">'PEC'</span>, <span class="hljs-string">'PFE'</span>, <span class="hljs-string">'PK'</span>,
+                <span class="hljs-string">'PMG'</span>, <span class="hljs-string">'PMN'</span>, <span class="hljs-string">'PMOTHR'</span>, <span class="hljs-string">'PNH4'</span>, <span class="hljs-string">'PNO3'</span>, <span class="hljs-string">'POC'</span>, <span class="hljs-string">'PSI'</span>, <span class="hljs-string">'PSO4'</span>, <span class="hljs-string">'PTI'</span>]:
+        VOC.append(<span class="hljs-number">0</span>)
+        NOx.append(<span class="hljs-number">0</span>)
+        NH3.append(<span class="hljs-number">0</span>)
+        SOx.append(<span class="hljs-number">0</span>)
+        PM2_5.append(float(emis))
+    <span class="hljs-keyword">elif</span> pol <span class="hljs-keyword">in</span> [<span class="hljs-string">'NOX'</span>, <span class="hljs-string">'HONO'</span>, <span class="hljs-string">'NO'</span>, <span class="hljs-string">'NO2'</span>]:
+        VOC.append(<span class="hljs-number">0</span>)
+        NOx.append(float(emis))
+        NH3.append(<span class="hljs-number">0</span>)
+        SOx.append(<span class="hljs-number">0</span>)
+        PM2_5.append(<span class="hljs-number">0</span>)
+    <span class="hljs-keyword">elif</span> pol == <span class="hljs-string">'NH3'</span>:
+        VOC.append(<span class="hljs-number">0</span>)
+        NOx.append(<span class="hljs-number">0</span>)
+        NH3.append(float(emis))
+        SOx.append(<span class="hljs-number">0</span>)
+        PM2_5.append(<span class="hljs-number">0</span>)
+    <span class="hljs-keyword">elif</span> pol == <span class="hljs-string">'SO2'</span>:
+        VOC.append(<span class="hljs-number">0</span>)
+        NOx.append(<span class="hljs-number">0</span>)
+        NH3.append(<span class="hljs-number">0</span>)
+        SOx.append(float(emis))
+        PM2_5.append(<span class="hljs-number">0</span>)
+    <span class="hljs-keyword">else</span>: <span class="hljs-keyword">return</span>
+
+    h = row[<span class="hljs-number">17</span>]
+    height.append(float(h) * <span class="hljs-number">0.3048</span>) <span class="hljs-keyword">if</span> h != <span class="hljs-string">''</span> <span class="hljs-keyword">else</span> height.append(<span class="hljs-number">0</span>)
+
+    d = row[<span class="hljs-number">18</span>]
+    diam.append(float(d) * <span class="hljs-number">0.3048</span>) <span class="hljs-keyword">if</span> d != <span class="hljs-string">''</span> <span class="hljs-keyword">else</span> diam.append(<span class="hljs-number">0</span>)
+
+    t = row[<span class="hljs-number">19</span>]
+    temp.append((float(t) - <span class="hljs-number">32</span>) * <span class="hljs-number">5.0</span>/<span class="hljs-number">9.0</span> + <span class="hljs-number">273.15</span>) <span class="hljs-keyword">if</span> t != <span class="hljs-string">''</span> <span class="hljs-keyword">else</span> temp.append(<span class="hljs-number">0</span>)
+
+    v = row[<span class="hljs-number">21</span>]
+    velocity.append(float(v) * <span class="hljs-number">0.3048</span>) <span class="hljs-keyword">if</span> v != <span class="hljs-string">''</span> <span class="hljs-keyword">else</span> velocity.append(<span class="hljs-number">0</span>)
+
+    coords.append(Point(float(row[<span class="hljs-number">23</span>]), float(row[<span class="hljs-number">24</span>])))
+
+<span class="hljs-keyword">with</span> ZipFile(BytesIO(url.read())) <span class="hljs-keyword">as</span> zf:
+    <span class="hljs-keyword">for</span> contained_file <span class="hljs-keyword">in</span> zf.namelist():
+        <span class="hljs-keyword">if</span> <span class="hljs-string">"egu"</span> <span class="hljs-keyword">in</span> contained_file: <span class="hljs-comment"># Only process files with electricity generating unit (EGU) emissions.</span>
+            <span class="hljs-keyword">for</span> row <span class="hljs-keyword">in</span> csv.reader(TextIOWrapper(zf.open(contained_file, <span class="hljs-string">'r'</span>), newline=<span class="hljs-string">''</span>)):
+                <span class="hljs-keyword">if</span> (len(row) == <span class="hljs-number">0</span>) <span class="hljs-keyword">or</span> (len(row[<span class="hljs-number">0</span>]) == <span class="hljs-number">0</span>) <span class="hljs-keyword">or</span> (row[<span class="hljs-number">0</span>][<span class="hljs-number">0</span>] == <span class="hljs-string">'#'</span>): <span class="hljs-keyword">continue</span>
+                add_record(row)
+
+emis = gpd.GeoDataFrame({
+    <span class="hljs-string">"VOC"</span>: VOC, <span class="hljs-string">"NOx"</span>: NOx, <span class="hljs-string">"NH3"</span>: NH3, <span class="hljs-string">"SOx"</span>: SOx, <span class="hljs-string">"PM2_5"</span>: PM2_5,
+    <span class="hljs-string">"height"</span>: height, <span class="hljs-string">"diam"</span>: diam, <span class="hljs-string">"temp"</span>: temp, <span class="hljs-string">"velocity"</span>: velocity,
+}, geometry=coords, crs={<span class="hljs-string">'init'</span>: <span class="hljs-string">'epsg:4269'</span>})
+</code></pre>
+<p>Now, let's inspect our emissions to ensure they look resonable.</p>
+<pre><code class="hljs css language-python"><span class="hljs-comment"># First, we print the first several rows of the dataframe:</span>
+emis.head()
+</code></pre>
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+<pre><code class="hljs">.dataframe tbody tr th {
+    vertical-align: top;
+}
+
+.dataframe thead th {
+    text-align: right;
+}
+</code></pre>
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>VOC</th>
+      <th>NOx</th>
+      <th>NH3</th>
+      <th>SOx</th>
+      <th>PM2_5</th>
+      <th>height</th>
+      <th>diam</th>
+      <th>temp</th>
+      <th>velocity</th>
+      <th>geometry</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>9.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>48.768</td>
+      <td>5.7912</td>
+      <td>348.15</td>
+      <td>15.60576</td>
+      <td>POINT (-86.573831 32.381659)</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>8.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>48.768</td>
+      <td>5.7912</td>
+      <td>348.15</td>
+      <td>15.60576</td>
+      <td>POINT (-86.573825 32.381989)</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>9.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>48.768</td>
+      <td>5.7912</td>
+      <td>348.15</td>
+      <td>15.60576</td>
+      <td>POINT (-86.573851 32.380321)</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>8.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>48.768</td>
+      <td>5.7912</td>
+      <td>348.15</td>
+      <td>15.60576</td>
+      <td>POINT (-86.573842 32.380647)</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>0.0</td>
+      <td>50.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>48.768</td>
+      <td>5.7912</td>
+      <td>348.15</td>
+      <td>15.60576</td>
+      <td>POINT (-86.573842 32.380647)</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<pre><code class="hljs css language-python"><span class="hljs-comment"># Now, let's look at the sums of emissions for all power plants (in short tons/year).</span>
+emis.sum(axis=<span class="hljs-number">0</span>)[[<span class="hljs-string">"VOC"</span>, <span class="hljs-string">"NOx"</span>, <span class="hljs-string">"NH3"</span>, <span class="hljs-string">"SOx"</span>, <span class="hljs-string">"PM2_5"</span>]]
+</code></pre>
+<pre><code class="hljs">VOC      3.345280e+04
+NOx      1.314463e+06
+NH3      2.501248e+04
+SOx      1.571217e+06
+PM2_5    1.408227e+05
+dtype: float64
+</code></pre>
+<pre><code class="hljs css language-python"><span class="hljs-comment"># Finally, lets make some maps of the emissions.</span>
+
+<span class="hljs-keyword">import</span> matplotlib.pyplot <span class="hljs-keyword">as</span> plt
+%matplotlib inline
+
+pols = [<span class="hljs-string">"SOx"</span>, <span class="hljs-string">"NOx"</span>, <span class="hljs-string">"PM2_5"</span>, <span class="hljs-string">"VOC"</span>, <span class="hljs-string">"NH3"</span>]
+pol_names = [<span class="hljs-string">"SO$_2$"</span>, <span class="hljs-string">"NO$_x$"</span>, <span class="hljs-string">"PM$_{2.5}$"</span>, <span class="hljs-string">"VOC"</span>, <span class="hljs-string">"NH$_3$"</span>]
+
+fig, axes = plt.subplots(figsize=(<span class="hljs-number">7</span>, <span class="hljs-number">3</span>), nrows=<span class="hljs-number">2</span>, ncols=<span class="hljs-number">3</span>, sharex=<span class="hljs-literal">True</span>, sharey=<span class="hljs-literal">True</span>)
+plt.subplots_adjust(left=<span class="hljs-number">0</span>, bottom=<span class="hljs-number">0</span>, right=<span class="hljs-number">1</span>, top=<span class="hljs-number">1</span>, wspace=<span class="hljs-number">0.1</span>, hspace=<span class="hljs-number">0.1</span>)
+
+i = <span class="hljs-number">0</span>
+<span class="hljs-keyword">for</span> x <span class="hljs-keyword">in</span> axes:
+    <span class="hljs-keyword">for</span> ax <span class="hljs-keyword">in</span> x:
+        <span class="hljs-keyword">if</span> i &lt; len(pols):
+            emis.plot(ax=ax, markersize=emis[pols[i]]**<span class="hljs-number">0.5</span> / <span class="hljs-number">5</span>)
+            ax.set_title(pol_names[i])
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.axis(<span class="hljs-string">'off'</span>)
+        i = i+<span class="hljs-number">1</span>
+plt.show()
+</code></pre>
+<p><img src="/blog/2019-04-20-sr/output_7_0.png" alt="png"></p>
+<p>Fig. 1: US year-2016 electricity generators. Areas of dots are proportionate to rate of emissions of each pollutant.</p>
+<p>These maps could be improved by adding politcal boundaries, etc. We will leave that as an exercise for the reader.</p>
+<h2><a class="anchor" aria-hidden="true" id="use-sr-matrices-to-estimate-concentrations-and-health-impacts"></a><a href="#use-sr-matrices-to-estimate-concentrations-and-health-impacts" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Use SR matrices to estimate concentrations and health impacts</h2>
+<p>Once we have our emissions in GeoPandas format, we are ready to run them through our SR matrices.
+To do this, we will use the <code>run_sr</code> function in the <code>sr_util.py</code> script that we have created for this purpose. You can view <code>sr_util.py</code> <a href="https://github.com/spatialmodel/inmap/blob/master/website/static/blog/2019-04-20-sr/sr_util.py">here</a>, and if you want to run the code here you will need to download the file into the directory you are working in.</p>
+<p>The <code>run_sr</code> function takes several arguments, which we will describe here.</p>
+<ul>
+<li><p><code>emis</code>: A geopandas dataframe of emissions, like the one we've prepared here.</p></li>
+<li><p><code>model</code>: Which SR matrix to use. Currently the ISRM (Goodkind et al. paper above) and APSCA (Heo et al. paper above) models are available. The options for this argument are:</p>
+<ul>
+<li><code>isrm</code>: The InMAP SR matrix</li>
+<li><code>apsca_q0</code>: The APSCA SR matrix, annual average</li>
+<li><code>apsca_q1</code>: The APSCA SR matrix, Jan-Mar season</li>
+<li><code>apsca_q2</code>: The APSCA SR matrix, Apr-Jun season</li>
+<li><code>apsca_q3</code>: The APSCA SR matrix, Jul-Sep season</li>
+<li><code>apsca_q4</code>: The APSCA SR matrix, Oct-Dec season</li>
+</ul></li>
+<li><p><code>emis_units</code>: The units that the emissions are in. Allowed values: <code>tons/year</code>, <code>kg/year</code>, <code>ug/s</code>, and <code>μg/s</code>. We will use tons/year, because those are the units our data are in.</p></li>
+<li><p><code>output_variables</code>: The information we want the model to output, input as a dictionary in the form {&quot;variable_name&quot;: &quot;formula&quot;}. Refer <a href="https://inmap.run/docs/results/">here</a> for more information regarding formulas. The native model variables available in the SR matrices for use in output formulas are:</p>
+<ul>
+<li><code>PrimaryPM25</code>: Calculated primary PM<sub>2.5</sub> concentration (μg/m³)</li>
+<li><code>pNH4</code>: Calculated particulate NH<sub>4</sub> concentration (μg/m³)</li>
+<li><code>pSO4</code>: Calculated particulate SO<sub>4</sub> concentration (μg/m³)</li>
+<li><code>pNO3</code>: Calculated particulate NO</sub>3</sub> concentration (μg/m³)</li>
+<li><code>SOA</code>: Calculated secondary organic aerosol concentration (μg/m³)</li>
+<li><code>Asian</code>: Year 2010 Asian Population (people/grid cell)</li>
+<li><code>Black</code>: Year 2010 Black Population (people/grid cell)</li>
+<li><code>Latino</code>: Year 2010 Latino Population (people/grid cell)</li>
+<li><code>Native</code>: Year 2010 Native Population (people/grid cell)</li>
+<li><code>TotalPop</code>: Year 2010 total Population (people/grid cell)</li>
+<li><code>WhiteNoLat</code>: Year 2010 White non-Latino Population (people/grid cell)</li>
+<li><code>MortalityRate</code>: Year 2005 baseline overall population mortality rate (deaths per year per 100,000 people)</li>
+<li><code>Baseline NH3</code>: Baseline NH3 Concentration (μg/m³)</li>
+<li><code>Baseline NOx</code>: Baseline NOx Concentration (μg/m³)</li>
+<li><code>Baseline SOA</code>: Baseline SOA Concentration (μg/m³)</li>
+<li><code>Baseline SOx</code>: Baseline SOx Concentration (μg/m³)</li>
+<li><code>Baseline TotalPM25</code>: Baseline TotalPM25 Concentration (μg/m³)</li>
+<li><code>Baseline VOC</code>: Baseline VOC Concentration (μg/m³)</li>
+<li><code>Baseline pNH4</code>: Baseline pNH4 Concentration (μg/m³)</li>
+<li><code>Baseline pNO3</code>: Baseline pNO3 Concentration (μg/m³)</li>
+<li><code>Baseline pSO4</code>: Baseline pSO4 Concentration (μg/m³)</li>
+<li><code>Asian</code>: Year 2010 Asian Population (people/grid cell)</li>
+<li><code>Black</code>: Year 2010 Black Population (people/grid cell)</li>
+<li><code>Latino</code>: Year 2010 Latino Population (people/grid cell)</li>
+<li><code>Native</code>: Year 2010 Native Population (people/grid cell)</li>
+<li><code>TotalPop</code>: Year 2010 total Population (people/grid cell)</li>
+<li><code>WhiteNoLat</code>: Year 2010 White non-Latino Population (people/grid cell)</li>
+<li><code>UAvg</code>: Average East-West wind speed (m/s)</li>
+<li><code>VAvg</code>: Average North-South wind speed (m/s)</li>
+<li><code>WAvg</code>: Average up-down wind speed (m/s)</li>
+<li><code>UDeviation</code>: Average deviation from East-West velocity (m/s)</li>
+<li><code>VDeviation</code>: Average deviation from North-South velocity (m/s)</li>
+<li><code>AOrgPartitioning</code>: Organic particle partitioning (-)</li>
+<li><code>SPartitioning</code>: Sulfur particle partitioning (-)</li>
+<li><code>NOPartitioning</code>: Nitrate particle partitioning (-)</li>
+<li><code>NHPartitioning</code>: Ammonium particle partitioning (-)</li>
+<li><code>SO2oxidation</code>: SO2 oxidation to SO4 by HO and H2O2 (1/s)</li>
+<li><code>ParticleWetDep</code>: Particle wet deposition (1/s)</li>
+<li><code>SO2WetDep</code>: SO2 wet deposition (1/s)</li>
+<li><code>OtherGasWetDep</code>: Wet deposition: other gases (1/s)</li>
+<li><code>ParticleDryDep</code>: Particle dry deposition (m/s)</li>
+<li><code>NH3DryDep</code>: Ammonia dry deposition (m/s)</li>
+<li><code>SO2DryDep</code>: SO2 dry deposition (m/s)</li>
+<li><code>VOCDryDep</code>: VOC dry deposition (m/s)</li>
+<li><code>NOxDryDep</code>: NOx dry deposition (m/s)</li>
+<li><code>Kzz</code>: Grid center vertical diffusivity after applying convective fraction (m²/s)</li>
+<li><code>Kxxyy</code>: Grid center horizontal diffusivity (m²/s)</li>
+<li><code>M2u</code>: ACM2 upward mixing (Pleim 2007)  (1/s)</li>
+<li><code>M2d</code>: ACM2 downward mixing (Pleim 2007) (1/s)</li>
+<li><code>Dx</code>: Cell x length (m)</li>
+<li><code>Dy</code>: Cell y length (m)</li>
+<li><code>Dz</code>: Cell z length (m)</li>
+<li><code>Volume</code>: Cell volume (m³)</li>
+<li><code>Temperature</code>: Average temperature (K)</li>
+<li><code>WindSpeed</code>: RMS wind speed (m/s)</li>
+<li><code>WindSpeedInverse</code>: RMS wind speed inverse (s/m)</li>
+<li><code>WindSpeedMinusThird</code>: RMS wind speed^(-1/3)</li>
+<li><code>WindSpeedMinusOnePointFour</code>: RMS wind speed^(-1.4)</li>
+<li><code>S1</code>: Stability parameter (?)</li>
+<li><code>SClass</code>: Stability class (0=Unstable; 1=Stable)</li>
+<li><code>N</code>: N grid cell edge (m)</li>
+<li><code>S</code>: S grid cell edge (m)</li>
+<li><code>E</code>: E grid cell edge (m)</li>
+<li><code>W</code>: W grid cell edge (m)</li>
+</ul></li>
+</ul>
+<p>You can probably see that there are an infinite number of output variables that could be calculated. For this example, we will output three variables:</p>
+<ol>
+<li><p><code>TotalPM25 = PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA</code>: In this equation, we are summing up all the different types of PM<sub>2.5</sub> that the model calculates to get total PM<sub>2.5</sub>.</p></li>
+<li><p><code>deathsK = (exp(log(1.06)/10 * TotalPM25) - 1) * TotalPop * 1.0465819687408728 * MortalityRate / 100000 * 1.025229357798165</code> In this equation, we are using the total PM<sub>2.5</sub> value we calculated above in a <a href="https://en.wikipedia.org/wiki/Proportional_hazards_model">Cox proportional hazards</a> equation, along with information on population counts (<code>TotalPop</code>) and baseline mortality rates (<code>MortalityRate / 100000</code>) to calculate the number of deaths.</p>
+<ul>
+<li>1.0465819687408728 is the ratio between year-2016 population (what we want) and year-2010 population (what the model has).</li>
+<li>1.025229357798165 is the ratio between year-2016 mortality rate (what we want) and year-2005 mortality rate (what the model has).</li>
+<li>The value 1.06 represents an assumption that overall mortality rate increases by 6% for every 10 μg/m³ increase in PM<sub>2.5</sub> concentration, which is taken from <a href="https://www.healtheffects.org/publication/extended-follow-and-spatial-analysis-american-cancer-society-study-linking-particulate">this</a> paper.</li>
+<li>The variable name, <code>deathsK</code>, comes from the fact that we're calculating deaths and that the 1.06 value comes from a report authored by Krewski et al.</li>
+</ul></li>
+<li><p><code>deathsL = (exp(log(1.14)/10 * TotalPM25) - 1) * TotalPop * 1.0465819687408728 * MortalityRate * 1.025229357798165 / 100000</code>: This is the same equation as the previous one, except we assume a 14% increase in morality rate for every 10 μg/m³ increase in PM<sub>2.5</sub> concentration, as <a href="https://ehp.niehs.nih.gov/doi/full/10.1289/ehp.1104660">reported by LePeule et al</a>.</p></li>
+</ol>
+<pre><code class="hljs css language-python"><span class="hljs-comment"># This step might take a while.</span>
+
+<span class="hljs-keyword">from</span> sr_util <span class="hljs-keyword">import</span> run_sr <span class="hljs-comment"># This allows us to use the 'run_sr' function</span>
+                           <span class="hljs-comment"># in the 'sr_util.py' file in this same directory.</span>
+
+output_variables = {
+    <span class="hljs-string">'TotalPM25'</span>:<span class="hljs-string">'PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA'</span>,
+    <span class="hljs-string">'deathsK'</span>:<span class="hljs-string">'(exp(log(1.06)/10 * TotalPM25) - 1) * TotalPop * 1.0465819687408728 * MortalityRate / 100000 * 1.025229357798165'</span>,
+    <span class="hljs-string">'deathsL'</span>:<span class="hljs-string">'(exp(log(1.14)/10 * TotalPM25) - 1) * TotalPop * 1.0465819687408728 * MortalityRate / 100000 * 1.025229357798165'</span>,
+}
+
+resultsISRM = run_sr(emis, model=<span class="hljs-string">"isrm"</span>, emis_units=<span class="hljs-string">"tons/year"</span>, output_variables=output_variables)
+</code></pre>
+<pre><code class="hljs">Finished (626 seconds)                               
+</code></pre>
+<pre><code class="hljs css language-python">resultsAPSCA = run_sr(emis, model=<span class="hljs-string">"apsca_q0"</span>, emis_units=<span class="hljs-string">"tons/year"</span>, output_variables=output_variables)
+</code></pre>
+<pre><code class="hljs">Finished (371 seconds)                          
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="summarize-results"></a><a href="#summarize-results" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Summarize results</h2>
+<p>Now that we have our results, the first thing we can do is sum up the number of deaths we are calculating:</p>
+<pre><code class="hljs css language-python"><span class="hljs-keyword">import</span> pandas <span class="hljs-keyword">as</span> pd
+
+deaths = pd.DataFrame.from_dict({
+    <span class="hljs-string">"Model"</span>: [<span class="hljs-string">"ISRM"</span>, <span class="hljs-string">"APSCA"</span>],
+    <span class="hljs-string">"Krewski Deaths"</span>: [resultsISRM.deathsK.sum(), resultsAPSCA.deathsK.sum()],
+    <span class="hljs-string">"LePeule Deaths"</span>: [resultsISRM.deathsL.sum(), resultsAPSCA.deathsL.sum()],
+})
+
+deaths
+</code></pre>
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+<pre><code class="hljs">.dataframe tbody tr th {
+    vertical-align: top;
+}
+
+.dataframe thead th {
+    text-align: right;
+}
+</code></pre>
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Model</th>
+      <th>Krewski Deaths</th>
+      <th>LePeule Deaths</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>ISRM</td>
+      <td>6928.959583</td>
+      <td>15623.924632</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>APSCA</td>
+      <td>6035.354385</td>
+      <td>13598.336851</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<p>We're calculating somewhere between 6,000 and 16,000 deaths every year caused by air pollution emissions from electricity generators.</p>
+<p>We can also estimate equivalent economic damages using a metric called Value of a Statistical Life, which we will take to be $9 million.</p>
+<pre><code class="hljs css language-python">vsl = <span class="hljs-number">9.0e6</span>
+
+pd.DataFrame.from_dict({
+    <span class="hljs-string">"Model"</span>: [<span class="hljs-string">"ISRM"</span>, <span class="hljs-string">"APSCA"</span>],
+    <span class="hljs-string">"Krewski Damages"</span>: deaths[<span class="hljs-string">"Krewski Deaths"</span>] * vsl,
+    <span class="hljs-string">"LePeule Damages"</span>: deaths[<span class="hljs-string">"LePeule Deaths"</span>] * vsl,
+})
+</code></pre>
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+<pre><code class="hljs">.dataframe tbody tr th {
+    vertical-align: top;
+}
+
+.dataframe thead th {
+    text-align: right;
+}
+</code></pre>
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Model</th>
+      <th>Krewski Damages</th>
+      <th>LePeule Damages</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>ISRM</td>
+      <td>6.236064e+10</td>
+      <td>1.406153e+11</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>APSCA</td>
+      <td>5.431819e+10</td>
+      <td>1.223850e+11</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<p>So the health damages from power plants are equivalent to between 50 and 140 billion dollars per year. By using multiple SR matrices and multiple esitimates of the relationship between concentrations and mortality rate, we're able to estimate the uncertainty in our results.</p>
+<p>The final thing we'll do here is to make maps of our concentration results:</p>
+<pre><code class="hljs css language-python"><span class="hljs-keyword">import</span> numpy <span class="hljs-keyword">as</span> np
+
+q = <span class="hljs-number">0.995</span> <span class="hljs-comment"># We are going to truncate our results at the 99.5th percentile</span>
+          <span class="hljs-comment"># to make the maps easier to interpret.</span>
+cut = resultsISRM.TotalPM25.append(resultsAPSCA.TotalPM25, ignore_index=<span class="hljs-literal">True</span>).quantile(q)
+
+
+fig, axes = plt.subplots(figsize=(<span class="hljs-number">7</span>, <span class="hljs-number">2.5</span>), nrows=<span class="hljs-number">1</span>, ncols=<span class="hljs-number">2</span>, sharex=<span class="hljs-literal">True</span>, sharey=<span class="hljs-literal">True</span>)
+plt.subplots_adjust(left=<span class="hljs-number">0</span>, bottom=<span class="hljs-number">0</span>, right=<span class="hljs-number">1</span>, top=<span class="hljs-number">1</span>, wspace=<span class="hljs-number">0</span>, hspace=<span class="hljs-number">0</span>)
+
+<span class="hljs-comment"># Create the color bar.</span>
+im1 = axes[<span class="hljs-number">0</span>].imshow(np.random.random((<span class="hljs-number">10</span>,<span class="hljs-number">10</span>)), vmin=<span class="hljs-number">0</span>, cmap=<span class="hljs-string">"GnBu"</span>, vmax=cut)
+fig.subplots_adjust(right=<span class="hljs-number">0.85</span>)
+cbar_ax1 = fig.add_axes([<span class="hljs-number">0.86</span>, <span class="hljs-number">0.05</span>, <span class="hljs-number">0.025</span>, <span class="hljs-number">0.9</span>])
+c1 = fig.colorbar(im1, cax=cbar_ax1)
+c1.ax.set_ylabel(<span class="hljs-string">'PM$_{2.5}$ concentration (μg m$^{-3}$)'</span>)
+axes[<span class="hljs-number">0</span>].clear()
+
+resultsISRM.plot(ax=axes[<span class="hljs-number">0</span>], vmin=<span class="hljs-number">0</span>, vmax=cut, cmap=<span class="hljs-string">"GnBu"</span>, column=<span class="hljs-string">"TotalPM25"</span>)
+resultsAPSCA.plot(ax=axes[<span class="hljs-number">1</span>], vmin=<span class="hljs-number">0</span>, vmax=cut, cmap=<span class="hljs-string">"GnBu"</span>, column=<span class="hljs-string">"TotalPM25"</span>)
+
+axes[<span class="hljs-number">0</span>].axis(<span class="hljs-string">'off'</span>)
+axes[<span class="hljs-number">1</span>].axis(<span class="hljs-string">'off'</span>)
+
+axes[<span class="hljs-number">0</span>].set_title(<span class="hljs-string">"ISRM"</span>)
+axes[<span class="hljs-number">1</span>].set_title(<span class="hljs-string">"APSCA"</span>)
+
+plt.show()
+</code></pre>
+<p><img src="/blog/2019-04-20-sr/output_16_0.png" alt="png"></p>
+<p>Fig. 2: PM<sub>2.5</sub> concentrations caused by electricity generation in the US.</p>
+<p>As above, the maps would be better if political boundaries were added for reference, but we will leave that as homework, as there are other tutorials out there that describe how to do that.</p>
+<h2><a class="anchor" aria-hidden="true" id="conclusion"></a><a href="#conclusion" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Conclusion</h2>
+<p>Hopefully this tutorial has given you the information you need to do your own air pollution analyses using SR matrices. If not, you can browse the documentation at <a href="https://inmap.run">https://inmap.run</a> or contact the InMAP users group at <a href="https://groups.google.com/forum/#!forum/inmap-users">https://groups.google.com/forum/#!forum/inmap-users</a>.</p>
+</span></div></div><div class="blogSocialSection"></div></div><div class="blog-recent"><a class="button" href="/blog">Recent Posts</a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#introduction">Introduction</a></li><li><a href="#set-up-environment">Set up environment</a></li><li><a href="#prepare-emissions">Prepare emissions</a></li><li><a href="#use-sr-matrices-to-estimate-concentrations-and-health-impacts">Use SR matrices to estimate concentrations and health impacts</a></li><li><a href="#summarize-results">Summarize results</a></li><li><a href="#conclusion">Conclusion</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/textLogo.svg" alt="InMAP" width="66" height="58"/></a><div><h5>Docs</h5><a href="/docs/en/quickstart.html">Getting Started</a><a href="https://scholar.google.com/scholar?cites=13697507566681577142&amp;as_sdt=5,48&amp;sciodt=0,48&amp;hl=en">Papers</a><a href="https://godoc.org/github.com/spatialmodel/inmap">API Reference</a></div><div><h5>Community</h5><a href="/en/users.html">User Showcase</a><a href="http://stackoverflow.com/questions/tagged/inmap" target="_blank" rel="noreferrer noopener">Stack Overflow</a></div><div><h5>More</h5><a href="/blog">Blog</a><a href="https://github.com/spatialmodel/inmap">GitHub</a><a class="github-button" href="https://github.com/spatialmodel/inmap" data-icon="octicon-star" data-count-href="/spatialmodel/inmap/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2019 the InMAP authors.</section></footer></div></body></html>

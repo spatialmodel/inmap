@@ -2,12 +2,26 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://inmap.run/blog</id>
     <title>InMAP Blog</title>
-    <updated>2019-03-04T06:00:00Z</updated>
+    <updated>2019-04-20T06:00:00Z</updated>
     <generator>Feed for Node.js</generator>
     <link rel="alternate" href="https://inmap.run/blog"/>
     <subtitle>The best place to stay up-to-date with the latest InMAP news and events.</subtitle>
     <logo>https://inmap.run/img/textLogo.svg</logo>
     <rights>Copyright © 2019 the InMAP authors.</rights>
+    <entry>
+        <title type="html"><![CDATA[Working with source-receptor matrices using https://inmap.run and GeoPandas in Python]]></title>
+        <id>https://inmap.run/blog/2019/04/20/sr.html</id>
+        <link href="https://inmap.run/blog/2019/04/20/sr.html">
+        </link>
+        <updated>2019-04-20T06:00:00Z</updated>
+        <summary type="html"><![CDATA[<p>Air pollution source-receptor matrices give relationships between emissions at source locations and concentrations at receptor locations.
+This tutorial demonstrates how to use source-receptor matrices to estimate health impacts of air pollution emissions.</p>
+]]></summary>
+        <author>
+            <name>Chris Tessum</name>
+            <uri>https://github.com/ctessum</uri>
+        </author>
+    </entry>
     <entry>
         <title type="html"><![CDATA[Tutorial: Estimating health impacts of the Volkswagen emissions scandal]]></title>
         <id>https://inmap.run/blog/2019/03/04/tutorial.html</id>
@@ -19,7 +33,7 @@ scenario and use the InMAP model to estimate the resulting health impacts.</p>
 ]]></summary>
         <author>
             <name>Xinyu Zhang</name>
-            <uri>xyzhang8@uw.edu</uri>
+            <uri>https://www.linkedin.com/in/xinyu-ryan-zhang/</uri>
         </author>
     </entry>
 </feed>
