@@ -1031,7 +1031,8 @@ func (gc *GEOSChem) QRain() NextData {
 					pfllSanV := (pfllSan.Get(k, j, i) + pfllSan.Get(k+1, j, i)) / 2
 					// From EMEP algorithm: P = QRAIN * Vdr * ρgas => QRAIN = P / Vdr / ρgas
 					// [kg m-2 s-1] / [m s-1] * [m3 kg-1]
-					qRain.Elements[i] = (pflcuV + pfllSanV) / Vdr * alt.Get(k, j, i)
+					q := (pflcuV + pfllSanV) / Vdr * alt.Get(k, j, i)
+					qRain.Set(q, k, j, i)
 				}
 			}
 		}
