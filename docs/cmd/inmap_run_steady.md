@@ -1,4 +1,4 @@
----
+3---
 id: inmap_run_steady
 title: inmap run steady
 sidebar_label: inmap run steady
@@ -140,5 +140,4 @@ inmap run steady [flags]
 
 ### SEE ALSO
 
-* [inmap run](inmap_run)	 - Run the model.
-
+* [inmap run](../inmap_run)	 - Run the model.

@@ -35,5 +35,4 @@ inmap cloud status [flags]
 
 ### SEE ALSO
 
-* [inmap cloud](inmap_cloud)	 - Interact with a Kubernetes cluster.
-
+* [inmap cloud](../inmap_cloud)	 - Interact with a Kubernetes cluster.

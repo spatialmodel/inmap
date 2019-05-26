@@ -40,8 +40,7 @@ Interact with an SR matrix.
 
 ### SEE ALSO
 
-* [inmap](inmap)	 - A reduced-form air quality model.
-* [inmap sr clean](inmap_sr_clean)	 - clean cleans up temporary simulation output
-* [inmap sr save](inmap_sr_save)	 - Save simulation results to create an SR matrix
-* [inmap sr start](inmap_sr_start)	 - Start simulations to create an SR matrix
-
+* [inmap](../inmap)	 - A reduced-form air quality model.
+* [inmap sr clean](../inmap_sr_clean)	 - clean cleans up temporary simulation output
+* [inmap sr save](../inmap_sr_save)	 - Save simulation results to create an SR matrix
+* [inmap sr start](../inmap_sr_start)	 - Start simulations to create an SR matrix

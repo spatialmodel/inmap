@@ -31,9 +31,8 @@ Interact with a Kubernetes cluster.
 
 ### SEE ALSO
 
-* [inmap](inmap)	 - A reduced-form air quality model.
-* [inmap cloud delete](inmap_cloud_delete)	 - Delete a cloud job.
-* [inmap cloud output](inmap_cloud_output)	 - Retrieve and save the output of a job on a Kubernetes cluster.
-* [inmap cloud start](inmap_cloud_start)	 - Start a job on a Kubernetes cluster.
-* [inmap cloud status](inmap_cloud_status)	 - Check the status of a job on a Kubernetes cluster.
-
+* [inmap](../inmap)	 - A reduced-form air quality model.
+* [inmap cloud delete](../inmap_cloud_delete)	 - Delete a cloud job.
+* [inmap cloud output](../inmap_cloud_output)	 - Retrieve and save the output of a job on a Kubernetes cluster.
+* [inmap cloud start](../inmap_cloud_start)	 - Start a job on a Kubernetes cluster.
+* [inmap cloud status](../inmap_cloud_status)	 - Check the status of a job on a Kubernetes cluster.

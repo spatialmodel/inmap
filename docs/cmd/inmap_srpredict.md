@@ -60,5 +60,4 @@ inmap srpredict [flags]
 
 ### SEE ALSO
 
-* [inmap](inmap)	 - A reduced-form air quality model.
-
+* [inmap](../inmap)	 - A reduced-form air quality model.

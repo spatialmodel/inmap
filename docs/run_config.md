@@ -28,7 +28,7 @@ The exact command may vary depending on your system configuration, and you may n
 
 ### Subcommands
 
-The available ImMAP subcommands are listed in the [InMAP command documentation](cmd/inmap.md), which also includes descriptions of what each command does and the available configuration settings.
+The available InMAP subcommands are listed in the [InMAP command documentation](cmd/inmap.md), which also includes descriptions of what each command does and the available configuration settings.
 
 ## Configuration
 

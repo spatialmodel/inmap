@@ -49,14 +49,14 @@ You can also compile InMAP from its source code. The instructions here are speci
 3. Create an emissions scenario or use one of the evaluation emissions datasets available in the `evaldata_vX.X.X.zip` files on the [InMAP release page](https://github.com/spatialmodel/inmap/releases). Emissions files should be in [shapefile](http://en.wikipedia.org/wiki/Shapefile) format where the attribute columns correspond to the names of emitted pollutants. The acceptable pollutant names are
 `VOC`, `NOx`, `NH3`, `SOx`, and `PM2_5`. Emissions units can be specified in the configuration file (discussed below) and can be short tons per year,  kilograms per year, or micrograms per second. The model can handle multiple input emissions files, and emissions can be either elevated or ground level. Files with elevated emissions need to have attribute columns labeled "height", "diam", "temp", and "velocity" containing stack information in units of m, m, K, and m/s, respectively. Emissions will be allocated from the geometries in the shape file to the InMAP computational grid.
 
-1. Make a copy of the [configuration file template](eval/nei2005Config.toml) and edit it if desired, keeping in mind that you will either need to set the `evaldata` environment variable to the directory you downloaded the evaluation data to, or replace all instances of `${evaldata}` in the configuration file with the path to that directory. You must also ensure that the directory `OutputFile` is to go in exists. Refer to the documentation [here](inmap/doc/inmap.md) for information about other configuration options. The configuration file is a text file in [TOML](https://github.com/toml-lang/toml) format, and any changes made to the file will need to conform to that format or the model will not run correctly and will produce an error.
+1. Make a copy of the [configuration file template](eval/nei2005Config.toml) and edit it if desired, keeping in mind that you will either need to set the `evaldata` environment variable to the directory you downloaded the evaluation data to, or replace all instances of `${evaldata}` in the configuration file with the path to that directory. You must also ensure that the directory `OutputFile` is to go in exists. Refer to the documentation [here](docs/cmd/inmap.md) for information about other configuration options. The configuration file is a text file in [TOML](https://github.com/toml-lang/toml) format, and any changes made to the file will need to conform to that format or the model will not run correctly and will produce an error.
 
 2. Run the program:
 
 		inmapXXX run steady --config=/path/to/configfile.toml
 	where `inmapXXX` is replaced with the executable file that you [downloaded](https://github.com/spatialmodel/inmap/releases). For some systems you may need to type `./inmapXXX` instead. If you compiled the program from source, the command will just be `inmap` for Linux or Mac systems and `inmap.exe` for Windows systems.
 
-	The above command runs the model in the most typical mode. For alternative run modes and other command options refer [here](inmap/doc/inmap.md).
+	The above command runs the model in the most typical mode. For alternative run modes and other command options refer [here](docs/cmd/inmap.md).
 
 3. View the program output. The output files are in [shapefile](http://en.wikipedia.org/wiki/Shapefile) format which can be viewed in most GIS programs. One free GIS program is [QGIS](http://www.qgis.org/). By default, the InMAP only outputs ground-level, but this can be changed using the configuration file.
 
@@ -66,7 +66,7 @@ You can also compile InMAP from its source code. The instructions here are speci
 
 	Output variable expressions are, by default, evaluated within each grid cell. By surrounding an expression with braces ({...}), InMAP can instead perform summary calculations (evaluating the expression across all grid cells). InMAP has a built-in function `sum()` that can be used for such grid level calculations. For example, an expression for a variable `NPctWNoLat`, representing the percentage of the total US population that is Non-Latino White, would be `NPctWNoLat = "{sum(WhiteNoLat) / sum(TotalPop)}"`. Only the part of the expression inside of the braces is evaluated at the grid level. `NPctWNoLat` could then be used as a variable in expressions evaluated at the grid cell level, e.g, `WhNoLatDiff = "PctWhNoLat - NPctWNoLat"`, representing the difference between the percentage of the population of each grid cell that is white and the percentage of the total US population that is white.
 
-	There is a complete list of built-in variables [here](doc/OutputOptions.md). Some examples include:
+	There is a complete list of built-in variables [here](docs/output_options.md). Some examples include:
 	* Pollutant concentrations in units of μg m<sup>-3</sup>:
 	  * VOC (`VOC`)
 		* NO<sub>x</sub> (`NOx`)
@@ -88,7 +88,11 @@ You can also compile InMAP from its source code. The instructions here are speci
 
 ### Running the preprocessor
 
-InMAP includes a preprocessor to convert chemical transport model (CTM) output into InMAP meteorology and baseline chemistry input data. Unlike the main InMAP model, the preprocessor only needs to be run once for each spatiotemporal domain. Users that would like to use a different spatial or temporal domain than what is included with the InMAP download can obtain CTM output for that domain and run the preprocessor themselves. The WRF-Chem and GEOS-Chem CTMs are currently supported. Information on how to run the preprocessor is [here](inmap/doc/inmap_preproc.md), and information regarding preprocessor configuration is [here](https://godoc.org/github.com/spatialmodel/inmap/inmaputil#ConfigData.Preproc).
+InMAP includes a preprocessor to convert chemical transport model (CTM) output into InMAP meteorology and baseline chemistry input data.
+Unlike the main InMAP model, the preprocessor only needs to be run once for each spatiotemporal domain.
+Users that would like to use a different spatial or temporal domain than what is included with the InMAP download can obtain CTM output for that domain and run the preprocessor themselves.
+The WRF-Chem and GEOS-Chem CTMs are currently supported.
+Information on how to run the preprocessor is [here](docs/cmd/inmap_preproc.md), and information regarding preprocessor configuration is [here](https://godoc.org/github.com/spatialmodel/inmap/inmaputil#ConfigData.Preproc).
 
 ## API
 
