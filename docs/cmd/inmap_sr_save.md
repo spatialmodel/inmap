@@ -47,5 +47,4 @@ inmap sr save [flags]
 
 ### SEE ALSO
 
-* [inmap sr](inmap_sr)	 - Interact with an SR matrix.
-
+* [inmap sr](../inmap_sr)	 - Interact with an SR matrix.

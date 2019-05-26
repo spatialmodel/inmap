@@ -133,6 +133,5 @@ run runs an InMAP simulation. Use the subcommands specified below to
 
 ### SEE ALSO
 
-* [inmap](inmap)	 - A reduced-form air quality model.
-* [inmap run steady](inmap_run_steady)	 - Run InMAP in steady-state mode.
-
+* [inmap](../inmap)	 - A reduced-form air quality model.
+* [inmap run steady](../inmap_run_steady)	 - Run InMAP in steady-state mode.
