@@ -10,11 +10,10 @@ require (
 	github.com/cpuguy83/go-md2man v1.0.9-0.20180619205630-691ee98543af // indirect
 	github.com/ctessum/atmos v0.0.0-20170526022537-cba69f7ca647
 	github.com/ctessum/cdf v0.0.0-20181201011353-edced208ea9d
-	github.com/ctessum/geom v0.0.0-20171214065257-1cd0f1efc691
+	github.com/ctessum/geom v0.1.1
 	github.com/ctessum/go-leaflet v0.0.0-20170724133759-2f9e4c38fb5e
 	github.com/ctessum/gobra v0.0.0-20180516235632-ddfa5eeb3017
 	github.com/ctessum/plotextra v0.0.0-20180623195436-96488e3f1996
-	github.com/ctessum/polyclip-go v0.0.0-20180821205400-6614925d6d70 // indirect
 	github.com/ctessum/requestcache v0.0.0-20180628165226-f806c589cca6
 	github.com/ctessum/sparse v0.0.0-20181201011727-57d6234a2c9d
 	github.com/ctessum/unit v0.0.0-20160621200450-755774ac2fcb
@@ -24,8 +23,7 @@ require (
 	github.com/gogo/protobuf v1.2.1 // indirect
 	github.com/golang/groupcache v0.0.0-20180924190550-6f2cf27854a4
 	github.com/golang/protobuf v1.3.0
-	github.com/gonum/floats v0.0.0-20170731225635-f74b330d45c5
-	github.com/gonum/internal v0.0.0-20170731230106-e57e4534cf9b // indirect
+	github.com/gonum/floats v0.0.0-20181209220543-c233463c7e82
 	github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf // indirect
 	github.com/googleapis/gnostic v0.2.0 // indirect
 	github.com/gopherjs/gopherjs v0.0.0-20181103185306-d547d1d9531e
@@ -36,7 +34,7 @@ require (
 	github.com/improbable-eng/grpc-web v0.0.0-20190113155728-0c7a81a25d11
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/johanbrandhorst/protobuf v0.6.1
-	github.com/jonas-p/go-shp v0.0.0-20171012111128-5b9c3047ce59
+	github.com/jonas-p/go-shp v0.1.2-0.20190401125246-9fd306ae10a6
 	github.com/json-iterator/go v1.1.5 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/kr/pretty v0.1.0
@@ -65,14 +63,11 @@ require (
 	go.opencensus.io v0.19.0 // indirect
 	gocloud.dev v0.9.0
 	golang.org/x/build v0.0.0-20190226180436-80ca8d25ddd4
-	golang.org/x/crypto v0.0.0-20190225124518-7f87c0fbb88b
-	golang.org/x/exp v0.0.0-20190221220918-438050ddec5e // indirect
-	golang.org/x/net v0.0.0-20190227022144-312bce6e941f
+	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
+	golang.org/x/net v0.0.0-20190311183353-d8887717615a
 	golang.org/x/oauth2 v0.0.0-20190226205417-e64efc72b421 // indirect
-	golang.org/x/sys v0.0.0-20190226215855-775f8194d0f9 // indirect
-	gonum.org/v1/gonum v0.0.0-20190123113241-dd4cc715c58a
-	gonum.org/v1/netlib v0.0.0-20190119082159-9be13e02fd56 // indirect
-	gonum.org/v1/plot v0.0.0-20190117111959-11e716203838
+	gonum.org/v1/gonum v0.0.0-20190509213835-50179cd3f3f7
+	gonum.org/v1/plot v0.0.0-20190526055220-ccfad0c86201
 	google.golang.org/genproto v0.0.0-20190226184841-fc2db5cae922 // indirect
 	google.golang.org/grpc v1.19.0
 	honnef.co/go/js/dom v0.0.0-20180323154144-6da835bec70f

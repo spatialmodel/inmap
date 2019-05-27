@@ -13,13 +13,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ctessum/cdf"
 	"github.com/GaryBoone/GoStats/stats"
+	"github.com/ctessum/cdf"
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/carto"
 	"github.com/ctessum/geom/encoding/shp"
 	"github.com/ctessum/geom/index/rtree"
-	"github.com/ctessum/geom/op"
 	"github.com/ctessum/geom/proj"
 	"gonum.org/v1/plot"
 	"gonum.org/v1/plot/plotter"
@@ -779,10 +778,7 @@ func getStates(filename string, simplifyThreshold float64) []geom.Polygon {
 		if err != nil {
 			panic(err)
 		}
-		gg, err = op.Simplify(gg, simplifyThreshold)
-		if err != nil {
-			panic(err)
-		}
+		gg = gg.(geom.Simplifier).Simplify(simplifyThreshold)
 		g = append(g, gg.(geom.Polygon))
 	}
 	if s.Error() != nil {
