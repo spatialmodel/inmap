@@ -193,74 +193,76 @@ func TestCreateSurrogates(t *testing.T) {
 	}
 
 	for _, code := range []string{"100", "137", "140", "500", "200"} {
-		srgSpec, err := srgSpecs.GetByCode(USA, code)
-		if err != nil {
-			t.Fatal(err)
-		}
-		srgsI, err := sp.createSurrogate(context.Background(), &srgGrid{srg: srgSpec, gridData: grid})
-		if err != nil {
-			t.Errorf("creating surrogate %s: %v", code, err)
-		}
-		srgs := srgsI.(*GriddingSurrogate)
-		if len(srgs.Srg) != 19 {
-			t.Errorf("in code %s: there should be %d surrogates instead of %d",
-				code, 19, len(srgs.Srg))
-		}
-		for fips, covered := range coveredByGrid {
-			if _, ok := srgs.Srg[fips]; !ok {
-				t.Errorf("county %s is not in surrogate %s", fips, code)
-				continue
+		t.Run(code, func(t *testing.T) {
+			srgSpec, err := srgSpecs.GetByCode(USA, code)
+			if err != nil {
+				t.Fatal(err)
 			}
-			if srgs.Srg[fips].CoveredByGrid != covered {
-				t.Errorf("county %s should %v be covered by the grid but it is %v",
-					fips, covered, srgs.Srg[fips].CoveredByGrid)
+			srgsI, err := sp.createSurrogate(context.Background(), &srgGrid{srg: srgSpec, gridData: grid})
+			if err != nil {
+				t.Errorf("creating surrogate %s: %v", code, err)
 			}
-			srg, ok := srgs.Srg[fips]
-			if !ok {
-				t.Errorf("missing surrogate %s for fips %s", code, fips)
+			srgs := srgsI.(*GriddingSurrogate)
+			if len(srgs.Srg) != 19 {
+				t.Errorf("in code %s: there should be %d surrogates instead of %d",
+					code, 19, len(srgs.Srg))
 			}
-			sum := 0.
-			for _, cell := range srg.Cells {
-				if cell.Weight < 0 {
-					t.Errorf("a surrogate grid cell equals <0; this should never happen")
-				}
-				sum += cell.Weight
+			for fips, covered := range coveredByGrid {
+				t.Run(fips, func(t *testing.T) {
+					if _, ok := srgs.Srg[fips]; !ok {
+						t.Fatalf("county %s is not in surrogate %s", fips, code)
+					}
+					if srgs.Srg[fips].CoveredByGrid != covered {
+						t.Errorf("county %s should %v be covered by the grid but it is %v",
+							fips, covered, srgs.Srg[fips].CoveredByGrid)
+					}
+					srg, ok := srgs.Srg[fips]
+					if !ok {
+						t.Errorf("missing surrogate %s for fips %s", code, fips)
+					}
+					sum := 0.
+					for _, cell := range srg.Cells {
+						if cell.Weight < 0 {
+							t.Errorf("a surrogate grid cell equals <0; this should never happen")
+						}
+						sum += cell.Weight
+					}
+					if covered {
+						if math.Abs(sum-1) > 0.001 {
+							t.Errorf("surrogate %s should sum to 1 for fips %s but "+
+								"instead sums to %f", code, fips, sum)
+						}
+					} else if sum > 1.00001 {
+						t.Errorf("surrogate %s should sum to less than 1 for fips %s but "+
+							"instead sums to %f", code, fips, sum)
+					}
+					gridded, _ := srgs.ToGrid(fips)
+					if gridded == nil {
+						if _, ok := nilSrgs[code][fips]; ok {
+							return
+						} else {
+							t.Fatalf("gridded surrogate %s fips %s is nil but shouldn't be",
+								code, fips)
+						}
+					}
+					if gridded.Get(0, 3) != 0 {
+						t.Errorf("gridded surrogate %s fips %s grid cell (0,3) should equal zero "+
+							"because because it is over the ocean but instead it equals %f",
+							code, fips, gridded.Get(0, 3))
+					}
+					sum = gridded.Sum()
+					if covered {
+						if !floats.EqualWithinAbsOrRel(sum, 1, 0.000001, 0.000001) {
+							t.Errorf("gridded surrogate %s should sum to 1 for fips %s but "+
+								"instead sums to %f", code, fips, sum)
+						}
+					} else if sum > 1.0000001 {
+						t.Errorf("gridded surrogate %s should sum to less than 1 for fips %s but "+
+							"instead sums to %f", code, fips, sum)
+					}
+				})
 			}
-			if covered {
-				if math.Abs(sum-1) > 0.001 {
-					t.Errorf("surrogate %s should sum to 1 for fips %s but "+
-						"instead sums to %f", code, fips, sum)
-				}
-			} else if sum > 1.00001 {
-				t.Errorf("surrogate %s should sum to less than 1 for fips %s but "+
-					"instead sums to %f", code, fips, sum)
-			}
-			gridded, _ := srgs.ToGrid(fips)
-			if gridded == nil {
-				if _, ok := nilSrgs[code][fips]; ok {
-					continue
-				} else {
-					t.Errorf("gridded surrogate %s fips %s is nil but shouldn't be",
-						code, fips)
-					continue
-				}
-			}
-			if gridded.Get(0, 3) != 0 {
-				t.Errorf("gridded surrogate %s fips %s grid cell (0,3) should equal zero "+
-					"because because it is over the ocean but instead it equals %f",
-					code, fips, gridded.Get(0, 3))
-			}
-			sum = gridded.Sum()
-			if covered {
-				if !floats.EqualWithinAbsOrRel(sum, 1, 0.000001, 0.000001) {
-					t.Errorf("gridded surrogate %s should sum to 1 for fips %s but "+
-						"instead sums to %f", code, fips, sum)
-				}
-			} else if sum > 1.0000001 {
-				t.Errorf("gridded surrogate %s should sum to less than 1 for fips %s but "+
-					"instead sums to %f", code, fips, sum)
-			}
-		}
+		})
 	}
 }
 
