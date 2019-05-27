@@ -11,10 +11,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ctessum/cdf"
 	"github.com/GaryBoone/GoStats/stats"
-
 	"github.com/ctessum/atmos/evalstats"
+	"github.com/ctessum/cdf"
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/carto"
 	"github.com/ctessum/geom/encoding/shp"
