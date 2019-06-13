@@ -30,6 +30,9 @@ import (
 
 	"github.com/ctessum/atmos/seinfeld"
 	"github.com/ctessum/atmos/wesely1989"
+	"github.com/ctessum/cdf"
+	"github.com/ctessum/geom"
+	"github.com/ctessum/geom/index/rtree"
 
 	"github.com/ctessum/sparse"
 )
@@ -59,6 +62,8 @@ type GEOSChem struct {
 	landUse *sparse.DenseArray
 
 	nx, ny, nz int
+
+	xo, yo, dx, dy float64
 
 	geosA1        string
 	geosA3Cld     string
@@ -312,6 +317,22 @@ func NewGEOSChem(GEOSA1, GEOSA3Cld, GEOSA3Dyn, GEOSI3, GEOSA3MstE, GEOSApBp, GEO
 	if err != nil {
 		return nil, err
 	}
+	gc.xo, err = gc.Xo()
+	if err != nil {
+		return nil, err
+	}
+	gc.yo, err = gc.Yo()
+	if err != nil {
+		return nil, err
+	}
+	gc.dx, err = gc.DX()
+	if err != nil {
+		return nil, err
+	}
+	gc.dy, err = gc.DY()
+	if err != nil {
+		return nil, err
+	}
 
 	landUse, err := readVegTypeGlobal(file, gc.ny, gc.nx)
 	if err != nil {
@@ -539,6 +560,47 @@ func (gc *GEOSChem) Nz() (int, error) {
 	}
 	return dims[0], nil
 }
+
+// Return the first value of a variable from a chemistry file.
+func (gc *GEOSChem) chemFirstValue(v string) (float64, error) {
+	f, ff, err := ncfFromTemplate(gc.geosChem, geosChemFormat, gc.start)
+	if err != nil {
+		return -1, err
+	}
+	defer f.Close()
+	data, err := readNCFNoHour(v, ff, 0)
+	if err != nil {
+		// If variable not in file, try all lowercase.
+		data, err = readNCFNoHour(strings.ToLower(v), ff, 0)
+		if err != nil {
+			return -1, err
+		}
+	}
+	return data.Elements[0], nil
+}
+
+// Return an attribute from a chemistry file.
+func (gc *GEOSChem) chemAttribute(a string) (float64, error) {
+	f, ff, err := ncfFromTemplate(gc.geosChem, geosChemFormat, gc.start)
+	if err != nil {
+		return math.NaN(), err
+	}
+	defer f.Close()
+	attr := ff.Header.GetAttribute("", a)
+	return float64(attr.([]float32)[0]), nil
+}
+
+// Xo returns the minimum longitude value in the grid
+func (gc *GEOSChem) Xo() (float64, error) { return gc.chemFirstValue("LON") }
+
+// Xo returns the minimum latitude value in the grid
+func (gc *GEOSChem) Yo() (float64, error) { return gc.chemFirstValue("LAT") }
+
+// DX returns the longitude grid spacing.
+func (gc *GEOSChem) DX() (float64, error) { return gc.chemAttribute("Delta_Lon") }
+
+// DY returns the latitude grid spacing.
+func (gc *GEOSChem) DY() (float64, error) { return gc.chemAttribute("Delta_Lat") }
 
 // PBLH helps fulfill the Preprocessor interface.
 func (gc *GEOSChem) PBLH() NextData { return gc.readA1("PBLH") }
@@ -1070,6 +1132,134 @@ func (gc *GEOSChem) RadiationDown() NextData {
 		out.AddDense(ParDR)
 		return out, nil
 	}
+}
+
+// olsonLandMap holds information about an Olson land map.
+type olsonLandMap struct {
+	data   *rtree.Rtree
+	dx, dy float64
+	xo, yo float64
+	nx, ny int
+}
+
+type olsonGridCell struct {
+	geom.Polygon
+	category int
+}
+
+// readOlsonLandMap reads data from an Olson land map file described here:
+// http://wiki.seas.harvard.edu/geos-chem/index.php/Olson_land_map.
+// It may be downlaodable from:
+// ftp://ftp.as.harvard.edu/gcgrid/geos-chem/data/ExtData/CHEM_INPUTS/Olson_Land_Map_201203/
+// The file must be converted from netcdf version 4 to version 3 before
+// use by this function.
+// This can be done using the command:
+// nccopy -k classic Olson_2001_Land_Map.025x025.generic.nc Olson_2001_Land_Map.025x025.generic.nc
+func readOlsonLandMap(file *cdf.File) (*olsonLandMap, error) {
+	dxStr := file.Header.GetAttribute("", "delta_lon").(string)
+	dyStr := file.Header.GetAttribute("", "delta_lat").(string)
+	dx, err := strconv.ParseFloat(dxStr, 64)
+	if err != nil {
+		return nil, fmt.Errorf("inmap: parsing Olson land map dx: %v", err)
+	}
+	dy, err := strconv.ParseFloat(dyStr, 64)
+	if err != nil {
+		return nil, fmt.Errorf("inmap: parsing Olson land map dy: %v", err)
+	}
+
+	dims := file.Header.Lengths("OLSON")
+	ny := dims[1]
+	nx := dims[2]
+
+	r := file.Reader("OLSON", nil, nil)
+	buf := r.Zero(-1).([]int32)
+	o := &olsonLandMap{
+		data: rtree.NewTree(25, 50),
+		xo:   -180,
+		yo:   -90,
+		dx:   dx,
+		dy:   dy,
+		nx:   nx,
+		ny:   ny,
+	}
+
+	if _, err := r.Read(buf); err != nil {
+		return nil, fmt.Errorf("inmap: reading Olson land map: %v", err)
+	}
+
+	for iy := 0; iy < o.ny; iy++ {
+		for ix := 0; ix < o.nx; ix++ {
+			x0 := o.xo + o.dx*float64(ix)
+			x1 := o.xo + o.dx*float64(ix+1)
+			y0 := o.yo + o.dy*float64(iy)
+			y1 := o.yo + o.dy*float64(iy+1)
+			c := olsonGridCell{
+				Polygon: geom.Polygon{{
+					{X: x0, Y: y0},
+					{X: x1, Y: y0},
+					{X: x1, Y: y1},
+					{X: x0, Y: y1},
+				}},
+				category: int(buf[iy*nx+ix]),
+			}
+			o.data.Insert(c)
+		}
+	}
+	return o, nil
+}
+
+// fractions returns the fraction of land use types within the given polygon.
+func (o *olsonLandMap) fractions(p geom.Polygon) map[int]float64 {
+	out := make(map[int]float64)
+	for _, cI := range o.data.SearchIntersect(p.Bounds()) {
+		c := cI.(olsonGridCell)
+		isect := p.Intersection(c)
+		if isect != nil {
+			out[c.category] += isect.Area()
+		}
+	}
+	a := p.Area()
+	for cat, v := range out {
+		out[cat] = v / a
+	}
+	return out
+}
+
+// largestLandUse returns the land use index with the largest area
+// in each grid cell when given a Olson land map file.
+func (gc *GEOSChem) largestLandUse(olsonLandMapFile *cdf.File) (*sparse.DenseArray, error) {
+	o, err := readOlsonLandMap(olsonLandMapFile)
+	if err != nil {
+		return nil, err
+	}
+
+	out := sparse.ZerosDense(gc.nx, gc.ny)
+	for ix := 0; ix < gc.nx; ix++ {
+		for iy := 0; iy < gc.ny; iy++ {
+			x0 := gc.xo + gc.dx*float64(ix)
+			x1 := gc.xo + gc.dx*float64(ix+1)
+			y0 := gc.yo + gc.dy*float64(iy)
+			y1 := gc.yo + gc.dy*float64(iy+1)
+			p := geom.Polygon{{
+				{X: x0, Y: y0},
+				{X: x1, Y: y0},
+				{X: x1, Y: y1},
+				{X: x0, Y: y1},
+				{X: x0, Y: y0},
+			}}
+			fractions := o.fractions(p)
+			maxCat := math.MinInt32
+			maxVal := math.Inf(-1)
+			for c, v := range fractions {
+				if v > maxVal {
+					maxVal = v
+					maxCat = c
+				}
+			}
+			out.Set(float64(maxCat), ix, iy)
+		}
+	}
+	return out, nil
 }
 
 // readVegTypeGlobal reads in the GEOS-Chem vegtype.global file described here:
