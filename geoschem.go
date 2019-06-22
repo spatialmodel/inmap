@@ -218,11 +218,15 @@ func NewGEOSChem(GEOSA1, GEOSA3Cld, GEOSA3Dyn, GEOSI3, GEOSA3MstE, GEOSApBp, GEO
 		// It is calculated based on the formula at:
 		// http://wiki.seas.harvard.edu/geos-chem/index.php/Particulate_matter_in_GEOS-Chem
 		totalPM25: map[string]float64{
-			"IJ" + d + "AVG" + d + "S__NH4":    ppbvToUgKg(150) * 1.33,
-			"IJ" + d + "AVG" + d + "S__NIT":    ppbvToUgKg(150) * 1.33,
-			"IJ" + d + "AVG" + d + "S__SO4":    ppbvToUgKg(150) * 1.33,
-			"IJ" + d + "AVG" + d + "S__BCPI":   ppbvToUgKg(150),
-			"IJ" + d + "AVG" + d + "S__BCPO":   ppbvToUgKg(150),
+			"IJ" + d + "AVG" + d + "S__NH4":    ppbvToUgKg(18) * 1.33,
+			"IJ" + d + "AVG" + d + "S__NIT":    ppbvToUgKg(62) * 1.33,
+			"IJ" + d + "AVG" + d + "S__SO4":    ppbvToUgKg(96) * 1.33,
+			"IJ" + d + "AVG" + d + "S__BCPI":   ppbvToUgKg(12),
+			"IJ" + d + "AVG" + d + "S__BCPO":   ppbvToUgKg(12),
+			"IJ" + d + "AVG" + d + "S__POA1":   ppbvToUgKg(12) * 1.4,
+			"IJ" + d + "AVG" + d + "S__POA2":   ppbvToUgKg(12) * 1.4,
+			"IJ" + d + "AVG" + d + "S__OPOA1":  ppbvToUgKg(12) * 2.1,
+			"IJ" + d + "AVG" + d + "S__OPOA2":  ppbvToUgKg(12) * 2.1,
 			"IJ" + d + "AVG" + d + "S__TSOA0":  ppbvToUgKg(150) * 1.16,
 			"IJ" + d + "AVG" + d + "S__TSOA1":  ppbvToUgKg(150) * 1.16,
 			"IJ" + d + "AVG" + d + "S__TSOA2":  ppbvToUgKg(150) * 1.16,
@@ -238,9 +242,9 @@ func NewGEOSChem(GEOSA1, GEOSA3Cld, GEOSA3Dyn, GEOSI3, GEOSA3MstE, GEOSApBp, GEO
 			"IJ" + d + "AVG" + d + "S__SOAME":  ppbvToUgKg(102) * 1.16,
 			"IJ" + d + "AVG" + d + "S__LVOCOA": ppbvToUgKg(154) * 1.16,
 			"IJ" + d + "AVG" + d + "S__ISN1OA": ppbvToUgKg(226) * 1.16,
-			"IJ" + d + "AVG" + d + "S__DST1":   ppbvToUgKg(150),
-			"IJ" + d + "AVG" + d + "S__DST2":   ppbvToUgKg(150) * 0.38,
-			"IJ" + d + "AVG" + d + "S__SALA":   ppbvToUgKg(150) * 1.86,
+			"IJ" + d + "AVG" + d + "S__DST1":   ppbvToUgKg(29),
+			"IJ" + d + "AVG" + d + "S__DST2":   ppbvToUgKg(29) * 0.38,
+			"IJ" + d + "AVG" + d + "S__SALA":   ppbvToUgKg(31.4) * 1.86,
 		},
 
 		geosA1:        GEOSA1,
