@@ -489,13 +489,13 @@ func (d *InMAP) addCells(config *VarGridConfig, newCellIndices [][][2]int,
 		cell *Cell
 		err  error
 	}
-	cellErrChan := make(chan cellErr)
+	cellErrChan := make(chan cellErr, len(newCellIndices))
+	cellIndexChan := make(chan int)
 	nprocs := runtime.GOMAXPROCS(-1)
 
-	// Create the new cells.
 	for p := 0; p < nprocs; p++ {
-		go func(p int) {
-			for i := p; i < len(newCellIndices); i += nprocs {
+		go func() {
+			for i := range cellIndexChan {
 				ii := newCellIndices[i]
 				var conci []float64
 				if conc != nil {
@@ -505,8 +505,14 @@ func (d *InMAP) addCells(config *VarGridConfig, newCellIndices [][][2]int,
 					newCellLayers[i], conci, webMapTrans, m, notMeters)
 				cellErrChan <- cellErr{cell: cell, err: err2}
 			}
-		}(p)
+		}()
 	}
+
+	// Create the new cells.
+	for i := 0; i < len(newCellIndices); i++ {
+		cellIndexChan <- i
+	}
+	close(cellIndexChan)
 	// Insert the new cells into d.
 	for range newCellIndices {
 		cellerr := <-cellErrChan
@@ -515,12 +521,14 @@ func (d *InMAP) addCells(config *VarGridConfig, newCellIndices [][][2]int,
 		}
 		d.InsertCell(cellerr.cell, m)
 	}
+
 	// Add emissions to new cells.
 	if emis != nil {
+		cellIndexChan2 := make(chan int)
 		errChan := make(chan error)
 		for p := 0; p < nprocs; p++ {
-			go func(p int) {
-				for i := p; i < d.cells.len(); i += nprocs {
+			go func() {
+				for i := range cellIndexChan2 {
 					c := (*d.cells)[i]
 					if len(c.EmisFlux) == 0 {
 						if err := c.setEmissionsFlux(emis, m); err != nil { // This needs to be called after setNeighbors.
@@ -530,8 +538,12 @@ func (d *InMAP) addCells(config *VarGridConfig, newCellIndices [][][2]int,
 					}
 				}
 				errChan <- nil
-			}(p)
+			}()
 		}
+		for i := 0; i < d.cells.len(); i++ {
+			cellIndexChan2 <- i
+		}
+		close(cellIndexChan2)
 		for p := 0; p < nprocs; p++ {
 			if err := <-errChan; err != nil {
 				return err
@@ -720,7 +732,18 @@ func (config *VarGridConfig) createCell(data *CTMData, pop *Population, popIndic
 // polygon, the mortality rate in each cell is equal to the population-weighted
 // average of: the area-weighted average of mortality rates within each population polygon.
 func (c *Cell) loadPopMortalityRate(config *VarGridConfig, mortRates *MortalityRates, mortIndices MortIndices, pop *Population, popIndices PopIndices) {
-	// First, intersect each grid cell with population polygons
+	// First, prepare mortality rates for later processing.
+	cellMortI := mortRates.tree.SearchIntersect(c.Bounds())
+	cellMort := make([]*mortality, len(cellMortI))
+	for i, mI := range cellMortI {
+		m := mI.(*mortality)
+		cellMort[i] = &mortality{
+			Polygonal: c.Polygonal.Intersection(m.Polygonal),
+			MortData:  m.MortData,
+		}
+	}
+
+	// Second, intersect each grid cell with population polygons
 	for _, pInterface := range pop.tree.SearchIntersect(c.Bounds()) {
 		p := pInterface.(*population)
 		pIntersection := c.Intersection(p)
@@ -742,10 +765,9 @@ func (c *Cell) loadPopMortalityRate(config *VarGridConfig, mortRates *MortalityR
 			c.AboveDensityThreshold = true
 		}
 		var mAreaTotal float64
-		// Second, intersect each intersection from first step with
+		// Third, intersect each intersection from first step with
 		// mortality rate polygons.
-		for _, mInterface := range mortRates.tree.SearchIntersect(pIntersection.Bounds()) {
-			m := mInterface.(*mortality)
+		for _, m := range cellMort {
 			mIntersection := pIntersection.Intersection(m)
 			mAreaIntersect := mIntersection.Area()
 			if mAreaIntersect == 0 {
@@ -1058,13 +1080,10 @@ func (config *VarGridConfig) makeCTMgrid(nlayers int) *rtree.Rtree {
 				x1 := config.ctmGridXo + config.ctmGridDx*float64(ix+1)
 				y0 := config.ctmGridYo + config.ctmGridDy*float64(iy)
 				y1 := config.ctmGridYo + config.ctmGridDy*float64(iy+1)
-				cell.Polygonal = geom.Polygon{[]geom.Point{
-					{X: x0, Y: y0},
-					{X: x1, Y: y0},
-					{X: x1, Y: y1},
-					{X: x0, Y: y1},
-					{X: x0, Y: y0},
-				}}
+				cell.Polygonal = &geom.Bounds{
+					Min: geom.Point{X: x0, Y: y0},
+					Max: geom.Point{X: x1, Y: y1},
+				}
 				cell.Row = iy
 				cell.Col = ix
 				cell.layer = k
