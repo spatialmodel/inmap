@@ -55,8 +55,8 @@ func TestMaybeDownloadLocal2(t *testing.T) {
 }
 
 func TestMaybeDownloadRemoteFail(t *testing.T) {
-	if k := maybeDownload(context.Background(), "http://blah/test/", helperLog(t)); k != "http://blah/test/" {
-		t.Error("Expected http://blah/test/, got ", k)
+	if k := maybeDownload(context.Background(), "httpz://blah/test/", helperLog(t)); k != "httpz://blah/test/" {
+		t.Error("Expected httpz://blah/test/, got ", k)
 	}
 }
 

@@ -23,6 +23,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/cloud"
 )
 
@@ -69,6 +70,8 @@ func TestSRPredict(t *testing.T) {
 	cfg.Set("OutputVariables", `{"TotalPM25": "PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA",
 "TotalPopD": "(exp(log(1.078)/10 * TotalPM25) - 1) * TotalPop * allcause / 100000"}`)
 	cfg.Set("EmissionsShapefiles", []string{"../cmd/inmap/testdata/testEmisSR.shp"})
+	defer os.Remove(os.ExpandEnv("$INMAP_ROOT_DIR/cmd/inmap/testdata/output_SRPredict.log"))
+	defer inmap.DeleteShapefile(os.ExpandEnv("$INMAP_ROOT_DIR/cmd/inmap/testdata/output_SRPredict.shp"))
 
 	cfg.Set("config", "../cmd/inmap/configExample.toml")
 	cfg.Root.SetArgs([]string{"srpredict"})
@@ -82,6 +85,8 @@ func TestSRPredictAboveTop(t *testing.T) {
 	cfg.Set("config", "../cmd/inmap/configExample.toml")
 	cfg.Set("SR.OutputFile", "../cmd/inmap/testdata/testSR_golden.ncf")
 	cfg.Set("OutputFile", "../cmd/inmap/testdata/output_SRPredict.shp")
+	defer os.Remove(os.ExpandEnv("$INMAP_ROOT_DIR/cmd/inmap/testdata/output_SRPredict.log"))
+	defer inmap.DeleteShapefile(os.ExpandEnv("$INMAP_ROOT_DIR/cmd/inmap/testdata/output_SRPredict.shp"))
 	cfg.Set("OutputVariables", `{"PNH4": "pNH4",
 	"PNO3": "pNO3",
 	"PSO4": "pSO4",
