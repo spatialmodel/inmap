@@ -49,8 +49,8 @@ func TestInMAPStaticCreateGrid(t *testing.T) {
 	os.Setenv("InMAPRunType", "static")
 	cfg.Set("config", "../cmd/inmap/configExample.toml")
 	cfg.Root.SetArgs([]string{"run", "steady"})
-	defer os.Remove("inmap_output.log")
-	defer inmap.DeleteShapefile(cfg.GetString("OutputFile"))
+	defer os.Remove(os.ExpandEnv("$INMAP_ROOT_DIR/cmd/inmap/testdata/output_static.log"))
+	defer inmap.DeleteShapefile(os.ExpandEnv("$INMAP_ROOT_DIR/cmd/inmap/testdata/output_static.shp"))
 	if err := cfg.Root.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -63,8 +63,8 @@ func TestInMAPStaticLoadGrid(t *testing.T) {
 	os.Setenv("InMAPRunType", "staticLoadGrid")
 	cfg.Set("config", "../cmd/inmap/configExample.toml")
 	cfg.Root.SetArgs([]string{"run", "steady"})
-	defer os.Remove("inmap_output.log")
-	defer inmap.DeleteShapefile(cfg.GetString("OutputFile"))
+	defer os.Remove(os.ExpandEnv("$INMAP_ROOT_DIR/cmd/inmap/testdata/output_staticLoadGrid.log"))
+	defer inmap.DeleteShapefile(os.ExpandEnv("$INMAP_ROOT_DIR/cmd/inmap/testdata/output_staticLoadGrid.shp"))
 	if err := cfg.Root.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -77,8 +77,8 @@ func TestInMAPDynamic(t *testing.T) {
 	os.Setenv("InMAPRunType", "dynamic")
 	cfg.Set("config", "../cmd/inmap/configExample.toml")
 	cfg.Root.SetArgs([]string{"run", "steady"})
-	defer os.Remove("inmap_output.log")
-	defer inmap.DeleteShapefile(cfg.GetString("OutputFile"))
+	defer os.Remove(os.ExpandEnv("$INMAP_ROOT_DIR/cmd/inmap/testdata/output_dynamic.log"))
+	defer inmap.DeleteShapefile(os.ExpandEnv("$INMAP_ROOT_DIR/cmd/inmap/testdata/output_dynamic.shp"))
 	if err := cfg.Root.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -96,11 +96,9 @@ func TestInMAPDynamicRemote_http(t *testing.T) {
 
 	cfg.Set("static", false)
 	cfg.Set("createGrid", false) // this isn't used for the dynamic grid
-	os.Setenv("InMAPRunType", "dynamic")
+	os.Setenv("InMAPRunType", "dynamichttp")
 	cfg.Set("config", "../cmd/inmap/configExampleRemote.toml")
 	cfg.Root.SetArgs([]string{"run", "steady"})
-	defer os.Remove("inmap_output.log")
-	defer inmap.DeleteShapefile(cfg.GetString("OutputFile"))
 	if err := cfg.Root.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -116,11 +114,9 @@ func TestInMAPDynamicRemote_bucket(t *testing.T) {
 
 	cfg.Set("static", false)
 	cfg.Set("createGrid", false) // this isn't used for the dynamic grid
-	os.Setenv("InMAPRunType", "dynamic")
+	os.Setenv("InMAPRunType", "dynamicbucket")
 	cfg.Set("config", "../cmd/inmap/configExampleRemote.toml")
 	cfg.Root.SetArgs([]string{"run", "steady"})
-	defer os.Remove("inmap_output.log")
-	defer inmap.DeleteShapefile(cfg.GetString("OutputFile"))
 	if err := cfg.Root.Execute(); err != nil {
 		t.Fatal(err)
 	}

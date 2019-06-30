@@ -118,6 +118,9 @@ func InitializeConfig() *Cfg {
 	choose a run mode. (Currently 'steady' is the only available run mode.)`,
 		DisableAutoGenTag: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			if err := setConfig(cfg); err != nil {
+				return err
+			}
 			outputFile, err := checkOutputFile(cfg.GetString("OutputFile"))
 			if err != nil {
 				return err
