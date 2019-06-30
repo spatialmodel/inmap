@@ -152,6 +152,10 @@ func ReadEmissionShapefiles(gridSR *proj.SR, units string, c chan string, shapef
 				break
 			}
 
+			if e.Geom == nil {
+				continue
+			}
+
 			e.Geom, err = e.Transform(trans)
 			if err != nil {
 				return nil, fmt.Errorf("there was a problem spatially reprojecting in "+
