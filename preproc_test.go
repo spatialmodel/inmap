@@ -19,7 +19,6 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package inmap
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
 	"io"
@@ -105,7 +104,7 @@ func TestGEOSChemToInMAP(t *testing.T) {
 		"cmd/inmap/testdata/preproc/GEOSFP.[DATE].A3mstE.2x25.nc",
 		"",
 		"cmd/inmap/testdata/preproc/gc_output.[DATE].nc",
-		"cmd/inmap/testdata/preproc/vegtype.global.txt",
+		"cmd/inmap/testdata/preproc/geoschem-new/Olson_2001_Land_Map.025x025.generic.nc",
 		"20130102",
 		"20130104",
 		true,
@@ -152,7 +151,7 @@ func BenchmarkGEOSChemToInMAP(b *testing.B) {
 		"cmd/inmap/testdata/preproc/GEOSFP.[DATE].A3mstE.2x25.nc",
 		"",
 		"cmd/inmap/testdata/preproc/gc_output.[DATE].nc",
-		"cmd/inmap/testdata/preproc/vegtype.global.txt",
+		"cmd/inmap/testdata/preproc/geoschem-new/Olson_2001_Land_Map.025x025.generic.nc",
 		"20130102",
 		"20130104",
 		true,
@@ -181,7 +180,7 @@ func TestGEOSChemToInMAP_new(t *testing.T) {
 		"cmd/inmap/testdata/preproc/geoschem-new/MERRA2.[DATE].A3mstE.2x25.nc3",
 		"cmd/inmap/testdata/preproc/geoschem-new/GEOSFP.ApBp.nc",
 		"cmd/inmap/testdata/preproc/geoschem-new/ts.[DATE].nc",
-		"cmd/inmap/testdata/preproc/geoschem-new/vegtype.global",
+		"cmd/inmap/testdata/preproc/geoschem-new/Olson_2001_Land_Map.025x025.generic.nc",
 		"20160102",
 		"20160103",
 		false,
@@ -476,114 +475,6 @@ func arrayCompare(have, want *sparse.DenseArray, tolerance float64, name string,
 		}
 		if math.Abs(havev-wantv)/math.Abs(havev+wantv)*2 > tolerance {
 			t.Errorf("%s, element %d: want %g but have %g", name, i, wantv, havev)
-		}
-	}
-}
-
-func TestReadVegTypeGlobal(t *testing.T) {
-	// vegtype.global example data from
-	// http://wiki.seas.harvard.edu/geos-chem/index.php/Olson_land_map#Structure_of_the_vegtype.global_file
-	const data = `  20  13   1   01000
-  21  13   1   01000
-  22  13   5   0  41  24  31  67 811  25  62  76  26
-  23  13   4  41  24  52  31 137 175 650  38
-  24  13   5  52   8   0  41  31 589  62 298  25  26
-`
-
-	b := bytes.NewBufferString(data)
-	result, err := readVegTypeGlobal(b, 13, 24)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	want := []struct {
-		index []int
-		val   float64
-	}{
-		{
-			index: []int{0, 12, 19},
-			val:   1,
-		},
-		{
-			index: []int{0, 12, 20},
-			val:   1,
-		},
-		{
-			index: []int{0, 12, 21},
-			val:   0.811,
-		},
-		{
-			index: []int{41, 12, 21},
-			val:   0.025,
-		},
-		{
-			index: []int{24, 12, 21},
-			val:   0.062,
-		},
-		{
-			index: []int{31, 12, 21},
-			val:   0.076,
-		},
-		{
-			index: []int{67, 12, 21},
-			val:   0.026,
-		},
-		{
-			index: []int{41, 12, 22},
-			val:   0.137,
-		},
-		{
-			index: []int{24, 12, 22},
-			val:   0.175,
-		},
-		{
-			index: []int{52, 12, 22},
-			val:   0.650,
-		},
-		{
-			index: []int{31, 12, 22},
-			val:   0.038,
-		},
-		{
-			index: []int{52, 12, 23},
-			val:   0.589,
-		},
-		{
-			index: []int{8, 12, 23},
-			val:   0.062,
-		},
-		{
-			index: []int{0, 12, 23},
-			val:   0.298,
-		},
-		{
-			index: []int{41, 12, 23},
-			val:   0.025,
-		},
-		{
-			index: []int{31, 12, 23},
-			val:   0.026,
-		},
-	}
-	for i, w := range want {
-		v := result.Get(w.index...)
-		if math.Abs(v-w.val)/(v+w.val)*2 > 1.0e-8 {
-			t.Errorf("%d: want %g but have %g", i, w.val, v)
-		}
-	}
-	lu := largestLandUse(result)
-	for j := 0; j < lu.Shape[0]; j++ {
-		for i := 0; i < lu.Shape[1]; i++ {
-			v := lu.Get(j, i)
-			if (j == 12 && i == 23) || (j == 12 && i == 22) {
-				if v != 52 {
-					t.Errorf("largestLandUse j=%d, i=%d: want 52 but have %g", j, i, v)
-				}
-			} else {
-				if v != 0 {
-					t.Errorf("largestLandUse j=%d, i=%d: want 0 but have %g", j, i, v)
-				}
-			}
 		}
 	}
 }

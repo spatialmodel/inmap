@@ -19,7 +19,6 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package inmap
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"math"
@@ -65,14 +64,13 @@ type GEOSChem struct {
 
 	xo, yo, dx, dy float64
 
-	geosA1        string
-	geosA3Cld     string
-	geosA3Dyn     string
-	geosI3        string
-	geosA3MstE    string
-	geosApBp      string
-	geosChem      string
-	vegTypeGlobal string
+	geosA1     string
+	geosA3Cld  string
+	geosA3Dyn  string
+	geosI3     string
+	geosA3MstE string
+	geosApBp   string
+	geosChem   string
 
 	// If dash is '-', GEOS-Chem chemical variable names are assumed to be in the
 	// form 'IJ-AVG-S__xxx'. If dash is '_', they are assumed to be in the form
@@ -111,9 +109,9 @@ type GEOSChem struct {
 // GEOSChemOut is the location of GEOS-Chem output files.
 // [DATE] should be used as a wild card for the simulation date.
 //
-// VegTypeGlobal is the location of the GEOS-Chem vegtype.global file,
+// OlsonLandMap is the location of the GEOS-Chem Olson land use map file,
 // which is described here:
-// http://wiki.seas.harvard.edu/geos-chem/index.php/Olson_land_map#Structure_of_the_vegtype.global_file
+// http://wiki.seas.harvard.edu/geos-chem/index.php/Olson_land_map
 //
 // startDate and endDate are the dates of the beginning and end of the
 // simulation, respectively, in the format "YYYYMMDD".
@@ -133,7 +131,7 @@ type GEOSChem struct {
 //
 // If noChemHour is true, then the GEOS-Chem output files will be
 // assumed to not contain a time dimension.
-func NewGEOSChem(GEOSA1, GEOSA3Cld, GEOSA3Dyn, GEOSI3, GEOSA3MstE, GEOSApBp, GEOSChemOut, VegTypeGlobal, startDate, endDate string, dash bool, chemRecordStr, chemFileStr string, noChemHour bool, msgChan chan string) (*GEOSChem, error) {
+func NewGEOSChem(GEOSA1, GEOSA3Cld, GEOSA3Dyn, GEOSI3, GEOSA3MstE, GEOSApBp, GEOSChemOut, OlsonLandMap, startDate, endDate string, dash bool, chemRecordStr, chemFileStr string, noChemHour bool, msgChan chan string) (*GEOSChem, error) {
 	var d string
 	if dash {
 		d = "-"
@@ -252,14 +250,13 @@ func NewGEOSChem(GEOSA1, GEOSA3Cld, GEOSA3Dyn, GEOSI3, GEOSA3MstE, GEOSApBp, GEO
 			"IJ" + d + "AVG" + d + "S__SALA":   ppbvToUgKg(31.4) * 1.86,
 		},
 
-		geosA1:        GEOSA1,
-		geosA3Cld:     GEOSA3Cld,
-		geosA3Dyn:     GEOSA3Dyn,
-		geosI3:        GEOSI3,
-		geosA3MstE:    GEOSA3MstE,
-		geosApBp:      GEOSApBp,
-		geosChem:      GEOSChemOut,
-		vegTypeGlobal: VegTypeGlobal,
+		geosA1:     GEOSA1,
+		geosA3Cld:  GEOSA3Cld,
+		geosA3Dyn:  GEOSA3Dyn,
+		geosI3:     GEOSI3,
+		geosA3MstE: GEOSA3MstE,
+		geosApBp:   GEOSApBp,
+		geosChem:   GEOSChemOut,
 
 		dash:       d,
 		msgChan:    msgChan,
@@ -301,10 +298,6 @@ func NewGEOSChem(GEOSA1, GEOSA3Cld, GEOSA3Dyn, GEOSI3, GEOSA3MstE, GEOSApBp, GEO
 		return nil, fmt.Errorf("inmap: GEOS-Chem preprocessor fileDelta: %v", err)
 	}
 
-	file, err := os.Open(VegTypeGlobal)
-	if err != nil {
-		return nil, err
-	}
 	gc.nz, err = gc.Nz()
 	if err != nil {
 		return nil, err
@@ -334,11 +327,19 @@ func NewGEOSChem(GEOSA1, GEOSA3Cld, GEOSA3Dyn, GEOSI3, GEOSA3MstE, GEOSApBp, GEO
 		return nil, err
 	}
 
-	landUse, err := readVegTypeGlobal(file, gc.ny, gc.nx)
+	file, err := os.Open(OlsonLandMap)
 	if err != nil {
 		return nil, err
 	}
-	gc.landUse = largestLandUse(landUse)
+	defer file.Close()
+	cfile, err := cdf.Open(file)
+	if err != nil {
+		return nil, fmt.Errorf("inmap: Olson land use file: %v", err)
+	}
+	gc.landUse, err = gc.largestLandUse(cfile)
+	if err != nil {
+		return nil, err
+	}
 
 	return &gc, nil
 }
@@ -849,6 +850,7 @@ func (gc *GEOSChem) Z0() NextData { return gc.readA1("Z0M") }
 // returning land use categories as
 // specified in github.com/ctessum/atmos/seinfeld.
 func (gc *GEOSChem) SeinfeldLandUse() NextData {
+	// TODO (CT): Account for the fact that a single grid cell can have multiple land uses.
 	snowFunc := gc.readA1("FRSNO") // Fraction land covered by snow
 	return geosChemSeinfeldLandUse(snowFunc, gc.landUse)
 }
@@ -958,6 +960,7 @@ var geosChemSeinfeld = []seinfeld.LandUseCategory{
 // returning land use categories as
 // specified in github.com/ctessum/atmos/wesely1989.
 func (gc *GEOSChem) WeselyLandUse() NextData {
+	// TODO (CT): Account for the fact that a single grid cell can have multiple land uses.
 	snowFunc := gc.readA1("FRSNO") // Fraction land covered by snow
 	return geosChemSeinfeldLandUse(snowFunc, gc.landUse)
 }
@@ -1260,95 +1263,4 @@ func (gc *GEOSChem) largestLandUse(olsonLandMapFile *cdf.File) (*sparse.DenseArr
 		}
 	}
 	return out, nil
-}
-
-// readVegTypeGlobal reads in the GEOS-Chem vegtype.global file described here:
-// http://wiki.seas.harvard.edu/geos-chem/index.php/Olson_land_map#Structure_of_the_vegtype.global_file
-// The return value is an array with 74 land uses and the number of rows
-// and columns are the specified ny and nx, respectively.
-// The values in the array are the fraction of each land use in each
-// grid cell.
-// The vegtype.global file may be downloadable from
-// ftp://ftp.as.harvard.edu/gcgrid/data/GEOS_2x2.5/leaf_area_index_200412/.
-func readVegTypeGlobal(file io.Reader, ny, nx int) (*sparse.SparseArray, error) {
-	r := bufio.NewReader(file)
-	o := sparse.ZerosSparse(74, ny, nx)
-	var nLine int
-	for {
-		line, err := r.ReadString('\n')
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return nil, fmt.Errorf("inmap preprocessor: reading GEOS-Chem vegtype.global: %v", err)
-		}
-		i, err := vegTypeFieldInt(line, 0)
-		if err != nil {
-			return nil, fmt.Errorf("vegtype file line %d parsing column: %v", nLine, err)
-		}
-		j, err := vegTypeFieldInt(line, 1)
-		if err != nil {
-			return nil, fmt.Errorf("vegtype file line %d parsing row: %v", nLine, err)
-		}
-		// n is the number of land uses in the grid cell
-		n, err := vegTypeFieldInt(line, 2)
-		if err != nil {
-			return nil, fmt.Errorf("vegtype file line %d parsing n: %v", nLine, err)
-		}
-		for ilu := 0; ilu < n; ilu++ {
-			luIndex, err := vegTypeFieldInt(line, 3+ilu)
-			if err != nil {
-				return nil, fmt.Errorf("vegtype file line %d parsing index %d: %v", nLine, ilu, err)
-			}
-			luFrac, err := vegTypeFieldMilFloat(line, 3+n+ilu)
-			if err != nil {
-				return nil, fmt.Errorf("vegtype file line %d parsing fraction %d: %v", nLine, ilu, err)
-			}
-			o.Set(luFrac, luIndex, j-1, i-1)
-		}
-		nLine++
-	}
-	return o, nil
-}
-
-func vegTypeFieldInt(line string, index int) (int, error) {
-	start := index * 4
-	end := (index + 1) * 4
-	i64, err := strconv.ParseInt(strings.TrimSpace(line[start:end]), 10, 64)
-	if err != nil {
-		return -1, fmt.Errorf("inmap preprocessor: reading GEOS-Chem vegtype.global: %v", err)
-	}
-	return int(i64), nil
-}
-
-func vegTypeFieldMilFloat(line string, index int) (float64, error) {
-	start := index * 4
-	end := (index + 1) * 4
-	f, err := strconv.ParseFloat(strings.TrimSpace(line[start:end]), 64)
-	if err != nil {
-		return -1, fmt.Errorf("inmap preprocessor: reading GEOS-Chem vegtype.global: %v", err)
-	}
-	return f / 1000, nil
-}
-
-// largestLandUse returns the land use index with the largest area
-// in each grid cell when given an array land use fractions with the
-// shape [land use category, y, x]
-func largestLandUse(landUse *sparse.SparseArray) *sparse.DenseArray {
-	o := sparse.ZerosDense(landUse.Shape[1], landUse.Shape[2])
-	for j := 0; j < landUse.Shape[1]; j++ {
-		for i := 0; i < landUse.Shape[2]; i++ {
-			var maxFrac float64
-			var maxCat int
-			for k := 0; k < landUse.Shape[0]; k++ {
-				f := landUse.Get(k, j, i)
-				if f > maxFrac {
-					maxFrac = f
-					maxCat = k
-				}
-			}
-			o.Set(float64(maxCat), j, i)
-		}
-	}
-	return o
 }

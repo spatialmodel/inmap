@@ -224,7 +224,7 @@ func InitializeConfig() *Cfg {
 				maybeDownload(ctx, os.ExpandEnv(cfg.GetString("Preproc.GEOSChem.GEOSA3MstE")), outChan),
 				os.ExpandEnv(cfg.GetString("Preproc.GEOSChem.GEOSApBp")),
 				maybeDownload(ctx, os.ExpandEnv(cfg.GetString("Preproc.GEOSChem.GEOSChem")), outChan),
-				maybeDownload(ctx, os.ExpandEnv(cfg.GetString("Preproc.GEOSChem.VegTypeGlobal")), outChan),
+				maybeDownload(ctx, os.ExpandEnv(cfg.GetString("Preproc.GEOSChem.OlsonLandMap")), outChan),
 				maybeDownload(ctx, os.ExpandEnv(cfg.GetString("InMAPData")), outChan),
 				cfg.GetFloat64("Preproc.CtmGridXo"),
 				cfg.GetFloat64("Preproc.CtmGridYo"),
@@ -904,12 +904,12 @@ func InitializeConfig() *Cfg {
 			flagsets:   []*pflag.FlagSet{cfg.preprocCmd.Flags()},
 		},
 		{
-			name: "Preproc.GEOSChem.VegTypeGlobal",
+			name: "Preproc.GEOSChem.OlsonLandMap",
 			usage: `
-              Preproc.GEOSChem.VegTypeGlobal is the location of the GEOS-Chem vegtype.global file,
+              Preproc.GEOSChem.OlsonLandMap is the location of the GEOS-Chem Olson land use map file,
               which is described here:
-              http://wiki.seas.harvard.edu/geos-chem/index.php/Olson_land_map#Structure_of_the_vegtype.global_file`,
-			defaultVal:  "${INMAP_ROOT_DIR}/cmd/inmap/testdata/preproc/vegtype.global.txt",
+              http://wiki.seas.harvard.edu/geos-chem/index.php/Olson_land_map`,
+			defaultVal:  "${INMAP_ROOT_DIR}/cmd/inmap/testdata/preproc/geoschem-new/Olson_2001_Land_Map.025x025.generic.nc",
 			isInputFile: true,
 			flagsets:    []*pflag.FlagSet{cfg.preprocCmd.Flags()},
 		},
