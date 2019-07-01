@@ -338,7 +338,6 @@ func BenchmarkOutput(b *testing.B) {
 			"NPctRatio":  "NPctWNoLat / NPctOther",
 			"TotalPopD":  "(exp(log(1.078)/10 * TotalPM25) - 1) * TotalPop * MortalityRate / 100000",
 			"TotalPM25":  "TotalPM25",
-			"PM25Emiss":  "PM25Emissions",
 			"BasePM25":   "BaselineTotalPM25",
 			"WindSpeed":  "WindSpeed"},
 			nil, m)
@@ -392,7 +391,6 @@ func TestOutput(t *testing.T) {
 		"NPctRatio":  "NPctWNoLat / NPctOther",
 		"TotalPopD":  "(exp(log(1.078)/10 * TotalPM25) - 1) * TotalPop * AllCause / 100000",
 		"TotalPM25":  "TotalPM25",
-		"PM25Emiss":  "PM25Emissions",
 		"BasePM25":   "BaselineTotalPM25",
 		"WindSpeed":  "WindSpeed"},
 		nil, m)
@@ -422,7 +420,6 @@ func TestOutput(t *testing.T) {
 	}
 	type outData struct {
 		BaselineTotalPM25 float64 `shp:"BasePM25"`
-		PM25Emissions     float64 `shp:"PM25Emiss"`
 		TotalPM25         float64
 		TotalPop          float64
 		WhiteNoLat        float64
@@ -451,7 +448,6 @@ func TestOutput(t *testing.T) {
 	want := []outData{
 		{
 			BaselineTotalPM25: 4.90770054,
-			PM25Emissions:     0.00112376243, //E / d.Cells[0].Volume,
 			TotalPop:          100000.,
 			WhiteNoLat:        50000.,
 			NPctWNoLat:        0.5,

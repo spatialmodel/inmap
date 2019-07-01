@@ -67,7 +67,6 @@ SOA = "SOA"
 SOx = "SOx"
 NH3 = "NH3"
 NOx = "NOx"
-PM25Emiss = "PM25Emissions"
 BasePM25 = "BaselineTotalPM25"
 WindSpeed = "WindSpeed"
 
