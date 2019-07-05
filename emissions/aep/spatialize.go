@@ -22,7 +22,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"encoding/csv"
 	"encoding/gob"
 	"fmt"
 	"io"
@@ -30,7 +29,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -376,170 +375,16 @@ func (s *SrgSpecs) GetByCode(region Country, code string) (*SrgSpec, error) {
 	return nil, fmt.Errorf("can't find surrogate for region=%s, code=%s", region, code)
 }
 
-// SrgSpec holds spatial surrogate specification information.
-type SrgSpec struct {
-	Region          Country
-	Name            string
-	Code            string
-	DATASHAPEFILE   string
-	DATAATTRIBUTE   string
-	WEIGHTSHAPEFILE string
-	Details         string
-
-	// BackupSurrogateNames specifies names of surrogates to use if this
-	// one doesn't have data for the desired location.
-	BackupSurrogateNames []string
-
-	// WeightColumns specify the fields of the surogate shapefile that
-	// should be used to weight the output locations.
-	WeightColumns []string
-
-	// WeightFactors are factors by which each of the WeightColumns should
-	// be multiplied.
-	WeightFactors []float64
-
-	// FilterFunction specifies which rows in the surrogate shapefile should
-	// be used to create this surrogate.
-	FilterFunction *SurrogateFilter
-
-	// MergeNames specify names of other surrogates that should be combined
-	// to create this surrogate.
-	MergeNames []string
-	// MergeMultipliers specifies multipliers associated with the surrogates
-	// in MergeNames.
-	MergeMultipliers []float64
-}
-
-const none = "NONE"
-
-// ReadSrgSpec reads a SMOKE formatted spatial surrogate specification file.
-// Results are returned as a map of surrogate specifications as indexed by
-// their unique ID, which is Region+SurrogateCode. shapefileDir specifies the
-// location of all the required shapefiles, and checkShapeFiles specifies whether
-// to check if the required shapefiles actually exist. If checkShapeFiles is
-// true, then it is okay for the shapefiles to be in any subdirectory of
-// shapefileDir, otherwise all shapefiles must be in shapefileDir itself and
-// not a subdirectory.
-func ReadSrgSpec(fid io.Reader, shapefileDir string, checkShapefiles bool) (*SrgSpecs, error) {
-	srgs := NewSrgSpecs()
-	reader := csv.NewReader(fid)
-	reader.Comment = '#'
-	reader.TrailingComma = true
-	records, err := reader.ReadAll()
-	if err != nil {
-		return nil, fmt.Errorf("in ReadSrgSpec: %v", err)
+// Status returns the status of the spatial surrogates in s.
+func (s *SrgSpecs) Status() []Status {
+	var o statuses
+	for _, ss := range s.byName {
+		for _, sss := range ss {
+			o = append(o, sss.Status())
+		}
 	}
-	for i := 1; i < len(records); i++ {
-		record := records[i]
-		srg := new(SrgSpec)
-		srg.Region, err = countryFromName(record[0])
-		if err != nil {
-			return nil, fmt.Errorf("in ReadSrgSpec: %v", err)
-		}
-		srg.Name = strings.TrimSpace(record[1])
-		srg.Code = record[2]
-		srg.DATASHAPEFILE = record[3]
-		srg.DATAATTRIBUTE = strings.TrimSpace(record[4])
-		srg.WEIGHTSHAPEFILE = record[5]
-		WEIGHTATTRIBUTE := record[6]
-		WEIGHTFUNCTION := record[7]
-		FILTERFUNCTION := record[8]
-		MERGEFUNCTION := record[9]
-		for i := 10; i <= 12; i++ {
-			if len(record[i]) != 0 {
-				srg.BackupSurrogateNames = append(srg.BackupSurrogateNames, record[i])
-			}
-		}
-		srg.Details = record[13]
-
-		// Parse weight function
-		if WEIGHTATTRIBUTE != none && WEIGHTATTRIBUTE != "" {
-			srg.WeightColumns = append(srg.WeightColumns,
-				strings.TrimSpace(WEIGHTATTRIBUTE))
-			srg.WeightFactors = append(srg.WeightFactors, 1.)
-		}
-		if WEIGHTFUNCTION != "" {
-			weightfunction := strings.Split(WEIGHTFUNCTION, "+")
-			for _, wf := range weightfunction {
-				mulFunc := strings.Split(wf, "*")
-				if len(mulFunc) == 1 {
-					srg.WeightColumns = append(srg.WeightColumns,
-						strings.TrimSpace(mulFunc[0]))
-					srg.WeightFactors = append(srg.WeightFactors, 1.)
-				} else if len(mulFunc) == 2 {
-					v, err2 := strconv.ParseFloat(mulFunc[0], 64)
-					if err2 != nil {
-						return nil, fmt.Errorf("srgspec weight function: %v", err2)
-					}
-					srg.WeightColumns = append(srg.WeightColumns,
-						strings.TrimSpace(mulFunc[1]))
-					srg.WeightFactors = append(srg.WeightFactors, v)
-				} else {
-					return nil, fmt.Errorf("invalid value %s in srgspec "+
-						"weighting function", wf)
-				}
-			}
-		}
-
-		// Parse filter function
-		srg.FilterFunction = ParseSurrogateFilter(FILTERFUNCTION)
-
-		// Parse merge function
-		if MERGEFUNCTION != none && MERGEFUNCTION != "" {
-			s := strings.Split(MERGEFUNCTION, "+")
-			for _, s2 := range s {
-				s3 := strings.Split(s2, "*")
-				srg.MergeNames = append(srg.MergeNames, strings.TrimSpace(s3[1]))
-				val, err2 := strconv.ParseFloat(strings.TrimSpace(s3[0]), 64)
-				if err2 != nil {
-					return nil, err2
-				}
-				srg.MergeMultipliers = append(srg.MergeMultipliers, val)
-			}
-		}
-		// Set up the shapefile paths and
-		// optionally check to make sure the shapefiles exist.
-		if checkShapefiles {
-			if srg.DATASHAPEFILE != "" {
-				srg.DATASHAPEFILE, err = findFile(shapefileDir, srg.DATASHAPEFILE+".shp")
-				if err != nil {
-					return nil, err
-				}
-			}
-			if srg.WEIGHTSHAPEFILE != "" {
-				srg.WEIGHTSHAPEFILE, err = findFile(shapefileDir, srg.WEIGHTSHAPEFILE+".shp")
-				if err != nil {
-					return nil, err
-				}
-			}
-		} else {
-			if srg.DATASHAPEFILE != "" {
-				srg.DATASHAPEFILE = filepath.Join(shapefileDir, srg.DATASHAPEFILE+".shp")
-			}
-			if srg.WEIGHTSHAPEFILE != "" {
-				srg.WEIGHTSHAPEFILE = filepath.Join(shapefileDir, srg.WEIGHTSHAPEFILE+".shp")
-			}
-		}
-
-		if checkShapefiles {
-			if srg.DATASHAPEFILE != "" {
-				shpf, err := shp.NewDecoder(srg.DATASHAPEFILE)
-				if err != nil {
-					return nil, err
-				}
-				shpf.Close()
-			}
-			if srg.WEIGHTSHAPEFILE != "" {
-				shpf, err := shp.NewDecoder(srg.WEIGHTSHAPEFILE)
-				if err != nil {
-					return nil, err
-				}
-				shpf.Close()
-			}
-		}
-		srgs.Add(srg)
-	}
-	return srgs, nil
+	sort.Sort(statuses(o))
+	return o
 }
 
 // findFile finds a file in dir or any of its subdirectories.
