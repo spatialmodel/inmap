@@ -172,10 +172,10 @@ func ParseSurrogateFilter(filterFunction string) *SurrogateFilter {
 }
 
 // createMerged creates a surrogate by creating and merging other surrogates.
-func (sp *SpatialProcessor) createMerged(srg *SrgSpec, gridData *GridDef, loc *Location) (*GriddedSrgData, error) {
-	mrgSrgs := make([]*GriddedSrgData, len(srg.MergeNames))
-	for i, mrgName := range srg.MergeNames {
-		newSrg, err := sp.SrgSpecs.GetByName(srg.Region, mrgName)
+func (sp *SpatialProcessor) createMerged(srg SrgSpec, gridData *GridDef, loc *Location) (*GriddedSrgData, error) {
+	mrgSrgs := make([]*GriddedSrgData, len(srg.mergeNames()))
+	for i, mrgName := range srg.mergeNames() {
+		newSrg, err := sp.SrgSpecs.GetByName(srg.region(), mrgName)
 		if err != nil {
 			return nil, err
 		}
@@ -187,19 +187,19 @@ func (sp *SpatialProcessor) createMerged(srg *SrgSpec, gridData *GridDef, loc *L
 		}
 		mrgSrgs[i] = data.(*GriddedSrgData)
 	}
-	return mergeSrgs(mrgSrgs, srg.MergeMultipliers), nil
+	return mergeSrgs(mrgSrgs, srg.mergeMultipliers()), nil
 }
 
 // srgGrid holds a surrogate specification and a grid definition.
 type srgGrid struct {
-	srg      *SrgSpec
+	srg      SrgSpec
 	gridData *GridDef
 	loc      *Location
 }
 
 // key returns a unique key for this surrogate request.
 func (s *srgGrid) key() string {
-	return fmt.Sprintf("%s_%s_%s_%s", s.srg.Region, s.srg.Code, s.gridData.Name, s.loc.Key())
+	return fmt.Sprintf("%s_%s_%s_%s", s.srg.region(), s.srg.code(), s.gridData.Name, s.loc.Key())
 }
 
 // createSurrogate creates a new gridding surrogate based on a
@@ -211,7 +211,7 @@ func (sp *SpatialProcessor) createSurrogate(_ context.Context, inData interface{
 	if in.loc == nil {
 		return nil, fmt.Errorf("aep.SpatialProcessor.createSurrogate: missing location: %+v", gridData)
 	}
-	if len(srg.MergeNames) != 0 {
+	if len(srg.mergeNames()) != 0 {
 		return sp.createMerged(srg, gridData, in.loc)
 	}
 

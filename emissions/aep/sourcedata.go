@@ -116,14 +116,14 @@ type sourceDataLocator struct {
 	gr *GridRef
 	sp *SrgSpecs
 
-	inputShapes map[*SrgSpec]map[string]*Location
+	inputShapes map[SrgSpec]map[string]*Location
 }
 
 // newSourceDataLocator initializes a new SourceData locator.
 func newSourceDataLocator(gr *GridRef, sp *SrgSpecs) *sourceDataLocator {
 	return &sourceDataLocator{
 		gr: gr, sp: sp,
-		inputShapes: make(map[*SrgSpec]map[string]*Location),
+		inputShapes: make(map[SrgSpec]map[string]*Location),
 	}
 }
 
@@ -141,7 +141,7 @@ func (sdl *sourceDataLocator) Locate(sd *SourceDataLocation) error {
 		return err
 	}
 	if _, ok := sdl.inputShapes[srgSpec]; !ok {
-		sdl.inputShapes[srgSpec], err = srgSpec.InputShapes()
+		sdl.inputShapes[srgSpec], err = srgSpec.(*SrgSpecSMOKE).InputShapes()
 		if err != nil {
 			return err
 		}
@@ -157,7 +157,7 @@ func (r *SourceDataLocation) getSourceDataLocation() *SourceDataLocation { retur
 
 // SurrogateSpecification returns the speicification of the spatial surrogate
 // associated with an area emissions source.
-func (r *SourceDataLocation) SurrogateSpecification(sp *SpatialProcessor) (*SrgSpec, error) {
+func (r *SourceDataLocation) SurrogateSpecification(sp *SpatialProcessor) (SrgSpec, error) {
 	srgNum, err := sp.GridRef.GetSrgCode(r.SCC, r.Country, r.FIPS)
 	if err != nil {
 		return nil, err

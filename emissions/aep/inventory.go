@@ -122,7 +122,7 @@ type RecordSpatialSurrogate interface {
 
 	// SurrogateSpecification returns the speicification of the spatial surrogate
 	// associated with an area emissions source.
-	SurrogateSpecification(sp *SpatialProcessor) (*SrgSpec, error)
+	SurrogateSpecification(sp *SpatialProcessor) (SrgSpec, error)
 }
 
 // PointRecord holds information about an emissions source that has a point
