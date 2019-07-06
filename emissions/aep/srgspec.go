@@ -33,8 +33,22 @@ import (
 	"github.com/ctessum/geom/index/rtree"
 )
 
-// SrgSpec holds spatial surrogate specification information.
-type SrgSpec struct {
+type SrgSpec interface {
+	getSrgData(gridData *GridDef, loc *Location, tol float64) (*rtree.Rtree, error)
+	backupSurrogateNames() []string
+	region() Country
+	code() string
+	name() string
+	Status() Status
+	mergeNames() []string
+	mergeMultipliers() []float64
+	setStatus(percent float64, status string)
+	incrementStatus(percent float64)
+}
+
+// SrgSpecSMOKE holds SMOKE-formatted spatial surrogate specification information.
+// See the SMOKE emissions model technical documentation for additional information.
+type SrgSpecSMOKE struct {
 	Region          Country
 	Name            string
 	Code            string
@@ -74,7 +88,7 @@ type SrgSpec struct {
 }
 
 // Status returns information about the status of s.
-func (s *SrgSpec) Status() Status {
+func (s *SrgSpecSMOKE) Status() Status {
 	s.progressLock.Lock()
 	o := Status{
 		Name:     s.Name,
@@ -86,9 +100,22 @@ func (s *SrgSpec) Status() Status {
 	return o
 }
 
+func (srg *SrgSpecSMOKE) setStatus(percent float64, status string) {
+	srg.progressLock.Lock()
+	srg.progress = percent
+	srg.status = status
+	srg.progressLock.Unlock()
+}
+
+func (srg *SrgSpecSMOKE) incrementStatus(percent float64) {
+	srg.progressLock.Lock()
+	srg.progress += percent
+	srg.progressLock.Unlock()
+}
+
 const none = "NONE"
 
-// ReadSrgSpec reads a SMOKE formatted spatial surrogate specification file.
+// ReadSrgSpecSMOKE reads a SMOKE formatted spatial surrogate specification file.
 // Results are returned as a map of surrogate specifications as indexed by
 // their unique ID, which is Region+SurrogateCode. shapefileDir specifies the
 // location of all the required shapefiles, and checkShapeFiles specifies whether
@@ -96,7 +123,7 @@ const none = "NONE"
 // true, then it is okay for the shapefiles to be in any subdirectory of
 // shapefileDir, otherwise all shapefiles must be in shapefileDir itself and
 // not a subdirectory.
-func ReadSrgSpec(fid io.Reader, shapefileDir string, checkShapefiles bool) (*SrgSpecs, error) {
+func ReadSrgSpecSMOKE(fid io.Reader, shapefileDir string, checkShapefiles bool) (*SrgSpecs, error) {
 	srgs := NewSrgSpecs()
 	reader := csv.NewReader(fid)
 	reader.Comment = '#'
@@ -107,7 +134,7 @@ func ReadSrgSpec(fid io.Reader, shapefileDir string, checkShapefiles bool) (*Srg
 	}
 	for i := 1; i < len(records); i++ {
 		record := records[i]
-		srg := new(SrgSpec)
+		srg := new(SrgSpecSMOKE)
 		srg.Region, err = countryFromName(record[0])
 		if err != nil {
 			return nil, fmt.Errorf("in ReadSrgSpec: %v", err)
@@ -210,55 +237,42 @@ func ReadSrgSpec(fid io.Reader, shapefileDir string, checkShapefiles bool) (*Srg
 	return srgs, nil
 }
 
-// Get input shapes. tol is simplifcation tolerance.
-func (srg *SrgSpec) getInputData(gridData *GridDef, tol float64) (map[string]geom.Polygonal, error) {
-	srg.progressLock.Lock()
-	srg.status = "getting surrogate input shape data"
-	srg.progress = 0.
-	srg.progressLock.Unlock()
+func (srg *SrgSpecSMOKE) backupSurrogateNames() []string { return srg.BackupSurrogateNames }
+func (srg *SrgSpecSMOKE) region() Country                { return srg.Region }
+func (srg *SrgSpecSMOKE) code() string                   { return srg.Code }
+func (srg *SrgSpecSMOKE) name() string                   { return srg.Name }
+func (srg *SrgSpecSMOKE) mergeNames() []string           { return srg.MergeNames }
+func (srg *SrgSpecSMOKE) mergeMultipliers() []float64    { return srg.MergeMultipliers }
 
+// InputShapes returns the input shapes associated with the receiver.
+func (srg *SrgSpecSMOKE) InputShapes() (map[string]*Location, error) {
 	inputShp, err := shp.NewDecoder(srg.DATASHAPEFILE)
-	defer inputShp.Close()
 	if err != nil {
 		return nil, err
 	}
+	defer inputShp.Close()
 	inputSR, err := inputShp.SR()
 	if err != nil {
 		return nil, err
 	}
-	ct, err := inputSR.NewTransform(gridData.SR)
-	if err != nil {
-		return nil, err
-	}
-	inputData := make(map[string]geom.Polygonal)
-	gridBounds := gridData.Extent.Bounds()
+	inputData := make(map[string]*Location)
 	for {
 		g, fields, more := inputShp.DecodeRowFields(srg.DATAATTRIBUTE)
 		if !more {
 			break
 		}
-		g, err = g.Transform(ct)
-		if err != nil {
-			return inputData, err
-		}
-		ggeom := g.(geom.Polygonal)
-		srg.progressLock.Lock()
-		srg.progress += 100. / float64(inputShp.AttributeCount())
-		srg.progressLock.Unlock()
 
-		if tol > 0 {
-			ggeom = ggeom.Simplify(tol).(geom.Polygonal)
-		}
+		inputID := fields[srg.DATAATTRIBUTE]
+		ggeom := g.(geom.Polygon)
 
-		intersects := ggeom.Bounds().Overlaps(gridBounds)
-		if intersects {
-			inputID := fields[srg.DATAATTRIBUTE]
-			// Extend existing polygon if one already exists for this InputID
-			if inputG, ok := inputData[inputID]; !ok {
-				inputData[inputID] = ggeom
-			} else {
-				inputData[inputID] = append(inputG.(geom.Polygon), ggeom.(geom.Polygon)...)
+		// Extend existing polygon if one already exists for this InputID
+		if _, ok := inputData[inputID]; !ok {
+			inputData[inputID] = &Location{
+				Geom: ggeom,
+				SR:   inputSR,
 			}
+		} else {
+			inputData[inputID].Geom = append(inputData[inputID].Geom.(geom.Polygon), ggeom...)
 		}
 	}
 	if inputShp.Error() != nil {
@@ -268,7 +282,7 @@ func (srg *SrgSpec) getInputData(gridData *GridDef, tol float64) (map[string]geo
 }
 
 // get surrogate shapes and weights. tol is a geometry simplification tolerance.
-func (srg *SrgSpec) getSrgData(gridData *GridDef, tol float64) (*rtree.Rtree, error) {
+func (srg *SrgSpecSMOKE) getSrgData(gridData *GridDef, tol float64) (*rtree.Rtree, error) {
 	srg.progressLock.Lock()
 	srg.progress = 0.
 	srg.status = "getting surrogate weight data"

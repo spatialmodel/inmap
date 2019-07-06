@@ -66,16 +66,17 @@ var coveredByGrid = map[string]bool{
 
 func TestReadSrgSpec(t *testing.T) {
 	r := strings.NewReader(srgSpecFileString)
-	srgSpecs, err := ReadSrgSpec(r, "testdata", true)
+	srgSpecs, err := ReadSrgSpecSMOKE(r, "testdata", true)
 	if err != nil {
 		t.Fatal(err)
 	}
 	testResult := ""
 	for _, code := range []string{"100", "137", "140", "500", "200"} {
-		srgSpec, err := srgSpecs.GetByCode(USA, code)
+		srgSpecI, err := srgSpecs.GetByCode(USA, code)
 		if err != nil {
 			t.Fatal(err)
 		}
+		srgSpec := srgSpecI.(*SrgSpecSMOKE)
 		testResult += fmt.Sprintf("&{Region:%s Name:%s Code:%s DATASHAPEFILE:%s "+
 			"DATAATTRIBUTE:%s WEIGHTSHAPEFILE:%s Details:%s "+
 			"BackupSurrogateNames:%v WeightColumns:%v MergeNames:%v MergeMultipliers:%v}\n",
@@ -172,7 +173,7 @@ func TestCreateSurrogates(t *testing.T) {
 		t.Error(err)
 	}
 	r := strings.NewReader(srgSpecFileString)
-	srgSpecs, err := ReadSrgSpec(r, "testdata", true)
+	srgSpecs, err := ReadSrgSpecSMOKE(r, "testdata", true)
 	if err != nil {
 		t.Error(err)
 	}
@@ -200,7 +201,7 @@ func TestCreateSurrogates(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			inputShapes, err := srgSpec.InputShapes()
+			inputShapes, err := srgSpec.(*SrgSpecSMOKE).InputShapes()
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -272,7 +273,7 @@ func TestSpatializeRecord(t *testing.T) {
 		t.Error(err)
 	}
 	r := strings.NewReader(srgSpecFileString)
-	srgSpecs, err := ReadSrgSpec(r, "testdata", true)
+	srgSpecs, err := ReadSrgSpecSMOKE(r, "testdata", true)
 	if err != nil {
 		t.Error(err)
 	}

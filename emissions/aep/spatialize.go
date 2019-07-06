@@ -35,7 +35,6 @@ import (
 	"time"
 
 	"github.com/ctessum/geom"
-	"github.com/ctessum/geom/encoding/shp"
 	"github.com/ctessum/geom/proj"
 	"github.com/ctessum/requestcache"
 	"github.com/ctessum/sparse"
@@ -262,7 +261,7 @@ func (r *recordGridded) Parent() Record { return r.Record }
 // It is important not to edit the returned surrogate in place, because the
 // same copy is used over and over again. The second return value indicates
 // whether the shape corresponding to fips is completely covered by the grid.
-func (sp *SpatialProcessor) Surrogate(srgSpec *SrgSpec, grid *GridDef, loc *Location) (*sparse.SparseArray, bool, error) {
+func (sp *SpatialProcessor) Surrogate(srgSpec SrgSpec, grid *GridDef, loc *Location) (*sparse.SparseArray, bool, error) {
 	sp.lazyLoad.Do(sp.load)
 
 	s := &srgGrid{srg: srgSpec, gridData: grid, loc: loc}
@@ -277,8 +276,8 @@ func (sp *SpatialProcessor) Surrogate(srgSpec *SrgSpec, grid *GridDef, loc *Loca
 		return srg, coveredByGrid, nil
 	}
 	// if srg was nil, try backup surrogates.
-	for _, newName := range srgSpec.BackupSurrogateNames {
-		newSrgSpec, err := sp.SrgSpecs.GetByName(srgSpec.Region, newName)
+	for _, newName := range srgSpec.backupSurrogateNames() {
+		newSrgSpec, err := sp.SrgSpecs.GetByName(srgSpec.region(), newName)
 		if err != nil {
 			return nil, false, err
 		}
@@ -298,7 +297,7 @@ func (sp *SpatialProcessor) Surrogate(srgSpec *SrgSpec, grid *GridDef, loc *Loca
 }
 
 type srgRequest struct {
-	srgSpec    *SrgSpec
+	srgSpec    SrgSpec
 	grid       *GridDef
 	data       *GriddingSurrogate
 	err        error
@@ -313,7 +312,7 @@ type srgRequest struct {
 
 // key returns a unique key for this surrogate request.
 func (s *srgRequest) key() string {
-	return fmt.Sprintf("%s_%s_%s", s.srgSpec.Region, s.srgSpec.Code,
+	return fmt.Sprintf("%s_%s_%s", s.srgSpec.region(), s.srgSpec.code(),
 		s.grid.Name)
 }
 
@@ -324,7 +323,7 @@ func (s *srgRequest) repeat() *srgRequest {
 	return ss
 }
 
-func newSrgRequest(srgSpec *SrgSpec, grid *GridDef) *srgRequest {
+func newSrgRequest(srgSpec SrgSpec, grid *GridDef) *srgRequest {
 	d := new(srgRequest)
 	d.srgSpec = srgSpec
 	d.grid = grid
@@ -335,30 +334,30 @@ func newSrgRequest(srgSpec *SrgSpec, grid *GridDef) *srgRequest {
 
 // SrgSpecs holds a group of surrogate specifications
 type SrgSpecs struct {
-	byName map[Country]map[string]*SrgSpec
-	byCode map[Country]map[string]*SrgSpec
+	byName map[Country]map[string]SrgSpec
+	byCode map[Country]map[string]SrgSpec
 }
 
 // NewSrgSpecs initializes a new SrgSpecs object.
 func NewSrgSpecs() *SrgSpecs {
 	s := new(SrgSpecs)
-	s.byName = make(map[Country]map[string]*SrgSpec)
-	s.byCode = make(map[Country]map[string]*SrgSpec)
+	s.byName = make(map[Country]map[string]SrgSpec)
+	s.byCode = make(map[Country]map[string]SrgSpec)
 	return s
 }
 
 // Add adds a new SrgSpec to s.
-func (s *SrgSpecs) Add(ss *SrgSpec) {
-	if _, ok := s.byName[ss.Region]; !ok {
-		s.byName[ss.Region] = make(map[string]*SrgSpec)
-		s.byCode[ss.Region] = make(map[string]*SrgSpec)
+func (s *SrgSpecs) Add(ss SrgSpec) {
+	if _, ok := s.byName[ss.region()]; !ok {
+		s.byName[ss.region()] = make(map[string]SrgSpec)
+		s.byCode[ss.region()] = make(map[string]SrgSpec)
 	}
-	s.byName[ss.Region][ss.Name] = ss
-	s.byCode[ss.Region][ss.Code] = ss
+	s.byName[ss.region()][ss.name()] = ss
+	s.byCode[ss.region()][ss.code()] = ss
 }
 
 // GetByName gets the surrogate matching the given region and name.
-func (s *SrgSpecs) GetByName(region Country, name string) (*SrgSpec, error) {
+func (s *SrgSpecs) GetByName(region Country, name string) (SrgSpec, error) {
 	ss, ok := s.byName[region][name]
 	if ok {
 		return ss, nil
@@ -367,7 +366,7 @@ func (s *SrgSpecs) GetByName(region Country, name string) (*SrgSpec, error) {
 }
 
 // GetByCode gets the surrogate matching the given region and code.
-func (s *SrgSpecs) GetByCode(region Country, code string) (*SrgSpec, error) {
+func (s *SrgSpecs) GetByCode(region Country, code string) (SrgSpec, error) {
 	ss, ok := s.byCode[region][code]
 	if ok {
 		return ss, nil
@@ -417,43 +416,6 @@ func findFile(dir, file string) (string, error) {
 		return "", fmt.Errorf("could not find file %s within directory %s", file, dir)
 	}
 	return fullPath, nil
-}
-
-// InputShapes returns the input shapes associated with the receiver.
-func (srg *SrgSpec) InputShapes() (map[string]*Location, error) {
-	inputShp, err := shp.NewDecoder(srg.DATASHAPEFILE)
-	if err != nil {
-		return nil, err
-	}
-	defer inputShp.Close()
-	inputSR, err := inputShp.SR()
-	if err != nil {
-		return nil, err
-	}
-	inputData := make(map[string]*Location)
-	for {
-		g, fields, more := inputShp.DecodeRowFields(srg.DATAATTRIBUTE)
-		if !more {
-			break
-		}
-
-		inputID := fields[srg.DATAATTRIBUTE]
-		ggeom := g.(geom.Polygon)
-
-		// Extend existing polygon if one already exists for this InputID
-		if _, ok := inputData[inputID]; !ok {
-			inputData[inputID] = &Location{
-				Geom: ggeom,
-				SR:   inputSR,
-			}
-		} else {
-			inputData[inputID].Geom = append(inputData[inputID].Geom.(geom.Polygon), ggeom...)
-		}
-	}
-	if inputShp.Error() != nil {
-		return nil, fmt.Errorf("in file %s, %v", srg.DATASHAPEFILE, inputShp.Error())
-	}
-	return inputData, nil
 }
 
 // GridRef specifies the grid surrogates the correspond with combinations of
