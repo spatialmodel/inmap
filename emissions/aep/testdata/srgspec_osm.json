@@ -1,0 +1,35 @@
+[
+  {
+    "region": 7,
+    "name": "primary_hwy",
+    "code": "001",
+    "data_shapefile": "testdata/honolulu_hawaii.shp",
+    "data_attribute": "geoid",
+    "osm_file": "testdata/honolulu_hawaii.osm.pbf",
+    "tags": {
+      "highway": ["primary"]
+    }
+  },
+  {
+    "region": 7,
+    "name": "building_residential",
+    "code": "002",
+    "data_shapefile": "testdata/honolulu_hawaii.shp",
+    "data_attribute": "geoid",
+    "osm_file": "testdata/honolulu_hawaii.osm.pbf",
+    "tags": {
+      "building": ["residential"]
+    }
+  },
+  {
+    "region": 7,
+    "name": "natural_tree",
+    "code": "003",
+    "data_shapefile": "testdata/honolulu_hawaii.shp",
+    "data_attribute": "geoid",
+    "osm_file": "testdata/honolulu_hawaii.osm.pbf",
+    "tags": {
+      "natural": ["tree"]
+    }
+  }
+]

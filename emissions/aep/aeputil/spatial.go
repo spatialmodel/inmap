@@ -36,6 +36,10 @@ type SpatialConfig struct {
 	// SrgSpec gives the location of the surrogate specification file.
 	SrgSpec string
 
+	// SrgSpecType specifies the type of data the gridding surrogates
+	// are being created from. It can be "SMOKE" or "OSM".
+	SrgSpecType string
+
 	// SrgShapefileDirectory gives the location of the directory holding
 	// the shapefiles used for creating spatial surrogates.
 	SrgShapefileDirectory string
@@ -172,9 +176,20 @@ func readSrgSpec(srgSpecPath, srgShapefileDirectory string, sccExactMatch bool) 
 	if err != nil {
 		return nil, err
 	}
-	srgSpecs, err := aep.ReadSrgSpec(f, os.ExpandEnv(srgShapefileDirectory), sccExactMatch)
-	if err != nil {
-		return nil, err
+	var srgSpecs *aep.SrgSpecs
+	switch c.SrgSpecType {
+	case "SMOKE":
+		srgSpecs, err = aep.ReadSrgSpecSMOKE(f, os.ExpandEnv(srgShapefileDirectory), sccExactMatch)
+		if err != nil {
+			return nil, err
+		}
+	case "OSM":
+		srgSpecs, err = aep.ReadSrgSpecOSM(f)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("aeputil: invalid value for SrgSpecType. Acceptable values are 'SMOKE' and 'OSM'.")
 	}
 	if err = f.Close(); err != nil {
 		return nil, err

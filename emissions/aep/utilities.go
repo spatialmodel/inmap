@@ -95,6 +95,7 @@ const (
 	Bahamas                   = 4
 	Haiti                     = 5
 	DominicanRepublic         = 6
+	Global                    = 7
 	Unknown                   = -1
 )
 
@@ -138,6 +139,8 @@ func getCountryFromID(code string) Country {
 		return Haiti
 	case "6":
 		return DominicanRepublic
+	case "7":
+		return Global
 	default:
 		err := fmt.Errorf("Unknown country code %v.", code)
 		panic(err)
@@ -160,6 +163,8 @@ func countryFromName(name string) (Country, error) {
 		return Haiti, nil
 	case "DOMINICANREPUBLIC":
 		return DominicanRepublic, nil
+	case "GLOBAL":
+		return Global, nil
 	default:
 		return Unknown, fmt.Errorf("Unkown country '%s'", name)
 	}

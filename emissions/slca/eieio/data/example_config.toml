@@ -84,6 +84,7 @@ DefaultYear = 2014
 
 [SpatialEIO.SpatialConfig]
   SrgSpec = "${INMAP_ROOT_DIR}/emissions/aep/data/nei2014/surrogate_specification_2014.csv"
+  SrgSpecType = "SMOKE"
   SrgShapefileDirectory = "$nei2014Dir"
   SCCExactMatch = true
   GridRef = [
