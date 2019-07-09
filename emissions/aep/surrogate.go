@@ -249,11 +249,22 @@ func (sp *SpatialProcessor) createSurrogate(_ context.Context, inData interface{
 }
 
 // WriteToShp write an individual gridding surrogate to a shapefile.
-func (g *GriddedSrgData) WriteToShp(s *shp.Encoder) error {
+func (g *GriddedSrgData) WriteToShp(file string) error {
 	covered := "F"
 	if g.CoveredByGrid {
 		covered = "T"
 	}
+	s, err := shp.NewEncoder(file, struct {
+		geom.Polygon
+		Row, Col int
+		InputID  string
+		Weight   float64
+		Covered  string
+	}{})
+	if err != nil {
+		return fmt.Errorf("aep: creating shapefile to write gridding surrogate: %v", err)
+	}
+
 	for _, cell := range g.Cells {
 		err := s.EncodeFields(cell.Polygonal,
 			cell.Row, cell.Col, g.InputLocation.Key(), cell.Weight, covered)
@@ -261,6 +272,7 @@ func (g *GriddedSrgData) WriteToShp(s *shp.Encoder) error {
 			return err
 		}
 	}
+	s.Close()
 	return nil
 }
 

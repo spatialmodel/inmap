@@ -46,6 +46,7 @@ CensusPopColumns= ["TotalPop", "WhiteNoLat", "Black", "Native", "Asian", "Latino
 
 [SpatialConfig]
 SrgSpec = "${INMAP_ROOT_DIR}/emissions/aep/aeputil/testdata/surrogate_specification.csv"
+SrgSpecType = "SMOKE"
 SrgShapefileDirectory = "${INMAP_ROOT_DIR}/emissions/aep/testdata/"
 SCCExactMatch = false
 GridRef = [

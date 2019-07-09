@@ -39,6 +39,8 @@ type SrgSpec interface {
 	region() Country
 	code() string
 	name() string
+	dataShapefile() string
+	dataAttribute() string
 	Status() Status
 	mergeNames() []string
 	mergeMultipliers() []float64
@@ -87,16 +89,16 @@ type SrgSpecSMOKE struct {
 	status string
 }
 
-// Status returns information about the status of s.
-func (s *SrgSpecSMOKE) Status() Status {
-	s.progressLock.Lock()
+// Status returns information about the status of the receiver.
+func (srg *SrgSpecSMOKE) Status() Status {
+	srg.progressLock.Lock()
 	o := Status{
-		Name:     s.Name,
-		Code:     s.Code,
-		Status:   s.status,
-		Progress: s.progress,
+		Name:     srg.Name,
+		Code:     srg.Code,
+		Status:   srg.status,
+		Progress: srg.progress,
 	}
-	s.progressLock.Unlock()
+	srg.progressLock.Unlock()
 	return o
 }
 
@@ -243,6 +245,8 @@ func (srg *SrgSpecSMOKE) code() string                   { return srg.Code }
 func (srg *SrgSpecSMOKE) name() string                   { return srg.Name }
 func (srg *SrgSpecSMOKE) mergeNames() []string           { return srg.MergeNames }
 func (srg *SrgSpecSMOKE) mergeMultipliers() []float64    { return srg.MergeMultipliers }
+func (srg *SrgSpecSMOKE) dataShapefile() string          { return srg.DATASHAPEFILE }
+func (srg *SrgSpecSMOKE) dataAttribute() string          { return srg.DATAATTRIBUTE }
 
 // InputShapes returns the input shapes associated with the receiver.
 func (srg *SrgSpecSMOKE) InputShapes() (map[string]*Location, error) {
@@ -257,7 +261,7 @@ func (srg *SrgSpecSMOKE) InputShapes() (map[string]*Location, error) {
 	}
 	inputData := make(map[string]*Location)
 	for {
-		g, fields, more := inputShp.DecodeRowFields(srg.DATAATTRIBUTE)
+		g, fields, more := inputShp.DecodeRowFields(srg.dataAttribute())
 		if !more {
 			break
 		}
@@ -276,17 +280,14 @@ func (srg *SrgSpecSMOKE) InputShapes() (map[string]*Location, error) {
 		}
 	}
 	if inputShp.Error() != nil {
-		return nil, fmt.Errorf("in file %s, %v", srg.DATASHAPEFILE, inputShp.Error())
+		return nil, fmt.Errorf("in file %s, %v", srg.dataShapefile(), inputShp.Error())
 	}
 	return inputData, nil
 }
 
 // get surrogate shapes and weights. tol is a geometry simplification tolerance.
 func (srg *SrgSpecSMOKE) getSrgData(gridData *GridDef, tol float64) (*rtree.Rtree, error) {
-	srg.progressLock.Lock()
-	srg.progress = 0.
-	srg.status = "getting surrogate weight data"
-	srg.progressLock.Unlock()
+	srg.setStatus(0, "getting surrogate weight data")
 	srgShp, err := shp.NewDecoder(srg.WEIGHTSHAPEFILE)
 	if err != nil {
 		return nil, err
@@ -321,9 +322,7 @@ func (srg *SrgSpecSMOKE) getSrgData(gridData *GridDef, tol float64) (*rtree.Rtre
 		if !more {
 			break
 		}
-		srg.progressLock.Lock()
-		srg.progress += 100. / float64(srgShp.AttributeCount())
-		srg.progressLock.Unlock()
+		srg.incrementStatus(100. / float64(srgShp.AttributeCount()))
 
 		if srg.FilterFunction == nil {
 			keepFeature = true

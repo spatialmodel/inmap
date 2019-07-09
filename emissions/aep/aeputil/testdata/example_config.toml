@@ -1,5 +1,6 @@
 [Spatial]
   SrgSpec = "testdata/surrogate_specification.csv"
+  SrgSpecType = "SMOKE"
   SrgShapefileDirectory = "../testdata"
   SCCExactMatch = false
   GridRef = [
