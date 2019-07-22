@@ -69,9 +69,9 @@ import (
 // GEOSChem is the location of GEOS-Chem output files.
 // [DATE] should be used as a wild card for the simulation date.
 //
-// VegTypeGlobal is the location of the GEOS-Chem vegtype.global file,
+// OlsonLandMap is the location of the GEOS-Chem Olson land use map file,
 // which is described here:
-// http://wiki.seas.harvard.edu/geos-chem/index.php/Olson_land_map#Structure_of_the_vegtype.global_file
+// http://wiki.seas.harvard.edu/geos-chem/index.php/Olson_land_map
 //
 // InMAPData is the path where the preprocessed baseline meteorology and pollutant
 // data should be written.
@@ -87,7 +87,7 @@ import (
 // dash indicates whether GEOS-Chem variable names are in the form 'IJ-AVG-S__xxx'
 // as opposed to 'IJ_AVG_S_xxx'.
 func Preproc(StartDate, EndDate, CTMType, WRFOut, GEOSA1, GEOSA3Cld, GEOSA3Dyn, GEOSI3, GEOSA3MstE, GEOSApBp,
-	GEOSChem, VegTypeGlobal, InMAPData string, CtmGridXo, CtmGridYo, CtmGridDx, CtmGridDy float64, dash bool, recordDeltaStr, fileDeltaStr string, noChemHour bool) error {
+	GEOSChem, OlsonLandMap, InMAPData string, CtmGridXo, CtmGridYo, CtmGridDx, CtmGridDy float64, dash bool, recordDeltaStr, fileDeltaStr string, noChemHour bool) error {
 	msgChan := make(chan string)
 	go func() {
 		for {
@@ -97,8 +97,8 @@ func Preproc(StartDate, EndDate, CTMType, WRFOut, GEOSA1, GEOSA3Cld, GEOSA3Dyn, 
 	var ctm inmap.Preprocessor
 	switch CTMType {
 	case "GEOS-Chem":
-		vars := []string{StartDate, EndDate, CTMType, GEOSA1, GEOSA3Cld, GEOSA3Dyn, GEOSI3, GEOSA3MstE, GEOSChem, VegTypeGlobal, recordDeltaStr, fileDeltaStr}
-		varNames := []string{"StartDate", "EndDate", "CTMType", "GEOSA1", "GEOSA3Cld", "GEOSA3Dyn", "GEOSI3", "GEOSA3MstE", "GEOSChem", "VegTypeGlobal", "recordDeltaStr", "fileDeltaStr"}
+		vars := []string{StartDate, EndDate, CTMType, GEOSA1, GEOSA3Cld, GEOSA3Dyn, GEOSI3, GEOSA3MstE, GEOSChem, OlsonLandMap, recordDeltaStr, fileDeltaStr}
+		varNames := []string{"StartDate", "EndDate", "CTMType", "GEOSA1", "GEOSA3Cld", "GEOSA3Dyn", "GEOSI3", "GEOSA3MstE", "GEOSChem", "OlsonLandMap", "recordDeltaStr", "fileDeltaStr"}
 		for i, v := range vars {
 			if v == "" {
 				return fmt.Errorf("inmap preprocessor: configuration variable %s is not specified", varNames[i])
@@ -113,7 +113,7 @@ func Preproc(StartDate, EndDate, CTMType, WRFOut, GEOSA1, GEOSA3Cld, GEOSA3Dyn, 
 			GEOSA3MstE,
 			GEOSApBp,
 			GEOSChem,
-			VegTypeGlobal,
+			OlsonLandMap,
 			StartDate,
 			EndDate,
 			dash,
