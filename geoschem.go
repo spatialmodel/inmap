@@ -1236,9 +1236,9 @@ func (gc *GEOSChem) largestLandUse(olsonLandMapFile *cdf.File) (*sparse.DenseArr
 		return nil, err
 	}
 
-	out := sparse.ZerosDense(gc.nx, gc.ny)
-	for ix := 0; ix < gc.nx; ix++ {
-		for iy := 0; iy < gc.ny; iy++ {
+	out := sparse.ZerosDense(gc.ny, gc.nx)
+	for iy := 0; iy < gc.ny; iy++ {
+		for ix := 0; ix < gc.nx; ix++ {
 			x0 := gc.xo + gc.dx*float64(ix)
 			x1 := gc.xo + gc.dx*float64(ix+1)
 			y0 := gc.yo + gc.dy*float64(iy)
@@ -1259,7 +1259,7 @@ func (gc *GEOSChem) largestLandUse(olsonLandMapFile *cdf.File) (*sparse.DenseArr
 					maxCat = c
 				}
 			}
-			out.Set(float64(maxCat), ix, iy)
+			out.Set(float64(maxCat), iy, ix)
 		}
 	}
 	return out, nil
