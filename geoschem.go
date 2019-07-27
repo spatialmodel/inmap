@@ -659,7 +659,7 @@ func (gc *GEOSChem) ALT() NextData {
 		}
 		alt := sparse.ZerosDense(density.Shape...)
 		for i, val := range density.Elements {
-			alt.Elements[i] += val * (MWa / avNum) * 1000.
+			alt.Elements[i] = 1 / (val * (MWa / avNum) * 1000.)
 		}
 		return alt, nil
 	}
