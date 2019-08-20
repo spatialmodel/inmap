@@ -60,9 +60,11 @@ type GEOSChem struct {
 
 	landUse *sparse.DenseArray
 
-	nx, ny, nz int
+	nz int
 
-	xo, yo, dx, dy float64
+	dx, dy float64
+
+	xCenters, yCenters []float64
 
 	geosA1     string
 	geosA3Cld  string
@@ -302,27 +304,19 @@ func NewGEOSChem(GEOSA1, GEOSA3Cld, GEOSA3Dyn, GEOSI3, GEOSA3MstE, GEOSApBp, GEO
 	if err != nil {
 		return nil, err
 	}
-	gc.ny, err = gc.Ny()
-	if err != nil {
-		return nil, err
-	}
-	gc.nx, err = gc.Nx()
-	if err != nil {
-		return nil, err
-	}
-	gc.xo, err = gc.Xo()
-	if err != nil {
-		return nil, err
-	}
-	gc.yo, err = gc.Yo()
-	if err != nil {
-		return nil, err
-	}
 	gc.dx, err = gc.DX()
 	if err != nil {
 		return nil, err
 	}
 	gc.dy, err = gc.DY()
+	if err != nil {
+		return nil, err
+	}
+	gc.xCenters, err = gc.XCenters()
+	if err != nil {
+		return nil, err
+	}
+	gc.yCenters, err = gc.YCenters()
 	if err != nil {
 		return nil, err
 	}
@@ -562,11 +556,11 @@ func (gc *GEOSChem) Nz() (int, error) {
 	return dims[0], nil
 }
 
-// Return the first value of a variable from a chemistry file.
-func (gc *GEOSChem) chemFirstValue(v string) (float64, error) {
+// Return the first set of values of a variable from a chemistry file.
+func (gc *GEOSChem) chemFirstValues(v string) ([]float64, error) {
 	f, ff, err := ncfFromTemplate(gc.geosChem, geosChemFormat, gc.start)
 	if err != nil {
-		return -1, err
+		return nil, err
 	}
 	defer f.Close()
 	data, err := readNCFNoHour(v, ff, 0)
@@ -574,10 +568,10 @@ func (gc *GEOSChem) chemFirstValue(v string) (float64, error) {
 		// If variable not in file, try all lowercase.
 		data, err = readNCFNoHour(strings.ToLower(v), ff, 0)
 		if err != nil {
-			return -1, err
+			return nil, err
 		}
 	}
-	return data.Elements[0], nil
+	return data.Elements, nil
 }
 
 // Return an attribute from a chemistry file.
@@ -591,11 +585,11 @@ func (gc *GEOSChem) chemAttribute(a string) (float64, error) {
 	return float64(attr.([]float32)[0]), nil
 }
 
-// Xo returns the minimum longitude value in the grid
-func (gc *GEOSChem) Xo() (float64, error) { return gc.chemFirstValue("LON") }
+// XCenters returns the x-coordinates of the grid points.
+func (gc *GEOSChem) XCenters() ([]float64, error) { return gc.chemFirstValues("LON") }
 
-// Xo returns the minimum latitude value in the grid
-func (gc *GEOSChem) Yo() (float64, error) { return gc.chemFirstValue("LAT") }
+// YCenters returns the y-coordinates of the grid points.
+func (gc *GEOSChem) YCenters() ([]float64, error) { return gc.chemFirstValues("LAT") }
 
 // DX returns the longitude grid spacing.
 func (gc *GEOSChem) DX() (float64, error) { return gc.chemAttribute("Delta_Lon") }
@@ -1222,8 +1216,8 @@ func (o *olsonLandMap) fractions(p geom.Polygon) map[int]float64 {
 		}
 	}
 	a := p.Area()
-	for cat, v := range out {
-		out[cat] = v / a
+	for cat := range out {
+		out[cat] /= a
 	}
 	return out
 }
@@ -1236,13 +1230,27 @@ func (gc *GEOSChem) largestLandUse(olsonLandMapFile *cdf.File) (*sparse.DenseArr
 		return nil, err
 	}
 
-	out := sparse.ZerosDense(gc.ny, gc.nx)
-	for iy := 0; iy < gc.ny; iy++ {
-		for ix := 0; ix < gc.nx; ix++ {
-			x0 := gc.xo + gc.dx*float64(ix)
-			x1 := gc.xo + gc.dx*float64(ix+1)
-			y0 := gc.yo + gc.dy*float64(iy)
-			y1 := gc.yo + gc.dy*float64(iy+1)
+	out := sparse.ZerosDense(len(gc.yCenters), len(gc.xCenters))
+	for j, y := range gc.yCenters {
+		dy := gc.dy
+		if j == 0 {
+			dy = ((gc.yCenters[j+1] - y) - gc.dy/2) * 2
+		}
+		if j == len(gc.yCenters)-1 {
+			dy = ((y - gc.yCenters[j-1]) - gc.dy/2) * 2
+		}
+		for i, x := range gc.xCenters {
+			dx := gc.dx
+			if i == 0 {
+				dx = ((gc.xCenters[i+1] - x) - gc.dx/2) * 2
+			}
+			if i == len(gc.xCenters)-1 {
+				dx = ((x - gc.xCenters[i-1]) - gc.dx/2) * 2
+			}
+			x0 := x - dx/2
+			x1 := x + dx/2
+			y0 := y - dy/2
+			y1 := y + dy/2
 			p := geom.Polygon{{
 				{X: x0, Y: y0},
 				{X: x1, Y: y0},
@@ -1251,6 +1259,9 @@ func (gc *GEOSChem) largestLandUse(olsonLandMapFile *cdf.File) (*sparse.DenseArr
 				{X: x0, Y: y0},
 			}}
 			fractions := o.fractions(p)
+			if len(fractions) == 0 {
+				return nil, fmt.Errorf("no land use information available for polygon %+v", p)
+			}
 			maxCat := math.MinInt32
 			maxVal := math.Inf(-1)
 			for c, v := range fractions {
@@ -1259,7 +1270,7 @@ func (gc *GEOSChem) largestLandUse(olsonLandMapFile *cdf.File) (*sparse.DenseArr
 					maxCat = c
 				}
 			}
-			out.Set(float64(maxCat), iy, ix)
+			out.Set(float64(maxCat), j, i)
 		}
 	}
 	return out, nil
