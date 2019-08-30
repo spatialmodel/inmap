@@ -27,6 +27,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ctessum/geom"
 	"github.com/ctessum/unit"
 	"github.com/ctessum/unit/badunit"
 
@@ -132,6 +133,17 @@ type nocontrolPolygonRecord struct {
 	EconomicData
 	Emissions
 }
+
+// basicPolygonRecord is a basic polygon record information.
+type basicPolygonRecord struct {
+	geom.Polygon
+	SourceData
+	Emissions
+}
+
+// PointData exists to fulfill the Record interface but always returns
+// nil because this is not a point source.
+func (r *basicPolygonRecord) PointData() *PointSourceData { return nil }
 
 type supplementalPointRecord struct {
 	SourceData
