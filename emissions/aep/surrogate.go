@@ -21,18 +21,17 @@ package aep
 import (
 	"context"
 	"fmt"
-	"log"
 	"math"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 
-	"github.com/ctessum/sparse"
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/encoding/shp"
 	"github.com/ctessum/geom/index/rtree"
 	"github.com/ctessum/geom/op"
+	"github.com/ctessum/sparse"
 )
 
 type srgGenWorker struct {
@@ -82,30 +81,47 @@ func (gs *GriddingSurrogate) ToGrid(shapeID string) (*sparse.SparseArray, bool) 
 	return srgOut, srg.CoveredByGrid
 }
 
+// ToGrid allocates the 1 unit of emissions associated with shapeID to a grid
+// based on gs. It will return nil if there is no surrogate for the specified
+// shapeID or if the sum of the surrogate is zero. The second returned value
+// indicates whether the shape corresponding to shapeID is completely covered
+// by the grid.
+func (gs *GriddedSrgData) ToGrid() (*sparse.SparseArray, bool) {
+	srgOut := sparse.ZerosSparse(gs.Ny, gs.Nx)
+	for _, cell := range gs.Cells {
+		srgOut.AddVal(cell.Weight, cell.Row, cell.Col)
+	}
+	sum := srgOut.Sum()
+	if sum == 0 {
+		return nil, false
+	}
+	// normalize so sum = 1 if the input shape is completely covered by the
+	// grid.
+	if gs.CoveredByGrid {
+		srgOut.Scale(1. / sum)
+	}
+	return srgOut, gs.CoveredByGrid
+}
+
 // mergeSrgs merges a number of surrogates, multiplying each of them by the
 // corresponding factor.
-func mergeSrgs(srgs []*GriddingSurrogate, factors []float64) *GriddingSurrogate {
-	o := new(GriddingSurrogate)
+func mergeSrgs(srgs []*GriddedSrgData, factors []float64) *GriddedSrgData {
+	o := new(GriddedSrgData)
 	o.Nx, o.Ny = srgs[0].Nx, srgs[0].Ny
-	o.Srg = make(map[string]*GriddedSrgData)
 	for i, g := range srgs {
 		fac := factors[i]
-		for id, gsd := range g.Srg {
-			if _, ok := o.Srg[id]; !ok {
-				o.Srg[id] = &GriddedSrgData{
-					InputID:       gsd.InputID,
-					InputGeom:     gsd.InputGeom,
-					CoveredByGrid: gsd.CoveredByGrid,
-				}
-			}
-			for _, cell := range gsd.Cells {
-				o.Srg[id].Cells = append(o.Srg[id].Cells, &GridCell{
-					Row:       cell.Row,
-					Col:       cell.Col,
-					Weight:    cell.Weight * fac,
-					Polygonal: cell.Polygonal,
-				})
-			}
+		if o.InputID == "" {
+			o.InputID = g.InputID
+			o.InputGeom = g.InputGeom
+			o.CoveredByGrid = g.CoveredByGrid
+		}
+		for _, cell := range g.Cells {
+			o.Cells = append(o.Cells, &GridCell{
+				Row:       cell.Row,
+				Col:       cell.Col,
+				Weight:    cell.Weight * fac,
+				Polygonal: cell.Polygonal,
+			})
 		}
 	}
 	return o
@@ -118,6 +134,7 @@ type GriddedSrgData struct {
 	Cells                []*GridCell
 	SingleShapeSrgWeight float64
 	CoveredByGrid        bool
+	Nx, Ny               int
 }
 
 type srgHolder struct {
@@ -159,8 +176,8 @@ func ParseSurrogateFilter(filterFunction string) *SurrogateFilter {
 }
 
 // createMerged creates a surrogate by creating and merging other surrogates.
-func (sp *SpatialProcessor) createMerged(srg *SrgSpec, gridData *GridDef) (*GriddingSurrogate, error) {
-	mrgSrgs := make([]*GriddingSurrogate, len(srg.MergeNames))
+func (sp *SpatialProcessor) createMerged(srg *SrgSpec, gridData *GridDef, fips string) (*GriddedSrgData, error) {
+	mrgSrgs := make([]*GriddedSrgData, len(srg.MergeNames))
 	for i, mrgName := range srg.MergeNames {
 		newSrg, err := sp.SrgSpecs.GetByName(srg.Region, mrgName)
 		if err != nil {
@@ -168,11 +185,11 @@ func (sp *SpatialProcessor) createMerged(srg *SrgSpec, gridData *GridDef) (*Grid
 		}
 		// If we use the cache here it is possible to end up with a channel deadlock,
 		// so we generate the surrogate from scratch here.
-		data, err := sp.createSurrogate(context.Background(), &srgGrid{srg: newSrg, gridData: gridData})
+		data, err := sp.createSurrogate(context.Background(), &srgGrid{srg: newSrg, gridData: gridData, fips: fips})
 		if err != nil {
 			return nil, err
 		}
-		mrgSrgs[i] = data.(*GriddingSurrogate)
+		mrgSrgs[i] = data.(*GriddedSrgData)
 	}
 	return mergeSrgs(mrgSrgs, srg.MergeMultipliers), nil
 }
@@ -181,11 +198,12 @@ func (sp *SpatialProcessor) createMerged(srg *SrgSpec, gridData *GridDef) (*Grid
 type srgGrid struct {
 	srg      *SrgSpec
 	gridData *GridDef
+	fips     string
 }
 
 // key returns a unique key for this surrogate request.
 func (s *srgGrid) key() string {
-	return fmt.Sprintf("%s_%s_%s", s.srg.Region, s.srg.Code, s.gridData.Name)
+	return fmt.Sprintf("%s_%s_%s_%s", s.srg.Region, s.srg.Code, s.gridData.Name, s.fips)
 }
 
 // createSurrogate creates a new gridding surrogate based on a
@@ -194,16 +212,18 @@ func (sp *SpatialProcessor) createSurrogate(_ context.Context, inData interface{
 	in := inData.(*srgGrid)
 	srg := in.srg
 	gridData := in.gridData
-	log.Println("Creating", srg.Code, srg.Name)
+	if in.fips == "" {
+		return nil, fmt.Errorf("aep.SpatialProcessor.createSurrogate: missing FIPS: %+v", gridData)
+	}
 	if len(srg.MergeNames) != 0 {
-		return sp.createMerged(srg, gridData)
+		return sp.createMerged(srg, gridData, in.fips)
 	}
 
-	inputData, err := srg.getInputData(gridData, sp.SimplifyTolerance)
+	inputData, err := srg.getInputData(gridData, sp.SimplifyTolerance, in.fips)
 	if err != nil {
 		return nil, err
 	}
-	srgData, err := srg.getSrgData(gridData, sp.SimplifyTolerance)
+	srgData, err := srg.getSrgData(gridData, inputData, sp.SimplifyTolerance)
 	if err != nil {
 		return nil, err
 	}
@@ -224,41 +244,13 @@ func (sp *SpatialProcessor) createSurrogate(_ context.Context, inData interface{
 	srg.status = "overlaying shapes"
 	srg.progressLock.Unlock()
 
-	srgsFinished := 0
-	GriddedSrgs := make(map[string]*GriddedSrgData)
-	for inputID, geom := range inputData {
-		singleShapeData := &GriddedSrgData{InputID: inputID, InputGeom: geom}
-		select {
-		case err = <-errchan:
-			if err != nil {
-				return nil, err
-			}
-			workersRunning--
-			singleShapeChan <- singleShapeData
-		default:
-			select {
-			case grdsrg := <-griddedSrgChan:
-				GriddedSrgs[grdsrg.InputID] = grdsrg
-				srg.progressLock.Lock()
-				srg.progress += 100. / float64(len(inputData))
-				srg.progressLock.Unlock()
-				srgsFinished++
-				singleShapeChan <- singleShapeData
-			default:
-				singleShapeChan <- singleShapeData
-			}
-		}
-	}
+	singleShapeData := &GriddedSrgData{InputID: in.fips, InputGeom: inputData}
+	singleShapeChan <- singleShapeData
 	close(singleShapeChan)
 	// wait for remaining results
-	for i := srgsFinished; i < len(inputData); i++ {
-		grdsrg := <-griddedSrgChan
-		GriddedSrgs[grdsrg.InputID] = grdsrg
-		srg.progressLock.Lock()
-		srg.progress += 100. / float64(len(inputData))
-		srg.progressLock.Unlock()
-		srgsFinished++
-	}
+	grdsrg := <-griddedSrgChan
+	grdsrg.Nx = gridData.Nx
+	grdsrg.Ny = gridData.Ny
 	// wait for workers to finish
 	for i := 0; i < workersRunning; i++ {
 		err = <-errchan
@@ -266,12 +258,7 @@ func (sp *SpatialProcessor) createSurrogate(_ context.Context, inData interface{
 			return nil, err
 		}
 	}
-	o := &GriddingSurrogate{
-		Srg: GriddedSrgs,
-		Nx:  gridData.Nx,
-		Ny:  gridData.Ny,
-	}
-	return o, nil
+	return grdsrg, nil
 }
 
 // WriteToShp write an individual gridding surrogate to a shapefile.
@@ -293,7 +280,7 @@ func (g *GriddedSrgData) WriteToShp(s *shp.Encoder) error {
 }
 
 // Get input shapes. tol is simplifcation tolerance.
-func (srg *SrgSpec) getInputData(gridData *GridDef, tol float64) (map[string]geom.Polygonal, error) {
+func (srg *SrgSpec) getInputData(gridData *GridDef, tol float64, fips string) (geom.Polygonal, error) {
 	srg.progressLock.Lock()
 	srg.status = "getting surrogate input shape data"
 	srg.progress = 0.
@@ -312,13 +299,19 @@ func (srg *SrgSpec) getInputData(gridData *GridDef, tol float64) (map[string]geo
 	if err != nil {
 		return nil, err
 	}
-	inputData := make(map[string]geom.Polygonal)
+	var inputData geom.Polygonal
 	gridBounds := gridData.Extent.Bounds()
 	for {
 		g, fields, more := inputShp.DecodeRowFields(srg.DATAATTRIBUTE)
 		if !more {
 			break
 		}
+
+		inputID := fields[srg.DATAATTRIBUTE]
+		if inputID != fips {
+			continue
+		}
+
 		g, err = g.Transform(ct)
 		if err != nil {
 			return inputData, err
@@ -334,12 +327,11 @@ func (srg *SrgSpec) getInputData(gridData *GridDef, tol float64) (map[string]geo
 
 		intersects := ggeom.Bounds().Overlaps(gridBounds)
 		if intersects {
-			inputID := fields[srg.DATAATTRIBUTE]
 			// Extend existing polygon if one already exists for this InputID
-			if inputG, ok := inputData[inputID]; !ok {
-				inputData[inputID] = ggeom
+			if inputData == nil {
+				inputData = ggeom
 			} else {
-				inputData[inputID] = append(inputG.(geom.Polygon), ggeom.(geom.Polygon)...)
+				inputData = append(inputData.(geom.Polygon), ggeom.(geom.Polygon)...)
 			}
 		}
 	}
@@ -350,11 +342,12 @@ func (srg *SrgSpec) getInputData(gridData *GridDef, tol float64) (map[string]geo
 }
 
 // get surrogate shapes and weights. tol is a geometry simplification tolerance.
-func (srg *SrgSpec) getSrgData(gridData *GridDef, tol float64) (*rtree.Rtree, error) {
+func (srg *SrgSpec) getSrgData(gridData *GridDef, inputShape geom.Polygonal, tol float64) (*rtree.Rtree, error) {
 	srg.progressLock.Lock()
 	srg.progress = 0.
 	srg.status = "getting surrogate weight data"
 	srg.progressLock.Unlock()
+
 	srgShp, err := shp.NewDecoder(srg.WEIGHTSHAPEFILE)
 	if err != nil {
 		return nil, err
@@ -370,6 +363,25 @@ func (srg *SrgSpec) getSrgData(gridData *GridDef, tol float64) (*rtree.Rtree, er
 	if err != nil {
 		return nil, err
 	}
+
+	// Calculate the area of interest for our surrogate data.
+	inputShapeT, err := inputShape.Transform(ct)
+	if err != nil {
+		return nil, err
+	}
+	inputShapeBounds := inputShapeT.Bounds()
+	srgBounds := inputShapeBounds.Copy()
+	for _, cell := range gridData.Cells {
+		cellT, err := cell.Transform(ct)
+		if err != nil {
+			return nil, err
+		}
+		b := cellT.Bounds()
+		if b.Overlaps(inputShapeBounds) {
+			srgBounds.Extend(b)
+		}
+	}
+
 	var fieldNames []string
 	if srg.FilterFunction != nil {
 		fieldNames = append(fieldNames, srg.FilterFunction.Column)
@@ -392,6 +404,10 @@ func (srg *SrgSpec) getSrgData(gridData *GridDef, tol float64) (*rtree.Rtree, er
 		srg.progressLock.Lock()
 		srg.progress += 100. / float64(srgShp.AttributeCount())
 		srg.progressLock.Unlock()
+
+		if !recGeom.Bounds().Overlaps(srgBounds) {
+			continue
+		}
 
 		if srg.FilterFunction == nil {
 			keepFeature = true

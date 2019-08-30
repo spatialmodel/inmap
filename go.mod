@@ -1,7 +1,7 @@
 module github.com/spatialmodel/inmap
 
 require (
-	cloud.google.com/go v0.36.0
+	cloud.google.com/go v0.44.3
 	github.com/BurntSushi/toml v0.3.1
 	github.com/GaryBoone/GoStats v0.0.0-20130122001700-1993eafbef57
 	github.com/Knetic/govaluate v3.0.0+incompatible
@@ -14,15 +14,15 @@ require (
 	github.com/ctessum/go-leaflet v0.0.0-20170724133759-2f9e4c38fb5e
 	github.com/ctessum/gobra v0.0.0-20180516235632-ddfa5eeb3017
 	github.com/ctessum/plotextra v0.0.0-20180623195436-96488e3f1996
-	github.com/ctessum/requestcache v0.0.0-20180628165226-f806c589cca6
+	github.com/ctessum/requestcache v1.0.0
 	github.com/ctessum/sparse v0.0.0-20181201011727-57d6234a2c9d
 	github.com/ctessum/unit v0.0.0-20160621200450-755774ac2fcb
 	github.com/evanphx/json-patch v4.1.0+incompatible // indirect
 	github.com/go-humble/detect v0.1.2 // indirect
 	github.com/go-humble/router v0.5.0
 	github.com/gogo/protobuf v1.2.1 // indirect
-	github.com/golang/groupcache v0.0.0-20180924190550-6f2cf27854a4
-	github.com/golang/protobuf v1.3.0
+	github.com/golang/groupcache v0.0.0-20190702054246-869f871628b6
+	github.com/golang/protobuf v1.3.2
 	github.com/gonum/floats v0.0.0-20181209220543-c233463c7e82
 	github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf // indirect
 	github.com/googleapis/gnostic v0.2.0 // indirect
@@ -60,16 +60,14 @@ require (
 	github.com/spf13/pflag v1.0.1
 	github.com/stretchr/testify v1.3.0 // indirect
 	github.com/tealeg/xlsx v1.0.3
-	go.opencensus.io v0.19.0 // indirect
 	gocloud.dev v0.9.0
 	golang.org/x/build v0.0.0-20190226180436-80ca8d25ddd4
-	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
-	golang.org/x/net v0.0.0-20190311183353-d8887717615a
-	golang.org/x/oauth2 v0.0.0-20190226205417-e64efc72b421 // indirect
+	golang.org/x/crypto v0.0.0-20190605123033-f99c8df09eb5
+	golang.org/x/net v0.0.0-20190620200207-3b0461eec859
 	gonum.org/v1/gonum v0.0.0-20190509213835-50179cd3f3f7
 	gonum.org/v1/plot v0.0.0-20190526055220-ccfad0c86201
-	google.golang.org/genproto v0.0.0-20190226184841-fc2db5cae922 // indirect
-	google.golang.org/grpc v1.19.0
+	google.golang.org/grpc v1.21.1
+	gopkg.in/yaml.v2 v2.2.2 // indirect
 	honnef.co/go/js/dom v0.0.0-20180323154144-6da835bec70f
 	k8s.io/api v0.0.0-20190111032252-67edc246be36
 	k8s.io/apimachinery v0.0.0-20190223094358-dcb391cde5ca
