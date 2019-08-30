@@ -36,11 +36,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ctessum/sparse"
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/encoding/shp"
 	"github.com/ctessum/geom/proj"
 	"github.com/ctessum/requestcache"
+	"github.com/ctessum/sparse"
 	"github.com/ctessum/unit"
 )
 
@@ -272,14 +272,14 @@ func (sp *SpatialProcessor) Surrogate(srgSpec *SrgSpec, grid *GridDef, fips stri
 
 	sp.lazyLoad.Do(sp.load)
 
-	s := &srgGrid{srg: srgSpec, gridData: grid}
+	s := &srgGrid{srg: srgSpec, gridData: grid, fips: fips}
 	req := sp.cache.NewRequest(context.Background(), s, s.key())
 	resultI, err := req.Result()
 	if err != nil {
 		return nil, false, err
 	}
-	result := resultI.(*GriddingSurrogate)
-	srg, coveredByGrid := result.ToGrid(fips)
+	result := resultI.(*GriddedSrgData)
+	srg, coveredByGrid := result.ToGrid()
 	if srg != nil {
 		return srg, coveredByGrid, nil
 	}

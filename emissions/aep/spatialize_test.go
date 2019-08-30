@@ -198,27 +198,21 @@ func TestCreateSurrogates(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			srgsI, err := sp.createSurrogate(context.Background(), &srgGrid{srg: srgSpec, gridData: grid})
-			if err != nil {
-				t.Errorf("creating surrogate %s: %v", code, err)
-			}
-			srgs := srgsI.(*GriddingSurrogate)
-			if len(srgs.Srg) != 19 {
-				t.Errorf("in code %s: there should be %d surrogates instead of %d",
-					code, 19, len(srgs.Srg))
-			}
 			for fips, covered := range coveredByGrid {
 				t.Run(fips, func(t *testing.T) {
-					if _, ok := srgs.Srg[fips]; !ok {
+					srgI, err := sp.createSurrogate(context.Background(), &srgGrid{srg: srgSpec, gridData: grid, fips: fips})
+					if err != nil {
+						t.Fatalf("creating surrogate %s, FIPS %s: %v", code, fips, err)
+					}
+					if srgI == nil {
 						t.Fatalf("county %s is not in surrogate %s", fips, code)
 					}
-					if srgs.Srg[fips].CoveredByGrid != covered {
+
+					srg := srgI.(*GriddedSrgData)
+
+					if srg.CoveredByGrid != covered {
 						t.Errorf("county %s should %v be covered by the grid but it is %v",
-							fips, covered, srgs.Srg[fips].CoveredByGrid)
-					}
-					srg, ok := srgs.Srg[fips]
-					if !ok {
-						t.Errorf("missing surrogate %s for fips %s", code, fips)
+							fips, covered, srg.CoveredByGrid)
 					}
 					sum := 0.
 					for _, cell := range srg.Cells {
@@ -236,7 +230,7 @@ func TestCreateSurrogates(t *testing.T) {
 						t.Errorf("surrogate %s should sum to less than 1 for fips %s but "+
 							"instead sums to %f", code, fips, sum)
 					}
-					gridded, _ := srgs.ToGrid(fips)
+					gridded, _ := srg.ToGrid()
 					if gridded == nil {
 						if _, ok := nilSrgs[code][fips]; ok {
 							return
