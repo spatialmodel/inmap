@@ -261,6 +261,9 @@ func (e *Emissions) CombineEmissions(r2 Record) {
 }
 
 func (e *Emissions) combine(e2 Emissions) {
+	if e.units == nil {
+		e.units = make(map[Pollutant]unit.Dimensions)
+	}
 	e.e = append(e.e, e2.e...)
 	for pol, u := range e2.units {
 		if uu, ok := e.units[pol]; ok {
