@@ -89,7 +89,7 @@ func TestReadSrgSpec(t *testing.T) {
 	}
 	result := `&{Region:USA Name:Population Code:100 DATASHAPEFILE:testdata/cty_pophu2k_revised.shp DATAATTRIBUTE:FIPSSTCO WEIGHTSHAPEFILE:testdata/pophu_bg2010.shp Details:Total population from Census 2010 blocks BackupSurrogateNames:[] WeightColumns:[POP2010] MergeNames:[] MergeMultipliers:[]}
 &{Region:USA Name:Housing Change Code:137 DATASHAPEFILE:testdata/cty_pophu2k_revised.shp DATAATTRIBUTE:FIPSSTCO WEIGHTSHAPEFILE:testdata/pophu_bg2010.shp Details:Housing change from 2000 to 2010 census blocks BackupSurrogateNames:[Housing Population Land] WeightColumns:[HUCH1000] MergeNames:[] MergeMultipliers:[]}
-&{Region:USA Name:Housing Change and Population Code:140 DATASHAPEFILE:cty_pophu2k_revised DATAATTRIBUTE:FIPSSTCO WEIGHTSHAPEFILE: Details:Combination of the change in housing between 2000 and 2010 and year 2010 population BackupSurrogateNames:[Population] WeightColumns:[] MergeNames:[Housing Change Population] MergeMultipliers:[0.5 0.5]}
+&{Region:USA Name:Housing Change and Population Code:140 DATASHAPEFILE:testdata/cty_pophu2k_revised.shp DATAATTRIBUTE:FIPSSTCO WEIGHTSHAPEFILE: Details:Combination of the change in housing between 2000 and 2010 and year 2010 population BackupSurrogateNames:[Population] WeightColumns:[] MergeNames:[Housing Change Population] MergeMultipliers:[0.5 0.5]}
 &{Region:USA Name:Commercial Land Code:500 DATASHAPEFILE:testdata/county_lu2k.shp DATAATTRIBUTE:FIPSSTCO WEIGHTSHAPEFILE:testdata/fema_bsf_2002bnd.shp Details:Sum of building square footage from the following FEMA categories:  COM1 + COM2 + COM3 + COM4 + COM5 + COM6 + COM7 + COM8 + COM9 BackupSurrogateNames:[Population Land] WeightColumns:[COM1 COM2 COM3 COM4 COM5 COM6 COM7 COM8 COM9] MergeNames:[] MergeMultipliers:[]}
 &{Region:USA Name:Urban Primary Road Miles Code:200 DATASHAPEFILE:testdata/cty_pophu2k_revised.shp DATAATTRIBUTE:FIPSSTCO WEIGHTSHAPEFILE:testdata/rd_ps_tiger2010.shp Details:Road Miles of Urban Primary Roads BackupSurrogateNames:[Total Road Miles Population] WeightColumns:[] MergeNames:[] MergeMultipliers:[]}
 &{Column:RDTYPE EqualNotEqual:Equal Values:[1]}
@@ -101,16 +101,18 @@ func TestReadSrgSpec(t *testing.T) {
 
 func TestReadGridRef(t *testing.T) {
 	r := strings.NewReader(gridRefFileString)
-	gridRef, err := ReadGridRef(r)
+	gridRef, err := ReadGridRef(r, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 	result := &GridRef{
-		0: map[string]map[string]interface{}{
+		data: map[Country]map[string]map[string]interface{}{0: map[string]map[string]interface{}{
 			"2102001001": map[string]interface{}{"34023": "500", "36047": "200", "00000": "100"},
 			"0010200501": map[string]interface{}{"00000": "100"},
 			"2101006002": map[string]interface{}{"00000": "137"},
-			"2102001000": map[string]interface{}{"00000": "140"}}}
+			"2102001000": map[string]interface{}{"00000": "140"}}},
+		sccExactMatch: true,
+	}
 
 	diff := pretty.Diff(result, gridRef)
 	if len(diff) != 0 {
@@ -175,7 +177,7 @@ func TestCreateSurrogates(t *testing.T) {
 		t.Error(err)
 	}
 	r = strings.NewReader(gridRefFileString)
-	gridRef, err := ReadGridRef(r)
+	gridRef, err := ReadGridRef(r, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -198,9 +200,13 @@ func TestCreateSurrogates(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			inputShapes, err := srgSpec.InputShapes()
+			if err != nil {
+				t.Fatal(err)
+			}
 			for fips, covered := range coveredByGrid {
 				t.Run(fips, func(t *testing.T) {
-					srgI, err := sp.createSurrogate(context.Background(), &srgGrid{srg: srgSpec, gridData: grid, fips: fips})
+					srgI, err := sp.createSurrogate(context.Background(), &srgGrid{srg: srgSpec, gridData: grid, loc: inputShapes[fips]})
 					if err != nil {
 						t.Fatalf("creating surrogate %s, FIPS %s: %v", code, fips, err)
 					}
@@ -271,7 +277,7 @@ func TestSpatializeRecord(t *testing.T) {
 		t.Error(err)
 	}
 	r = strings.NewReader(gridRefFileString)
-	gridRef, err := ReadGridRef(r)
+	gridRef, err := ReadGridRef(r, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -310,6 +316,8 @@ func TestSpatializeRecord(t *testing.T) {
 		t.Errorf("projected Y coordinate should equal %g but instead is %g", yval, point.Y)
 	}
 
+	sdl := newSourceDataLocator(gridRef, srgSpecs)
+
 	emis := new(Emissions)
 	begin, _ := time.Parse("Jan 2006", "Jan 2005")
 	end, _ := time.Parse("Jan 2006", "Jan 2006")
@@ -325,8 +333,8 @@ func TestSpatializeRecord(t *testing.T) {
 			sourceData.SCC = scc
 			for i, rec := range []Record{
 				&PolygonRecord{
-					SourceData: sourceData,
-					Emissions:  *emis,
+					SourceDataLocation: SourceDataLocation{SourceData: sourceData},
+					Emissions:          *emis,
 				},
 				&PointRecord{
 					SourceData:      sourceData,
@@ -334,7 +342,11 @@ func TestSpatializeRecord(t *testing.T) {
 					Emissions:       *emis,
 				},
 			} {
-				emis, _, err := GriddedEmissions(rec, begin, end, sp, 0)
+				if ar, ok := rec.(sourceDataLocationer); ok {
+					sdl.Locate(ar.getSourceDataLocation())
+				}
+				gr := sp.GridRecord(rec)
+				emis, _, err := gr.GriddedEmissions(begin, end, 0)
 				if err != nil {
 					t.Fatalf("scc: %s, fips: %s, i: %d, err: %v", scc, fips, i, err)
 					continue

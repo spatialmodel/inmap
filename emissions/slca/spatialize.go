@@ -76,7 +76,7 @@ func (c *CSTConfig) spatialSurrogateWorker(ctx context.Context, request interfac
 	case Stationary:
 		if spatialRef.NoSpatial {
 			// Allocate NoSpatial processes using population density
-			return c.neiSpatialSrg(populationSrg, "00000")
+			return c.neiSpatialSrg(populationSrg, c.DefaultFIPS)
 		} else if spatialRef.Surrogate != "" {
 			return c.neiSpatialSrg(spatialRef.Surrogate, spatialRef.SurrogateFIPS)
 		} else if len(spatialRef.SCCs) > 0 {
@@ -151,7 +151,17 @@ func (c *CSTConfig) neiSpatialSrg(srgCode, FIPS string) ([]*inmap.EmisRecord, er
 	if FIPS == "" {
 		FIPS = c.DefaultFIPS
 	}
-	srg, _, err := sp.Surrogate(srgSpec, sp.Grids[0], FIPS)
+
+	inputShapes, err := srgSpec.InputShapes()
+	if err != nil {
+		return nil, err
+	}
+	location, ok := inputShapes[FIPS]
+	if !ok {
+		return nil, fmt.Errorf("slca.neiSpatialSrg: missing location %s", FIPS)
+	}
+
+	srg, _, err := sp.Surrogate(srgSpec, sp.Grids[0], location)
 	if err != nil {
 		return nil, err
 	}
@@ -177,8 +187,14 @@ func (c *CSTConfig) neiSpatialSrg(srgCode, FIPS string) ([]*inmap.EmisRecord, er
 func (c *CSTConfig) neiEmisSrg(spatialRef *SpatialRef) ([]*inmap.EmisRecord, error) {
 	c.loadInventoryOnce.Do(func() {
 		// Initialize emissions record holder.
-		c.emis = make(map[int]map[string][]aep.Record)
+		c.emis = make(map[int]map[string][]aep.RecordGridded)
 	})
+
+	sp, err := c.SpatialConfig.SpatialProcessor()
+	if err != nil {
+		return nil, err
+	}
+
 	if _, ok := c.emis[spatialRef.EmisYear]; !ok {
 		fmt.Println("Filtering out New York State commercial cooking emissions, dog waste emissions, and human perspiration.")
 		c.InventoryConfig.FilterFunc = func(r aep.Record) bool {
@@ -201,11 +217,6 @@ func (c *CSTConfig) neiEmisSrg(spatialRef *SpatialRef) ([]*inmap.EmisRecord, err
 			return nil, err
 		}
 
-		emis, err = c.groupBySCCAndApplyAdj(emis)
-		if err != nil {
-			return nil, err
-		}
-
 		if c.NEIBaseYear != 0 && spatialRef.EmisYear != 0 {
 			// Scale emissions for the requested year.
 			f, err := os.Open(c.SCCReference)
@@ -220,27 +231,28 @@ func (c *CSTConfig) neiEmisSrg(spatialRef *SpatialRef) ([]*inmap.EmisRecord, err
 				return nil, err
 			}
 		}
-		c.emis[spatialRef.EmisYear] = emis
+
+		emisGridded, err := c.groupBySCCAndApplyAdj(emis, sp)
+		if err != nil {
+			return nil, err
+		}
+		c.emis[spatialRef.EmisYear] = emisGridded
 	}
 	emis := c.emis[spatialRef.EmisYear]
-	sp, err := c.SpatialConfig.SpatialProcessor()
-	if err != nil {
-		return nil, err
-	}
 
 	foundData := false
-	var aepRecs []aep.Record
+	var aepRecs []aep.RecordGridded
 	for i, scc := range spatialRef.SCCs {
 		recs, ok := emis[string(scc)]
 		if ok {
 			foundData = true
 		}
-		scaledRecs := make([]aep.Record, len(recs))
+		scaledRecs := make([]aep.RecordGridded, len(recs))
 		if spatialRef.SCCFractions != nil {
 			for j, rec := range recs {
 				scaledRecs[j] = &scaledEmissionsRecord{
-					Record: rec,
-					scale:  spatialRef.SCCFractions[i],
+					RecordGridded: rec,
+					scale:         spatialRef.SCCFractions[i],
 				}
 			}
 		} else {
@@ -255,7 +267,7 @@ func (c *CSTConfig) neiEmisSrg(spatialRef *SpatialRef) ([]*inmap.EmisRecord, err
 	if err != nil {
 		return nil, err
 	}
-	outData, err := inmap.FromAEP(aepRecs, sp, 0, VOC, NOx, NH3, SOx, PM25)
+	outData, err := inmap.FromAEP(aepRecs, sp.Grids, 0, VOC, NOx, NH3, SOx, PM25)
 	if err != nil {
 		return nil, err
 	}
@@ -268,14 +280,14 @@ func (c *CSTConfig) neiEmisSrg(spatialRef *SpatialRef) ([]*inmap.EmisRecord, err
 // scaledEmissionsRecord is a wrapper for an emissions record that
 // applies a scaling factor before returning the emissions total
 type scaledEmissionsRecord struct {
-	aep.Record
+	aep.RecordGridded
 	scale float64
 }
 
 // GetEmissions overrides the corresponding Record method to
 // return scaled emissions.
 func (r *scaledEmissionsRecord) GetEmissions() *aep.Emissions {
-	e := r.Record.GetEmissions().Clone()
+	e := r.RecordGridded.GetEmissions().Clone()
 	e.Scale(func(arg1 aep.Pollutant) (float64, error) { return r.scale, nil })
 	return e
 	//return r.Record.GetEmissions()
@@ -319,6 +331,9 @@ func (c *CSTConfig) scaleFlattenSrg(srg []*inmap.EmisRecord, pol Pollutant, scal
 	}
 	o := sparse.ZerosSparse(len(c.SpatialConfig.GridCells))
 	for _, rec := range srg {
+		if rec == nil {
+			continue
+		}
 		cells := c.gridIndex.SearchIntersect(rec.Geom.Bounds())
 		for _, cI := range cells {
 			c := cI.(gridIndex)
@@ -354,7 +369,7 @@ func (a *arrayAdjuster) Adjustment() (*sparse.DenseArray, error) {
 
 // groupBySCCAndApplyAdj groups the records by SCC code instead of by sector
 // and applies a fugitive dust adjustment.
-func (c *CSTConfig) groupBySCCAndApplyAdj(emis map[string][]aep.Record) (map[string][]aep.Record, error) {
+func (c *CSTConfig) groupBySCCAndApplyAdj(emis map[string][]aep.Record, sp *aep.SpatialProcessor) (map[string][]aep.RecordGridded, error) {
 	// Read the fugitive dust adjustment file.
 	f, err := os.Open(c.FugitiveDustAdjustment)
 	if err != nil {
@@ -384,16 +399,16 @@ func (c *CSTConfig) groupBySCCAndApplyAdj(emis map[string][]aep.Record) (map[str
 	adj := arrayAdjuster(*d)
 
 	// Reorganize records and apply adjustments.
-	o := make(map[string][]aep.Record)
+	o := make(map[string][]aep.RecordGridded)
 	for sector, recs := range emis {
 		for _, rec := range recs {
 			if _, ok := fugitiveDustSectors[sector]; ok {
-				o[rec.GetSCC()] = append(o[rec.GetSCC()], &aep.SpatialAdjustRecord{
-					Record:          rec,
+				o[rec.GetSCC()] = append(o[rec.GetSCC()], &aep.RecordGriddedAdjusted{
+					RecordGridded:   sp.GridRecord(rec),
 					SpatialAdjuster: &adj,
 				})
 			} else {
-				o[rec.GetSCC()] = append(o[rec.GetSCC()], rec)
+				o[rec.GetSCC()] = append(o[rec.GetSCC()], sp.GridRecord(rec))
 			}
 		}
 	}

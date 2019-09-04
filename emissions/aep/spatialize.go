@@ -30,7 +30,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -46,9 +45,9 @@ import (
 
 // SpatialProcessor spatializes emissions records.
 type SpatialProcessor struct {
-	SrgSpecs
-	Grids []*GridDef
-	GridRef
+	SrgSpecs *SrgSpecs
+	Grids    []*GridDef
+	GridRef  *GridRef
 
 	// inputSR is the spatial reference of the input data. It will usually be
 	// "+longlat".
@@ -89,9 +88,9 @@ type SpatialProcessor struct {
 // NewSpatialProcessor creates a new spatial processor.
 func NewSpatialProcessor(srgSpecs *SrgSpecs, grids []*GridDef, gridRef *GridRef, inputSR *proj.SR, matchFullSCC bool) *SpatialProcessor {
 	sp := new(SpatialProcessor)
-	sp.SrgSpecs = *srgSpecs
+	sp.SrgSpecs = srgSpecs
 	sp.Grids = grids
-	sp.GridRef = *gridRef
+	sp.GridRef = gridRef
 	sp.inputSR = inputSR
 	sp.matchFullSCC = matchFullSCC
 
@@ -153,61 +152,80 @@ func (sp *SpatialProcessor) load() {
 	}
 }
 
-// Spatialize takes a spatial processor (sp) and a grid index number (gi) and
-// returns a gridded spatial surrogate (gridSrg) for an area emissions source,
-// as well as whether the emissions source is completely covered by the grid
-// (coveredByGrid) and whether it is in the grid all all (inGrid).
-func (r *SourceData) Spatialize(sp *SpatialProcessor, gi int) (
-	gridSrg *sparse.SparseArray, coveredByGrid, inGrid bool, err error) {
+// RecordGridded represents an emissions record that can be allocated
+// to a spatial grid.
+type RecordGridded interface {
+	Record
 
-	var srgNum string
-	srgNum, err = sp.GridRef.GetSrgCode(r.SCC, r.Country, r.FIPS, sp.matchFullSCC)
-	if err != nil {
-		return
-	}
-	var srgSpec *SrgSpec
-	srgSpec, err = sp.SrgSpecs.GetByCode(r.Country, srgNum)
-	if err != nil {
-		return
-	}
+	// Parent returns the record that this record was created from.
+	Parent() Record
 
-	gridSrg, coveredByGrid, err = sp.Surrogate(srgSpec, sp.Grids[gi], r.FIPS)
-	if err != nil {
-		return
-	}
-	if gridSrg != nil {
-		inGrid = true
-	}
-	return
+	// RecordToGrid returns the normalized fractions of emissions in each
+	// grid cell (gridSrg) of grid index gi.
+	// coveredByGrid indicates whether the emissions source is completely
+	// covered by the grid, and inGrid indicates whether it is in the
+	// grid at all.
+	GridFactors(gi int) (gridSrg *sparse.SparseArray, coveredByGrid, inGrid bool, err error)
+
+	// GriddedEmissions returns gridded emissions of the receiver for a given grid index and period.
+	GriddedEmissions(begin, end time.Time, gi int) (
+		emis map[Pollutant]*sparse.SparseArray, units map[Pollutant]unit.Dimensions, err error)
 }
 
-// Spatialize takes a spatial processor (sp) and a grid index number (gi) and
-// returns a gridded spatial surrogate (gridSrg) for a point emissions source,
-// as well as whether the emissions source is completely covered by the grid
-// (coveredByGrid) and whether it is in the grid all all (inGrid).
-func (r *PointSourceData) Spatialize(sp *SpatialProcessor, gi int) (
+func (sp *SpatialProcessor) GridRecord(r Record) RecordGridded {
+	return &recordGridded{
+		Record: r,
+		sp:     sp,
+	}
+}
+
+type recordGridded struct {
+	Record
+	sp *SpatialProcessor
+}
+
+// GridFactors returns the normalized fractions of emissions in each
+// grid cell (gridSrg) of grid index gi.
+// coveredByGrid indicates whether the emissions source is completely
+// covered by the grid, and inGrid indicates whether it is in the
+// grid at all.
+func (r *recordGridded) GridFactors(gi int) (
 	gridSrg *sparse.SparseArray, coveredByGrid, inGrid bool, err error) {
 
-	var ct proj.Transformer
-	ct, err = r.SR.NewTransform(sp.Grids[gi].SR)
+	loc := r.Location()
+
+	if ra, ok := r.Record.(RecordSpatialSurrogate); ok {
+		// If this record has a spatial surrogate, use it.
+		srgSpec, err := ra.SurrogateSpecification(r.sp)
+		if err != nil {
+			return nil, false, false, err
+		}
+		gridSrg, coveredByGrid, err = r.sp.Surrogate(srgSpec, r.sp.Grids[gi], loc)
+		if err != nil {
+			return nil, false, false, err
+		}
+		if gridSrg != nil {
+			inGrid = true
+		}
+		return gridSrg, coveredByGrid, inGrid, nil
+	}
+
+	// Otherwise, directly allocate emissions to grid.
+	gridLoc, err := loc.Reproject(r.sp.Grids[gi].SR)
 	if err != nil {
 		return
 	}
 
-	p2, err := r.Point.Transform(ct)
-	if err != nil {
-		return
-	}
-
+	// TODO: Handle non-point geometries.
 	var rows, cols []int
-	rows, cols, inGrid, err = sp.Grids[gi].GetIndex(p2.(geom.Point))
+	rows, cols, inGrid, err = r.sp.Grids[gi].GetIndex(gridLoc.(geom.Point))
 	if err != nil {
 		return
 	}
 	// for points, inGrid and coveredByGrid are the same thing.
 	coveredByGrid = inGrid
 	if inGrid {
-		gridSrg = sparse.ZerosSparse(sp.Grids[gi].Ny, sp.Grids[gi].Nx)
+		gridSrg = sparse.ZerosSparse(r.sp.Grids[gi].Ny, r.sp.Grids[gi].Nx)
 		// A point can be allocated to more than one grid cell if it lies
 		// on the boundary between two cells.
 		frac := 1.0 / float64(len(rows))
@@ -218,38 +236,12 @@ func (r *PointSourceData) Spatialize(sp *SpatialProcessor, gi int) (
 	return
 }
 
-// Spatialize takes a spatial processor (sp) and a grid index number (gi) and
-// returns a gridded spatial surrogate (gridSrg) for a point emissions source,
-// as well as whether the emissions source is completely covered by the grid
-// (coveredByGrid) and whether it is in the grid all all (inGrid).
-func (r *PointRecord) Spatialize(sp *SpatialProcessor, gi int) (
-	gridSrg *sparse.SparseArray, coveredByGrid, inGrid bool, err error) {
-	return r.PointSourceData.Spatialize(sp, gi)
-}
-
-// Spatialize takes a spatial processor (sp) and a grid index number (gi) and
-// returns a gridded spatial surrogate (gridSrg) for a point emissions source,
-// as well as whether the emissions source is completely covered by the grid
-// (coveredByGrid) and whether it is in the grid all all (inGrid).
-func (r *pointRecordIDA) Spatialize(sp *SpatialProcessor, gi int) (
-	gridSrg *sparse.SparseArray, coveredByGrid, inGrid bool, err error) {
-	return r.PointSourceData.Spatialize(sp, gi)
-}
-
-// Spatialize is added here to fulfill the Record in interace, but
-// it does not contain enough information on its own to be spatialized so
-// it panics if used. (It should never be used).
-func (r *supplementalPointRecord) Spatialize(sp *SpatialProcessor, gi int) (
-	gridSrg *sparse.SparseArray, coveredByGrid, inGrid bool, err error) {
-	panic("supplementalPointRecord cannot be spatialized")
-}
-
-// GriddedEmissions returns gridded emissions of record r for a given grid index and period.
-func GriddedEmissions(r Record, begin, end time.Time, sp *SpatialProcessor,
-	gi int) (emis map[Pollutant]*sparse.SparseArray, units map[Pollutant]unit.Dimensions, err error) {
+// GriddedEmissions returns gridded emissions of the receiver for a given grid index and period.
+func (r *recordGridded) GriddedEmissions(begin, end time.Time, gi int) (
+	emis map[Pollutant]*sparse.SparseArray, units map[Pollutant]unit.Dimensions, err error) {
 
 	var gridSrg *sparse.SparseArray
-	gridSrg, _, _, err = r.Spatialize(sp, gi)
+	gridSrg, _, _, err = r.GridFactors(gi)
 	if err != nil || gridSrg == nil {
 		return
 	}
@@ -264,15 +256,17 @@ func GriddedEmissions(r Record, begin, end time.Time, sp *SpatialProcessor,
 	return
 }
 
+// Parent returns the record that this record was created from.
+func (r *recordGridded) Parent() Record { return r.Record }
+
 // Surrogate gets the specified spatial surrogate.
 // It is important not to edit the returned surrogate in place, because the
 // same copy is used over and over again. The second return value indicates
 // whether the shape corresponding to fips is completely covered by the grid.
-func (sp *SpatialProcessor) Surrogate(srgSpec *SrgSpec, grid *GridDef, fips string) (*sparse.SparseArray, bool, error) {
-
+func (sp *SpatialProcessor) Surrogate(srgSpec *SrgSpec, grid *GridDef, loc *Location) (*sparse.SparseArray, bool, error) {
 	sp.lazyLoad.Do(sp.load)
 
-	s := &srgGrid{srg: srgSpec, gridData: grid, fips: fips}
+	s := &srgGrid{srg: srgSpec, gridData: grid, loc: loc}
 	req := sp.cache.NewRequest(context.Background(), s, s.key())
 	resultI, err := req.Result()
 	if err != nil {
@@ -289,14 +283,14 @@ func (sp *SpatialProcessor) Surrogate(srgSpec *SrgSpec, grid *GridDef, fips stri
 		if err != nil {
 			return nil, false, err
 		}
-		s := &srgGrid{srg: newSrgSpec, gridData: grid}
+		s := &srgGrid{srg: newSrgSpec, gridData: grid, loc: loc}
 		req := sp.cache.NewRequest(context.Background(), s, s.key())
 		resultI, err := req.Result()
 		if err != nil {
 			return nil, false, err
 		}
-		result := resultI.(*GriddingSurrogate)
-		srg, coveredByGrid := result.ToGrid(fips)
+		result := resultI.(*GriddedSrgData)
+		srg, coveredByGrid := result.ToGrid()
 		if srg != nil {
 			return srg, coveredByGrid, nil
 		}
@@ -382,18 +376,6 @@ func (s *SrgSpecs) GetByCode(region Country, code string) (*SrgSpec, error) {
 	return nil, fmt.Errorf("can't find surrogate for region=%s, code=%s", region, code)
 }
 
-// Status returns the status of the spatial surrogates in s.
-func (s *SrgSpecs) Status() []Status {
-	var o statuses
-	for _, ss := range s.byName {
-		for _, sss := range ss {
-			o = append(o, sss.Status())
-		}
-	}
-	sort.Sort(statuses(o))
-	return o
-}
-
 // SrgSpec holds spatial surrogate specification information.
 type SrgSpec struct {
 	Region          Country
@@ -426,25 +408,6 @@ type SrgSpec struct {
 	// MergeMultipliers specifies multipliers associated with the surrogates
 	// in MergeNames.
 	MergeMultipliers []float64
-
-	// progress specifies the progress in generating the surrogate.
-	progress     float64
-	progressLock sync.Mutex
-	// status specifies what the surrogate generator is currently doing.
-	status string
-}
-
-// Status returns information about the status of s.
-func (s *SrgSpec) Status() Status {
-	s.progressLock.Lock()
-	o := Status{
-		Name:     s.Name,
-		Code:     s.Code,
-		Status:   s.status,
-		Progress: s.progress,
-	}
-	s.progressLock.Unlock()
-	return o
 }
 
 const none = "NONE"
@@ -534,32 +497,40 @@ func ReadSrgSpec(fid io.Reader, shapefileDir string, checkShapefiles bool) (*Srg
 				srg.MergeMultipliers = append(srg.MergeMultipliers, val)
 			}
 		}
-		if len(srg.MergeNames) == 0 {
-			// If this is not a merged surrogate, setup the shapefile paths and
-			// optionally check to make sure the shapefiles exist.
-			if checkShapefiles {
+		// Set up the shapefile paths and
+		// optionally check to make sure the shapefiles exist.
+		if checkShapefiles {
+			if srg.DATASHAPEFILE != "" {
 				srg.DATASHAPEFILE, err = findFile(shapefileDir, srg.DATASHAPEFILE+".shp")
 				if err != nil {
 					return nil, err
 				}
+			}
+			if srg.WEIGHTSHAPEFILE != "" {
 				srg.WEIGHTSHAPEFILE, err = findFile(shapefileDir, srg.WEIGHTSHAPEFILE+".shp")
 				if err != nil {
 					return nil, err
 				}
-			} else {
-				srg.DATASHAPEFILE = filepath.Join(
-					shapefileDir, srg.DATASHAPEFILE+".shp")
-				srg.WEIGHTSHAPEFILE = filepath.Join(
-					shapefileDir, srg.WEIGHTSHAPEFILE+".shp")
 			}
+		} else {
+			if srg.DATASHAPEFILE != "" {
+				srg.DATASHAPEFILE = filepath.Join(shapefileDir, srg.DATASHAPEFILE+".shp")
+			}
+			if srg.WEIGHTSHAPEFILE != "" {
+				srg.WEIGHTSHAPEFILE = filepath.Join(shapefileDir, srg.WEIGHTSHAPEFILE+".shp")
+			}
+		}
 
-			if checkShapefiles {
+		if checkShapefiles {
+			if srg.DATASHAPEFILE != "" {
 				shpf, err := shp.NewDecoder(srg.DATASHAPEFILE)
 				if err != nil {
 					return nil, err
 				}
 				shpf.Close()
-				shpf, err = shp.NewDecoder(srg.WEIGHTSHAPEFILE)
+			}
+			if srg.WEIGHTSHAPEFILE != "" {
+				shpf, err := shp.NewDecoder(srg.WEIGHTSHAPEFILE)
 				if err != nil {
 					return nil, err
 				}
@@ -603,13 +574,58 @@ func findFile(dir, file string) (string, error) {
 	return fullPath, nil
 }
 
+// InputShapes returns the input shapes associated with the receiver.
+func (srg *SrgSpec) InputShapes() (map[string]*Location, error) {
+	inputShp, err := shp.NewDecoder(srg.DATASHAPEFILE)
+	if err != nil {
+		return nil, err
+	}
+	defer inputShp.Close()
+	inputSR, err := inputShp.SR()
+	if err != nil {
+		return nil, err
+	}
+	inputData := make(map[string]*Location)
+	for {
+		g, fields, more := inputShp.DecodeRowFields(srg.DATAATTRIBUTE)
+		if !more {
+			break
+		}
+
+		inputID := fields[srg.DATAATTRIBUTE]
+		ggeom := g.(geom.Polygon)
+
+		// Extend existing polygon if one already exists for this InputID
+		if _, ok := inputData[inputID]; !ok {
+			inputData[inputID] = &Location{
+				Geom: ggeom,
+				SR:   inputSR,
+			}
+		} else {
+			inputData[inputID].Geom = append(inputData[inputID].Geom.(geom.Polygon), ggeom...)
+		}
+	}
+	if inputShp.Error() != nil {
+		return nil, fmt.Errorf("in file %s, %v", srg.DATASHAPEFILE, inputShp.Error())
+	}
+	return inputData, nil
+}
+
 // GridRef specifies the grid surrogates the correspond with combinations of
 // country (first map), SCC (second map), and FIPS or spatial ID (third map).
-type GridRef map[Country]map[string]map[string]interface{}
+type GridRef struct {
+	data          map[Country]map[string]map[string]interface{}
+	sccExactMatch bool
+}
 
-// ReadGridRef reads the SMOKE gref file, which maps FIPS and SCC codes to grid surrogates
-func ReadGridRef(f io.Reader) (*GridRef, error) {
-	gr := make(GridRef)
+// ReadGridRef reads the SMOKE gref file, which maps FIPS and SCC codes to grid surrogates.
+// sccExactMatch specifies whether SCC codes must match exactly, or if partial
+// matches are allowed.
+func ReadGridRef(f io.Reader, sccExactMatch bool) (*GridRef, error) {
+	gr := &GridRef{
+		data:          make(map[Country]map[string]map[string]interface{}),
+		sccExactMatch: sccExactMatch,
+	}
 	buf := bufio.NewReader(f)
 	for {
 		record, err := buf.ReadString('\n')
@@ -644,27 +660,27 @@ func ReadGridRef(f io.Reader) (*GridRef, error) {
 			}
 			srg := strings.Trim(splitLine[2], "\"\n ")
 
-			if _, ok := gr[country]; !ok {
-				gr[country] = make(map[string]map[string]interface{})
+			if _, ok := gr.data[country]; !ok {
+				gr.data[country] = make(map[string]map[string]interface{})
 			}
-			if _, ok := gr[country][SCC]; !ok {
-				gr[country][SCC] = make(map[string]interface{})
+			if _, ok := gr.data[country][SCC]; !ok {
+				gr.data[country][SCC] = make(map[string]interface{})
 			}
-			gr[country][SCC][FIPS] = srg
+			gr.data[country][SCC][FIPS] = srg
 		}
 	}
-	return &gr, nil
+	return gr, nil
 }
 
 // GetSrgCode returns the surrogate code appropriate for the given SCC code,
 // country and FIPS.
-func (gr GridRef) GetSrgCode(SCC string, c Country, FIPS string, matchFullSCC bool) (string, error) {
+func (gr GridRef) GetSrgCode(SCC string, c Country, FIPS string) (string, error) {
 	var err error
 	var matchedVal interface{}
-	if !matchFullSCC {
-		_, _, matchedVal, err = MatchCodeDouble(SCC, FIPS, gr[c])
+	if !gr.sccExactMatch {
+		_, _, matchedVal, err = MatchCodeDouble(SCC, FIPS, gr.data[c])
 	} else {
-		_, matchedVal, err = MatchCode(FIPS, gr[c][SCC])
+		_, matchedVal, err = MatchCode(FIPS, gr.data[c][SCC])
 	}
 	if err != nil {
 		return "", fmt.Errorf("in aep.GridRef.GetSrgCode: %v. (SCC=%v, Country=%v, FIPS=%v)",
@@ -675,22 +691,22 @@ func (gr GridRef) GetSrgCode(SCC string, c Country, FIPS string, matchFullSCC bo
 
 // Merge combines values in gr2 into gr. If gr2 combines any values that
 // conflict with values already in gr, an error is returned.
-func (gr *GridRef) Merge(gr2 GridRef) error {
-	for country, d1 := range gr2 {
-		if _, ok := (*gr)[country]; !ok {
-			(*gr)[country] = make(map[string]map[string]interface{})
+func (gr *GridRef) Merge(gr2 *GridRef) error {
+	for country, d1 := range gr2.data {
+		if _, ok := gr.data[country]; !ok {
+			gr.data[country] = make(map[string]map[string]interface{})
 		}
 		for SCC, d2 := range d1 {
-			if _, ok := (*gr)[country][SCC]; !ok {
-				(*gr)[country][SCC] = make(map[string]interface{})
+			if _, ok := gr.data[country][SCC]; !ok {
+				gr.data[country][SCC] = make(map[string]interface{})
 			}
 			for FIPS, code := range d2 {
-				if existingCode, ok := (*gr)[country][SCC][FIPS]; ok && existingCode != code {
+				if existingCode, ok := gr.data[country][SCC][FIPS]; ok && existingCode != code {
 					return fmt.Errorf("GridRef already has code of %s for country=%s, "+
 						"SCC=%s, FIPS=%s. Cannot replace with code %s.",
 						existingCode, country, SCC, FIPS, code)
 				}
-				(*gr)[country][SCC][FIPS] = code
+				gr.data[country][SCC][FIPS] = code
 			}
 		}
 	}

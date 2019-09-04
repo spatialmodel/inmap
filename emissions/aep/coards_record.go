@@ -25,6 +25,7 @@ import (
 
 	"github.com/ctessum/cdf"
 	"github.com/ctessum/geom"
+	"github.com/ctessum/geom/proj"
 	"github.com/ctessum/unit"
 )
 
@@ -91,6 +92,11 @@ func ReadCOARDSFile(file string, begin, end time.Time, toKG float64, sourceData 
 		return nil, fmt.Errorf("aep: opening COARDS file %s: %v", file, err)
 	}
 
+	sr, err := proj.Parse("+proj=longlat")
+	if err != nil {
+		panic(err)
+	}
+
 	// Read in emissions variables.
 	variables := make(map[string][]float64)
 	for _, v := range nc.Header.Variables() {
@@ -134,6 +140,7 @@ func ReadCOARDSFile(file string, begin, end time.Time, toKG float64, sourceData 
 		r := &basicPolygonRecord{
 			Polygon:    geom.Polygon{{min, {max.X, min.Y}, max, {min.X, max.Y}}},
 			SourceData: sourceData,
+			SR:         sr,
 		}
 
 		e := new(Emissions)
@@ -153,6 +160,5 @@ func ReadCOARDSFile(file string, begin, end time.Time, toKG float64, sourceData 
 		}
 		return r, nil
 	}
-
 	return generator, nil
 }

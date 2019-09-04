@@ -24,9 +24,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ctessum/sparse"
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/proj"
+	"github.com/ctessum/sparse"
 	"github.com/ctessum/unit"
 )
 
@@ -44,10 +44,10 @@ func TestSpatialAdjustRecord(t *testing.T) {
 	r := strings.NewReader(srgSpecFileString)
 	srgSpecs, err := ReadSrgSpec(r, "testdata", true)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	r = strings.NewReader(gridRefFileString)
-	gridRef, err := ReadGridRef(r)
+	gridRef, err := ReadGridRef(r, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,8 +84,8 @@ func TestSpatialAdjustRecord(t *testing.T) {
 
 	for i, rec := range []Record{
 		&PolygonRecord{
-			SourceData: sourceData,
-			Emissions:  *emis,
+			SourceDataLocation: SourceDataLocation{SourceData: sourceData},
+			Emissions:          *emis,
 		},
 		&PointRecord{
 			SourceData:      sourceData,
@@ -96,19 +96,20 @@ func TestSpatialAdjustRecord(t *testing.T) {
 		if i == 0 {
 			continue // Skip surrogate creation for polygon record.
 		}
-		recAdj := &SpatialAdjustRecord{Record: rec, SpatialAdjuster: &adj}
+		recG := sp.GridRecord(rec)
+		recAdj := &RecordGriddedAdjusted{RecordGridded: recG, SpatialAdjuster: &adj}
 
-		emis, _, err := GriddedEmissions(rec, begin, end, sp, 0)
+		emis, _, err := recG.GriddedEmissions(begin, end, 0)
 		if err != nil {
 			t.Fatalf("i: %d, err: %v", i, err)
 			continue
 		}
-		emisAdj, _, err := GriddedEmissions(recAdj, begin, end, sp, 0)
+		emisAdj, _, err := recAdj.GriddedEmissions(begin, end, 0)
 		if err != nil {
 			t.Fatalf("i: %d, err: %v", i, err)
 			continue
 		}
-		emis2, _, err := GriddedEmissions(rec, begin, end, sp, 0)
+		emis2, _, err := recG.GriddedEmissions(begin, end, 0)
 		if err != nil {
 			t.Fatalf("i: %d, err: %v", i, err)
 			continue

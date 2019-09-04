@@ -19,6 +19,9 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package aep
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/gob"
 	"fmt"
 	"io"
 	"os"
@@ -28,10 +31,9 @@ import (
 	"time"
 
 	"github.com/ctessum/geom"
+	"github.com/ctessum/geom/proj"
 	"github.com/ctessum/unit"
 	"github.com/ctessum/unit/badunit"
-
-	"github.com/ctessum/sparse"
 )
 
 const (
@@ -39,9 +41,44 @@ const (
 	commentRune = '#'
 )
 
-// A Record holds data from a parsed emissions inventory record. Two types
-// that implement this interface are PointRecord and PolygonRecord.
+func init() {
+	gob.Register(geom.Polygon{})
+	gob.Register(geom.Point{})
+	gob.Register(geom.LineString{})
+}
+
+type Location struct {
+	geom.Geom
+	SR *proj.SR
+}
+
+// Key returns a unique key for this location.
+func (l *Location) Key() string {
+	b := new(bytes.Buffer)
+	e := gob.NewEncoder(b)
+	if err := e.Encode(l); err != nil {
+		panic(err)
+	}
+	bKey := sha256.Sum256(b.Bytes())
+	return string(bKey[0:sha256.Size])
+}
+
+func (l *Location) Reproject(sr *proj.SR) (geom.Geom, error) {
+	ct, err := l.SR.NewTransform(sr)
+	if err != nil {
+		return nil, err
+	}
+	return l.Geom.Transform(ct)
+}
+
+// A Record holds data from a parsed emissions inventory record.
 type Record interface {
+	// Key returns a unique identifier for this record.
+	Key() string
+
+	// Location returns the polygon representing the location of emissions.
+	Location() *Location
+
 	// GetSCC returns the SCC associated with this record.
 	GetSCC() string
 
@@ -63,28 +100,29 @@ type Record interface {
 	// PeriodTotals returns the total emissions from this emissions source between
 	// the times begin and end.
 	PeriodTotals(begin, end time.Time) map[Pollutant]*unit.Unit
-
-	// Spatialize takes a spatial processor (sp) and a grid index number (gi) and
-	// returns a gridded spatial surrogate (gridSrg) for an emissions source,
-	// as well as whether the emissions source is completely covered by the grid
-	// (coveredByGrid) and whether it is in the grid all all (inGrid).
-	Spatialize(sp *SpatialProcessor, gi int) (gridSrg *sparse.SparseArray, coveredByGrid, inGrid bool, err error)
-
-	// GetSourceData returns the source information associated with this record.
-	GetSourceData() *SourceData
-
-	// PointData returns the data specific to point sources. If the record is
-	// not a point source, it should return nil.
-	PointData() *PointSourceData
-
-	// Key returns a unique identifier for this record.
-	Key() string
 }
 
-// EconomicRecord is any record that contains economic information.
-type EconomicRecord interface {
-	// GetEconomicData returns the economic information associated with this record.
-	GetEconomicData() *EconomicData
+// RecordElevated describes emissions that are released from above ground.
+type RecordElevated interface {
+	Record
+
+	// StackParameters describes the parameters of the emissions release
+	// from a elevated stack.
+	StackParameters() (StackHeight, StackDiameter, StackTemp, StackFlow, StackVelocity *unit.Unit)
+
+	// GroundLevel returns true if the receiver emissions are
+	// at ground level and false if they are elevated.
+	GroundLevel() bool
+}
+
+// RecordSpatialSurrogate describes emissions that need to be allocated to a grid
+// using a spatial surrogate.
+type RecordSpatialSurrogate interface {
+	Record
+
+	// SurrogateSpecification returns the speicification of the spatial surrogate
+	// associated with an area emissions source.
+	SurrogateSpecification(sp *SpatialProcessor) (*SrgSpec, error)
 }
 
 // PointRecord holds information about an emissions source that has a point
@@ -105,7 +143,7 @@ func (r *PointRecord) Key() string {
 // PolygonRecord holds information about an emissions source that has an area
 // (i.e., polygon) location. The polygon is designated by the SourceData.FIPS code.
 type PolygonRecord struct {
-	SourceData
+	SourceDataLocation
 	EconomicData
 	ControlData
 	Emissions
@@ -118,7 +156,7 @@ func (r *PolygonRecord) PointData() *PointSourceData { return nil }
 // nobusinessPolygonRecord is a nonpoint record that does not have any
 // economic information.
 type nobusinessPolygonRecord struct {
-	SourceData
+	SourceDataLocation
 	ControlData
 	Emissions
 }
@@ -129,7 +167,7 @@ func (r *nobusinessPolygonRecord) PointData() *PointSourceData { return nil }
 
 // nocontrolPolygonRecord is a polygon record without any control information.
 type nocontrolPolygonRecord struct {
-	SourceData
+	SourceDataLocation
 	EconomicData
 	Emissions
 }
@@ -137,6 +175,7 @@ type nocontrolPolygonRecord struct {
 // basicPolygonRecord is a basic polygon record information.
 type basicPolygonRecord struct {
 	geom.Polygon
+	SR *proj.SR
 	SourceData
 	Emissions
 }
@@ -144,6 +183,11 @@ type basicPolygonRecord struct {
 // PointData exists to fulfill the Record interface but always returns
 // nil because this is not a point source.
 func (r *basicPolygonRecord) PointData() *PointSourceData { return nil }
+
+// Location returns the polygon representing the location of emissions.
+func (r *basicPolygonRecord) Location() *Location {
+	return &Location{r.Polygon, r.SR}
+}
 
 type supplementalPointRecord struct {
 	SourceData
@@ -189,6 +233,8 @@ type EmissionsReader struct {
 
 	inputConv func(float64) *unit.Unit
 
+	sourceDataLocator *sourceDataLocator
+
 	// Group specifies a group name for files read by this reader.
 	// It is used for report creation
 	Group string
@@ -214,10 +260,13 @@ const (
 // pollutants from the inventory to keep. If it is nil, all pollutants are kept.
 // InputUnits is the units of input data. Acceptable values are `tons',
 // `tonnes', `kg', `g', and `lbs'.
-func NewEmissionsReader(polsToKeep Speciation, freq InventoryFrequency, InputUnits InputUnits) (*EmissionsReader, error) {
+// gr and sp are used to reference emissions records to geographic locations;
+// if they are both nil, the location referencing is skipped.
+func NewEmissionsReader(polsToKeep Speciation, freq InventoryFrequency, InputUnits InputUnits, gr *GridRef, sp *SrgSpecs) (*EmissionsReader, error) {
 	e := new(EmissionsReader)
 	e.polsToKeep = polsToKeep
 	e.freq = freq
+	e.sourceDataLocator = newSourceDataLocator(gr, sp)
 	var monthlyConv = 1.
 	if freq == Monthly {
 		// If the freqency is monthly, the emissions need to be divided by 12 because
@@ -284,6 +333,10 @@ func (e *EmissionsReader) OpenFilesFromTemplate(filetemplate string) ([]*Invento
 // and processed.
 type RecFilter func(Record) bool
 
+type sourceDataLocationer interface {
+	getSourceDataLocation() *SourceDataLocation
+}
+
 // TODO: Double-counting tracking has been removed from here.
 // Make sure to add it back somewhere else.
 
@@ -331,6 +384,11 @@ func (e *EmissionsReader) ReadFiles(files []*InventoryFile, f RecFilter) ([]Reco
 	recordList := make([]Record, len(records))
 	i := 0
 	for _, r := range records {
+		if ar, ok := r.(sourceDataLocationer); ok {
+			if err := e.sourceDataLocator.Locate(ar.getSourceDataLocation()); err != nil {
+				return nil, nil, err
+			}
+		}
 		recordList[i] = r
 		i++
 	}

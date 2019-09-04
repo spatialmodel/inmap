@@ -192,13 +192,13 @@ func ReadEmissionShapefiles(gridSR *proj.SR, units string, c chan string, shapef
 }
 
 // FromAEP converts the given AEP (github.com/spatialmodel/inmap/emissions/aep) records to
-// EmisRecords using the given SpatialProcessor and the SpatialProcessor
+// EmisRecords using the given grid definitions and
 // grid index gi. VOC, NOx, NH3, SOx, and PM25 are lists of
 // AEP Polluants that should be mapped to those InMAP species.
 // The returned EmisRecords will be grouped as much as possible to minimize
 // the number of records.
-func FromAEP(r []aep.Record, sp *aep.SpatialProcessor, gi int, VOC, NOx, NH3, SOx, PM25 []aep.Pollutant) ([]*EmisRecord, error) {
-	if gi > 0 || len(sp.Grids) <= gi {
+func FromAEP(r []aep.RecordGridded, grids []*aep.GridDef, gi int, VOC, NOx, NH3, SOx, PM25 []aep.Pollutant) ([]*EmisRecord, error) {
+	if gi < 0 || len(grids) <= gi {
 		return nil, fmt.Errorf("inmap: converting AEP record to EmisRecord: invalid gi (%d)", gi)
 	}
 
@@ -213,7 +213,7 @@ func FromAEP(r []aep.Record, sp *aep.SpatialProcessor, gi int, VOC, NOx, NH3, SO
 	}
 
 	// Find the centroids of the grid cells.
-	grid := sp.Grids[gi]
+	grid := grids[gi]
 	centroids := make([]geom.Point, len(grid.Cells))
 	for i, c := range grid.Cells {
 		centroids[i] = c.Centroid()
@@ -223,7 +223,7 @@ func FromAEP(r []aep.Record, sp *aep.SpatialProcessor, gi int, VOC, NOx, NH3, SO
 	groundERecs := make(map[geom.Point]*EmisRecord)
 
 	for _, rec := range r {
-		gridSrg, _, inGrid, err := rec.Spatialize(sp, gi)
+		gridSrg, _, inGrid, err := rec.GridFactors(gi)
 		if err != nil {
 			return nil, err
 		}
@@ -299,8 +299,14 @@ func FromAEP(r []aep.Record, sp *aep.SpatialProcessor, gi int, VOC, NOx, NH3, SO
 				}
 			}
 
-			pointData := rec.PointData()
-			if pointData == nil || pointData.GroundLevel() {
+			if ptRec, ok := rec.Parent().(aep.RecordElevated); ok && !ptRec.GroundLevel() {
+				StackHeight, StackDiameter, StackTemp, _, StackVelocity := ptRec.StackParameters()
+				er.Height = StackHeight.Value()
+				er.Diam = StackDiameter.Value()
+				er.Temp = StackTemp.Value()
+				er.Velocity = StackVelocity.Value()
+				eRecs = append(eRecs, &er)
+			} else {
 				// For ground level sources, combine with other records
 				// at the same point.
 				if _, ok := groundERecs[p]; !ok {
@@ -308,12 +314,6 @@ func FromAEP(r []aep.Record, sp *aep.SpatialProcessor, gi int, VOC, NOx, NH3, SO
 				} else {
 					groundERecs[p].add(&er)
 				}
-			} else {
-				er.Height = pointData.StackHeight.Value()
-				er.Diam = pointData.StackDiameter.Value()
-				er.Temp = pointData.StackTemp.Value()
-				er.Velocity = pointData.StackVelocity.Value()
-				eRecs = append(eRecs, &er)
 			}
 		}
 	}

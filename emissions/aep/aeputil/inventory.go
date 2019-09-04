@@ -39,6 +39,24 @@ type InventoryConfig struct {
 	// values are `tons', `tonnes', `kg', `g', and `lbs'.
 	InputUnits string
 
+	// SrgSpec gives the location of the surrogate specification file.
+	// It is used for assigning spatial locations to emissions records.
+	SrgSpec string
+
+	// SrgShapefileDirectory gives the location of the directory holding
+	// the shapefiles used for creating spatial surrogates.
+	// It is used for assigning spatial locations to emissions records.
+	SrgShapefileDirectory string
+
+	// GridRef specifies the locations of the spatial surrogate gridding
+	// reference files used for processing the NEI.
+	// It is used for assigning spatial locations to emissions records.
+	GridRef []string
+
+	// SCCExactMatch specifies whether SCC codes must match exactly when processing
+	// emissions.
+	SCCExactMatch bool
+
 	// FilterFunc specifies which records should be kept.
 	// If it is nil, all records are kept.
 	FilterFunc aep.RecFilter
@@ -48,19 +66,28 @@ type InventoryConfig struct {
 // in the NEIFiles field in the receiver. The returned records are
 // split up by sector.
 func (c *InventoryConfig) ReadEmissions() (map[string][]aep.Record, *aep.InventoryReport, error) {
+	srgSpecs, err := readSrgSpec(c.SrgSpec, c.SrgShapefileDirectory, c.SCCExactMatch)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	gridRef, err := readGridRef(c.GridRef, c.SCCExactMatch)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	var r *aep.EmissionsReader
-	var err error
 	switch c.InputUnits {
 	case "tons":
-		r, err = aep.NewEmissionsReader(c.PolsToKeep, aep.Annually, aep.Ton)
+		r, err = aep.NewEmissionsReader(c.PolsToKeep, aep.Annually, aep.Ton, gridRef, srgSpecs)
 	case "tonnes":
-		r, err = aep.NewEmissionsReader(c.PolsToKeep, aep.Annually, aep.Tonne)
+		r, err = aep.NewEmissionsReader(c.PolsToKeep, aep.Annually, aep.Tonne, gridRef, srgSpecs)
 	case "kg":
-		r, err = aep.NewEmissionsReader(c.PolsToKeep, aep.Annually, aep.Kg)
+		r, err = aep.NewEmissionsReader(c.PolsToKeep, aep.Annually, aep.Kg, gridRef, srgSpecs)
 	case "lbs":
-		r, err = aep.NewEmissionsReader(c.PolsToKeep, aep.Annually, aep.Lb)
+		r, err = aep.NewEmissionsReader(c.PolsToKeep, aep.Annually, aep.Lb, gridRef, srgSpecs)
 	case "g":
-		r, err = aep.NewEmissionsReader(c.PolsToKeep, aep.Annually, aep.G)
+		r, err = aep.NewEmissionsReader(c.PolsToKeep, aep.Annually, aep.G, gridRef, srgSpecs)
 	default:
 		return nil, nil, fmt.Errorf("aeputil.ReadEmissions: invalid input units '%s'", c.InputUnits)
 	}

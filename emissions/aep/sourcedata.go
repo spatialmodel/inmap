@@ -42,6 +42,11 @@ type SourceData struct {
 	Country Country
 }
 
+type SourceDataLocation struct {
+	SourceData
+	location *Location
+}
+
 // GetSCC returns the SCC associated with this record.
 func (r SourceData) GetSCC() string {
 	return r.SCC
@@ -104,4 +109,58 @@ func (r *SourceData) parseSCC(SCC string) {
 // Key returns a unique key for this record.
 func (r *SourceData) Key() string {
 	return fmt.Sprintf("%s%s%d", r.FIPS, r.SCC, r.Country)
+}
+
+// sourceDataLocator adds locations to SourceData records.
+type sourceDataLocator struct {
+	gr *GridRef
+	sp *SrgSpecs
+
+	inputShapes map[*SrgSpec]map[string]*Location
+}
+
+// newSourceDataLocator initializes a new SourceData locator.
+func newSourceDataLocator(gr *GridRef, sp *SrgSpecs) *sourceDataLocator {
+	return &sourceDataLocator{
+		gr: gr, sp: sp,
+		inputShapes: make(map[*SrgSpec]map[string]*Location),
+	}
+}
+
+// Locate adds a location to sd.
+func (sdl *sourceDataLocator) Locate(sd *SourceDataLocation) error {
+	if sdl.gr == nil && sdl.sp == nil {
+		return nil
+	}
+	srgNum, err := sdl.gr.GetSrgCode(sd.SCC, sd.Country, sd.FIPS)
+	if err != nil {
+		return err
+	}
+	srgSpec, err := sdl.sp.GetByCode(sd.Country, srgNum)
+	if err != nil {
+		return err
+	}
+	if _, ok := sdl.inputShapes[srgSpec]; !ok {
+		sdl.inputShapes[srgSpec], err = srgSpec.InputShapes()
+		if err != nil {
+			return err
+		}
+	}
+	sd.location = sdl.inputShapes[srgSpec][sd.FIPS]
+	return nil
+}
+
+// Location returns the polygon representing the location of emissions.
+func (r *SourceDataLocation) Location() *Location { return r.location }
+
+func (r *SourceDataLocation) getSourceDataLocation() *SourceDataLocation { return r }
+
+// SurrogateSpecification returns the speicification of the spatial surrogate
+// associated with an area emissions source.
+func (r *SourceDataLocation) SurrogateSpecification(sp *SpatialProcessor) (*SrgSpec, error) {
+	srgNum, err := sp.GridRef.GetSrgCode(r.SCC, r.Country, r.FIPS)
+	if err != nil {
+		return nil, err
+	}
+	return sp.SrgSpecs.GetByCode(r.Country, srgNum)
 }

@@ -119,7 +119,10 @@ func (si *SpatialIterator) Next() (aep.Record, error) {
 	if err != nil {
 		return nil, err
 	}
-	srg, _, inGrid, err := rec.Spatialize(si.c.sp, si.gridIndex)
+
+	recG := si.c.sp.GridRecord(rec)
+
+	srg, _, inGrid, err := recG.GridFactors(si.gridIndex)
 	if err != nil {
 		return nil, err
 	}
@@ -164,31 +167,29 @@ func (c *SpatialConfig) SpatialProcessor() (*aep.SpatialProcessor, error) {
 	return c.sp, nil
 }
 
-// setupSpatialProcessor reads in the necessary information to initialize
-// a processor for spatializing emissions, and then does so.
-func (c *SpatialConfig) setupSpatialProcessor() (*aep.SpatialProcessor, error) {
-	if c.GridCells == nil {
-		return nil, fmt.Errorf("aeputil: GridCells must be specified for spatial processor")
-	}
-	f, err := os.Open(os.ExpandEnv(c.SrgSpec))
+func readSrgSpec(srgSpecPath, srgShapefileDirectory string, sccExactMatch bool) (*aep.SrgSpecs, error) {
+	f, err := os.Open(os.ExpandEnv(srgSpecPath))
 	if err != nil {
 		return nil, err
 	}
-	srgSpecs, err := aep.ReadSrgSpec(f, os.ExpandEnv(c.SrgShapefileDirectory), true)
+	srgSpecs, err := aep.ReadSrgSpec(f, os.ExpandEnv(srgShapefileDirectory), sccExactMatch)
 	if err != nil {
 		return nil, err
 	}
 	if err = f.Close(); err != nil {
 		return nil, err
 	}
+	return srgSpecs, nil
+}
 
+func readGridRef(paths []string, sccExactMatch bool) (*aep.GridRef, error) {
 	var gridRef *aep.GridRef
-	for _, gf := range c.GridRef {
-		f, err = os.Open(os.ExpandEnv(gf))
+	for _, gf := range paths {
+		f, err := os.Open(os.ExpandEnv(gf))
 		if err != nil {
 			return nil, err
 		}
-		gridRefTemp, err2 := aep.ReadGridRef(f)
+		gridRefTemp, err2 := aep.ReadGridRef(f, sccExactMatch)
 		if err2 != nil {
 			return nil, err2
 		}
@@ -198,11 +199,30 @@ func (c *SpatialConfig) setupSpatialProcessor() (*aep.SpatialProcessor, error) {
 		if gridRef == nil {
 			gridRef = gridRefTemp
 		} else {
-			err = gridRef.Merge(*gridRefTemp)
+			err = gridRef.Merge(gridRefTemp)
 			if err != nil {
 				return nil, err
 			}
 		}
+	}
+	return gridRef, nil
+}
+
+// setupSpatialProcessor reads in the necessary information to initialize
+// a processor for spatializing emissions, and then does so.
+func (c *SpatialConfig) setupSpatialProcessor() (*aep.SpatialProcessor, error) {
+	if c.GridCells == nil {
+		return nil, fmt.Errorf("aeputil: GridCells must be specified for spatial processor")
+	}
+
+	srgSpecs, err := readSrgSpec(c.SrgSpec, c.SrgShapefileDirectory, c.SCCExactMatch)
+	if err != nil {
+		return nil, err
+	}
+
+	gridRef, err := readGridRef(c.GridRef, c.SCCExactMatch)
+	if err != nil {
+		return nil, err
 	}
 
 	outSR, err := proj.Parse(os.ExpandEnv(c.OutputSR))

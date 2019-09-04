@@ -163,7 +163,7 @@ type CSTConfig struct {
 	concRequestCache *requestcache.Cache
 
 	// DefaultFIPS specifies the default FIPS code to use when retrieving gridding
-	// surrogates.
+	// surrogates. Set to "00000" by default.
 	DefaultFIPS string
 
 	// spatializeRequestCache is a cache for spatialized
@@ -207,7 +207,7 @@ type CSTConfig struct {
 	loadGeometryOnce      sync.Once
 
 	// NEI emissions data. Format: map[Year][sector][]records
-	emis map[int]map[string][]aep.Record
+	emis map[int]map[string][]aep.RecordGridded
 
 	sr *sr.Reader
 
@@ -221,6 +221,10 @@ type CSTConfig struct {
 // hr specifies the hazard ratio functions that should be included.
 func (c *CSTConfig) Setup(hr ...epi.HRer) error {
 	expandEnv(reflect.ValueOf(c).Elem())
+
+	if c.DefaultFIPS == "" {
+		c.DefaultFIPS = "00000"
+	}
 
 	c.censusFile = make(map[int]string)
 	for ys, f := range c.CensusFile {
@@ -295,7 +299,9 @@ func (c *CSTConfig) lazyLoadSR() error {
 		if c.SRCacheSize != 0 {
 			c.sr.CacheSize = c.SRCacheSize
 		}
-		c.SpatialConfig.GridCells = c.sr.Geometry()
+		if c.SpatialConfig.GridCells == nil {
+			c.SpatialConfig.GridCells = c.sr.Geometry()
+		}
 		c.gridIndex = rtree.NewTree(25, 50)
 		for i, g := range c.SpatialConfig.GridCells {
 			c.gridIndex.Insert(gridIndex{Polygonal: g, i: i})

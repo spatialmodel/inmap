@@ -186,7 +186,6 @@ func NewFF10Point(rec []string, annualBegin, annualEnd time.Time,
 	} else {
 		r.Emissions.Add(annualBegin, annualEnd, pol, prefix, annualEmisRate)
 	}
-
 	return r, nil
 }
 
