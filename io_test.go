@@ -945,8 +945,11 @@ func TestFromAEP(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			er, err := FromAEP(test.recs, sp, 0,
+			recs := make([]aep.RecordGridded, len(test.recs))
+			for i, r := range test.recs {
+				recs[i] = sp.GridRecord(r)
+			}
+			er, err := FromAEP(recs, sp.Grids, 0,
 				[]aep.Pollutant{{Name: "voc"}},
 				[]aep.Pollutant{{Name: "nox"}},
 				[]aep.Pollutant{{Name: "nh3"}},
@@ -1062,7 +1065,11 @@ func BenchmarkFromAEP(b *testing.B) {
 			}
 			result := resultFuncs[i](n)
 			b.Run(fmt.Sprintf("%s %d", name[i], n), func(b *testing.B) {
-				er, err := FromAEP(r, sp, 0,
+				recs := make([]aep.RecordGridded, len(r))
+				for i, rec := range r {
+					recs[i] = sp.GridRecord(rec)
+				}
+				er, err := FromAEP(recs, sp.Grids, 0,
 					[]aep.Pollutant{{Name: "voc"}},
 					[]aep.Pollutant{{Name: "nox"}},
 					[]aep.Pollutant{{Name: "nh3"}},

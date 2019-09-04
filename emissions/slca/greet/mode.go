@@ -3,8 +3,8 @@ package greet
 import (
 	"fmt"
 
-	"github.com/spatialmodel/inmap/emissions/slca"
 	"github.com/ctessum/unit"
+	"github.com/spatialmodel/inmap/emissions/slca"
 )
 
 // Mode is a holder for information about a transportation mode.

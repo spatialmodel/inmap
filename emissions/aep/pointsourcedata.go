@@ -177,9 +177,14 @@ func (r *PointSourceData) setStackParams(height, diam, temp, flow, vel string) e
 	return nil
 }
 
-// PointData returns the data specific to point sources.
-func (r *PointSourceData) PointData() *PointSourceData {
-	return r
+// StackParameters describes the parameters of the emissions release
+// from a elevated stack.
+func (r *PointSourceData) StackParameters() (StackHeight, StackDiameter, StackTemp, StackFlow, StackVelocity *unit.Unit) {
+	return r.StackHeight, r.StackDiameter, r.StackTemp, r.StackFlow, r.StackVelocity
+}
+
+func (r *PointSourceData) Location() *Location {
+	return &Location{r.Point, r.SR}
 }
 
 // GroundLevel returns true if the receiver emissions are

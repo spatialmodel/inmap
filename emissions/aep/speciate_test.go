@@ -135,10 +135,10 @@ func TestSpeciate(t *testing.T) {
 		{
 			name: "VOC ungrouped mol",
 			rec: &PolygonRecord{
-				SourceData: SourceData{
+				SourceDataLocation: SourceDataLocation{SourceData: SourceData{
 					FIPS: "01001",
 					SCC:  "2310011503",
-				},
+				}},
 				Emissions: *newEmissions(1, Pollutant{Name: "VOC", Prefix: "x"}, Annual),
 			},
 			mechanism:    "SAPRC99",
@@ -152,10 +152,10 @@ func TestSpeciate(t *testing.T) {
 		{
 			name: "VOC ungrouped mass",
 			rec: &PolygonRecord{
-				SourceData: SourceData{
+				SourceDataLocation: SourceDataLocation{SourceData: SourceData{
 					FIPS: "01001",
 					SCC:  "2310011503",
-				},
+				}},
 				Emissions: *newEmissions(1, Pollutant{Name: "VOC", Prefix: "x"}, Annual),
 			},
 			mechanism:    "SAPRC99",
@@ -169,10 +169,10 @@ func TestSpeciate(t *testing.T) {
 		{
 			name: "VOC double count ungrouped mass",
 			rec: &PolygonRecord{
-				SourceData: SourceData{
+				SourceDataLocation: SourceDataLocation{SourceData: SourceData{
 					FIPS: "01001",
 					SCC:  "2310011503",
-				},
+				}},
 				Emissions: *newEmissionsDouble(1, 1, Pollutant{Name: "VOC", Prefix: "x"}, Pollutant{Name: "pentane"}, Annual),
 			},
 			mechanism:    "SAPRC99",
@@ -189,10 +189,10 @@ func TestSpeciate(t *testing.T) {
 		{
 			name: "VOC double count ungrouped mol",
 			rec: &PolygonRecord{
-				SourceData: SourceData{
+				SourceDataLocation: SourceDataLocation{SourceData: SourceData{
 					FIPS: "01001",
 					SCC:  "2310011503",
-				},
+				}},
 				Emissions: *newEmissionsDouble(1, 1, Pollutant{Name: "VOC", Prefix: "x"}, Pollutant{Name: "pentane"}, Annual),
 			},
 			mechanism:    "SAPRC99",
@@ -209,10 +209,10 @@ func TestSpeciate(t *testing.T) {
 		{
 			name: "VOC grouped mol",
 			rec: &PolygonRecord{
-				SourceData: SourceData{
+				SourceDataLocation: SourceDataLocation{SourceData: SourceData{
 					FIPS: "01001",
 					SCC:  "2310011503",
-				},
+				}},
 				Emissions: *newEmissions(1, Pollutant{Name: "VOC"}, Annual),
 			},
 			mechanism:    "SAPRC99",
@@ -226,10 +226,10 @@ func TestSpeciate(t *testing.T) {
 		{
 			name: "VOC grouped mass",
 			rec: &PolygonRecord{
-				SourceData: SourceData{
+				SourceDataLocation: SourceDataLocation{SourceData: SourceData{
 					FIPS: "01001",
 					SCC:  "2310011503",
-				},
+				}},
 				Emissions: *newEmissions(1, Pollutant{Name: "VOC"}, Annual),
 			},
 			mechanism:    "SAPRC99",
@@ -243,10 +243,10 @@ func TestSpeciate(t *testing.T) {
 		{
 			name: "VOC double count grouped mol",
 			rec: &PolygonRecord{
-				SourceData: SourceData{
+				SourceDataLocation: SourceDataLocation{SourceData: SourceData{
 					FIPS: "01001",
 					SCC:  "2310011503",
-				},
+				}},
 				Emissions: *newEmissionsDouble(1, 1, Pollutant{Name: "VOC"}, Pollutant{Name: "butane"}, Annual),
 			},
 			mechanism:    "SAPRC99",
@@ -263,10 +263,10 @@ func TestSpeciate(t *testing.T) {
 		{
 			name: "NOx mass",
 			rec: &PolygonRecord{
-				SourceData: SourceData{
+				SourceDataLocation: SourceDataLocation{SourceData: SourceData{
 					FIPS: "01001",
 					SCC:  "2280003100",
-				},
+				}},
 				Emissions: *newEmissions(1, Pollutant{Name: "NOX", Prefix: "EXH"}, Annual),
 			},
 			mechanism:    "SAPRC99",
@@ -280,10 +280,10 @@ func TestSpeciate(t *testing.T) {
 		{
 			name: "NOx mol",
 			rec: &PolygonRecord{
-				SourceData: SourceData{
+				SourceDataLocation: SourceDataLocation{SourceData: SourceData{
 					FIPS: "01001",
 					SCC:  "2280003100",
-				},
+				}},
 				Emissions: *newEmissions(1, Pollutant{Name: "NOX", Prefix: "EXH"}, Annual),
 			},
 			mechanism:    "SAPRC99",
@@ -297,10 +297,10 @@ func TestSpeciate(t *testing.T) {
 		{
 			name: "PM2.5",
 			rec: &PolygonRecord{
-				SourceData: SourceData{
+				SourceDataLocation: SourceDataLocation{SourceData: SourceData{
 					FIPS: "01001",
 					SCC:  "0030532003",
-				},
+				}},
 				Emissions: *newEmissions(1, Pollutant{Name: "PM2_5"}, Annual),
 			},
 			mechanism:    "SAPRC99",
@@ -320,10 +320,10 @@ func TestSpeciate(t *testing.T) {
 		{
 			name: "Direct",
 			rec: &PolygonRecord{
-				SourceData: SourceData{
+				SourceDataLocation: SourceDataLocation{SourceData: SourceData{
 					FIPS: "01001",
 					SCC:  "0030532003",
-				},
+				}},
 				Emissions: *newEmissions(1, Pollutant{Name: "Toxin"}, Annual),
 			},
 			mechanism:    "SAPRC99",

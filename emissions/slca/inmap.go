@@ -397,11 +397,6 @@ func (c *CSTConfig) evaluationEmissions(ctx context.Context, yearI interface{}) 
 		return nil, err
 	}
 
-	emis, err = c.groupBySCCAndApplyAdj(emis)
-	if err != nil {
-		return nil, err
-	}
-
 	// Scale emissions for the requested year.
 	f, err := os.Open(c.SCCReference)
 	if err != nil {
@@ -421,11 +416,17 @@ func (c *CSTConfig) evaluationEmissions(ctx context.Context, yearI interface{}) 
 	if err != nil {
 		return nil, err
 	}
-	var aepRecs []aep.Record
-	for _, e := range emis {
+
+	emisGridded, err := c.groupBySCCAndApplyAdj(emis, sp)
+	if err != nil {
+		return nil, err
+	}
+
+	var aepRecs []aep.RecordGridded
+	for _, e := range emisGridded {
 		aepRecs = append(aepRecs, e...)
 	}
-	spatialEmis, err := inmap.FromAEP(aepRecs, sp, 0, VOC, NOx, NH3, SOx, PM25)
+	spatialEmis, err := inmap.FromAEP(aepRecs, sp.Grids, 0, VOC, NOx, NH3, SOx, PM25)
 	if err != nil {
 		return nil, err
 	}

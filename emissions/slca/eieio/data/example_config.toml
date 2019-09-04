@@ -100,6 +100,14 @@ DefaultYear = 2014
 
 [SpatialEIO.InventoryConfig]
   InputUnits = "tons"
+  SrgSpec = "${INMAP_ROOT_DIR}/emissions/aep/data/nei2014/surrogate_specification_2014.csv"
+  SrgShapefileDirectory = "$nei2014Dir"
+  SCCExactMatch = true
+  GridRef = [
+    "$nei2014Dir/ge_dat/gridding/agref_us_2014platform_08nov2016_nf_v3.txt",
+    "$nei2014Dir/ge_dat/gridding/amgref_can2010_mex2010v3_12US1_26aug2016_nf_v9.txt",
+    "$nei2014Dir/ge_dat/gridding/mgref_onroad_us_2014platform_03oct2016_nf_v2.txt",
+   ]
 
   [SpatialEIO.InventoryConfig.NEIFiles]
     afdust = [
@@ -282,6 +290,14 @@ DefaultYear = 2014
 
   [SpatialEIO.EvaluationInventoryConfig]
     InputUnits = "tons"
+    SrgSpec = "${INMAP_ROOT_DIR}/emissions/aep/data/nei2014/surrogate_specification_2014.csv"
+    SrgShapefileDirectory = "$nei2014Dir"
+    SCCExactMatch = true
+    GridRef = [
+      "$nei2014Dir/ge_dat/gridding/agref_us_2014platform_08nov2016_nf_v3.txt",
+      "$nei2014Dir/ge_dat/gridding/amgref_can2010_mex2010v3_12US1_26aug2016_nf_v9.txt",
+      "$nei2014Dir/ge_dat/gridding/mgref_onroad_us_2014platform_03oct2016_nf_v2.txt",
+     ]
 
     [SpatialEIO.EvaluationInventoryConfig.NEIFiles]
       afdust = [

@@ -45,7 +45,7 @@ func (r *pointRecordIDA) Key() string {
 // polyonRecordIDA holds information about an emissions source that has a polygon
 // location. IDA records have pollutant-specific control information.
 type polygonRecordIDA struct {
-	SourceData
+	SourceDataLocation
 	ControlData map[string]ControlData
 	Emissions
 }
@@ -57,7 +57,7 @@ func (r *polygonRecordIDA) PointData() *PointSourceData { return nil }
 // mobilePolygonRecordIDA holds information about an emissions source that has a polygon
 // location and only has source and emissions data.
 type mobilePolygonRecordIDA struct {
-	SourceData
+	SourceDataLocation
 	Emissions
 }
 

@@ -1302,7 +1302,7 @@ country_cd,region_cd,tribal_code,facility_id,unit_id,rel_point_id,process_id,agy
 	}
 	overallReport := new(InventoryReport)
 	for _, test := range table {
-		e, err := NewEmissionsReader(nil, test.freq, Ton)
+		e, err := NewEmissionsReader(nil, test.freq, Ton, nil, nil)
 		if err != nil {
 			t.Errorf("%s: %v", test.name, err)
 			continue

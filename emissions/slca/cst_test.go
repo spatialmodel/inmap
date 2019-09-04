@@ -10,6 +10,7 @@ import (
 	"github.com/spatialmodel/inmap/emissions/slca/greet"
 
 	"github.com/BurntSushi/toml"
+	"github.com/ctessum/geom"
 	"github.com/ctessum/unit"
 )
 
@@ -19,11 +20,11 @@ func init() {
 }
 
 func initCSTDB() (*greet.DB, *slca.DB) {
-	f1, err := os.Open("default.greet")
+	f1, err := os.Open("greet/testdb.greet")
 	if err != nil {
 		panic(err)
 	}
-	f2, err := os.Open("eieio/data/test_config.toml")
+	f2, err := os.Open("testdata/test_config.toml")
 	if err != nil {
 		panic(err)
 	}
@@ -37,7 +38,7 @@ func initCSTDB() (*greet.DB, *slca.DB) {
 		panic(err)
 	}
 
-	f5, err := os.Open("greet/scc/GREET technology SCC.csv")
+	f5, err := os.Open("greet/scc/GREET technology SCC_test.csv")
 	if err != nil {
 		panic(err)
 	}
@@ -53,6 +54,21 @@ func initCSTDB() (*greet.DB, *slca.DB) {
 	}
 	if err := cstConfig.Setup(); err != nil {
 		panic(err)
+	}
+	cstConfig.DefaultFIPS = "36119"
+
+	// Transform grid cells so they line up with spatial surrogates.
+	cstConfig.SpatialConfig.GridCells = []geom.Polygonal{
+		geom.Polygon{{{X: 1.916e+06, Y: 346000}, {X: 1.917e+06, Y: 346000}, {X: 1.917e+06, Y: 347000}, {X: 1.916e+06, Y: 347000}, {X: 1.916e+06, Y: 346000}}},
+		geom.Polygon{{{X: 1.916e+06, Y: 347000}, {X: 1.917e+06, Y: 347000}, {X: 1.917e+06, Y: 348000}, {X: 1.916e+06, Y: 348000}, {X: 1.916e+06, Y: 347000}}},
+		geom.Polygon{{{X: 1.916e+06, Y: 348000}, {X: 1.918e+06, Y: 348000}, {X: 1.918e+06, Y: 350000}, {X: 1.916e+06, Y: 350000}, {X: 1.916e+06, Y: 348000}}},
+		geom.Polygon{{{X: 1.917e+06, Y: 346000}, {X: 1.918e+06, Y: 346000}, {X: 1.918e+06, Y: 347000}, {X: 1.917e+06, Y: 347000}, {X: 1.917e+06, Y: 346000}}},
+		geom.Polygon{{{X: 1.917e+06, Y: 347000}, {X: 1.918e+06, Y: 347000}, {X: 1.918e+06, Y: 348000}, {X: 1.917e+06, Y: 348000}, {X: 1.917e+06, Y: 347000}}},
+		geom.Polygon{{{X: 1.916e+06, Y: 350000}, {X: 1.92e+06, Y: 350000}, {X: 1.92e+06, Y: 354000}, {X: 1.916e+06, Y: 354000}, {X: 1.916e+06, Y: 350000}}},
+		geom.Polygon{{{X: 1.918e+06, Y: 346000}, {X: 1.92e+06, Y: 346000}, {X: 1.92e+06, Y: 348000}, {X: 1.918e+06, Y: 348000}, {X: 1.918e+06, Y: 346000}}},
+		geom.Polygon{{{X: 1.918e+06, Y: 348000}, {X: 1.92e+06, Y: 348000}, {X: 1.92e+06, Y: 350000}, {X: 1.918e+06, Y: 350000}, {X: 1.918e+06, Y: 348000}}},
+		geom.Polygon{{{X: 1.92e+06, Y: 346000}, {X: 1.924e+06, Y: 346000}, {X: 1.924e+06, Y: 350000}, {X: 1.92e+06, Y: 350000}, {X: 1.92e+06, Y: 346000}}},
+		geom.Polygon{{{X: 1.92e+06, Y: 350000}, {X: 1.924e+06, Y: 350000}, {X: 1.924e+06, Y: 354000}, {X: 1.92e+06, Y: 354000}, {X: 1.92e+06, Y: 350000}}},
 	}
 
 	slcadb := &slca.DB{
@@ -70,9 +86,6 @@ func initCSTDB() (*greet.DB, *slca.DB) {
 }
 
 func TestSpatial(t *testing.T) {
-	if testing.Short() {
-		return
-	}
 	const (
 		tolerance = 1.e-3
 		pol       = "PM2.5"
@@ -105,7 +118,9 @@ func TestSpatial(t *testing.T) {
 
 		spatialResults := slca.NewSpatialResults(wtpResults, slcadb)
 		emis, err := spatialResults.Emissions()
-		t.Fatal(err)
+		if err != nil {
+			t.Fatal(err)
+		}
 		gridSum := emis[polgas].Sum()
 		passFail := "Pass"
 		if math.Abs(gridSum-resultsSum) > tolerance*math.Abs(resultsSum) {

@@ -66,7 +66,7 @@ DefaultYear = 2011
 [SpatialEIO.SpatialConfig]
   SrgSpec = "${INMAP_ROOT_DIR}/emissions/aep/aeputil/testdata/surrogate_specification.csv"
   SrgShapefileDirectory = "${INMAP_ROOT_DIR}/emissions/aep/testdata/"
-  SCCExactMatch = true
+  SCCExactMatch = false
   GridRef = [
     "${INMAP_ROOT_DIR}/emissions/aep/aeputil/testdata/gridref.txt",
   ]
@@ -79,6 +79,13 @@ DefaultYear = 2011
 
 [SpatialEIO.InventoryConfig]
   InputUnits = "tons"
+  SrgSpec = "${INMAP_ROOT_DIR}/emissions/aep/aeputil/testdata/surrogate_specification.csv"
+  SrgShapefileDirectory = "${INMAP_ROOT_DIR}/emissions/aep/testdata/"
+  SCCExactMatch = false
+  GridRef = [
+    "${INMAP_ROOT_DIR}/emissions/aep/aeputil/testdata/gridref.txt",
+  ]
+
 
   [SpatialEIO.InventoryConfig.NEIFiles]
     test = [
@@ -130,6 +137,13 @@ DefaultYear = 2011
 
   [SpatialEIO.EvaluationInventoryConfig]
     InputUnits = "tons"
+    SrgSpec = "${INMAP_ROOT_DIR}/emissions/aep/aeputil/testdata/surrogate_specification.csv"
+    SrgShapefileDirectory = "${INMAP_ROOT_DIR}/emissions/aep/testdata/"
+    SCCExactMatch = false
+    GridRef = [
+      "${INMAP_ROOT_DIR}/emissions/aep/aeputil/testdata/gridref.txt",
+    ]
+
 
     [SpatialEIO.EvaluationInventoryConfig.NEIFiles]
       test = [

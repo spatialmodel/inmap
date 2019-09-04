@@ -12,6 +12,13 @@
 [Inventory]
   InputUnits = "tons"
 
+  SrgSpec = "testdata/surrogate_specification.csv"
+  SrgShapefileDirectory = "../testdata"
+  GridRef = [
+    "testdata/gridref.txt",
+   ]
+   SCCExactMatch = false
+
   [Inventory.NEIFiles]
     othar = [
     	"testdata/testemis.csv",

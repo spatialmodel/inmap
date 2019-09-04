@@ -67,14 +67,6 @@ func (db *DB) RegisterHTTPHandlers(prefix, staticFileDir string) {
 	db.ServeMux.HandleFunc(prefix+"sidebar.css", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(staticFileDir, "sidebar.css"))
 	})
-
-	// Report status of spatial surrogate creation
-	db.ServeMux.HandleFunc(prefix+"srgstatus", func(w http.ResponseWriter, r *http.Request) {
-		e := json.NewEncoder(w)
-		if err := e.Encode(db.CSTConfig.sp.SrgSpecs.Status()); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-	})
 }
 
 func (db *DB) resultPageHandler(prefix string, templates *template.Template) http.HandlerFunc {
