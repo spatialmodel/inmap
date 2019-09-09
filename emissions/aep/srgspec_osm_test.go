@@ -24,6 +24,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ctessum/geom/encoding/shp"
 	"github.com/ctessum/geom/proj"
 	"github.com/gonum/floats"
 )
@@ -44,12 +45,27 @@ func TestCreateSurrogates_osm(t *testing.T) {
 	gridRef, err := ReadGridRef(strings.NewReader(`000007;0010101011;001
 000007;0010101012;002
 000007;0010101013;003
-  `))
+  `), true)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	grid := NewGridRegular("test grid", 4, 4, 0.1, 0.1, -158, 21.25, inputSR)
+
+	d, err := shp.NewDecoder("testdata/honolulu_hawaii.shp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	g, _, _ := d.DecodeRowFields()
+	if err := d.Error(); err != nil {
+		t.Fatal(err)
+	}
+	sr, err := d.SR()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	inputLoc := &Location{Geom: g, SR: sr}
 
 	matchFullSCC := true
 	sp := NewSpatialProcessor(srgSpecs, []*GridDef{grid}, gridRef, inputSR, matchFullSCC)
@@ -67,12 +83,12 @@ func TestCreateSurrogates_osm(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			srgsI, err := sp.createSurrogate(context.Background(), &srgGrid{srg: srgSpec, gridData: grid})
+			srgsI, err := sp.createSurrogate(context.Background(), &srgGrid{srg: srgSpec, gridData: grid, loc: inputLoc})
 			if err != nil {
-				t.Errorf("creating surrogate %s: %v", code, err)
+				t.Fatalf("creating surrogate %s: %v", code, err)
 			}
-			srgs := srgsI.(*GriddingSurrogate)
-			griddedSrg, covered := srgs.ToGrid("01")
+			srgs := srgsI.(*GriddedSrgData)
+			griddedSrg, covered := srgs.ToGrid()
 			if covered {
 				t.Errorf("srg %s should not cover", code)
 			}
