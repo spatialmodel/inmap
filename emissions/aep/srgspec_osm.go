@@ -118,7 +118,7 @@ func (srg *SrgSpecOSM) incrementStatus(percent float64) {
 
 // getSrgData returns the spatial surrogate information for this
 // surrogate definition, where tol is tolerance for geometry simplification.
-func (srg *SrgSpecOSM) getSrgData(gridData *GridDef, tol float64) (*rtree.Rtree, error) {
+func (srg *SrgSpecOSM) getSrgData(gridData *GridDef, inputLoc *Location, tol float64) (*rtree.Rtree, error) {
 	srg.setStatus(0, "getting surrogate weight data")
 
 	f, err := os.Open(srg.OSMFile)
@@ -131,9 +131,32 @@ func (srg *SrgSpecOSM) getSrgData(gridData *GridDef, tol float64) (*rtree.Rtree,
 		panic(err)
 	}
 
-	ct, err := srgSR.NewTransform(gridData.SR)
+	srgCT, err := srgSR.NewTransform(gridData.SR)
 	if err != nil {
 		return nil, err
+	}
+
+	gridSrgCT, err := gridData.SR.NewTransform(srgSR)
+	if err != nil {
+		return nil, err
+	}
+
+	// Calculate the area of interest for our surrogate data.
+	inputShapeT, err := inputLoc.Reproject(srgSR)
+	if err != nil {
+		return nil, err
+	}
+	inputShapeBounds := inputShapeT.Bounds()
+	srgBounds := inputShapeBounds.Copy()
+	for _, cell := range gridData.Cells {
+		cellT, err := cell.Transform(gridSrgCT)
+		if err != nil {
+			return nil, err
+		}
+		b := cellT.Bounds()
+		if b.Overlaps(inputShapeBounds) {
+			srgBounds.Extend(b)
+		}
 	}
 
 	srgData := rtree.NewTree(25, 50)
@@ -155,6 +178,10 @@ func (srg *SrgSpecOSM) getSrgData(gridData *GridDef, tol float64) (*rtree.Rtree,
 			return nil, fmt.Errorf("aep: extracting OSM spatial surrogate data for tag `%s:%v`: %v", t, v, err)
 		}
 		for _, geomTag := range geomTags {
+			if !geomTag.Bounds().Overlaps(srgBounds) {
+				continue
+			}
+
 			switch typ { // Drop features that do not match the dominant type.
 			case osm.Point:
 				if _, ok := geomTag.Geom.(geom.Point); !ok {
@@ -172,7 +199,7 @@ func (srg *SrgSpecOSM) getSrgData(gridData *GridDef, tol float64) (*rtree.Rtree,
 				continue // Drop collection-type features.
 			}
 
-			g, err := geomTag.Geom.Transform(ct)
+			g, err := geomTag.Geom.Transform(srgCT)
 			if err != nil {
 				return nil, fmt.Errorf("aep: processing OSM spatial surrogate data: %v", err)
 			}

@@ -171,13 +171,13 @@ func (c *SpatialConfig) SpatialProcessor() (*aep.SpatialProcessor, error) {
 	return c.sp, nil
 }
 
-func readSrgSpec(srgSpecPath, srgShapefileDirectory string, sccExactMatch bool) (*aep.SrgSpecs, error) {
+func readSrgSpec(srgSpecPath, srgShapefileDirectory, srgSpecType string, sccExactMatch bool) (*aep.SrgSpecs, error) {
 	f, err := os.Open(os.ExpandEnv(srgSpecPath))
 	if err != nil {
 		return nil, err
 	}
 	var srgSpecs *aep.SrgSpecs
-	switch c.SrgSpecType {
+	switch srgSpecType {
 	case "SMOKE":
 		srgSpecs, err = aep.ReadSrgSpecSMOKE(f, os.ExpandEnv(srgShapefileDirectory), sccExactMatch)
 		if err != nil {
@@ -230,7 +230,7 @@ func (c *SpatialConfig) setupSpatialProcessor() (*aep.SpatialProcessor, error) {
 		return nil, fmt.Errorf("aeputil: GridCells must be specified for spatial processor")
 	}
 
-	srgSpecs, err := readSrgSpec(c.SrgSpec, c.SrgShapefileDirectory, c.SCCExactMatch)
+	srgSpecs, err := readSrgSpec(c.SrgSpec, c.SrgShapefileDirectory, c.SrgSpecType, c.SCCExactMatch)
 	if err != nil {
 		return nil, err
 	}

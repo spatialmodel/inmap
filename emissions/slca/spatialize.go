@@ -152,7 +152,7 @@ func (c *CSTConfig) neiSpatialSrg(srgCode, FIPS string) ([]*inmap.EmisRecord, er
 		FIPS = c.DefaultFIPS
 	}
 
-	inputShapes, err := srgSpec.InputShapes()
+	inputShapes, err := srgSpec.(*aep.SrgSpecSMOKE).InputShapes()
 	if err != nil {
 		return nil, err
 	}

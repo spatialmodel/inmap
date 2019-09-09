@@ -202,32 +202,41 @@ func ReadSrgSpecSMOKE(fid io.Reader, shapefileDir string, checkShapefiles bool) 
 				srg.MergeMultipliers = append(srg.MergeMultipliers, val)
 			}
 		}
-		if len(srg.MergeNames) == 0 {
-			// If this is not a merged surrogate, setup the shapefile paths and
-			// optionally check to make sure the shapefiles exist.
-			if checkShapefiles {
+
+		// Set up the shapefile paths and
+		// optionally check to make sure the shapefiles exist.
+		if checkShapefiles {
+			if srg.DATASHAPEFILE != "" {
 				srg.DATASHAPEFILE, err = findFile(shapefileDir, srg.DATASHAPEFILE+".shp")
 				if err != nil {
 					return nil, err
 				}
+			}
+			if srg.WEIGHTSHAPEFILE != "" {
 				srg.WEIGHTSHAPEFILE, err = findFile(shapefileDir, srg.WEIGHTSHAPEFILE+".shp")
 				if err != nil {
 					return nil, err
 				}
-			} else {
-				srg.DATASHAPEFILE = filepath.Join(
-					shapefileDir, srg.DATASHAPEFILE+".shp")
-				srg.WEIGHTSHAPEFILE = filepath.Join(
-					shapefileDir, srg.WEIGHTSHAPEFILE+".shp")
 			}
+		} else {
+			if srg.DATASHAPEFILE != "" {
+				srg.DATASHAPEFILE = filepath.Join(shapefileDir, srg.DATASHAPEFILE+".shp")
+			}
+			if srg.WEIGHTSHAPEFILE != "" {
+				srg.WEIGHTSHAPEFILE = filepath.Join(shapefileDir, srg.WEIGHTSHAPEFILE+".shp")
+			}
+		}
 
-			if checkShapefiles {
+		if checkShapefiles {
+			if srg.DATASHAPEFILE != "" {
 				shpf, err := shp.NewDecoder(srg.DATASHAPEFILE)
 				if err != nil {
 					return nil, err
 				}
 				shpf.Close()
-				shpf, err = shp.NewDecoder(srg.WEIGHTSHAPEFILE)
+			}
+			if srg.WEIGHTSHAPEFILE != "" {
+				shpf, err := shp.NewDecoder(srg.WEIGHTSHAPEFILE)
 				if err != nil {
 					return nil, err
 				}
@@ -286,8 +295,7 @@ func (srg *SrgSpecSMOKE) InputShapes() (map[string]*Location, error) {
 }
 
 // get surrogate shapes and weights. tol is a geometry simplification tolerance.
-func (srg *SrgSpecSMOKE) getSrgData(gridData *GridDef, tol float64) (*rtree.Rtree, error) {
-	srg.setStatus(0, "getting surrogate weight data")
+func (srg *SrgSpecSMOKE) getSrgData(gridData *GridDef, inputLoc *Location, tol float64) (*rtree.Rtree, error) {
 	srgShp, err := shp.NewDecoder(srg.WEIGHTSHAPEFILE)
 	if err != nil {
 		return nil, err
@@ -299,10 +307,34 @@ func (srg *SrgSpecSMOKE) getSrgData(gridData *GridDef, tol float64) (*rtree.Rtre
 		return nil, err
 	}
 
-	ct, err := srgSR.NewTransform(gridData.SR)
+	srgCT, err := srgSR.NewTransform(gridData.SR)
 	if err != nil {
 		return nil, err
 	}
+
+	gridSrgCT, err := gridData.SR.NewTransform(srgSR)
+	if err != nil {
+		return nil, err
+	}
+
+	// Calculate the area of interest for our surrogate data.
+	inputShapeT, err := inputLoc.Reproject(srgSR)
+	if err != nil {
+		return nil, err
+	}
+	inputShapeBounds := inputShapeT.Bounds()
+	srgBounds := inputShapeBounds.Copy()
+	for _, cell := range gridData.Cells {
+		cellT, err := cell.Transform(gridSrgCT)
+		if err != nil {
+			return nil, err
+		}
+		b := cellT.Bounds()
+		if b.Overlaps(inputShapeBounds) {
+			srgBounds.Extend(b)
+		}
+	}
+
 	var fieldNames []string
 	if srg.FilterFunction != nil {
 		fieldNames = append(fieldNames, srg.FilterFunction.Column)
@@ -322,7 +354,10 @@ func (srg *SrgSpecSMOKE) getSrgData(gridData *GridDef, tol float64) (*rtree.Rtre
 		if !more {
 			break
 		}
-		srg.incrementStatus(100. / float64(srgShp.AttributeCount()))
+
+		if !recGeom.Bounds().Overlaps(srgBounds) {
+			continue
+		}
 
 		if srg.FilterFunction == nil {
 			keepFeature = true
@@ -346,7 +381,7 @@ func (srg *SrgSpecSMOKE) getSrgData(gridData *GridDef, tol float64) (*rtree.Rtre
 		}
 		if keepFeature && recGeom != nil {
 			srgH := new(srgHolder)
-			srgH.Geom, err = recGeom.Transform(ct)
+			srgH.Geom, err = recGeom.Transform(srgCT)
 			if err != nil {
 				return srgData, err
 			}
