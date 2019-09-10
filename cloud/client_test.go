@@ -58,7 +58,7 @@ func TestClient_fake(t *testing.T) {
 			"--VarGrid.PopGridColumn=TotalPop", "--VarGrid.PopThreshold=40000", "--VarGrid.VariableGridDx=4000",
 			"--VarGrid.VariableGridDy=4000", "--VarGrid.VariableGridXo=-4000", "--VarGrid.VariableGridYo=-4000",
 			"--VarGrid.Xnests=2,2,2", "--VarGrid.Ynests=2,2,2",
-			"--VariableGridData=file://test/test/test_user/test_job/3c7e1a672dad2c3e41c76a2d3b1bf3b528510f354231cd06ddd374ebdf2a010d.gob",
+			"--VariableGridData=file://test/test/test_user/test_job/aa4dd05ac464a1f532480e5f3aae5a7cf20fb97f1250de88e5b5b192f6e752e7.gob",
 		}
 		if len(cmd) != len(wantCmd) {
 			t.Errorf("wrong command length: %d != %d", len(cmd), len(wantCmd))

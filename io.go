@@ -98,12 +98,9 @@ func (e *Emissions) Add(er *EmisRecord) {
 // receiver.
 func (e *Emissions) EmisRecords() []*EmisRecord { return e.dataSlice }
 
-// ReadEmissionShapefiles returns the emissions data in the specified shapefiles,
-// and converts them to the spatial reference gridSR. Input units are specified
-// by units; options are tons/year, kg/year, ug/s, and μg/s. Output units = μg/s.
-// c is a channel over which status updates will be sent. If c is nil,
-// no updates will be sent.
-func ReadEmissionShapefiles(gridSR *proj.SR, units string, c chan string, shapefiles ...string) (*Emissions, error) {
+// emisConversionFactor returns the conversion factor to μg/s
+// for the given units.
+func emisConversionFactor(units string) (float64, error) {
 	var emisConv float64
 	switch units {
 	case "tons/year":
@@ -120,9 +117,21 @@ func ReadEmissionShapefiles(gridSR *proj.SR, units string, c chan string, shapef
 		// Input units = μg/s; output units = μg/s
 		emisConv = 1
 	default:
-		return nil, fmt.Errorf("inmap: invalid emissions units '%s'", units)
+		return math.NaN(), fmt.Errorf("inmap: invalid emissions units '%s'", units)
 	}
+	return emisConv, nil
+}
 
+// ReadEmissionShapefiles returns the emissions data in the specified shapefiles,
+// and converts them to the spatial reference gridSR. Input units are specified
+// by units; options are tons/year, kg/year, ug/s, and μg/s. Output units = μg/s.
+// c is a channel over which status updates will be sent. If c is nil,
+// no updates will be sent.
+func ReadEmissionShapefiles(gridSR *proj.SR, units string, c chan string, shapefiles ...string) (*Emissions, error) {
+	emisConv, err := emisConversionFactor(units)
+	if err != nil {
+		return nil, err
+	}
 	// Add in emissions shapefiles
 	// Load emissions into rtree for fast searching
 	emis := NewEmissions()

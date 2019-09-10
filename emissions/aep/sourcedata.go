@@ -155,7 +155,7 @@ func (r *SourceDataLocation) Location() *Location { return r.location }
 
 func (r *SourceDataLocation) getSourceDataLocation() *SourceDataLocation { return r }
 
-// SurrogateSpecification returns the speicification of the spatial surrogate
+// SurrogateSpecification returns the specification of the spatial surrogate
 // associated with an area emissions source.
 func (r *SourceDataLocation) SurrogateSpecification(sp *SpatialProcessor) (SrgSpec, error) {
 	srgNum, err := sp.GridRef.GetSrgCode(r.SCC, r.Country, r.FIPS)

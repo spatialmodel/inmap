@@ -77,7 +77,7 @@ func TestSpeciate(t *testing.T) {
 
 func compareTables(table, want aep.Table, tolerance float64, t *testing.T) {
 	if !reflect.DeepEqual(table[0], want[0]) {
-		t.Errorf("inventory report header: have %v, want %v", table, want)
+		t.Errorf("inventory report header: have %v, want %v", table[0], want[0])
 	}
 	if len(want[1]) != len(table[1]) {
 		t.Fatalf("line 1: length %d != %d", len(want[1]), len(table[1]))

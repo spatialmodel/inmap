@@ -180,6 +180,16 @@ type basicPolygonRecord struct {
 	Emissions
 }
 
+// SurrogateSpecification returns the specification of the spatial surrogate
+// associated with an area emissions source.
+func (r *basicPolygonRecord) SurrogateSpecification(sp *SpatialProcessor) (SrgSpec, error) {
+	srgNum, err := sp.GridRef.GetSrgCode(r.SCC, r.Country, r.FIPS)
+	if err != nil {
+		return nil, err
+	}
+	return sp.SrgSpecs.GetByCode(r.Country, srgNum)
+}
+
 // PointData exists to fulfill the Record interface but always returns
 // nil because this is not a point source.
 func (r *basicPolygonRecord) PointData() *PointSourceData { return nil }
@@ -256,6 +266,46 @@ const (
 	Lb
 )
 
+// ParseInputUnits parses a string representation of an input unit
+// type. Currently supported options are "tons", "tonnes", "kg", "lbs", and "g".
+func ParseInputUnits(units string) (InputUnits, error) {
+	switch units {
+	case "tons":
+		return Ton, nil
+	case "tonnes":
+		return Tonne, nil
+	case "kg":
+		return Kg, nil
+	case "lbs":
+		return Lb, nil
+	case "g":
+		return G, nil
+	default:
+		return -1, fmt.Errorf("aep.ParseInputUnits: invalid input units '%s'", units)
+	}
+}
+
+// Conversion returns a function that converts a value to units of kilograms.
+// factor reprents an additional factor the value should be multiplied by.
+func (u InputUnits) Conversion(factor float64) func(v float64) *unit.Unit {
+	switch u {
+	case Ton:
+		return func(v float64) *unit.Unit { return badunit.Ton(v * factor) }
+	case Tonne:
+		return func(v float64) *unit.Unit { return unit.New(v/1000.*factor, unit.Kilogram) }
+	case Kg:
+		return func(v float64) *unit.Unit { return unit.New(v*factor, unit.Kilogram) }
+	case G:
+		return func(v float64) *unit.Unit { return unit.New(v/1000.*factor, unit.Kilogram) }
+	case Lb:
+		return func(v float64) *unit.Unit { return badunit.Pound(v * factor) }
+	default:
+		panic(fmt.Errorf("aep.NewEmissionsReader: unknown value %d"+
+			" for variable InputUnits. Acceptable values are Ton, "+
+			"Tonne, Kg, G, and Lb.", u))
+	}
+}
+
 // NewEmissionsReader creates a new EmissionsReader. polsToKeep specifies which
 // pollutants from the inventory to keep. If it is nil, all pollutants are kept.
 // InputUnits is the units of input data. Acceptable values are `tons',
@@ -274,22 +324,7 @@ func NewEmissionsReader(polsToKeep Speciation, freq InventoryFrequency, InputUni
 		// for 1/12 of the year.
 		monthlyConv = 1. / 12.
 	}
-	switch InputUnits {
-	case Ton:
-		e.inputConv = func(v float64) *unit.Unit { return badunit.Ton(v * monthlyConv) }
-	case Tonne:
-		e.inputConv = func(v float64) *unit.Unit { return unit.New(v/1000.*monthlyConv, unit.Kilogram) }
-	case Kg:
-		e.inputConv = func(v float64) *unit.Unit { return unit.New(v*monthlyConv, unit.Kilogram) }
-	case G:
-		e.inputConv = func(v float64) *unit.Unit { return unit.New(v/1000.*monthlyConv, unit.Kilogram) }
-	case Lb:
-		e.inputConv = func(v float64) *unit.Unit { return badunit.Pound(v * monthlyConv) }
-	default:
-		return nil, fmt.Errorf("aep.NewEmissionsReader: unknown value %d"+
-			" for variable InputUnits. Acceptable values are Ton, "+
-			"Tonne, Kg, G, and Lb.", InputUnits)
-	}
+	e.inputConv = InputUnits.Conversion(monthlyConv)
 	return e, nil
 }
 

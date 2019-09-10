@@ -76,12 +76,13 @@ func readCOARDSVar(nc *cdf.File, v string) ([]float64, error) {
 // All floating point variables that have dimensions [lat, lon] are
 // assumed to be emissions variables.
 // begin and end specify the time period when the emissions occur.
-// toKG is a number to multiply the emissions by to get them in
-// units of kilograms.
+// units represents the input units of the emissions.
 // SourceData specifies additional information to be included in each
 // emissions record.
 // Data in the COARDS file are assumed to be row-major (i.e., latitude-major).
-func ReadCOARDSFile(file string, begin, end time.Time, toKG float64, sourceData SourceData) (func() (Record, error), error) {
+// Information regarding the COARDS NetCDF conventions are
+// available here: https://ferret.pmel.noaa.gov/Ferret/documentation/coards-netcdf-conventions.
+func ReadCOARDSFile(file string, begin, end time.Time, units InputUnits, sourceData SourceData) (func() (Record, error), error) {
 	f, err := os.Open(file)
 	if err != nil {
 		return nil, fmt.Errorf("aep: opening COARDS file %s: %v", file, err)
@@ -124,8 +125,11 @@ func ReadCOARDSFile(file string, begin, end time.Time, toKG float64, sourceData 
 		return nil, fmt.Errorf("aep: reading from COARDS file %s: lat and lon variables must be length >= 2 but are %d and %d", file, len(lats), len(lons))
 	}
 
-	var i, j int
+	convert := units.Conversion(1)
 	durationSeconds := end.Sub(begin).Seconds()
+	duration := unit.New(durationSeconds, unit.Second)
+
+	var i, j int
 	generator := func() (Record, error) {
 		if j == len(lats) {
 			return nil, io.EOF
@@ -134,8 +138,8 @@ func ReadCOARDSFile(file string, begin, end time.Time, toKG float64, sourceData 
 		dx := gridPointsToGridSpacing(lons, i)
 		y := lats[j]
 		x := lons[i]
-		min := geom.Point{x - dx/2, y - dy/2}
-		max := geom.Point{x + dx/2, y + dy/2}
+		min := geom.Point{X: x - dx/2, Y: y - dy/2}
+		max := geom.Point{X: x + dx/2, Y: y + dy/2}
 
 		r := &basicPolygonRecord{
 			Polygon:    geom.Polygon{{min, {max.X, min.Y}, max, {min.X, max.Y}}},
@@ -145,9 +149,9 @@ func ReadCOARDSFile(file string, begin, end time.Time, toKG float64, sourceData 
 
 		e := new(Emissions)
 		for name, data := range variables {
-			rate := unit.New(
-				data[len(lons)*j+i]*toKG/durationSeconds,
-				unit.Dimensions{unit.MassDim: 1, unit.TimeDim: -1},
+			rate := unit.Div(
+				convert(data[len(lons)*j+i]),
+				duration,
 			)
 			e.Add(begin, end, name, "", rate)
 		}

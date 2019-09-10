@@ -54,3 +54,39 @@ func TestInventory(t *testing.T) {
 		t.Errorf("inventory report: have %v, want %v", report.TotalsTable(), want)
 	}
 }
+
+func TestInventory_coards(t *testing.T) {
+	type config struct {
+		Inventory InventoryConfig
+	}
+	r, err := os.Open("testdata/example_config.toml")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c := new(config)
+
+	// Read the configuration file into the configuration variable.
+	if _, err = toml.DecodeReader(r, c); err != nil {
+		t.Fatal(err)
+	}
+
+	c.Inventory.NEIFiles = nil
+
+	c.Inventory.COARDSFiles = map[string][]string{
+		"all": {"../testdata/emis_coards_hawaii.nc"},
+	}
+	c.Inventory.COARDSYear = 2016
+
+	_, report, err := c.Inventory.ReadEmissions()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := aep.Table{
+		[]string{"Group", "File", "NH3 (kg)", "NOx (kg)", "PM25 (kg)", "SOx (kg)", "VOC (kg)"},
+		[]string{"all", "../testdata/emis_coards_hawaii.nc", "4.1533555064591676e+07",
+			"4.0896043774575606e+07", "1.3217351922194459e+08", "4.145479962381774e+07", "3.340366574798584e+07"}}
+	if !reflect.DeepEqual(report.TotalsTable(), want) {
+		t.Errorf("inventory report: have %v, want %v", report.TotalsTable(), want)
+	}
+}
