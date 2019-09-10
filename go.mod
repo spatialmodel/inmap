@@ -78,3 +78,5 @@ require (
 	k8s.io/kube-openapi v0.0.0-20181106182614-a9a16210091c // indirect
 	sigs.k8s.io/yaml v1.1.0 // indirect
 )
+
+go 1.13

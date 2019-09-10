@@ -37,7 +37,6 @@ func init() {
 	// `go test -regen_golden_files`, will regenerate the golden files
 	// based on the current output.
 	flag.BoolVar(&regenGoldenFiles, "regen_golden_files", false, "regenerate golden files for preprocessor testing")
-	flag.Parse()
 }
 
 // regenGoldenFile writes out the given data to the given FilePath.
@@ -50,6 +49,7 @@ func regenGoldenFile(data *CTMData, filePath string, x0, y0, dx, dy float64) err
 }
 
 func TestWRFChemToInMAP(t *testing.T) {
+	flag.Parse()
 	const tolerance = 1.0e-6
 
 	wrf, err := NewWRFChem("cmd/inmap/testdata/preproc/wrfout_d01_[DATE]", "20050101", "20050103", nil)
@@ -94,6 +94,7 @@ func BenchmarkWRFChemToInMAP(b *testing.B) {
 }
 
 func TestGEOSChemToInMAP(t *testing.T) {
+	flag.Parse()
 	const tolerance = 1.0e-6
 
 	gc, err := NewGEOSChem(
@@ -170,6 +171,7 @@ func BenchmarkGEOSChemToInMAP(b *testing.B) {
 }
 
 func TestGEOSChemToInMAP_new(t *testing.T) {
+	flag.Parse()
 	const tolerance = 1.0e-6
 
 	gc, err := NewGEOSChem(
