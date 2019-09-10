@@ -2,7 +2,7 @@
 
 package eval
 
-import (
+/*import (
 	_ "net/http/pprof" // pprof serves a performance profiler.
 	"os"
 	"path/filepath"
@@ -72,4 +72,4 @@ func TestNEI2005Dynamic_mosaic(t *testing.T) {
 		filepath.Join(evalData, "states.shp"), filepath.Dir(cfg.OutputFile), "dynamic"); err != nil {
 		t.Error(err)
 	}
-}
+}*/
