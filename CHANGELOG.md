@@ -1,3 +1,6 @@
+# Release 1.6.1 (2019-9-10)
+* Bug fixes
+
 # Release 1.6.0 (2019-4-3)
 * Update documentation
 * Add output variable capability to srpredict

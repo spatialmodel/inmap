@@ -29,11 +29,11 @@ import (
 
 const (
 	// Version gives the version number.
-	Version = "1.6.0"
+	Version = "1.6.1"
 
 	// VarGridDataVersion gives the version of the variable grid data reuquired by
 	// this version of the software.
-	VarGridDataVersion = "1.3.0"
+	VarGridDataVersion = "1.6.1"
 
 	// InMAPDataVersion is the version of the InMAP data required by this version
 	// of the software.

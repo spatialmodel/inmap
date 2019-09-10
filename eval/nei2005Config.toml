@@ -5,7 +5,7 @@ InMAPData = "${evaldata}/InMAPData_v1.2.0.ncf"
 # VariableGridData is the path to the location of the variable-resolution gridded
 # InMAP data, or the location where it should be created if it doesn't already
 # exist. The path can include environment variables.
-VariableGridData = "${evaldata}/InMAPData_v1.3.0.gob"
+VariableGridData = "${evaldata}/InMAPData_v1.6.1.gob"
 
 # EmissionsShapefiles are the paths to any emissions shapefiles.
 # Can be elevated or ground level; elevated files need to have columns
