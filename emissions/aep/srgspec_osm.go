@@ -33,11 +33,9 @@ import (
 
 // SrgSpecOSM holds OpenStreetMap spatial surrogate specification information.
 type SrgSpecOSM struct {
-	Region        Country `json:"region"`
-	Name          string  `json:"name"`
-	Code          string  `json:"code"`
-	DataShapefile string  `json:"data_shapefile"`
-	DataAttribute string  `json:"data_attribute"`
+	Region Country `json:"region"`
+	Name   string  `json:"name"`
+	Code   string  `json:"code"`
 
 	OSMFile string `json:"osm_file"`
 
@@ -87,8 +85,6 @@ func (srg *SrgSpecOSM) code() string                   { return srg.Code }
 func (srg *SrgSpecOSM) name() string                   { return srg.Name }
 func (srg *SrgSpecOSM) mergeNames() []string           { return srg.MergeNames }
 func (srg *SrgSpecOSM) mergeMultipliers() []float64    { return srg.MergeMultipliers }
-func (srg *SrgSpecOSM) dataShapefile() string          { return srg.DataShapefile }
-func (srg *SrgSpecOSM) dataAttribute() string          { return srg.DataAttribute }
 
 // Status returns information about the status of the receiver.
 func (srg *SrgSpecOSM) Status() Status {
@@ -121,7 +117,7 @@ func (srg *SrgSpecOSM) incrementStatus(percent float64) {
 func (srg *SrgSpecOSM) getSrgData(gridData *GridDef, inputLoc *Location, tol float64) (*rtree.Rtree, error) {
 	srg.setStatus(0, "getting surrogate weight data")
 
-	f, err := os.Open(srg.OSMFile)
+	f, err := os.Open(os.ExpandEnv(srg.OSMFile))
 	if err != nil {
 		return nil, fmt.Errorf("aep: opening spatial surrogate OSM file: %v", err)
 	}

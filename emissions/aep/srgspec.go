@@ -39,8 +39,6 @@ type SrgSpec interface {
 	region() Country
 	code() string
 	name() string
-	dataShapefile() string
-	dataAttribute() string
 	Status() Status
 	mergeNames() []string
 	mergeMultipliers() []float64

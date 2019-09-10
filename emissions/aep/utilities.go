@@ -115,6 +115,8 @@ func (c Country) String() string {
 		return "HAITI"
 	case DominicanRepublic:
 		return "DOMINICANREPUBLIC"
+	case Global:
+		return "GLOBAL"
 	default:
 		panic(fmt.Errorf("Unknown country %d", c))
 	}

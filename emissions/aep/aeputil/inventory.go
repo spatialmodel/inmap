@@ -20,17 +20,34 @@ package aeputil
 
 import (
 	"fmt"
+	"io"
 	"os"
+	"time"
 
+	"github.com/ctessum/unit"
 	"github.com/spatialmodel/inmap/emissions/aep"
 )
 
 // InventoryConfig holds emissions inventory configuration information.
 type InventoryConfig struct {
-	// NEIFiles lists National Emissions Inventory emissions files to use
-	// for making SCC-based spatial surrogates. The file names can include
-	// environment variables. The format is map[sector name][list of files].
+	// NEIFiles lists National Emissions Inventory emissions files.
+	// The file names can include environment variables.
+	// The format is map[sector name][list of files].
 	NEIFiles map[string][]string
+
+	// COARDSFiles lists COARDS-compliant NetCDF emission files
+	// (NetCDF 4 and greater not supported).
+	// Information regarding the COARDS NetCDF conventions are
+	// available here: https://ferret.pmel.noaa.gov/Ferret/documentation/coards-netcdf-conventions.
+	// The file names can include environment variables.
+	// The format is map[sector name][list of files].
+	// For COARDS files, the sector name will also be used
+	// as the SCC code.
+	COARDSFiles map[string][]string
+
+	// COARDSYear specifies the year of emissions for COARDS emissions files.
+	// The year will not be used for NEI emissions files.
+	COARDSYear int
 
 	// PolsToKeep lists pollutants from the NEI that should be kept.
 	PolsToKeep aep.Speciation
@@ -80,21 +97,13 @@ func (c *InventoryConfig) ReadEmissions() (map[string][]aep.Record, *aep.Invento
 		return nil, nil, err
 	}
 
-	var r *aep.EmissionsReader
-	switch c.InputUnits {
-	case "tons":
-		r, err = aep.NewEmissionsReader(c.PolsToKeep, aep.Annually, aep.Ton, gridRef, srgSpecs)
-	case "tonnes":
-		r, err = aep.NewEmissionsReader(c.PolsToKeep, aep.Annually, aep.Tonne, gridRef, srgSpecs)
-	case "kg":
-		r, err = aep.NewEmissionsReader(c.PolsToKeep, aep.Annually, aep.Kg, gridRef, srgSpecs)
-	case "lbs":
-		r, err = aep.NewEmissionsReader(c.PolsToKeep, aep.Annually, aep.Lb, gridRef, srgSpecs)
-	case "g":
-		r, err = aep.NewEmissionsReader(c.PolsToKeep, aep.Annually, aep.G, gridRef, srgSpecs)
-	default:
-		return nil, nil, fmt.Errorf("aeputil.ReadEmissions: invalid input units '%s'", c.InputUnits)
+	units, err := aep.ParseInputUnits(c.InputUnits)
+	if err != nil {
+		return nil, nil, err
 	}
+
+	// Read NEI emissions.
+	r, err := aep.NewEmissionsReader(c.PolsToKeep, aep.Annually, units, gridRef, srgSpecs)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -126,5 +135,95 @@ func (c *InventoryConfig) ReadEmissions() (map[string][]aep.Record, *aep.Invento
 			records[sector] = append(records[sector], rec)
 		}
 	}
+
+	// Read COARDS files.
+	coardsBegin := time.Date(c.COARDSYear, time.January, 1, 0, 0, 0, 0, time.UTC)
+	coardsEnd := time.Date(c.COARDSYear+1, time.January, 1, 0, 0, 0, 0, time.UTC)
+	for sector, files := range c.COARDSFiles {
+		sourceData := aep.SourceData{
+			SCC:     sector,
+			Country: aep.Global,
+			FIPS:    "00000",
+		}
+		for _, file := range files {
+			if c.COARDSYear <= 0 {
+				return nil, nil, fmt.Errorf("aeputil: COARDSYear == %d, but must be set to a positive value when COARDS files are present", c.COARDSYear)
+			}
+			file = os.ExpandEnv(file)
+			recordGenerator, err := aep.ReadCOARDSFile(file, coardsBegin, coardsEnd, units, sourceData)
+			if err != nil {
+				return nil, nil, fmt.Errorf("aeputil: reading COARDS file: %v", err)
+			}
+
+			t := &recordTotaler{
+				name:  file,
+				group: sector,
+			}
+
+			for {
+				rec, err := recordGenerator()
+				if err == io.EOF {
+					break
+				} else if err != nil {
+					return nil, nil, fmt.Errorf("aeputil: reading COARDS file: %v", err)
+				}
+				t.add(rec)
+				records[sector] = append(records[sector], rec)
+			}
+			inventoryReport.AddData(t)
+		}
+	}
 	return records, inventoryReport, nil
+}
+
+// A recordTotaler stores information about records.
+type recordTotaler struct {
+
+	// Name is the name of this file. It can be the path to the file or something else.
+	name string
+
+	// Group is a label for the group of files this is part of. It is used for reporting.
+	group string
+
+	// totals holds the total emissions in this file, disaggregated by pollutant.
+	totals map[aep.Pollutant]*unit.Unit
+
+	// droppedTotals holds the total emissions in this file that are not being
+	// kept for analysis.
+	droppedTotals map[aep.Pollutant]*unit.Unit
+}
+
+// Name is the name of this file. It can be the path to the file or something else.
+func (f *recordTotaler) Name() string {
+	return f.name
+}
+
+// Group is a label for the group of files this is part of. It is used for reporting.
+func (f *recordTotaler) Group() string {
+	return f.group
+}
+
+// Totals returns the total emissions in this file, disaggregated by pollutant.
+func (f *recordTotaler) Totals() map[aep.Pollutant]*unit.Unit {
+	return f.totals
+}
+
+// DroppedTotals returns the total emissions in this file that are not being
+// kept for analysis.
+func (f *recordTotaler) DroppedTotals() map[aep.Pollutant]*unit.Unit {
+	return f.droppedTotals
+}
+
+func (f *recordTotaler) add(r aep.Record) {
+	if f.totals == nil {
+		f.totals = make(map[aep.Pollutant]*unit.Unit)
+	}
+	totals := r.Totals()
+	for pol, val := range totals {
+		if _, ok := f.totals[pol]; !ok {
+			f.totals[pol] = val
+		} else {
+			f.totals[pol].Add(val)
+		}
+	}
 }

@@ -31,9 +31,8 @@ func TestReadCOARDSFile(t *testing.T) {
 	file := "testdata/emis_coards_hawaii.nc"
 	begin := time.Date(2016, time.January, 1, 0, 0, 0, 0, time.UTC)
 	end := time.Date(2017, time.January, 1, 0, 0, 0, 0, time.UTC)
-	toKG := 907.185
 	sourceData := SourceData{}
-	generator, err := ReadCOARDSFile(file, begin, end, toKG, sourceData)
+	generator, err := ReadCOARDSFile(file, begin, end, Ton, sourceData)
 	if err != nil {
 		t.Fatal(err)
 	}
