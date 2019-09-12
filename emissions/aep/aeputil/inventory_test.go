@@ -83,7 +83,7 @@ func TestInventory_coards(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := aep.Table{
-		[]string{"Group", "File", "NH3 (kg)", "NOx (kg)", "PM25 (kg)", "SOx (kg)", "VOC (kg)"},
+		[]string{"Group", "File", "NH3 (kg)", "NOx (kg)", "PM2_5 (kg)", "SOx (kg)", "VOC (kg)"},
 		[]string{"all", "../testdata/emis_coards_hawaii.nc", "4.1533555064591676e+07",
 			"4.0896043774575606e+07", "1.3217351922194459e+08", "4.145479962381774e+07", "3.340366574798584e+07"}}
 	if !reflect.DeepEqual(report.TotalsTable(), want) {

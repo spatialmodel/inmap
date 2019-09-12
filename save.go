@@ -22,7 +22,6 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io"
-	"runtime"
 	"sort"
 
 	"github.com/ctessum/geom"
@@ -112,26 +111,9 @@ func (d *InMAP) initFromCells(cells []*Cell, emis *Emissions, config *VarGridCon
 	}
 
 	// Add emissions to new cells.
-	if emis != nil {
-		errChan := make(chan error)
-		nprocs := runtime.GOMAXPROCS(-1)
-		for p := 0; p < nprocs; p++ {
-			go func(p int) {
-				for i := p; i < d.cells.len(); i += nprocs {
-					c := (*d.cells)[i]
-					if err := c.setEmissionsFlux(emis, m); err != nil { // This needs to be called after setNeighbors.
-						errChan <- err
-						return
-					}
-				}
-				errChan <- nil
-			}(p)
-		}
-		for p := 0; p < nprocs; p++ {
-			if err := <-errChan; err != nil {
-				return err
-			}
-		}
+	// This needs to be called after setNeighbors.
+	if err := d.SetEmissionsFlux(emis, m); err != nil {
+		return err
 	}
 	return nil
 }

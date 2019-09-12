@@ -382,8 +382,8 @@ func calcWeightFactor(e geom.Geom, c *Cell) float64 {
 	return weightFactor
 }
 
-// setEmissionsFlux sets the emissions flux for c based on the emissions in e.
-func (c *Cell) setEmissionsFlux(e *Emissions, m Mechanism) error {
+// SetEmissionsFlux sets the emissions flux for the receiver based on the emissions in e.
+func (c *Cell) SetEmissionsFlux(e *Emissions, m Mechanism) error {
 	c.EmisFlux = make([]float64, m.Len())
 	for _, eTemp := range e.data.SearchIntersect(c.Bounds()) {
 		e := eTemp.(*EmisRecord)

@@ -84,6 +84,20 @@ func TestInMAPDynamic(t *testing.T) {
 	}
 }
 
+func TestInMAPDynamic_coards(t *testing.T) {
+	cfg := InitializeConfig()
+	cfg.Set("static", false)
+	cfg.Set("createGrid", false) // this isn't used for the dynamic grid
+	os.Setenv("InMAPRunType", "dynamic_coards")
+	cfg.Set("config", "../cmd/inmap/configExample_coards.toml")
+	cfg.Root.SetArgs([]string{"run", "steady"})
+	defer os.Remove(os.ExpandEnv("$INMAP_ROOT_DIR/cmd/inmap/testdata/output_dynamic_coards.log"))
+	defer inmap.DeleteShapefile(os.ExpandEnv("$INMAP_ROOT_DIR/cmd/inmap/testdata/output_dynamic_coards.shp"))
+	if err := cfg.Root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestInMAPDynamicRemote_http(t *testing.T) {
 	cfg := InitializeConfig()
 	if err := os.Mkdir("test_bucket", os.ModePerm); err != nil {

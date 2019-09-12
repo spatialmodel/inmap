@@ -21,6 +21,7 @@ package inmaputil
 import (
 	"context"
 	"io/ioutil"
+	"log"
 	"os"
 	"reflect"
 	"testing"
@@ -31,7 +32,13 @@ import (
 
 func TestCloud(t *testing.T) {
 	cfg := InitializeConfig()
-	client, err := cloud.NewFakeClient(nil, nil, "file://test", cfg.Root, cfg.Viper, cfg.InputFiles(), cfg.OutputFiles())
+	checkRun := func(b []byte, err error) {
+		if err != nil {
+			log.Println(err)
+		}
+		t.Log(string(b))
+	}
+	client, err := cloud.NewFakeClient(nil, checkRun, "file://test", cfg.Root, cfg.Viper, cfg.InputFiles(), cfg.OutputFiles())
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -105,7 +105,7 @@ func JobSpec(root *cobra.Command, config *viper.Viper, name string, cmdArgs, inp
 		}
 		if argVal != "false" {
 			if argVal == "true" {
-				js.Args = append(js.Args, fmt.Sprintf("--%s", f.Name))
+				js.Args = append(js.Args, fmt.Sprintf("--%s", f.Name), "true")
 			} else {
 				js.Args = append(js.Args, fmt.Sprintf("--%s", f.Name), argVal)
 			}

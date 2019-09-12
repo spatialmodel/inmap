@@ -22,9 +22,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ctessum/sparse"
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/encoding/shp"
+	"github.com/ctessum/sparse"
 )
 
 const (
@@ -585,10 +585,11 @@ func VarGridTestData() (*VarGridConfig, *CTMData, *Population, PopIndices, *Mort
 }
 
 // DeleteShapefile deletes the named shapefile.
-func DeleteShapefile(fname string) {
+func DeleteShapefile(fname string) error {
 	for _, ext := range []string{".dbf", ".prj", ".shp", ".shx"} {
 		if err := os.Remove(strings.TrimSuffix(fname, ".shp") + ext); err != nil {
-			panic(err)
+			return err
 		}
 	}
+	return nil
 }

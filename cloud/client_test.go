@@ -59,6 +59,19 @@ func TestClient_fake(t *testing.T) {
 			"--VarGrid.VariableGridDy=4000", "--VarGrid.VariableGridXo=-4000", "--VarGrid.VariableGridYo=-4000",
 			"--VarGrid.Xnests=2,2,2", "--VarGrid.Ynests=2,2,2",
 			"--VariableGridData=file://test/test/test_user/test_job/aa4dd05ac464a1f532480e5f3aae5a7cf20fb97f1250de88e5b5b192f6e752e7.gob",
+			"--aep.GridRef=no_default",
+			"--aep.InventoryConfig.COARDSFiles={}\n",
+			"--aep.InventoryConfig.COARDSYear=0",
+			"--aep.InventoryConfig.InputUnits=no_default",
+			"--aep.InventoryConfig.NEIFiles={}\n",
+			"--aep.SCCExactMatch=true",
+			"--aep.SpatialConfig.GridName=inmap",
+			"--aep.SpatialConfig.InputSR=+proj=longlat",
+			"--aep.SpatialConfig.MaxCacheEntries=10",
+			"--aep.SpatialConfig.SpatialCache=",
+			"--aep.SrgShapefileDirectory=no_default",
+			"--aep.SrgSpec=no_default",
+			"--aep.SrgSpecType=no_default",
 		}
 		if len(cmd) != len(wantCmd) {
 			t.Errorf("wrong command length: %d != %d", len(cmd), len(wantCmd))
