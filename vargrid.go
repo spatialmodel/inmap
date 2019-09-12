@@ -523,6 +523,17 @@ func (d *InMAP) addCells(config *VarGridConfig, newCellIndices [][][2]int,
 	}
 
 	// Add emissions to new cells.
+	// This needs to be called after setNeighbors.
+	if err := d.SetEmissionsFlux(emis, m); err != nil {
+		return err
+	}
+	return nil
+}
+
+// SetEmissionsFlux sets the emissions flux for the cells in the receiver
+// based on the emissions in e.
+func (d *InMAP) SetEmissionsFlux(emis *Emissions, m Mechanism) error {
+	nprocs := runtime.GOMAXPROCS(-1)
 	if emis != nil {
 		cellIndexChan2 := make(chan int)
 		errChan := make(chan error)
@@ -531,7 +542,7 @@ func (d *InMAP) addCells(config *VarGridConfig, newCellIndices [][][2]int,
 				for i := range cellIndexChan2 {
 					c := (*d.cells)[i]
 					if len(c.EmisFlux) == 0 {
-						if err := c.setEmissionsFlux(emis, m); err != nil { // This needs to be called after setNeighbors.
+						if err := c.SetEmissionsFlux(emis, m); err != nil { // This needs to be called after setNeighbors.
 							errChan <- err
 							return
 						}

@@ -162,6 +162,11 @@ func InitializeConfig() *Cfg {
 				shapeFiles[i] = maybeDownload(context.TODO(), shapeFiles[i], outChan)
 			}
 
+			inventoryConfig, spatialConfig, err := aeputilConfig(cfg.Viper)
+			if err != nil {
+				return err
+			}
+
 			return Run(
 				cmd,
 				cfg.GetString("LogFile"),
@@ -171,6 +176,8 @@ func InitializeConfig() *Cfg {
 				emisUnits,
 				shapeFiles,
 				vgc,
+				inventoryConfig,
+				spatialConfig,
 				maybeDownload(context.TODO(), os.ExpandEnv(cfg.GetString("InMAPData")), outChan),
 				maybeDownload(context.TODO(), os.ExpandEnv(cfg.GetString("VariableGridData")), outChan),
 				cfg.GetInt("NumIterations"),
@@ -793,6 +800,116 @@ func InitializeConfig() *Cfg {
 			flagsets:   []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags(), cfg.srStartCmd.Flags()},
 		},
 		{
+			name: "aep.InventoryConfig.NEIFiles",
+			usage: `NEIFiles lists National Emissions Inventory emissions files.
+The file names can include environment variables.
+The format is map[sector name][list of files].`,
+			defaultVal: map[string][]string{},
+			//isInputFile: true,
+			flagsets: []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags()},
+		},
+		{
+			name: "aep.InventoryConfig.COARDSFiles",
+			usage: `COARDSFiles lists COARDS-compliant NetCDF emission files
+(NetCDF 4 and greater not supported).
+Information regarding the COARDS NetCDF conventions are
+available here: https://ferret.pmel.noaa.gov/Ferret/documentation/coards-netcdf-conventions.
+The file names can include environment variables.
+The format is map[sector name][list of files].
+For COARDS files, the sector name will also be used
+as the SCC code.`,
+			defaultVal: map[string][]string{},
+			//isInputFile: true,
+			flagsets: []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags()},
+		},
+		{
+			name: "aep.InventoryConfig.COARDSYear",
+			usage: `COARDSYear specifies the year of emissions for COARDS emissions files.
+COARDS emissions are assumed to be in units of mass of emissions per year.
+The year will not be used for NEI emissions files.`,
+			defaultVal: 0,
+			flagsets:   []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags()},
+		},
+		{
+			name: "aep.InventoryConfig.InputUnits",
+			usage: `InputUnits specifies the units of input data. Acceptable
+values are 'tons', 'tonnes', 'kg', 'g', and 'lbs'.
+This value will be used for AEP emissions only, not for shapefiles.`,
+			defaultVal: "no_default",
+			flagsets:   []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags()},
+		},
+		{
+			name: "aep.SrgSpec",
+			usage: `SrgSpec gives the location of the surrogate specification file.
+It is used for assigning spatial locations to emissions records.`,
+			defaultVal: "no_default",
+			//isInputFile: true,
+			flagsets: []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags()},
+		},
+		{
+			name: "aep.SrgSpecType",
+			usage: `SrgSpecType specifies the type of data the gridding surrogates
+are being created from. It can be "SMOKE" or "OSM".`,
+			defaultVal: "no_default",
+			flagsets:   []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags()},
+		},
+		{
+			name: "aep.SrgShapefileDirectory",
+			usage: `SrgShapefileDirectory gives the location of the directory holding
+the shapefiles used for creating spatial surrogates.
+It is used for assigning spatial locations to emissions records.
+It is only used when SrgSpecType == "SMOKE".`,
+			defaultVal: "no_default",
+			flagsets:   []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags()},
+		},
+		{
+			name: "aep.GridRef",
+			usage: `GridRef specifies the locations of the spatial surrogate gridding
+reference files used for processing emissions.
+It is used for assigning spatial locations to emissions records.`,
+			defaultVal: []string{"no_default"},
+			//isInputFile: true,
+			flagsets: []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags()},
+		},
+		{
+			name: "aep.SCCExactMatch",
+			usage: `SCCExactMatch specifies whether SCC codes must match exactly when processing
+emissions.`,
+			defaultVal: true,
+			flagsets:   []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags()},
+		},
+		{
+			name:       "aep.SpatialConfig.InputSR",
+			usage:      `InputSR specifies the input emissions spatial reference in Proj4 format.`,
+			defaultVal: "+proj=longlat",
+			flagsets:   []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags()},
+		},
+		{
+			name: "aep.SpatialConfig.SpatialCache",
+			usage: `SpatialCache specifies the location for storing spatial emissions
+data for quick access. If this is left empty, no cache will be used.`,
+			defaultVal: "",
+			flagsets:   []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags()},
+		},
+		{
+			name: "aep.SpatialConfig.MaxCacheEntries",
+			usage: `MaxCacheEntries specifies the maximum number of emissions and concentrations
+surrogates to hold in a memory cache. Larger numbers can result in faster
+processing but increased memory usage.`,
+			defaultVal: 10,
+			flagsets:   []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags()},
+		},
+		{
+			name: "aep.SpatialConfig.GridName",
+			usage: `GridName specifies a name for the grid which is used in the names
+of intermediate and output files.
+Changes to the geometry of the grid must be accompanied by either a
+a change in GridName or the deletion of all the files in the
+SpatialCache directory..`,
+			defaultVal: "inmap",
+			flagsets:   []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags()},
+		},
+		{
 			name: "SR.OutputFile",
 			usage: `
               SR.OutputFile is the path where the output file is or should be created
@@ -1048,7 +1165,7 @@ func InitializeConfig() *Cfg {
 				} else {
 					set.Float64P(option.name, option.shorthand, option.defaultVal.(float64), option.usage)
 				}
-			case map[string]string:
+			case map[string]string, map[string][]string:
 				b := bytes.NewBuffer(nil)
 				e := json.NewEncoder(b)
 				e.Encode(option.defaultVal)
@@ -1059,7 +1176,7 @@ func InitializeConfig() *Cfg {
 					set.StringP(option.name, option.shorthand, s, option.usage)
 				}
 			default:
-				panic("invalid argument type")
+				panic(fmt.Errorf("invalid argument type: %T", option.defaultVal))
 			}
 			cfg.BindPFlag(option.name, set.Lookup(option.name))
 		}

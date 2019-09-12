@@ -32,6 +32,8 @@ import (
 	"github.com/lnashier/viper"
 	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/cloud"
+	"github.com/spatialmodel/inmap/emissions/aep"
+	"github.com/spatialmodel/inmap/emissions/aep/aeputil"
 	"github.com/spf13/cast"
 )
 
@@ -184,6 +186,53 @@ func VarGridConfig(cfg *viper.Viper) (*inmap.VarGridConfig, error) {
 	return &c, nil
 }
 
+// aeputilConfig unmarshals an aeputil inventory and spatial configuration.
+func aeputilConfig(cfg *viper.Viper) (*aeputil.InventoryConfig, *aeputil.SpatialConfig, error) {
+	neiFiles, err := getStringMapStringSlice("aep.InventoryConfig.NEIFiles", cfg)
+	if err != nil {
+		return nil, nil, fmt.Errorf("inmaputil: parsing config variable aep.InventoryConfig.NEIFiles: %v", err)
+	}
+
+	coardsFiles, err := getStringMapStringSlice("aep.InventoryConfig.COARDSFiles", cfg)
+	if err != nil {
+		return nil, nil, fmt.Errorf("inmaputil: parsing config variable aep.InventoryConfig.COARDSFiles: %v", err)
+	}
+
+	i := &aeputil.InventoryConfig{
+		NEIFiles:              neiFiles,
+		COARDSFiles:           coardsFiles,
+		COARDSYear:            cfg.GetInt("aep.InventoryConfig.COARDSYear"),
+		InputUnits:            cfg.GetString("aep.InventoryConfig.InputUnits"),
+		SrgSpec:               os.ExpandEnv(cfg.GetString("aep.SrgSpec")),
+		SrgSpecType:           cfg.GetString("aep.SrgSpecType"),
+		SrgShapefileDirectory: cfg.GetString("aep.SrgShapefileDirectory"),
+		GridRef:               cfg.GetStringSlice("aep.GridRef"),
+		SCCExactMatch:         cfg.GetBool("aep.SCCExactMatch"),
+	}
+	i.PolsToKeep = aep.Speciation{
+		"VOC":   {},
+		"NOx":   {},
+		"NH3":   {},
+		"SOx":   {},
+		"PM2_5": {},
+	}
+
+	s := &aeputil.SpatialConfig{
+		SrgSpec:               os.ExpandEnv(cfg.GetString("aep.SrgSpec")),
+		SrgSpecType:           cfg.GetString("aep.SrgSpecType"),
+		SrgShapefileDirectory: cfg.GetString("aep.SrgShapefileDirectory"),
+		SCCExactMatch:         cfg.GetBool("aep.SCCExactMatch"),
+		GridRef:               cfg.GetStringSlice("aep.GridRef"),
+		OutputSR:              os.ExpandEnv(cfg.GetString("VarGrid.GridProj")),
+		InputSR:               cfg.GetString("aep.SpatialConfig.InputSR"),
+		SpatialCache:          cfg.GetString("aep.SpatialConfig.SpatialCache"),
+		MaxCacheEntries:       cfg.GetInt("aep.SpatialConfig.MaxCacheEntries"),
+		GridName:              cfg.GetString("aep.SpatialConfig.GridName"),
+	}
+
+	return i, s, nil
+}
+
 func toIntSliceE(s interface{}) ([]int, error) {
 	if v, ok := s.([]interface{}); ok {
 		o := make([]int, len(v))
@@ -217,6 +266,29 @@ func GetStringMapString(varName string, cfg *viper.Viper) map[string]string {
 			panic(err)
 		}
 		return o
+	default:
+		panic(fmt.Errorf("invalid type for getStringMapString variable %s: %#v", varName, i))
+	}
+}
+
+// getStringMapStringSlice returns a map[string][]string from a viper configuration,
+// accounting for the fact that it might be a json object if it was set
+// from a command line argument.
+func getStringMapStringSlice(varName string, cfg *viper.Viper) (map[string][]string, error) {
+	i := cfg.Get(varName)
+	switch i.(type) {
+	case map[string][]string:
+		return i.(map[string][]string), nil
+	case map[string]interface{}:
+		return cast.ToStringMapStringSliceE(i)
+	case string:
+		b := bytes.NewBuffer(([]byte)(i.(string)))
+		d := json.NewDecoder(b)
+		o := make(map[string][]string)
+		if err := d.Decode(&o); err != nil {
+			return nil, err
+		}
+		return o, nil
 	default:
 		panic(fmt.Errorf("invalid type for getStringMapString variable %s: %#v", varName, i))
 	}

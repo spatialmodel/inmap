@@ -55,7 +55,7 @@ type SpatialConfig struct {
 	// OutputSR specifies the output spatial reference in Proj4 format.
 	OutputSR string
 
-	// InputSR specifies the input spatial reference in Proj4 format.
+	// InputSR specifies the input emissions spatial reference in Proj4 format.
 	InputSR string
 
 	// SimplifyTolerance is the tolerance for simplifying spatial surrogate
@@ -76,6 +76,9 @@ type SpatialConfig struct {
 
 	// GridName specifies a name for the grid which is used in the names
 	// of intermediate and output files.
+	// Changes to the geometry of the grid must be accompanied by either a
+	// a change in GridName or the deletion of all the files in the
+	// SpatialCache directory.
 	GridName string
 
 	loadOnce sync.Once
@@ -111,15 +114,14 @@ type SpatialIterator struct {
 
 // Next spatializes a record from the
 func (si *SpatialIterator) Next() (aep.Record, error) {
-	var err error
-	si.c.loadOnce.Do(func() {
-		si.c.sp, err = si.c.setupSpatialProcessor()
-	})
+	rec, err := si.parent.Next()
 	if err != nil {
 		return nil, err
 	}
 
-	rec, err := si.parent.Next()
+	si.c.loadOnce.Do(func() {
+		si.c.sp, err = si.c.setupSpatialProcessor()
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +133,7 @@ func (si *SpatialIterator) Next() (aep.Record, error) {
 		return nil, err
 	}
 	if !inGrid {
-		return rec, nil
+		return recG, nil
 	}
 	t := rec.Totals()
 	for p, totalEmis := range t {
@@ -149,7 +151,7 @@ func (si *SpatialIterator) Next() (aep.Record, error) {
 			si.ungridded[p].Add(totalEmis)
 		}
 	}
-	return rec, nil
+	return recG, nil
 }
 
 // SpatialTotals returns spatial arrays of the total emissions
@@ -174,7 +176,8 @@ func (c *SpatialConfig) SpatialProcessor() (*aep.SpatialProcessor, error) {
 func readSrgSpec(srgSpecPath, srgShapefileDirectory, srgSpecType string, sccExactMatch bool) (*aep.SrgSpecs, error) {
 	f, err := os.Open(os.ExpandEnv(srgSpecPath))
 	if err != nil {
-		return nil, err
+		panic(err)
+		return nil, fmt.Errorf("aep: opening surrogate specification: %v", err)
 	}
 	var srgSpecs *aep.SrgSpecs
 	switch srgSpecType {
@@ -202,7 +205,7 @@ func readGridRef(paths []string, sccExactMatch bool) (*aep.GridRef, error) {
 	for _, gf := range paths {
 		f, err := os.Open(os.ExpandEnv(gf))
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("aep: opening GridRef file: %v", err)
 		}
 		gridRefTemp, err2 := aep.ReadGridRef(f, sccExactMatch)
 		if err2 != nil {

@@ -120,7 +120,7 @@ func (d *WRFconfigData) Grids() []*GridDef {
 func (d *WRFconfigData) parseWPSnamelist(filename string, e *wrfErrCat) {
 	file, err := os.Open(filename)
 	if err != nil {
-		e.Add(err)
+		e.Add(fmt.Errorf("aep: parsing WPS namelist: %v", err))
 		return
 	}
 	includesRefx := false
@@ -225,6 +225,7 @@ func (d *WRFconfigData) parseWPSnamelist(filename string, e *wrfErrCat) {
 func (d *WRFconfigData) parseWRFnamelist(filename string, e *wrfErrCat) {
 	file, err := os.Open(filename)
 	if err != nil {
+		e.Add(fmt.Errorf("aep: parsing WRF namelist: %v", err))
 		return
 	}
 	f := bufio.NewReader(file)

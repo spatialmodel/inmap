@@ -338,7 +338,7 @@ func (e *EmissionsReader) OpenFilesFromTemplate(filetemplate string) ([]*Invento
 			file = os.ExpandEnv(file)
 			f, err := os.Open(file)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("aep: opening emissions file: %v", err)
 			}
 			files[i], err = NewInventoryFile(file, f, p, e.inputConv)
 			if err != nil {
@@ -352,7 +352,7 @@ func (e *EmissionsReader) OpenFilesFromTemplate(filetemplate string) ([]*Invento
 		file := os.ExpandEnv(filetemplate)
 		f, err := os.Open(file)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("aep: opening emissions file: %v", err)
 		}
 		invF, err := NewInventoryFile(file, f, Annual, e.inputConv)
 		if err != nil {

@@ -46,6 +46,7 @@ type InventoryConfig struct {
 	COARDSFiles map[string][]string
 
 	// COARDSYear specifies the year of emissions for COARDS emissions files.
+	// COARDS emissions are assumed to be in units of mass of emissions per year.
 	// The year will not be used for NEI emissions files.
 	COARDSYear int
 
@@ -67,10 +68,11 @@ type InventoryConfig struct {
 	// SrgShapefileDirectory gives the location of the directory holding
 	// the shapefiles used for creating spatial surrogates.
 	// It is used for assigning spatial locations to emissions records.
+	// It is only used when SrgSpecType == "SMOKE".
 	SrgShapefileDirectory string
 
 	// GridRef specifies the locations of the spatial surrogate gridding
-	// reference files used for processing the NEI.
+	// reference files used for processing emissions.
 	// It is used for assigning spatial locations to emissions records.
 	GridRef []string
 

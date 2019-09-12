@@ -188,7 +188,7 @@ func TestAnimation_logo(t *testing.T) {
 	if err := inmaputil.Run(nil, "animation_logo/logoOut.log", "animation_logo/logoOut.shp", false,
 		map[string]string{"TotalPM25": "TotalPM25"}, cfg.GetString("EmissionUnits"),
 		[]string{"animation_logo/logo.shp"},
-		vgc, cfg.GetString("InMAPData"), cfg.GetString("VariableGridData"), cfg.GetInt("NumIterations"),
+		vgc, nil, nil, cfg.GetString("InMAPData"), cfg.GetString("VariableGridData"), cfg.GetInt("NumIterations"),
 		dynamic, createGrid, inmaputil.DefaultScienceFuncs, nil,
 		[]inmap.DomainManipulator{inmap.RunPeriodically(framePeriod, saveConc(dataChan))}, nil, simplechem.Mechanism{}); err != nil {
 		t.Fatal(err)
@@ -243,7 +243,7 @@ func TestAnimation_nei(t *testing.T) {
 	if err := inmaputil.Run(nil, "animation_nei/results.log", "animation_nei/results.shp", false,
 		inmaputil.GetStringMapString("OutputVariables", cfg.Viper), cfg.GetString("EmissionUnits"),
 		cfg.GetStringSlice("EmissionsShapefiles"),
-		vgc, cfg.GetString("InMAPData"), cfg.GetString("VariableGridData"), cfg.GetInt("NumIterations"),
+		vgc, nil, nil, cfg.GetString("InMAPData"), cfg.GetString("VariableGridData"), cfg.GetInt("NumIterations"),
 		dynamic, createGrid, inmaputil.DefaultScienceFuncs, nil,
 		[]inmap.DomainManipulator{inmap.RunPeriodically(framePeriod, saveConc(dataChan))}, nil, simplechem.Mechanism{}); err != nil {
 		t.Fatal(err)

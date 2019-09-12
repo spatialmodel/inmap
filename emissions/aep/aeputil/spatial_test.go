@@ -164,19 +164,19 @@ func TestSpatial_coards(t *testing.T) {
 	}
 
 	wantEmis := map[aep.Pollutant]float64{
-		aep.Pollutant{Name: "NOx"}:  1.3984131235786172e+07,
-		aep.Pollutant{Name: "VOC"}:  2.7990005393761573e+06,
-		aep.Pollutant{Name: "PM25"}: 5.988116747096776e+06,
-		aep.Pollutant{Name: "SOx"}:  5.494101046635956e+06,
-		aep.Pollutant{Name: "NH3"}:  1.2303264126897848e+06,
+		aep.Pollutant{Name: "NOx"}:   1.3984131235786172e+07,
+		aep.Pollutant{Name: "VOC"}:   2.7990005393761573e+06,
+		aep.Pollutant{Name: "PM2_5"}: 5.988116747096776e+06,
+		aep.Pollutant{Name: "SOx"}:   5.494101046635956e+06,
+		aep.Pollutant{Name: "NH3"}:   1.2303264126897848e+06,
 	}
 
 	wantUnits := map[aep.Pollutant]unit.Dimensions{
-		aep.Pollutant{Name: "PM25"}: unit.Dimensions{4: 1},
-		aep.Pollutant{Name: "NH3"}:  unit.Dimensions{4: 1},
-		aep.Pollutant{Name: "SOx"}:  unit.Dimensions{4: 1},
-		aep.Pollutant{Name: "NOx"}:  unit.Dimensions{4: 1},
-		aep.Pollutant{Name: "VOC"}:  unit.Dimensions{4: 1},
+		aep.Pollutant{Name: "PM2_5"}: unit.Dimensions{4: 1},
+		aep.Pollutant{Name: "NH3"}:   unit.Dimensions{4: 1},
+		aep.Pollutant{Name: "SOx"}:   unit.Dimensions{4: 1},
+		aep.Pollutant{Name: "NOx"}:   unit.Dimensions{4: 1},
+		aep.Pollutant{Name: "VOC"}:   unit.Dimensions{4: 1},
 	}
 	iter := c.Spatial.Iterator(IteratorFromMap(records), 0)
 	for {
@@ -204,7 +204,7 @@ func TestSpatial_coards(t *testing.T) {
 	t.Run("totals", func(t *testing.T) {
 		totals := report.TotalsTable()
 		totalsWant := aep.Table{
-			[]string{"Group", "File", "NH3 (kg)", "NOx (kg)", "PM25 (kg)", "SOx (kg)", "VOC (kg)"},
+			[]string{"Group", "File", "NH3 (kg)", "NOx (kg)", "PM2_5 (kg)", "SOx (kg)", "VOC (kg)"},
 			[]string{"", "Spatial", "1.230326412689783e+06", "1.3984131235786151e+07", "5.988116747096768e+06", "5.494101046635947e+06", "2.799000539376153e+06"},
 		}
 		compareTables(totals, totalsWant, 1.0e-14, t)
@@ -212,7 +212,7 @@ func TestSpatial_coards(t *testing.T) {
 	t.Run("totals", func(t *testing.T) {
 		droppedTotals := report.DroppedTotalsTable()
 		droppedTotalsWant := aep.Table{
-			[]string{"Group", "File", "NH3 (kg)", "NOx (kg)", "PM25 (kg)", "SOx (kg)", "VOC (kg)"},
+			[]string{"Group", "File", "NH3 (kg)", "NOx (kg)", "PM2_5 (kg)", "SOx (kg)", "VOC (kg)"},
 			[]string{"", "Spatial", "0", "0", "0", "0", "0"},
 		}
 		compareTables(droppedTotals, droppedTotalsWant, 1.0e-14, t)

@@ -26,7 +26,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ctessum/geom"
 	"github.com/spatialmodel/inmap"
+	"github.com/spatialmodel/inmap/emissions/aep"
+	"github.com/spatialmodel/inmap/emissions/aep/aeputil"
 	"github.com/spatialmodel/inmap/science/chem/simplechem"
 	"github.com/spf13/cobra"
 )
@@ -115,8 +118,9 @@ var DefaultScienceFuncs = []inmap.CellManipulator{
 // notMeters should be set to true if the units of the grid are not meters
 // (e.g., if the grid is in degrees latitude/longitude.)
 func Run(CobraCommand *cobra.Command, LogFile string, OutputFile string, OutputAllLayers bool, OutputVariables map[string]string,
-	EmissionUnits string, EmissionsShapefiles []string, VarGrid *inmap.VarGridConfig, InMAPData, VariableGridData string,
-	NumIterations int,
+	EmissionUnits string, EmissionsShapefiles []string, VarGrid *inmap.VarGridConfig,
+	inventoryConfig *aeputil.InventoryConfig, spatialConfig *aeputil.SpatialConfig,
+	InMAPData, VariableGridData string, NumIterations int,
 	dynamic, createGrid bool, scienceFuncs []inmap.CellManipulator, addInit, addRun, addCleanup []inmap.DomainManipulator,
 	m inmap.Mechanism) error {
 
@@ -182,6 +186,8 @@ func Run(CobraCommand *cobra.Command, LogFile string, OutputFile string, OutputA
 		return err
 	}
 
+	aepSetEmis := setEmissionsAEP(inventoryConfig, spatialConfig, emis)
+
 	// Only load the population if we're creating the grid.
 	var pop *inmap.Population
 	var mr *inmap.MortalityRates
@@ -212,8 +218,9 @@ func Run(CobraCommand *cobra.Command, LogFile string, OutputFile string, OutputA
 				return err
 			}
 			initFuncs = []inmap.DomainManipulator{
-				VarGrid.RegularGrid(ctmData, pop, popIndices, mr, mortIndices, emis, m),
-				VarGrid.MutateGrid(mutator, ctmData, pop, mr, emis, m, msgLog),
+				VarGrid.RegularGrid(ctmData, pop, popIndices, mr, mortIndices, nil, m),
+				VarGrid.MutateGrid(mutator, ctmData, pop, mr, nil, m, msgLog),
+				aepSetEmis,
 				inmap.SetTimestepCFL(),
 			}
 		} else { // pre-created static grid
@@ -223,7 +230,8 @@ func Run(CobraCommand *cobra.Command, LogFile string, OutputFile string, OutputA
 				return fmt.Errorf("problem opening file to load VariableGridData: %v", err)
 			}
 			initFuncs = []inmap.DomainManipulator{
-				inmap.Load(r, VarGrid, emis, m),
+				inmap.Load(r, VarGrid, nil, m),
+				aepSetEmis,
 				inmap.SetTimestepCFL(),
 				o.CheckOutputVars(m),
 			}
@@ -237,19 +245,33 @@ func Run(CobraCommand *cobra.Command, LogFile string, OutputFile string, OutputA
 		}
 	} else { // dynamic grid
 		initFuncs = []inmap.DomainManipulator{
-			VarGrid.RegularGrid(ctmData, pop, popIndices, mr, mortIndices, emis, m),
+			VarGrid.RegularGrid(ctmData, pop, popIndices, mr, mortIndices, nil, m),
+			aepSetEmis,
 			inmap.SetTimestepCFL(),
 			o.CheckOutputVars(m),
 		}
+
+		// Set up a domain manipulator that mutates the grid, sets the emissions,
+		// the sets the timestep.
 		popConcMutator := inmap.NewPopConcMutator(VarGrid, popIndices)
 		const gridMutateInterval = 3 * 60 * 60 // every 3 hours in seconds
+		mg := VarGrid.MutateGrid(popConcMutator.Mutate(), ctmData, pop, mr, nil, m, msgLog)
+		setTS := inmap.SetTimestepCFL()
+		mutateThenAddEmis := func(d *inmap.InMAP) error {
+			if err := mg(d); err != nil {
+				return err
+			}
+			if err := aepSetEmis(d); err != nil {
+				return err
+			}
+			return setTS(d)
+		}
+
 		runFuncs = []inmap.DomainManipulator{
 			inmap.Log(cLog),
 			inmap.Calculations(inmap.AddEmissionsFlux()),
 			scienceCalcs,
-			inmap.RunPeriodically(gridMutateInterval,
-				VarGrid.MutateGrid(popConcMutator.Mutate(), ctmData, pop, mr, emis, m, msgLog)),
-			inmap.RunPeriodically(gridMutateInterval, inmap.SetTimestepCFL()),
+			inmap.RunPeriodically(gridMutateInterval, mutateThenAddEmis),
 			inmap.SteadyStateConvergenceCheck(NumIterations, VarGrid.PopGridColumn, m, cConverge),
 		}
 	}
@@ -291,4 +313,72 @@ func Run(CobraCommand *cobra.Command, LogFile string, OutputFile string, OutputA
 	log.Printf("Elapsed time: %f hours", elapsedTime.Hours())
 
 	return nil
+}
+
+// setEmissionsAEP adds AEP-processed emissions flux to an existing grid.
+// The returned DomainManipulator must be run after each time the grid changes.
+// extraEmis specifies any extra emissions that should be added. It is ignored
+// if nil.
+func setEmissionsAEP(inventoryConfig *aeputil.InventoryConfig, spatialConfig *aeputil.SpatialConfig, extraEmis *inmap.Emissions) func(d *inmap.InMAP) error {
+	// Read in emissions records and save in memory.
+	recs := make(map[string][]aep.Record)
+	var err error
+	if len(inventoryConfig.NEIFiles) > 0 || len(inventoryConfig.COARDSFiles) > 0 {
+		recs, _, err = inventoryConfig.ReadEmissions() // Remember to check error below.
+	}
+
+	return func(d *inmap.InMAP) error {
+		if err != nil { // Check error from ReadEmissions
+			return err
+		}
+
+		// Specify the grid cells we want to allocate to.
+		cells := d.Cells()
+		spatialConfig.GridCells = make([]geom.Polygonal, 0, len(cells))
+		for _, c := range cells {
+			if c.Layer == 0 {
+				spatialConfig.GridCells = append(spatialConfig.GridCells, c)
+			}
+		}
+
+		iter := spatialConfig.Iterator(aeputil.IteratorFromMap(recs), 0)
+		var spatialRecs []aep.RecordGridded
+		for {
+			rec, err := iter.Next()
+			if err == io.EOF {
+				break
+			} else if err != nil {
+				return err
+			}
+			spatialRecs = append(spatialRecs, rec.(aep.RecordGridded))
+		}
+
+		var emisRecs []*inmap.EmisRecord
+		if len(spatialRecs) > 0 {
+			sp, err := spatialConfig.SpatialProcessor()
+			if err != nil {
+				return err
+			}
+			emisRecs, err = inmap.FromAEP(spatialRecs, sp.Grids, 0,
+				[]aep.Pollutant{{Name: "VOC"}},
+				[]aep.Pollutant{{Name: "NOx"}},
+				[]aep.Pollutant{{Name: "NH3"}},
+				[]aep.Pollutant{{Name: "SOx"}},
+				[]aep.Pollutant{{Name: "PM2_5"}},
+			)
+			if err != nil {
+				return err
+			}
+		}
+		emis := inmap.NewEmissions()
+		for _, e := range emisRecs {
+			emis.Add(e)
+		}
+		if extraEmis != nil { // Add in extra emissions.
+			for _, e := range extraEmis.EmisRecords() {
+				emis.Add(e)
+			}
+		}
+		return d.SetEmissionsFlux(emis, m)
+	}
 }

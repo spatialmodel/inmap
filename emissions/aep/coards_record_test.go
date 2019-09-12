@@ -75,11 +75,11 @@ func TestReadCOARDSFile(t *testing.T) {
 		i++
 	}
 	emisWant := map[Pollutant]*unit.Unit{
-		Pollutant{Name: "NH3"}:  unit.New(4.1533555064591676e+07, unit.Kilogram),
-		Pollutant{Name: "NOx"}:  unit.New(4.0896043774575606e+07, unit.Kilogram),
-		Pollutant{Name: "PM25"}: unit.New(1.3217351922194459e+08, unit.Kilogram),
-		Pollutant{Name: "SOx"}:  unit.New(4.145479962381774e+07, unit.Kilogram),
-		Pollutant{Name: "VOC"}:  unit.New(3.340366574798584e+07, unit.Kilogram),
+		Pollutant{Name: "NH3"}:   unit.New(4.1533555064591676e+07, unit.Kilogram),
+		Pollutant{Name: "NOx"}:   unit.New(4.0896043774575606e+07, unit.Kilogram),
+		Pollutant{Name: "PM2_5"}: unit.New(1.3217351922194459e+08, unit.Kilogram),
+		Pollutant{Name: "SOx"}:   unit.New(4.145479962381774e+07, unit.Kilogram),
+		Pollutant{Name: "VOC"}:   unit.New(3.340366574798584e+07, unit.Kilogram),
 	}
 	emisHave := totalEmis.Totals()
 	if !reflect.DeepEqual(emisWant, emisHave) {
