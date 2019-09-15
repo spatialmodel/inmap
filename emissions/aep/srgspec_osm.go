@@ -19,6 +19,7 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package aep
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -29,6 +30,7 @@ import (
 	"github.com/ctessum/geom/encoding/osm"
 	"github.com/ctessum/geom/index/rtree"
 	"github.com/ctessum/geom/proj"
+	"github.com/ctessum/requestcache"
 )
 
 // SrgSpecOSM holds OpenStreetMap spatial surrogate specification information.
@@ -61,11 +63,16 @@ type SrgSpecOSM struct {
 	progressLock sync.Mutex
 	// status specifies what the surrogate generator is currently doing.
 	status string
+
+	cache *requestcache.Cache
 }
 
 // ReadSrgSpec reads a OpenStreetMap surrogate specification formated as a
 // JSON array of SrgSpecOSM objects.
-func ReadSrgSpecOSM(r io.Reader) (*SrgSpecs, error) {
+// diskCachePath specifies a path to a directory where an on-disk cache should
+// be created (if "", no cache will be created), and memCacheSize specifies the
+// number of surrogate data entries to hold in an in-memory cache.
+func ReadSrgSpecOSM(r io.Reader, diskCachePath string, memCacheSize int) (*SrgSpecs, error) {
 	d := json.NewDecoder(r)
 	var o []*SrgSpecOSM
 	err := d.Decode(&o)
@@ -74,6 +81,7 @@ func ReadSrgSpecOSM(r io.Reader) (*SrgSpecs, error) {
 	}
 	srgs := NewSrgSpecs()
 	for _, s := range o {
+		s.cache = newCache(s.readSrgData, diskCachePath, memCacheSize)
 		srgs.Add(s)
 	}
 	return srgs, nil
@@ -113,10 +121,51 @@ func (srg *SrgSpecOSM) incrementStatus(percent float64) {
 }
 
 // getSrgData returns the spatial surrogate information for this
-// surrogate definition, where tol is tolerance for geometry simplification.
+// surrogate definition and location, where tol is tolerance for geometry simplification.
 func (srg *SrgSpecOSM) getSrgData(gridData *GridDef, inputLoc *Location, tol float64) (*rtree.Rtree, error) {
 	srg.setStatus(0, "getting surrogate weight data")
 
+	// Calculate the area of interest for our surrogate data.
+	inputShapeT, err := inputLoc.Reproject(gridData.SR)
+	if err != nil {
+		return nil, err
+	}
+	inputShapeBounds := inputShapeT.Bounds()
+	srgBounds := inputShapeBounds.Copy()
+	for _, cell := range gridData.Cells {
+		b := cell.Bounds()
+		if b.Overlaps(inputShapeBounds) {
+			srgBounds.Extend(b)
+		}
+	}
+
+	key := fmt.Sprintf("osm_srgdata_%s_%g", gridData.Name, tol)
+	request := srg.cache.NewRequest(context.TODO(), &osmReadSrgDataInput{gridData: gridData, tol: tol}, key)
+	srgs, err := request.Result()
+	if err != nil {
+		return nil, err
+	}
+
+	srgData := rtree.NewTree(25, 50)
+	for _, s := range srgs.([]*srgHolder) {
+		if s.Bounds().Overlaps(srgBounds) {
+			srgData.Insert(s)
+		}
+	}
+
+	return srgData, nil
+}
+
+type osmReadSrgDataInput struct {
+	gridData *GridDef
+	tol      float64
+}
+
+// readSrgData returns all of the spatial surrogate information for this
+// surrogate definition, inputI is of type *osmReadSrgDataInput and
+// inputI.tol is tolerance for geometry simplification.
+func (srg *SrgSpecOSM) readSrgData(ctx context.Context, inputI interface{}) (interface{}, error) {
+	input := inputI.(*osmReadSrgDataInput)
 	f, err := os.Open(os.ExpandEnv(srg.OSMFile))
 	if err != nil {
 		return nil, fmt.Errorf("aep: opening spatial surrogate OSM file: %v", err)
@@ -127,36 +176,12 @@ func (srg *SrgSpecOSM) getSrgData(gridData *GridDef, inputLoc *Location, tol flo
 		panic(err)
 	}
 
-	srgCT, err := srgSR.NewTransform(gridData.SR)
+	srgCT, err := srgSR.NewTransform(input.gridData.SR)
 	if err != nil {
 		return nil, err
 	}
 
-	gridSrgCT, err := gridData.SR.NewTransform(srgSR)
-	if err != nil {
-		return nil, err
-	}
-
-	// Calculate the area of interest for our surrogate data.
-	inputShapeT, err := inputLoc.Reproject(srgSR)
-	if err != nil {
-		return nil, err
-	}
-	inputShapeBounds := inputShapeT.Bounds()
-	srgBounds := inputShapeBounds.Copy()
-	for _, cell := range gridData.Cells {
-		cellT, err := cell.Transform(gridSrgCT)
-		if err != nil {
-			return nil, err
-		}
-		b := cellT.Bounds()
-		if b.Overlaps(inputShapeBounds) {
-			srgBounds.Extend(b)
-		}
-	}
-
-	srgData := rtree.NewTree(25, 50)
-
+	srgs := make([]*srgHolder, 0)
 	for t, v := range srg.Tags {
 		data, err := osm.ExtractTag(f, t, v...)
 		if err != nil {
@@ -174,10 +199,6 @@ func (srg *SrgSpecOSM) getSrgData(gridData *GridDef, inputLoc *Location, tol flo
 			return nil, fmt.Errorf("aep: extracting OSM spatial surrogate data for tag `%s:%v`: %v", t, v, err)
 		}
 		for _, geomTag := range geomTags {
-			if !geomTag.Bounds().Overlaps(srgBounds) {
-				continue
-			}
-
 			switch typ { // Drop features that do not match the dominant type.
 			case osm.Point:
 				if _, ok := geomTag.Geom.(geom.Point); !ok {
@@ -199,26 +220,28 @@ func (srg *SrgSpecOSM) getSrgData(gridData *GridDef, inputLoc *Location, tol flo
 			if err != nil {
 				return nil, fmt.Errorf("aep: processing OSM spatial surrogate data: %v", err)
 			}
-			if tol > 0 {
+			if input.tol > 0 {
 				switch g.(type) {
 				case geom.Simplifier:
-					g = g.(geom.Simplifier).Simplify(tol)
+					g = g.(geom.Simplifier).Simplify(input.tol)
 				}
 			}
+			var srgData *srgHolder
 			if srg.TagMultipliers != nil {
 				if m, ok := srg.TagMultipliers[t]; ok {
-					srgData.Insert(&srgHolder{
+					srgData = &srgHolder{
 						Geom:   g,
 						Weight: m,
-					})
+					}
 				}
 			} else {
-				srgData.Insert(&srgHolder{
+				srgData = &srgHolder{
 					Geom:   g,
 					Weight: 1,
-				})
+				}
 			}
+			srgs = append(srgs, srgData)
 		}
 	}
-	return srgData, nil
+	return srgs, nil
 }
