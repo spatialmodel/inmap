@@ -38,7 +38,7 @@ func TestCreateSurrogates_osm(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	srgSpecs, err := ReadSrgSpecOSM(f)
+	srgSpecs, err := ReadSrgSpecOSM(f, "", 10)
 	if err != nil {
 		t.Error(err)
 	}

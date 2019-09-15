@@ -173,7 +173,7 @@ func (c *SpatialConfig) SpatialProcessor() (*aep.SpatialProcessor, error) {
 	return c.sp, nil
 }
 
-func readSrgSpec(srgSpecPath, srgShapefileDirectory, srgSpecType string, sccExactMatch bool) (*aep.SrgSpecs, error) {
+func readSrgSpec(srgSpecPath, srgShapefileDirectory, srgSpecType string, sccExactMatch bool, diskCachePath string, memCacheEntries int) (*aep.SrgSpecs, error) {
 	f, err := os.Open(os.ExpandEnv(srgSpecPath))
 	if err != nil {
 		panic(err)
@@ -187,7 +187,7 @@ func readSrgSpec(srgSpecPath, srgShapefileDirectory, srgSpecType string, sccExac
 			return nil, err
 		}
 	case "OSM":
-		srgSpecs, err = aep.ReadSrgSpecOSM(f)
+		srgSpecs, err = aep.ReadSrgSpecOSM(f, diskCachePath, memCacheEntries)
 		if err != nil {
 			return nil, err
 		}
@@ -233,7 +233,7 @@ func (c *SpatialConfig) setupSpatialProcessor() (*aep.SpatialProcessor, error) {
 		return nil, fmt.Errorf("aeputil: GridCells must be specified for spatial processor")
 	}
 
-	srgSpecs, err := readSrgSpec(c.SrgSpec, c.SrgShapefileDirectory, c.SrgSpecType, c.SCCExactMatch)
+	srgSpecs, err := readSrgSpec(c.SrgSpec, c.SrgShapefileDirectory, c.SrgSpecType, c.SCCExactMatch, c.SpatialCache, c.MaxCacheEntries)
 	if err != nil {
 		return nil, err
 	}

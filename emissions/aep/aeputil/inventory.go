@@ -89,7 +89,7 @@ type InventoryConfig struct {
 // in the NEIFiles field in the receiver. The returned records are
 // split up by sector.
 func (c *InventoryConfig) ReadEmissions() (map[string][]aep.Record, *aep.InventoryReport, error) {
-	srgSpecs, err := readSrgSpec(c.SrgSpec, c.SrgShapefileDirectory, c.SrgSpecType, c.SCCExactMatch)
+	srgSpecs, err := readSrgSpec(c.SrgSpec, c.SrgShapefileDirectory, c.SrgSpecType, c.SCCExactMatch, "", 0)
 	if err != nil {
 		return nil, nil, err
 	}

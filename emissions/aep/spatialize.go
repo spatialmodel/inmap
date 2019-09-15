@@ -127,12 +127,16 @@ func marshalGob(data interface{}) ([]byte, error) {
 }
 
 func (sp *SpatialProcessor) load() {
-	if sp.DiskCachePath == "" {
-		sp.cache = requestcache.NewCache(sp.createSurrogate, runtime.GOMAXPROCS(-1),
-			requestcache.Deduplicate(), requestcache.Memory(sp.MemCacheSize))
+	sp.cache = newCache(sp.createSurrogate, sp.DiskCachePath, sp.MemCacheSize)
+}
+
+func newCache(f requestcache.ProcessFunc, diskCachePath string, memCacheSize int) *requestcache.Cache {
+	if diskCachePath == "" {
+		return requestcache.NewCache(f, runtime.GOMAXPROCS(-1),
+			requestcache.Deduplicate(), requestcache.Memory(memCacheSize))
 	} else {
-		if strings.HasPrefix(sp.DiskCachePath, "gs://") {
-			loc, err := url.Parse(sp.DiskCachePath)
+		if strings.HasPrefix(diskCachePath, "gs://") {
+			loc, err := url.Parse(diskCachePath)
 			if err != nil {
 				panic(err)
 			}
@@ -140,12 +144,12 @@ func (sp *SpatialProcessor) load() {
 			if err != nil {
 				panic(err)
 			}
-			sp.cache = requestcache.NewCache(sp.createSurrogate, runtime.GOMAXPROCS(-1), requestcache.Deduplicate(),
-				requestcache.Memory(sp.MemCacheSize), cf)
+			return requestcache.NewCache(f, runtime.GOMAXPROCS(-1), requestcache.Deduplicate(),
+				requestcache.Memory(memCacheSize), cf)
 		} else {
-			sp.cache = requestcache.NewCache(sp.createSurrogate, runtime.GOMAXPROCS(-1),
-				requestcache.Deduplicate(), requestcache.Memory(sp.MemCacheSize),
-				requestcache.Disk(sp.DiskCachePath, marshalGob, unmarshalGob))
+			return requestcache.NewCache(f, runtime.GOMAXPROCS(-1),
+				requestcache.Deduplicate(), requestcache.Memory(memCacheSize),
+				requestcache.Disk(diskCachePath, marshalGob, unmarshalGob))
 		}
 	}
 }
