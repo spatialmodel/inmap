@@ -1133,6 +1133,24 @@ func nextDataGroupAltNCF(fileTemplate string, dateFormat string, varNames map[st
 	}
 }
 
+// nextDataGroupSTPNCF reads a group of variables using nextDataGroupNCF
+// and multiplies the result by air density STP (1.2754 kg/m3).
+func nextDataGroupSTPNCF(fileTemplate string, dateFormat string, varNames map[string]float64, start, end time.Time, recordDelta, fileDelta time.Duration, readFunc readNCFFunc, msgChan chan string) NextData {
+	f := nextDataGroupNCF(fileTemplate, dateFormat, varNames, start, end, recordDelta, fileDelta, readFunc, msgChan)
+	const rho = 1.2754 // kg/m3, air density at STP
+	return func() (*sparse.DenseArray, error) {
+		data, err := f()
+		if err != nil {
+			return nil, err
+		}
+		out := sparse.ZerosDense(data.Shape...)
+		for i, val := range data.Elements {
+			out.Elements[i] = val * rho
+		}
+		return out, nil
+	}
+}
+
 // ncfFromTemplate opens a NetCDF file from the given template, where
 // the [DATE] wildcard in the given fileTemplate is replaced by the given
 // date, formatted as the given dateFormat.
