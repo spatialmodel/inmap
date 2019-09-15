@@ -126,6 +126,12 @@ func NewWRFChem(WRFOut, startDate, endDate string, msgChan chan string) (*WRFChe
 		return nil, fmt.Errorf("inmap: WRF-Chem preprocessor end time: %v", err)
 	}
 
+	if !w.end.After(w.start) {
+		if err != nil {
+			return nil, fmt.Errorf("inmap: WRF-Chem preprocessor end time %v is not after start time %v", w.end, w.start)
+		}
+	}
+
 	w.recordDelta, err = time.ParseDuration("1h")
 	if err != nil {
 		return nil, fmt.Errorf("inmap: WRF-Chem preprocessor recordDelta: %v", err)

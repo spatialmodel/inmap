@@ -275,6 +275,12 @@ func NewGEOSChem(GEOSA1, GEOSA3Cld, GEOSA3Dyn, GEOSI3, GEOSA3MstE, GEOSApBp, GEO
 		return nil, fmt.Errorf("inmap: GEOS-Chem preprocessor end time: %v", err)
 	}
 
+	if !gc.end.After(gc.start) {
+		if err != nil {
+			return nil, fmt.Errorf("inmap: GEOS-Chem preprocessor end time %v is not after start time %v", gc.end, gc.start)
+		}
+	}
+
 	gc.chemRecordDeltaInterval, err = time.ParseDuration(chemRecordStr)
 	if err != nil {
 		return nil, fmt.Errorf("inmap: GEOS-Chem preprocessor recordDelta: %v", err)
