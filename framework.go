@@ -368,6 +368,9 @@ func SetTimestepCFL() DomainManipulator {
 
 			d.Dt = amin(d.Dt, dt1, dt7, dt8, dt9, dt10, dt11, dt12, dt13, dt14, dt15) // seconds
 		}
+		if !(d.Dt > 0) {
+			return fmt.Errorf("invalid timestep %g; check InMAP input data", d.Dt)
+		}
 		return nil
 	}
 }
