@@ -20,6 +20,7 @@ package aep
 
 import (
 	"encoding/gob"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -135,24 +136,85 @@ func NewGridIrregular(Name string, g []geom.Polygonal, inputSR, outputSR *proj.S
 	return
 }
 
-// GetIndex gets the returns the row and column indices of point p in the grid.
-// withinGrid is false if point (X,Y) is not within the grid. Usually
+// GetIndex gets the returns the row and column indices of geometry g in the grid.
+// withinGrid is false if point (X,Y) is not within the grid.
+// g can be a Point, Line, or Polygon.
+// For lines and polygons, the fraction of g that is in each grid cell is returned
+// as fracs.
+// If g is a point, usually
 // there will be only one row and column for each point, but it the point
 // lies on a shared edge among multiple grid cells, all of the overlapping
 // grid cells will be returned.
-func (grid *GridDef) GetIndex(p geom.Point) (rows, cols []int, withinGrid bool, err error) {
-	for _, cI := range grid.rtree.SearchIntersect(p.Bounds()) {
-		c := cI.(*GridCell)
-		if grid.IrregularGrid && p.Within(c.Polygonal) == geom.Outside {
-			continue
+func (grid *GridDef) GetIndex(g geom.Geom) (rows, cols []int, fracs []float64, inGrid, coveredByGrid bool) {
+	switch g.(type) {
+	case geom.Point:
+		p := g.(geom.Point)
+		for _, cI := range grid.rtree.SearchIntersect(p.Bounds()) {
+			c := cI.(*GridCell)
+			if grid.IrregularGrid && p.Within(c.Polygonal) == geom.Outside {
+				continue
+			}
+			rows = append(rows, c.Row)
+			cols = append(cols, c.Col)
 		}
-		rows = append(rows, c.Row)
-		cols = append(cols, c.Col)
+		if len(rows) > 0 {
+			coveredByGrid = true
+			inGrid = true
+		}
+		fracs = make([]float64, len(rows))
+		for i := range rows {
+			fracs[i] = 1.0 / float64(len(rows))
+		}
+		return
+	case geom.LineString:
+		l := g.(geom.LineString)
+		length := l.Length()
+		var lengthSum float64
+		for _, cI := range grid.rtree.SearchIntersect(l.Bounds()) {
+			c := cI.(*GridCell)
+			iSect := l.Clip(c)
+			if iSect == nil {
+				continue
+			}
+			cellLength := iSect.Length()
+			fracs = append(fracs, cellLength/length)
+			lengthSum += cellLength
+			rows = append(rows, c.Row)
+			cols = append(cols, c.Col)
+		}
+		if len(rows) > 0 {
+			inGrid = true
+		}
+		if lengthSum/length > 0.9999 {
+			coveredByGrid = true
+		}
+		return
+	case geom.Polygon:
+		p := g.(geom.Polygon)
+		area := p.Area()
+		var areaSum float64
+		for _, cI := range grid.rtree.SearchIntersect(p.Bounds()) {
+			c := cI.(*GridCell)
+			iSect := p.Intersection(c)
+			if iSect == nil {
+				continue
+			}
+			cellArea := iSect.Area()
+			fracs = append(fracs, cellArea/area)
+			areaSum += cellArea
+			rows = append(rows, c.Row)
+			cols = append(cols, c.Col)
+		}
+		if len(rows) > 0 {
+			inGrid = true
+		}
+		if areaSum/area > 0.9999 {
+			coveredByGrid = true
+		}
+		return
+	default:
+		panic(fmt.Errorf("invalid type %T", g))
 	}
-	if len(rows) > 0 {
-		withinGrid = true
-	}
-	return
 }
 
 // WriteToShp writes the grid definition to a shapefile in directory outdir.

@@ -337,6 +337,10 @@ func TestSpatializeRecord(t *testing.T) {
 					SourceDataLocation: SourceDataLocation{SourceData: sourceData},
 					Emissions:          *emis,
 				},
+				&PolygonRecord{
+					SourceDataLocation: SourceDataLocation{SourceData: sourceData},
+					Emissions:          *emis,
+				},
 				&PointRecord{
 					SourceData:      sourceData,
 					PointSourceData: pointData,
@@ -346,6 +350,9 @@ func TestSpatializeRecord(t *testing.T) {
 				if ar, ok := rec.(sourceDataLocationer); ok {
 					sdl.Locate(ar.getSourceDataLocation())
 				}
+				if i == 0 {
+					rec = sp.AddSurrogate(rec)
+				}
 				gr := sp.GridRecord(rec)
 				emis, _, err := gr.GriddedEmissions(begin, end, 0)
 				if err != nil {
@@ -353,7 +360,7 @@ func TestSpatializeRecord(t *testing.T) {
 					continue
 				}
 
-				if i == 0 { // area record
+				if i == 0 || i == 1 { // area record
 					sum := emis[Pollutant{Name: "testpol"}].Sum()
 					if covered {
 						if math.Abs(sum-1) > 0.000001 {
@@ -364,7 +371,7 @@ func TestSpatializeRecord(t *testing.T) {
 						t.Errorf("%d area gridded emissions should sum to between 0 and 1 for scc %s "+
 							"and fips %s but instead sums to %f", i, scc, fips, sum)
 					}
-				} else if i == 1 { // point record
+				} else { // point record
 					sum := emis[Pollutant{Name: "testpol"}].Sum()
 					if math.Abs(sum-1) > 0.000001 {
 						t.Errorf("%d point gridded emissions should sum to 1 for scc %s and fips %s but "+

@@ -115,16 +115,6 @@ type RecordElevated interface {
 	GroundLevel() bool
 }
 
-// RecordSpatialSurrogate describes emissions that need to be allocated to a grid
-// using a spatial surrogate.
-type RecordSpatialSurrogate interface {
-	Record
-
-	// SurrogateSpecification returns the speicification of the spatial surrogate
-	// associated with an area emissions source.
-	SurrogateSpecification(sp *SpatialProcessor) (SrgSpec, error)
-}
-
 // PointRecord holds information about an emissions source that has a point
 // location.
 type PointRecord struct {
@@ -178,16 +168,6 @@ type basicPolygonRecord struct {
 	SR *proj.SR
 	SourceData
 	Emissions
-}
-
-// SurrogateSpecification returns the specification of the spatial surrogate
-// associated with an area emissions source.
-func (r *basicPolygonRecord) SurrogateSpecification(sp *SpatialProcessor) (SrgSpec, error) {
-	srgNum, err := sp.GridRef.GetSrgCode(r.SCC, r.Country, r.FIPS)
-	if err != nil {
-		return nil, err
-	}
-	return sp.SrgSpecs.GetByCode(r.Country, srgNum)
 }
 
 // PointData exists to fulfill the Record interface but always returns

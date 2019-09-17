@@ -218,3 +218,102 @@ func TestSpatial_coards(t *testing.T) {
 		compareTables(droppedTotals, droppedTotalsWant, 1.0e-14, t)
 	})
 }
+
+func TestSpatial_coards_nosurrogate(t *testing.T) {
+	type config struct {
+		Inventory InventoryConfig
+		Spatial   SpatialConfig
+	}
+	r, err := os.Open("testdata/example_config.toml")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c := new(config)
+
+	// Read the configuration file into the configuration variable.
+	if _, err = toml.DecodeReader(r, c); err != nil {
+		t.Fatal(err)
+	}
+
+	c.Inventory.NEIFiles = nil
+	c.Inventory.COARDSFiles = map[string][]string{
+		"all": {"../testdata/emis_coards_hawaii.nc"},
+	}
+	c.Inventory.COARDSYear = 2016
+
+	c.Spatial.SrgSpec = ""
+	c.Spatial.GridRef = []string{}
+	c.Spatial.OutputSR = "+proj=longlat"
+
+	sr, err := proj.Parse(c.Spatial.OutputSR)
+	if err != nil {
+		t.Fatal(err)
+	}
+	grid := aep.NewGridRegular("test grid", 4, 4, 0.1, 0.1, -158, 21.25, sr)
+	g := make([]geom.Polygonal, len(grid.Cells))
+	for i, c := range grid.Cells {
+		g[i] = c.Polygonal
+	}
+	c.Spatial.GridCells = g
+
+	records, report, err := c.Inventory.ReadEmissions()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wantEmis := map[aep.Pollutant]float64{
+		aep.Pollutant{Name: "NOx"}:   758866.7728921714,
+		aep.Pollutant{Name: "VOC"}:   151891.34532749676,
+		aep.Pollutant{Name: "PM2_5"}: 324952.8165140556,
+		aep.Pollutant{Name: "SOx"}:   298144.42248186853,
+		aep.Pollutant{Name: "NH3"}:   66765.23687167828,
+	}
+
+	wantUnits := map[aep.Pollutant]unit.Dimensions{
+		aep.Pollutant{Name: "PM2_5"}: unit.Dimensions{4: 1},
+		aep.Pollutant{Name: "NH3"}:   unit.Dimensions{4: 1},
+		aep.Pollutant{Name: "SOx"}:   unit.Dimensions{4: 1},
+		aep.Pollutant{Name: "NOx"}:   unit.Dimensions{4: 1},
+		aep.Pollutant{Name: "VOC"}:   unit.Dimensions{4: 1},
+	}
+	iter := c.Spatial.Iterator(IteratorFromMap(records), 0)
+	for {
+		_, err := iter.Next()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			t.Fatal(err)
+		}
+	}
+	emis, units := iter.SpatialTotals()
+	for pol, grid := range emis {
+		if different(grid.Sum(), wantEmis[pol], 1e-10) {
+			t.Errorf("emissions for %v: have %g but want %g", pol, grid.Sum(), wantEmis[pol])
+		}
+	}
+	for pol, u := range units {
+		if !u.Matches(wantUnits[pol]) {
+			t.Errorf("units for %v: have %v but want %v", pol, wantUnits[pol], units)
+		}
+	}
+	report = iter.Report()
+
+	t.Run("totals", func(t *testing.T) {
+		totals := report.TotalsTable()
+		totalsWant := aep.Table{
+			[]string{"Group", "File", "NH3 (kg)", "NOx (kg)", "PM2_5 (kg)", "SOx (kg)", "VOC (kg)"},
+			[]string{"", "Spatial", "66765.23687167828", "758866.7728921714", "324952.8165140556", "298144.42248186853", "151891.34532749676"},
+		}
+		compareTables(totals, totalsWant, 1.0e-14, t)
+	})
+	t.Run("totals", func(t *testing.T) {
+		droppedTotals := report.DroppedTotalsTable()
+		droppedTotalsWant := aep.Table{
+			[]string{"Group", "File", "NH3 (kg)", "NOx (kg)", "PM2_5 (kg)", "SOx (kg)", "VOC (kg)"},
+			[]string{"", "Spatial", "0", "0", "0", "0", "0"},
+		}
+		compareTables(droppedTotals, droppedTotalsWant, 1.0e-14, t)
+	})
+}

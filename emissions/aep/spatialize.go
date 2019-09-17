@@ -34,7 +34,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/proj"
 	"github.com/ctessum/requestcache"
 	"github.com/ctessum/sparse"
@@ -98,7 +97,7 @@ func NewSpatialProcessor(srgSpecs *SrgSpecs, grids []*GridDef, gridRef *GridRef,
 }
 
 func init() {
-	gob.Register(GriddingSurrogate{})
+	gob.Register(GriddedSrgData{})
 }
 
 // unmarshalGob unmarshals an interface from a byte array and fulfills
@@ -106,7 +105,7 @@ func init() {
 func unmarshalGob(b []byte) (interface{}, error) {
 	r := bytes.NewBuffer(b)
 	d := gob.NewDecoder(r)
-	var data GriddingSurrogate
+	var data GriddedSrgData
 	if err := d.Decode(&data); err != nil {
 		return nil, err
 	}
@@ -119,7 +118,7 @@ func marshalGob(data interface{}) ([]byte, error) {
 	w := bytes.NewBuffer(nil)
 	e := gob.NewEncoder(w)
 	d := *data.(*interface{})
-	dd := d.(*GriddingSurrogate)
+	dd := d.(*GriddedSrgData)
 	if err := e.Encode(dd); err != nil {
 		return nil, err
 	}
@@ -198,7 +197,7 @@ func (r *recordGridded) GridFactors(gi int) (
 
 	if ra, ok := r.Record.(RecordSpatialSurrogate); ok {
 		// If this record has a spatial surrogate, use it.
-		srgSpec, err := ra.SurrogateSpecification(r.sp)
+		srgSpec, err := ra.SurrogateSpecification()
 		if err != nil {
 			return nil, false, false, err
 		}
@@ -218,21 +217,15 @@ func (r *recordGridded) GridFactors(gi int) (
 		return
 	}
 
-	// TODO: Handle non-point geometries.
 	var rows, cols []int
-	rows, cols, inGrid, err = r.sp.Grids[gi].GetIndex(gridLoc.(geom.Point))
-	if err != nil {
-		return
-	}
-	// for points, inGrid and coveredByGrid are the same thing.
-	coveredByGrid = inGrid
+	var fracs []float64
+	rows, cols, fracs, inGrid, coveredByGrid = r.sp.Grids[gi].GetIndex(gridLoc)
 	if inGrid {
 		gridSrg = sparse.ZerosSparse(r.sp.Grids[gi].Ny, r.sp.Grids[gi].Nx)
 		// A point can be allocated to more than one grid cell if it lies
 		// on the boundary between two cells.
-		frac := 1.0 / float64(len(rows))
 		for i, row := range rows {
-			gridSrg.Set(frac, row, cols[i])
+			gridSrg.Set(fracs[i], row, cols[i])
 		}
 	}
 	return
@@ -303,7 +296,6 @@ func (sp *SpatialProcessor) Surrogate(srgSpec SrgSpec, grid *GridDef, loc *Locat
 type srgRequest struct {
 	srgSpec    SrgSpec
 	grid       *GridDef
-	data       *GriddingSurrogate
 	err        error
 	returnChan chan *srgRequest
 

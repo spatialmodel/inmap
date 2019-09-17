@@ -42,43 +42,6 @@ type srgGenWorkerInitData struct {
 	GridCells  *GridDef
 }
 
-// GriddingSurrogate holds generated gridding surrogate data, and can be
-// used to allocate emissions attributed to a relatively large area, such as
-// a county, to the grid cells within that area.
-type GriddingSurrogate struct {
-	// Srg holds surrogate data associated with individual input locations.
-	Srg map[string]*GriddedSrgData
-
-	// Nx and Ny are the number of columns and rows in the grid
-	Nx, Ny int
-}
-
-// ToGrid allocates the 1 unit of emissions associated with shapeID to a grid
-// based on gs. It will return nil if there is no surrogate for the specified
-// shapeID or if the sum of the surrogate is zero. The second returned value
-// indicates whether the shape corresponding to shapeID is completely covered
-// by the grid.
-func (gs *GriddingSurrogate) ToGrid(shapeID string) (*sparse.SparseArray, bool) {
-	srg, ok := gs.Srg[shapeID]
-	if !ok {
-		return nil, false
-	}
-	srgOut := sparse.ZerosSparse(gs.Ny, gs.Nx)
-	for _, cell := range srg.Cells {
-		srgOut.AddVal(cell.Weight, cell.Row, cell.Col)
-	}
-	sum := srgOut.Sum()
-	if sum == 0 {
-		return nil, false
-	}
-	// normalize so sum = 1 if the input shape is completely covered by the
-	// grid.
-	if srg.CoveredByGrid {
-		srgOut.Scale(1. / sum)
-	}
-	return srgOut, srg.CoveredByGrid
-}
-
 // ToGrid allocates the 1 unit of emissions associated with shapeID to a grid
 // based on gs. It will return nil if there is no surrogate for the specified
 // shapeID or if the sum of the surrogate is zero. The second returned value
@@ -483,3 +446,40 @@ func (s *srgGenWorker) intersections2(data *GriddedSrgData,
 	}
 	return
 }
+
+// RecordSpatialSurrogate describes emissions that need to be allocated to a grid
+// using a spatial surrogate.
+type RecordSpatialSurrogate interface {
+	Record
+
+	// Parent returns the record that this record was created from.
+	Parent() Record
+
+	// SurrogateSpecification returns the specification of the spatial surrogate
+	// associated with an area emissions source.
+	SurrogateSpecification() (SrgSpec, error)
+}
+
+// AddSurrogate adds a spatial surrogate to a record to increase its
+// spatial resolution.
+func (sp *SpatialProcessor) AddSurrogate(r Record) RecordSpatialSurrogate {
+	return &recordSpatialSurrogate{Record: r, sp: sp}
+}
+
+type recordSpatialSurrogate struct {
+	Record
+	sp *SpatialProcessor
+}
+
+// SurrogateSpecification returns the specification of the spatial surrogate
+// associated with an area emissions source.
+func (r *recordSpatialSurrogate) SurrogateSpecification() (SrgSpec, error) {
+	srgNum, err := r.sp.GridRef.GetSrgCode(r.Record.GetSCC(), r.Record.GetCountry(), r.Record.GetFIPS())
+	if err != nil {
+		return nil, err
+	}
+	return r.sp.SrgSpecs.GetByCode(r.Record.GetCountry(), srgNum)
+}
+
+// Parent returns the record that this record was created from.
+func (r *recordSpatialSurrogate) Parent() Record { return r.Record }
