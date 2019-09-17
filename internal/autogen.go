@@ -188,8 +188,17 @@ sidebar_label: %s
 		}
 		r.Close()
 
-		// Remove .md file extensions from links.
-		b = bytes.Replace(b, []byte(".md)"), []byte(")"), -1)
+		bb := bytes.Split(b, []byte("\n"))
+		for i := range bb {
+			if bytes.Contains(bb[i], []byte(".md)")) && bytes.Contains(bb[i], []byte("* [")) {
+				// Remove .md file extensions from links.
+				bb[i] = bytes.Replace(bb[i], []byte(".md)"), []byte(")"), -1)
+				// Fix links to work correctly on website.
+				bb[i] = bytes.Replace(bb[i], []byte("]("), []byte("](./"), -1)
+			}
+		}
+		b = bytes.Join(bb, []byte("\n"))
+		b = b[:bytes.LastIndex(b, []byte("\n"))]
 
 		w, err := os.Create(path)
 		if err != nil {

@@ -77,10 +77,10 @@ inmap preproc [flags]
                                                                    the simulation date. (default "${INMAP_ROOT_DIR}/cmd/inmap/testdata/preproc/GEOSFP.[DATE].I3.2x25.nc")
       --Preproc.GEOSChem.NoChemHourIndex             
                                                                    If Preproc.GEOSChem.NoChemHourIndex is true, the GEOS-Chem output files will be assumed to not contain a time dimension.
-      --Preproc.GEOSChem.VegTypeGlobal string        
-                                                                   Preproc.GEOSChem.VegTypeGlobal is the location of the GEOS-Chem vegtype.global file,
+      --Preproc.GEOSChem.OlsonLandMap string         
+                                                                   Preproc.GEOSChem.OlsonLandMap is the location of the GEOS-Chem Olson land use map file,
                                                                    which is described here:
-                                                                   http://wiki.seas.harvard.edu/geos-chem/index.php/Olson_land_map#Structure_of_the_vegtype.global_file (default "${INMAP_ROOT_DIR}/cmd/inmap/testdata/preproc/vegtype.global.txt")
+                                                                   http://wiki.seas.harvard.edu/geos-chem/index.php/Olson_land_map (default "${INMAP_ROOT_DIR}/cmd/inmap/testdata/preproc/geoschem-new/Olson_2001_Land_Map.025x025.generic.nc")
       --Preproc.StartDate string                     
                                                                    Preproc.StartDate is the date of the beginning of the simulation.
                                                                    Format = "YYYYMMDD". (default "No Default")
@@ -99,4 +99,4 @@ inmap preproc [flags]
 
 ### SEE ALSO
 
-* [inmap](../inmap)	 - A reduced-form air quality model.
+* [inmap](./inmap)	 - A reduced-form air quality model.
