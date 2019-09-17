@@ -126,6 +126,13 @@ func (si *SpatialIterator) Next() (aep.Record, error) {
 		return nil, err
 	}
 
+	// Add a spatial surrogate for records that are polygons,
+	// if SrgSpecs and a GridRef have been specified.
+	loc := rec.Location()
+	if _, ok := loc.Geom.(geom.Polygonal); ok && si.c.sp.SrgSpecs != nil && si.c.sp.GridRef != nil {
+		rec = si.c.sp.AddSurrogate(rec)
+	}
+
 	recG := si.c.sp.GridRecord(rec)
 
 	srg, _, inGrid, err := recG.GridFactors(si.gridIndex)
@@ -174,9 +181,11 @@ func (c *SpatialConfig) SpatialProcessor() (*aep.SpatialProcessor, error) {
 }
 
 func readSrgSpec(srgSpecPath, srgShapefileDirectory, srgSpecType string, sccExactMatch bool, diskCachePath string, memCacheEntries int) (*aep.SrgSpecs, error) {
+	if srgSpecPath == "" {
+		return nil, nil
+	}
 	f, err := os.Open(os.ExpandEnv(srgSpecPath))
 	if err != nil {
-		panic(err)
 		return nil, fmt.Errorf("aep: opening surrogate specification: %v", err)
 	}
 	var srgSpecs *aep.SrgSpecs
@@ -201,6 +210,9 @@ func readSrgSpec(srgSpecPath, srgShapefileDirectory, srgSpecType string, sccExac
 }
 
 func readGridRef(paths []string, sccExactMatch bool) (*aep.GridRef, error) {
+	if len(paths) == 0 {
+		return nil, nil
+	}
 	var gridRef *aep.GridRef
 	for _, gf := range paths {
 		f, err := os.Open(os.ExpandEnv(gf))
