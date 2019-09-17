@@ -1,4 +1,4 @@
-3---
+---
 id: inmap_run_steady
 title: inmap run steady
 sidebar_label: inmap run steady
@@ -20,10 +20,51 @@ inmap run steady [flags]
 ### Options
 
 ```
-      --NumIterations int   
-                                          NumIterations is the number of iterations to calculate. If < 1, convergence
-                                          is automatically calculated.
-  -h, --help                help for steady
+      --NumIterations int                        
+                                                               NumIterations is the number of iterations to calculate. If < 1, convergence
+                                                               is automatically calculated.
+      --aep.GridRef strings                      GridRef specifies the locations of the spatial surrogate gridding
+                                                 reference files used for processing emissions.
+                                                 It is used for assigning spatial locations to emissions records. (default [no_default])
+      --aep.InventoryConfig.COARDSFiles string   COARDSFiles lists COARDS-compliant NetCDF emission files
+                                                 (NetCDF 4 and greater not supported).
+                                                 Information regarding the COARDS NetCDF conventions are
+                                                 available here: https://ferret.pmel.noaa.gov/Ferret/documentation/coards-netcdf-conventions.
+                                                 The file names can include environment variables.
+                                                 The format is map[sector name][list of files].
+                                                 For COARDS files, the sector name will also be used
+                                                 as the SCC code. (default "{}\n")
+      --aep.InventoryConfig.COARDSYear int       COARDSYear specifies the year of emissions for COARDS emissions files.
+                                                 COARDS emissions are assumed to be in units of mass of emissions per year.
+                                                 The year will not be used for NEI emissions files.
+      --aep.InventoryConfig.InputUnits string    InputUnits specifies the units of input data. Acceptable
+                                                 values are 'tons', 'tonnes', 'kg', 'g', and 'lbs'.
+                                                 This value will be used for AEP emissions only, not for shapefiles. (default "no_default")
+      --aep.InventoryConfig.NEIFiles string      NEIFiles lists National Emissions Inventory emissions files.
+                                                 The file names can include environment variables.
+                                                 The format is map[sector name][list of files]. (default "{}\n")
+      --aep.SCCExactMatch                        SCCExactMatch specifies whether SCC codes must match exactly when processing
+                                                 emissions. (default true)
+      --aep.SpatialConfig.GridName string        GridName specifies a name for the grid which is used in the names
+                                                 of intermediate and output files.
+                                                 Changes to the geometry of the grid must be accompanied by either a
+                                                 a change in GridName or the deletion of all the files in the
+                                                 SpatialCache directory.. (default "inmap")
+      --aep.SpatialConfig.InputSR string         InputSR specifies the input emissions spatial reference in Proj4 format. (default "+proj=longlat")
+      --aep.SpatialConfig.MaxCacheEntries int    MaxCacheEntries specifies the maximum number of emissions and concentrations
+                                                 surrogates to hold in a memory cache. Larger numbers can result in faster
+                                                 processing but increased memory usage. (default 10)
+      --aep.SpatialConfig.SpatialCache string    SpatialCache specifies the location for storing spatial emissions
+                                                 data for quick access. If this is left empty, no cache will be used.
+      --aep.SrgShapefileDirectory string         SrgShapefileDirectory gives the location of the directory holding
+                                                 the shapefiles used for creating spatial surrogates.
+                                                 It is used for assigning spatial locations to emissions records.
+                                                 It is only used when SrgSpecType == "SMOKE". (default "no_default")
+      --aep.SrgSpec string                       SrgSpec gives the location of the surrogate specification file.
+                                                 It is used for assigning spatial locations to emissions records. (default "no_default")
+      --aep.SrgSpecType string                   SrgSpecType specifies the type of data the gridding surrogates
+                                                 are being created from. It can be "SMOKE" or "OSM". (default "no_default")
+  -h, --help                                     help for steady
 ```
 
 ### Options inherited from parent commands
@@ -140,4 +181,4 @@ inmap run steady [flags]
 
 ### SEE ALSO
 
-* [inmap run](../inmap_run)	 - Run the model.
+* [inmap run](./inmap_run)	 - Run the model.
