@@ -20,7 +20,11 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 // for a small number of chemical species.
 package simpledrydep
 
-import "github.com/spatialmodel/inmap"
+import (
+	"math"
+
+	"github.com/spatialmodel/inmap"
+)
 
 // SOx specifies array indicies that hold sulfur oxide concentrations.
 type SOx []int
@@ -45,25 +49,25 @@ func DryDeposition(indices func() (SOx, NH3, NOx, VOC, PM25)) inmap.CellManipula
 	return func(c *inmap.Cell, Δt float64) {
 		if c.Layer == 0 {
 			fac := 1. / c.Dz * Δt
-			noxfac := c.NOxDryDep * fac
-			so2fac := c.SO2DryDep * fac
-			vocfac := c.VOCDryDep * fac
-			nh3fac := c.NH3DryDep * fac
-			pm25fac := c.ParticleDryDep * fac
+			noxfac := math.Exp(-c.NOxDryDep * fac)
+			so2fac := math.Exp(-c.SO2DryDep * fac)
+			vocfac := math.Exp(-c.VOCDryDep * fac)
+			nh3fac := math.Exp(-c.NH3DryDep * fac)
+			pm25fac := math.Exp(-c.ParticleDryDep * fac)
 			for _, i := range voc {
-				c.Cf[i] -= c.Ci[i] * vocfac
+				c.Cf[i] -= c.Ci[i] - c.Ci[i]*vocfac
 			}
 			for _, i := range pm25 {
-				c.Cf[i] -= c.Ci[i] * pm25fac
+				c.Cf[i] -= c.Ci[i] - c.Ci[i]*pm25fac
 			}
 			for _, i := range nh3 {
-				c.Cf[i] -= c.Ci[i] * nh3fac
+				c.Cf[i] -= c.Ci[i] - c.Ci[i]*nh3fac
 			}
 			for _, i := range sox {
-				c.Cf[i] -= c.Ci[i] * so2fac
+				c.Cf[i] -= c.Ci[i] - c.Ci[i]*so2fac
 			}
 			for _, i := range nox {
-				c.Cf[i] -= c.Ci[i] * noxfac
+				c.Cf[i] -= c.Ci[i] - c.Ci[i]*noxfac
 			}
 		}
 	}

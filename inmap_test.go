@@ -52,7 +52,7 @@ func TestConverge(t *testing.T) {
 	convergences := []inmap.DomainManipulator{inmap.SteadyStateConvergenceCheck(2, cfg.PopGridColumn, m, nil),
 		inmap.SteadyStateConvergenceCheck(-1, cfg.PopGridColumn, m, nil)}
 	convergenceNames := []string{"fixed", "criterion"}
-	expectedConcentration := []float64{0.348963630316385, 83.8101077058609}
+	expectedConcentration := []float64{0.3489647639076775, 83.89644268259369}
 
 	for i, conv := range convergences {
 

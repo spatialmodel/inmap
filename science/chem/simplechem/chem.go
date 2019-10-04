@@ -234,7 +234,7 @@ func (m Mechanism) Chemistry() inmap.CellManipulator {
 	return func(c *inmap.Cell, Δt float64) {
 		// All SO4 forms particles, so sulfur particle formation is limited by the
 		// SO2 -> SO4 reaction.
-		ΔS := c.SO2oxidation * c.Cf[igS] * Δt
+		ΔS := c.Cf[igS] - c.Cf[igS]*math.Exp(-c.SO2oxidation*Δt)
 		c.Cf[ipS] += ΔS
 		c.Cf[igS] -= ΔS
 		// NH3 / pNH4 partitioning

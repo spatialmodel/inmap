@@ -96,7 +96,7 @@ func TestChemistry(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	want = 2.706438081780582
+	want = 2.7064380816665774
 	if v != want {
 		t.Errorf("have %g, want %g", v, want)
 	}

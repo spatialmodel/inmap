@@ -321,10 +321,6 @@ func SetTimestepCFL() DomainManipulator {
 		const (
 			// Cmax is the maximum CFL value allowed.
 			CMax = 0.75
-			// CFirstOrder is the empirically determined maximum
-			// allowed dimensionless step size for first-order
-			// differential equations.
-			CFirstOrder = 1.0 / 3.0
 		)
 		d.Dt = math.Inf(1)
 		for _, c := range *d.cells {
@@ -341,32 +337,7 @@ func SetTimestepCFL() DomainManipulator {
 			dt1 := CMax / sqrt3 / max(cUadv+cXdiff, cVadv+cYdiff,
 				cWadv+cZdiff+c.M2d+c.M2u)
 
-			// Chemistry time step
-			dt7 := CFirstOrder / c.SO2oxidation
-
-			// Deposition time steps
-			// Wet deposition can cause a negative time step
-			// because rounding error sometimes causes the wet deposition rate
-			// to be a very small negative number. So we check for that here.
-			dt8 := math.Inf(1)
-			if c.ParticleWetDep > 0 {
-				dt8 = CFirstOrder / c.ParticleWetDep
-			}
-			dt9 := math.Inf(1)
-			if c.SO2WetDep > 0 {
-				dt9 = CFirstOrder / c.SO2WetDep
-			}
-			dt10 := math.Inf(1)
-			if c.OtherGasWetDep > 0 {
-				dt10 = CFirstOrder / c.OtherGasWetDep
-			}
-			dt11 := CFirstOrder * c.Dy / c.ParticleDryDep
-			dt12 := CFirstOrder * c.Dy / c.NH3DryDep
-			dt13 := CFirstOrder * c.Dy / c.SO2DryDep
-			dt14 := CFirstOrder * c.Dy / c.VOCDryDep
-			dt15 := CFirstOrder * c.Dy / c.NOxDryDep
-
-			d.Dt = amin(d.Dt, dt1, dt7, dt8, dt9, dt10, dt11, dt12, dt13, dt14, dt15) // seconds
+			d.Dt = amin(d.Dt, dt1) // seconds
 		}
 		if !(d.Dt > 0) {
 			return fmt.Errorf("invalid timestep %g; check InMAP input data", d.Dt)
