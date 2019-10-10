@@ -43,9 +43,9 @@ type SrgSpecOSM struct {
 
 	Tags map[string][]string `json:"tags"`
 
-	// TagMultipliers are factors by which each of the tags should
-	// be multiplied. If empty, all weights are set equal to one.
-	TagMultipliers map[string]float64 `json:"tag_multipliers"`
+	// TagMultiplier is a factors by which the tags should
+	// be multiplied. If it is zero it will automatically be set to one.
+	TagMultiplier float64 `json:"tag_multiplier"`
 
 	// BackupSurrogateNames specifies names of surrogates to use if this
 	// one doesn't have data for the desired location.
@@ -181,67 +181,63 @@ func (srg *SrgSpecOSM) readSrgData(ctx context.Context, inputI interface{}) (int
 		return nil, err
 	}
 
-	srgs := make([]*srgHolder, 0)
-	for t, v := range srg.Tags {
-		data, err := osm.ExtractTag(f, t, v...)
-		if err != nil {
-			return nil, fmt.Errorf("aep: extracting OSM spatial surrogate data for tag `%s:%v`: %v", t, v, err)
-		}
-		if err := data.Check(); err != nil {
-			return nil, fmt.Errorf("aep: extracting OSM spatial surrogate data for tag `%s:%v`: %v", t, v, err)
-		}
-		geomTags, err := data.Geom()
-		if err != nil {
-			return nil, fmt.Errorf("aep: extracting OSM spatial surrogate data for tag `%s:%v`: %v", t, v, err)
-		}
-		typ, err := osm.DominantType(geomTags)
-		if err != nil {
-			return nil, fmt.Errorf("aep: extracting OSM spatial surrogate data for tag `%s:%v`: %v", t, v, err)
-		}
-		for _, geomTag := range geomTags {
-			switch typ { // Drop features that do not match the dominant type.
-			case osm.Point:
-				if _, ok := geomTag.Geom.(geom.Point); !ok {
-					continue
-				}
-			case osm.Poly:
-				if _, ok := geomTag.Geom.(geom.Polygonal); !ok {
-					continue
-				}
-			case osm.Line:
-				if _, ok := geomTag.Geom.(geom.Linear); !ok {
-					continue
-				}
-			default:
-				continue // Drop collection-type features.
+	data, err := osm.ExtractPBF(context.Background(), f, osm.KeepTags(srg.Tags))
+	if err != nil {
+		return nil, fmt.Errorf("aep: extracting OSM spatial surrogate data for tags %v: %v", srg.Tags, err)
+	}
+	if err := data.Check(); err != nil {
+		return nil, fmt.Errorf("aep: extracting OSM spatial surrogate data for tags %v: %v", srg.Tags, err)
+	}
+	geomTags, err := data.Geom()
+	if err != nil {
+		return nil, fmt.Errorf("aep: extracting OSM spatial surrogate data for tags %v: %v", srg.Tags, err)
+	}
+	typ, err := osm.DominantType(geomTags)
+	if err != nil {
+		return nil, fmt.Errorf("aep: extracting OSM spatial surrogate data for tags %v: %v", srg.Tags, err)
+	}
+	var srgs []*srgHolder
+	for _, geomTag := range geomTags {
+		switch typ { // Drop features that do not match the dominant type.
+		case osm.Point:
+			if _, ok := geomTag.Geom.(geom.Point); !ok {
+				continue
 			}
+		case osm.Poly:
+			if _, ok := geomTag.Geom.(geom.Polygonal); !ok {
+				continue
+			}
+		case osm.Line:
+			if _, ok := geomTag.Geom.(geom.Linear); !ok {
+				continue
+			}
+		default:
+			continue // Drop collection-type features.
+		}
 
-			g, err := geomTag.Geom.Transform(srgCT)
-			if err != nil {
-				return nil, fmt.Errorf("aep: processing OSM spatial surrogate data: %v", err)
-			}
-			if input.tol > 0 {
-				switch g.(type) {
-				case geom.Simplifier:
-					g = g.(geom.Simplifier).Simplify(input.tol)
-				}
-			}
-			var srgData *srgHolder
-			if srg.TagMultipliers != nil {
-				if m, ok := srg.TagMultipliers[t]; ok {
-					srgData = &srgHolder{
-						Geom:   g,
-						Weight: m,
-					}
-				}
-			} else {
-				srgData = &srgHolder{
-					Geom:   g,
-					Weight: 1,
-				}
-			}
-			srgs = append(srgs, srgData)
+		g, err := geomTag.Geom.Transform(srgCT)
+		if err != nil {
+			return nil, fmt.Errorf("aep: processing OSM spatial surrogate data: %v", err)
 		}
+		if input.tol > 0 {
+			switch gs := g.(type) {
+			case geom.Simplifier:
+				g = gs.Simplify(input.tol)
+			}
+		}
+		var srgData *srgHolder
+		if srg.TagMultiplier != 0 {
+			srgData = &srgHolder{
+				Geom:   g,
+				Weight: srg.TagMultiplier,
+			}
+		} else {
+			srgData = &srgHolder{
+				Geom:   g,
+				Weight: 1,
+			}
+		}
+		srgs = append(srgs, srgData)
 	}
 	return srgs, nil
 }
