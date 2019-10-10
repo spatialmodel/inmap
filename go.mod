@@ -10,7 +10,7 @@ require (
 	github.com/cpuguy83/go-md2man v1.0.9-0.20180619205630-691ee98543af // indirect
 	github.com/ctessum/atmos v0.0.0-20170526022537-cba69f7ca647
 	github.com/ctessum/cdf v0.0.0-20181201011353-edced208ea9d
-	github.com/ctessum/geom v0.2.3
+	github.com/ctessum/geom v0.2.4
 	github.com/ctessum/go-leaflet v0.0.0-20170724133759-2f9e4c38fb5e
 	github.com/ctessum/gobra v0.0.0-20180516235632-ddfa5eeb3017
 	github.com/ctessum/plotextra v0.0.0-20180623195436-96488e3f1996
@@ -20,7 +20,6 @@ require (
 	github.com/evanphx/json-patch v4.1.0+incompatible // indirect
 	github.com/go-humble/detect v0.1.2 // indirect
 	github.com/go-humble/router v0.5.0
-	github.com/gogo/protobuf v1.2.1 // indirect
 	github.com/golang/groupcache v0.0.0-20190702054246-869f871628b6
 	github.com/golang/protobuf v1.3.2
 	github.com/gonum/floats v0.0.0-20181209220543-c233463c7e82
@@ -64,7 +63,7 @@ require (
 	golang.org/x/build v0.0.0-20190226180436-80ca8d25ddd4
 	golang.org/x/crypto v0.0.0-20190605123033-f99c8df09eb5
 	golang.org/x/net v0.0.0-20190620200207-3b0461eec859
-	gonum.org/v1/gonum v0.0.0-20190509213835-50179cd3f3f7
+	gonum.org/v1/gonum v0.0.0-20191009222026-5d5638e6749a
 	gonum.org/v1/plot v0.0.0-20190526055220-ccfad0c86201
 	google.golang.org/grpc v1.21.1
 	gopkg.in/yaml.v2 v2.2.2 // indirect
