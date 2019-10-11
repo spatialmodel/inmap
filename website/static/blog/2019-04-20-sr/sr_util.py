@@ -90,6 +90,7 @@ def run_sr(emis, model, output_variables, emis_units="tons/year"):
     subprocess.check_call([_inmap_exe, "cloud", "start",
         "--cmds=srpredict",
         "--job_name=%s"%job_name,
+        "--memory_gb=2",
         "--EmissionUnits=%s"%emis_units,
         "--EmissionsShapefiles=%s"%emis_file,
         "--OutputVariables=%s"%json.dumps(output_variables),
