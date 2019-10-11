@@ -10,7 +10,7 @@ require (
 	github.com/cpuguy83/go-md2man v1.0.9-0.20180619205630-691ee98543af // indirect
 	github.com/ctessum/atmos v0.0.0-20170526022537-cba69f7ca647
 	github.com/ctessum/cdf v0.0.0-20181201011353-edced208ea9d
-	github.com/ctessum/geom v0.2.4
+	github.com/ctessum/geom v0.2.5
 	github.com/ctessum/go-leaflet v0.0.0-20170724133759-2f9e4c38fb5e
 	github.com/ctessum/gobra v0.0.0-20180516235632-ddfa5eeb3017
 	github.com/ctessum/plotextra v0.0.0-20180623195436-96488e3f1996

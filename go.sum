@@ -51,8 +51,8 @@ github.com/ctessum/atmos v0.0.0-20170526022537-cba69f7ca647 h1:lUT29TZ1puayHZ2KL
 github.com/ctessum/atmos v0.0.0-20170526022537-cba69f7ca647/go.mod h1:sPaXeGajd2kT9U0BHxsZRfon2LjMH3Ohs2VOF+ACNSY=
 github.com/ctessum/cdf v0.0.0-20181201011353-edced208ea9d h1:mIQwc9ihMh23CRrvN5Vyv2T5E73NVALNguZizrV9XoI=
 github.com/ctessum/cdf v0.0.0-20181201011353-edced208ea9d/go.mod h1:E45T61NEPsdFg0n3CqBwcG7jbwHTRdhOufhVTm3/Dtc=
-github.com/ctessum/geom v0.2.4 h1:TKdF88QwTGYjXQj/jplPh8mOBZm6NCdOBiPktkfyU0k=
-github.com/ctessum/geom v0.2.4/go.mod h1:CdcpDcEdImJy9b20i+xEcYZZt9rl2oT3kCCGe0OVE3Q=
+github.com/ctessum/geom v0.2.5 h1:PG5R8dlrxAGhK+zdTLpBBs6hHkC6+JIEBNO38X7fwvg=
+github.com/ctessum/geom v0.2.5/go.mod h1:CdcpDcEdImJy9b20i+xEcYZZt9rl2oT3kCCGe0OVE3Q=
 github.com/ctessum/go-leaflet v0.0.0-20170724133759-2f9e4c38fb5e h1:IV59uAui/Q61m9UyCjpOCEl0Bg1g9kwsgxcF5Zt8yTQ=
 github.com/ctessum/go-leaflet v0.0.0-20170724133759-2f9e4c38fb5e/go.mod h1:q862W3zi1fUPpnVc9HFYNESw9P+G52Nkq7r2xy2xWYI=
 github.com/ctessum/gobra v0.0.0-20180516235632-ddfa5eeb3017 h1:51Dc8x+DBWx1x+U9lCAXLG9E3ktMPgW08n2+7uXAOp0=

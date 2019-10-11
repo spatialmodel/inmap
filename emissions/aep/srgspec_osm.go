@@ -166,10 +166,6 @@ type osmReadSrgDataInput struct {
 // inputI.tol is tolerance for geometry simplification.
 func (srg *SrgSpecOSM) readSrgData(ctx context.Context, inputI interface{}) (interface{}, error) {
 	input := inputI.(*osmReadSrgDataInput)
-	f, err := os.Open(os.ExpandEnv(srg.OSMFile))
-	if err != nil {
-		return nil, fmt.Errorf("aep: opening spatial surrogate OSM file: %v", err)
-	}
 
 	srgSR, err := proj.Parse("+proj=longlat")
 	if err != nil {
@@ -181,7 +177,7 @@ func (srg *SrgSpecOSM) readSrgData(ctx context.Context, inputI interface{}) (int
 		return nil, err
 	}
 
-	data, err := osm.ExtractPBF(context.Background(), f, osm.KeepTags(srg.Tags))
+	data, err := osm.ExtractFile(context.Background(), os.ExpandEnv(srg.OSMFile), osm.KeepTags(srg.Tags))
 	if err != nil {
 		return nil, fmt.Errorf("aep: extracting OSM spatial surrogate data for tags %v: %v", srg.Tags, err)
 	}
