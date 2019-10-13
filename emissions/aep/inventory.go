@@ -60,7 +60,7 @@ func (l *Location) Key() string {
 		panic(err)
 	}
 	bKey := sha256.Sum256(b.Bytes())
-	return string(bKey[0:sha256.Size])
+	return fmt.Sprintf("%x", bKey[0:sha256.Size])
 }
 
 func (l *Location) Reproject(sr *proj.SR) (geom.Geom, error) {

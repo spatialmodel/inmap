@@ -67,6 +67,11 @@ func TestCreateSurrogates_osm(t *testing.T) {
 
 	inputLoc := &Location{Geom: g, SR: sr}
 
+	wantKey := "596d17c2bdb148b3649ed0d19c523942a42e1d240765da23ce60ec0f98f004ac"
+	if k := inputLoc.Key(); k != wantKey {
+		t.Errorf("location key: have %s, want %s", inputLoc.Key(), wantKey)
+	}
+
 	matchFullSCC := true
 	sp := NewSpatialProcessor(srgSpecs, []*GridDef{grid}, gridRef, inputSR, matchFullSCC)
 	sp.load()
