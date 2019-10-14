@@ -19,8 +19,10 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package aep
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -131,6 +133,17 @@ func (srg *SrgSpecOSM) incrementStatus(percent float64) {
 	srg.progressLock.Unlock()
 }
 
+// srKey returns a unique key for a proj.SR
+func srKey(sr *proj.SR) string {
+	b := new(bytes.Buffer)
+	e := gob.NewEncoder(b)
+	if err := e.Encode(sr); err != nil {
+		panic(err)
+	}
+	bKey := sha256.Sum256(b.Bytes())
+	return fmt.Sprintf("%x", bKey[0:sha256.Size])
+}
+
 // getSrgData returns the spatial surrogate information for this
 // surrogate definition and location, where tol is tolerance for geometry simplification.
 func (srg *SrgSpecOSM) getSrgData(gridData *GridDef, inputLoc *Location, tol float64) (*rtree.Rtree, error) {
@@ -150,7 +163,7 @@ func (srg *SrgSpecOSM) getSrgData(gridData *GridDef, inputLoc *Location, tol flo
 		}
 	}
 
-	key := fmt.Sprintf("osm_srgdata_%s_%s_%g", srg.Key(), gridData.Name, tol)
+	key := fmt.Sprintf("osm_srgdata_%s_%s_%g", srg.Key(), srKey(gridData.SR), tol)
 	request := srg.cache.NewRequest(context.TODO(), &osmReadSrgDataInput{gridData: gridData, tol: tol}, key)
 	srgs, err := request.Result()
 	if err != nil {
