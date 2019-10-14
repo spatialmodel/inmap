@@ -19,7 +19,9 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package aep
 
 import (
+	"bytes"
 	"context"
+	"encoding/gob"
 	"fmt"
 	"runtime"
 	"strings"
@@ -483,3 +485,28 @@ func (r *recordSpatialSurrogate) SurrogateSpecification() (SrgSpec, error) {
 
 // Parent returns the record that this record was created from.
 func (r *recordSpatialSurrogate) Parent() Record { return r.Record }
+
+// unmarshalSrgHolders unmarshals an interface from a byte array and fulfills
+// the requirements for the Disk cache unmarshalFunc input.
+func unmarshalSrgHolders(b []byte) (interface{}, error) {
+	r := bytes.NewBuffer(b)
+	d := gob.NewDecoder(r)
+	var data []*srgHolder
+	if err := d.Decode(&data); err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+// marshalSrgHolders marshals an interface to a byte array and fulfills
+// the requirements for the Disk cache marshalFunc input.
+func marshalSrgHolders(data interface{}) ([]byte, error) {
+	w := bytes.NewBuffer(nil)
+	e := gob.NewEncoder(w)
+	d := *data.(*interface{})
+	dd := d.([]*srgHolder)
+	if err := e.Encode(dd); err != nil {
+		return nil, err
+	}
+	return w.Bytes(), nil
+}

@@ -20,6 +20,7 @@ package aep
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -67,6 +68,16 @@ type SrgSpecOSM struct {
 	cache *requestcache.Cache
 }
 
+// Key returns a unique identifier for this surrogate specification.
+func (srg *SrgSpecOSM) Key() string {
+	b, err := json.Marshal(srg)
+	if err != nil {
+		panic(err)
+	}
+	bKey := sha256.Sum256(b)
+	return fmt.Sprintf("%x", bKey[0:sha256.Size])
+}
+
 // ReadSrgSpec reads a OpenStreetMap surrogate specification formated as a
 // JSON array of SrgSpecOSM objects.
 // diskCachePath specifies a path to a directory where an on-disk cache should
@@ -81,7 +92,7 @@ func ReadSrgSpecOSM(r io.Reader, diskCachePath string, memCacheSize int) (*SrgSp
 	}
 	srgs := NewSrgSpecs()
 	for _, s := range o {
-		s.cache = newCache(s.readSrgData, diskCachePath, memCacheSize)
+		s.cache = newCache(s.readSrgData, diskCachePath, memCacheSize, marshalSrgHolders, unmarshalSrgHolders)
 		srgs.Add(s)
 	}
 	return srgs, nil
@@ -139,7 +150,7 @@ func (srg *SrgSpecOSM) getSrgData(gridData *GridDef, inputLoc *Location, tol flo
 		}
 	}
 
-	key := fmt.Sprintf("osm_srgdata_%s_%g", gridData.Name, tol)
+	key := fmt.Sprintf("osm_srgdata_%s_%s_%g", srg.Key(), gridData.Name, tol)
 	request := srg.cache.NewRequest(context.TODO(), &osmReadSrgDataInput{gridData: gridData, tol: tol}, key)
 	srgs, err := request.Result()
 	if err != nil {
@@ -179,9 +190,6 @@ func (srg *SrgSpecOSM) readSrgData(ctx context.Context, inputI interface{}) (int
 
 	data, err := osm.ExtractFile(context.Background(), os.ExpandEnv(srg.OSMFile), osm.KeepTags(srg.Tags))
 	if err != nil {
-		return nil, fmt.Errorf("aep: extracting OSM spatial surrogate data for tags %v: %v", srg.Tags, err)
-	}
-	if err := data.Check(); err != nil {
 		return nil, fmt.Errorf("aep: extracting OSM spatial surrogate data for tags %v: %v", srg.Tags, err)
 	}
 	geomTags, err := data.Geom()

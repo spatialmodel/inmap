@@ -100,9 +100,9 @@ func init() {
 	gob.Register(GriddedSrgData{})
 }
 
-// unmarshalGob unmarshals an interface from a byte array and fulfills
+// unmarshalGriddedSrgData unmarshals an interface from a byte array and fulfills
 // the requirements for the Disk cache unmarshalFunc input.
-func unmarshalGob(b []byte) (interface{}, error) {
+func unmarshalGriddedSrgData(b []byte) (interface{}, error) {
 	r := bytes.NewBuffer(b)
 	d := gob.NewDecoder(r)
 	var data GriddedSrgData
@@ -112,9 +112,9 @@ func unmarshalGob(b []byte) (interface{}, error) {
 	return &data, nil
 }
 
-// marshalGob marshals an interface to a byte array and fulfills
+// marshalGriddedSrgData marshals an interface to a byte array and fulfills
 // the requirements for the Disk cache marshalFunc input.
-func marshalGob(data interface{}) ([]byte, error) {
+func marshalGriddedSrgData(data interface{}) ([]byte, error) {
 	w := bytes.NewBuffer(nil)
 	e := gob.NewEncoder(w)
 	d := *data.(*interface{})
@@ -126,10 +126,10 @@ func marshalGob(data interface{}) ([]byte, error) {
 }
 
 func (sp *SpatialProcessor) load() {
-	sp.cache = newCache(sp.createSurrogate, sp.DiskCachePath, sp.MemCacheSize)
+	sp.cache = newCache(sp.createSurrogate, sp.DiskCachePath, sp.MemCacheSize, marshalGriddedSrgData, unmarshalGriddedSrgData)
 }
 
-func newCache(f requestcache.ProcessFunc, diskCachePath string, memCacheSize int) *requestcache.Cache {
+func newCache(f requestcache.ProcessFunc, diskCachePath string, memCacheSize int, marshalFunc func(interface{}) ([]byte, error), unmarshalFunc func([]byte) (interface{}, error)) *requestcache.Cache {
 	if diskCachePath == "" {
 		return requestcache.NewCache(f, runtime.GOMAXPROCS(-1),
 			requestcache.Deduplicate(), requestcache.Memory(memCacheSize))
@@ -139,7 +139,7 @@ func newCache(f requestcache.ProcessFunc, diskCachePath string, memCacheSize int
 			if err != nil {
 				panic(err)
 			}
-			cf, err := requestcache.GoogleCloudStorage(context.TODO(), loc.Host, strings.TrimLeft(loc.Path, "/"), marshalGob, unmarshalGob)
+			cf, err := requestcache.GoogleCloudStorage(context.TODO(), loc.Host, strings.TrimLeft(loc.Path, "/"), marshalFunc, unmarshalFunc)
 			if err != nil {
 				panic(err)
 			}
@@ -148,7 +148,7 @@ func newCache(f requestcache.ProcessFunc, diskCachePath string, memCacheSize int
 		} else {
 			return requestcache.NewCache(f, runtime.GOMAXPROCS(-1),
 				requestcache.Deduplicate(), requestcache.Memory(memCacheSize),
-				requestcache.Disk(diskCachePath, marshalGob, unmarshalGob))
+				requestcache.Disk(diskCachePath, marshalFunc, unmarshalFunc))
 		}
 	}
 }
