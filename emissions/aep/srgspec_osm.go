@@ -46,10 +46,6 @@ type SrgSpecOSM struct {
 
 	Tags map[string][]string `json:"tags"`
 
-	// TagMultiplier is a factors by which the tags should
-	// be multiplied. If it is zero it will automatically be set to one.
-	TagMultiplier float64 `json:"tag_multiplier"`
-
 	// BackupSurrogateNames specifies names of surrogates to use if this
 	// one doesn't have data for the desired location.
 	BackupSurrogateNames []string `json:"backup_surrogate_names"`
@@ -242,17 +238,9 @@ func (srg *SrgSpecOSM) readSrgData(ctx context.Context, inputI interface{}) (int
 				g = gs.Simplify(input.tol)
 			}
 		}
-		var srgData *srgHolder
-		if srg.TagMultiplier != 0 {
-			srgData = &srgHolder{
-				Geom:   g,
-				Weight: srg.TagMultiplier,
-			}
-		} else {
-			srgData = &srgHolder{
-				Geom:   g,
-				Weight: 1,
-			}
+		srgData := &srgHolder{
+			Geom:   g,
+			Weight: 1,
 		}
 		srgs = append(srgs, srgData)
 	}
