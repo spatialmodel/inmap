@@ -375,23 +375,28 @@ func (s *srgGenWorker) intersections1(
 
 // intersection calculates the intersection of g and poly
 func intersection(g geom.Geom, poly geom.Polygonal) geom.Geom {
-	var intersection geom.Geom
 	switch g.(type) {
-	case geom.Point:
-		in := g.(geom.Point).Within(poly)
-		if in == geom.Inside || in == geom.OnEdge {
-			intersection = g
-		} else {
-			return nil
+	case geom.Point, geom.MultiPoint:
+		o := make(geom.MultiPoint, 0, g.Len())
+		ptsF := g.Points()
+		for i := 0; i < g.Len(); i++ {
+			pt := ptsF()
+			in := pt.Within(poly)
+			if in == geom.Inside || in == geom.OnEdge {
+				o = append(o, pt)
+			}
 		}
+		if len(o) > 0 {
+			return o
+		}
+		return nil
 	case geom.Polygonal:
-		intersection = g.(geom.Polygonal).Intersection(poly)
+		return g.(geom.Polygonal).Intersection(poly)
 	case geom.Linear:
-		intersection = g.(geom.Linear).Clip(poly)
+		return g.(geom.Linear).Clip(poly)
 	default:
 		panic(fmt.Errorf("unsupported intersection geometry type %#v", g))
 	}
-	return intersection
 }
 
 // geomWeight multiplies w by a relevant property of g.
@@ -401,8 +406,8 @@ func geomWeight(w float64, g geom.Geom) float64 {
 		return w * g.(geom.Polygonal).Area()
 	case geom.LineString, geom.MultiLineString:
 		return w * g.(geom.Linear).Length()
-	case geom.Point:
-		return w
+	case geom.Point, geom.MultiPoint:
+		return w * float64(g.Len())
 	default:
 		panic(op.UnsupportedGeometryError{G: g})
 	}
