@@ -205,30 +205,20 @@ func (srg *SrgSpecOSM) readSrgData(ctx context.Context, inputI interface{}) (int
 	if err != nil {
 		return nil, fmt.Errorf("aep: extracting OSM spatial surrogate data for tags %v: %v", srg.Tags, err)
 	}
-	typ, err := osm.DominantType(geomTags)
+	dominantType, err := osm.DominantType(geomTags)
 	if err != nil {
 		return nil, fmt.Errorf("aep: extracting OSM spatial surrogate data for tags %v: %v", srg.Tags, err)
 	}
 	var srgs []*srgHolder
 	for _, geomTag := range geomTags {
-		switch typ { // Drop features that do not match the dominant type.
-		case osm.Point:
-			if _, ok := geomTag.Geom.(geom.Point); !ok {
-				continue
-			}
-		case osm.Poly:
-			if _, ok := geomTag.Geom.(geom.Polygonal); !ok {
-				continue
-			}
-		case osm.Line:
-			if _, ok := geomTag.Geom.(geom.Linear); !ok {
-				continue
-			}
-		default:
-			continue // Drop collection-type features.
+		g, err := osmGeometry(geomTag.Geom, dominantType)
+		if err != nil {
+			return nil, fmt.Errorf("aep: processing OSM spatial surrogate data: %v", err)
 		}
-
-		g, err := geomTag.Geom.Transform(srgCT)
+		if g == nil {
+			continue // ignore geometry that is not the dominant type.
+		}
+		g, err = g.Transform(srgCT)
 		if err != nil {
 			return nil, fmt.Errorf("aep: processing OSM spatial surrogate data: %v", err)
 		}
@@ -245,4 +235,105 @@ func (srg *SrgSpecOSM) readSrgData(ctx context.Context, inputI interface{}) (int
 		srgs = append(srgs, srgData)
 	}
 	return srgs, nil
+}
+
+func geomCollectionToMultiPoint(gc geom.GeometryCollection, dominantType osm.GeomType) (geom.MultiPoint, error) {
+	o := geom.MultiPoint{}
+	for _, f := range gc {
+		if gc2, ok := f.(geom.GeometryCollection); ok {
+			var err error
+			f, err = osmGeometry(gc2, dominantType)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if p, ok := f.(geom.Point); ok {
+			o = append(o, p)
+		}
+		if p, ok := f.(geom.MultiPoint); ok {
+			o = append(o, p...)
+		}
+	}
+	if len(o) > 0 {
+		return o, nil
+	}
+	return nil, nil
+}
+
+func geomCollectionToMultiPolygon(gc geom.GeometryCollection, dominantType osm.GeomType) (geom.MultiPolygon, error) {
+	o := geom.MultiPolygon{}
+	for _, f := range gc {
+		if gc2, ok := f.(geom.GeometryCollection); ok {
+			var err error
+			f, err = osmGeometry(gc2, dominantType)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if p, ok := f.(geom.Polygon); ok {
+			o = append(o, p)
+		}
+		if p, ok := f.(geom.MultiPolygon); ok {
+			o = append(o, p...)
+		}
+	}
+	if len(o) > 0 {
+		return o, nil
+	}
+	return nil, nil
+}
+
+func geomCollectionToMultiLineString(gc geom.GeometryCollection, dominantType osm.GeomType) (geom.MultiLineString, error) {
+	o := geom.MultiLineString{}
+	for _, f := range gc {
+		if gc2, ok := f.(geom.GeometryCollection); ok {
+			var err error
+			f, err = osmGeometry(gc2, dominantType)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if l, ok := f.(geom.LineString); ok {
+			o = append(o, l)
+		}
+		if l, ok := f.(geom.MultiLineString); ok {
+			o = append(o, l...)
+		}
+	}
+	if len(o) > 0 {
+		return o, nil
+	}
+	return nil, nil
+}
+
+func osmGeometry(g geom.Geom, dominantType osm.GeomType) (geom.Geom, error) {
+	if gc, ok := g.(geom.GeometryCollection); ok {
+		switch dominantType { // Drop features that do not match the dominant type.
+		case osm.Point:
+			return geomCollectionToMultiPoint(gc, dominantType)
+		case osm.Poly:
+			return geomCollectionToMultiPolygon(gc, dominantType)
+		case osm.Line:
+			return geomCollectionToMultiLineString(gc, dominantType)
+		default:
+			return nil, fmt.Errorf("invalid geometry type %v", dominantType)
+		}
+	}
+	switch dominantType { // Drop features that do not match the dominant type.
+	case osm.Point:
+		if _, ok := g.(geom.Point); ok {
+			return g, nil
+		}
+	case osm.Poly:
+		if _, ok := g.(geom.Polygonal); ok {
+			return g, nil
+		}
+	case osm.Line:
+		if _, ok := g.(geom.Linear); ok {
+			return g, nil
+		}
+	default:
+		return nil, fmt.Errorf("invalid geometry type %v", dominantType)
+	}
+	return nil, nil
 }
