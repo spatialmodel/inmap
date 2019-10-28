@@ -141,7 +141,7 @@ func Preproc(StartDate, EndDate, CTMType, WRFOut, GEOSA1, GEOSA3Cld, GEOSA3Dyn, 
 	default:
 		return fmt.Errorf("inmap preprocessor: the CTMType you specified, '%s', is invalid. Valid options are WRF-Chem and GEOS-Chem", CTMType)
 	}
-	ctmData, err := inmap.Preprocess(ctm)
+	ctmData, err := inmap.Preprocess(ctm, CtmGridXo, CtmGridYo, CtmGridDx, CtmGridDy)
 	if err != nil {
 		return err
 	}
@@ -151,7 +151,7 @@ func Preproc(StartDate, EndDate, CTMType, WRFOut, GEOSA1, GEOSA3Cld, GEOSA3Dyn, 
 	if err != nil {
 		return fmt.Errorf("inmap: preprocessor writing output file: %v", err)
 	}
-	ctmData.Write(ff, CtmGridXo, CtmGridYo, CtmGridDx, CtmGridDy)
+	ctmData.Write(ff)
 	ff.Close()
 
 	return nil

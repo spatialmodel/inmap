@@ -159,8 +159,10 @@ type Preprocessor interface {
 
 // Preprocess returns preprocessed InMAP input data
 // based on the information available from the given
-// preprocessor.
-func Preprocess(p Preprocessor) (*CTMData, error) {
+// preprocessor. x0 and y0 are the left and y coordinates of the
+// lower-left corner of the domain, and dx and dy are the x and y edge
+// lengths of the grid cells, respectively.
+func Preprocess(p Preprocessor, xo, yo, dx, dy float64) (*CTMData, error) {
 	var pblh, layerHeights, windSpeed, windSpeedInverse, windSpeedMinusThird, windSpeedMinusOnePointFour, uAvg, vAvg, wAvg *sparse.DenseArray
 
 	errChan := make(chan error)
@@ -283,6 +285,10 @@ func Preprocess(p Preprocessor) (*CTMData, error) {
 	}
 
 	data := new(CTMData)
+	data.xo = xo
+	data.yo = yo
+	data.dx = dx
+	data.dy = dy
 	data.AddVariable("UAvg", []string{"z", "y", "xStagger"},
 		"Annual average x velocity", "m/s", uAvg)
 	data.AddVariable("VAvg", []string{"z", "yStagger", "x"},
