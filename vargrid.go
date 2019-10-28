@@ -48,13 +48,6 @@ type VarGridConfig struct {
 	Ynests         []int   // Nesting multiples in the Y direction
 	HiResLayers    int     // number of layers to do in high resolution (layers above this will be lowest resolution.
 
-	ctmGridXo float64 // lower left of Chemical Transport Model (CTM) grid, x
-	ctmGridYo float64 // lower left of grid, y
-	ctmGridDx float64 // m
-	ctmGridDy float64 // m
-	ctmGridNx int
-	ctmGridNy int
-
 	PopDensityThreshold float64 // limit for people per unit area in the grid cell
 	PopThreshold        float64 // limit for total number of people in the grid cell
 
@@ -79,6 +72,13 @@ type VarGridConfig struct {
 // CTMData holds processed data from a chemical transport model
 type CTMData struct {
 	gridTree *rtree.Rtree
+
+	xo float64 // lower left of Chemical Transport Model (CTM) grid, x
+	yo float64 // lower left of grid, y
+	dx float64 // m
+	dy float64 // m
+	ctmGridNx int
+	ctmGridNy int
 
 	// Data is a map of information about processed CTM variables,
 	// with the keys being the variable names.
@@ -123,12 +123,12 @@ func (config *VarGridConfig) LoadCTMData(rw cdf.ReaderWriterAt) (*CTMData, error
 	nz := f.Header.Lengths("UAvg")[0]
 
 	// Get CTM grid attributes
-	config.ctmGridDx = f.Header.GetAttribute("", "dx").([]float64)[0]
-	config.ctmGridDy = f.Header.GetAttribute("", "dy").([]float64)[0]
-	config.ctmGridNx = int(f.Header.GetAttribute("", "nx").([]int32)[0])
-	config.ctmGridNy = int(f.Header.GetAttribute("", "ny").([]int32)[0])
-	config.ctmGridXo = f.Header.GetAttribute("", "x0").([]float64)[0]
-	config.ctmGridYo = f.Header.GetAttribute("", "y0").([]float64)[0]
+	o.dx = f.Header.GetAttribute("", "dx").([]float64)[0]
+	o.dy = f.Header.GetAttribute("", "dy").([]float64)[0]
+	o.ctmGridNx = int(f.Header.GetAttribute("", "nx").([]int32)[0])
+	o.ctmGridNy = int(f.Header.GetAttribute("", "ny").([]int32)[0])
+	o.xo = f.Header.GetAttribute("", "x0").([]float64)[0]
+	o.yo = f.Header.GetAttribute("", "y0").([]float64)[0]
 
 	dataVersion := f.Header.GetAttribute("", "data_version").(string)
 
@@ -137,7 +137,7 @@ func (config *VarGridConfig) LoadCTMData(rw cdf.ReaderWriterAt) (*CTMData, error
 			"with the required version %s", dataVersion, InMAPDataVersion)
 	}
 
-	o.gridTree = config.makeCTMgrid(nz)
+	o.makeCTMgrid(nz)
 
 	od := make(map[string]struct {
 		Dims        []string
@@ -183,10 +183,8 @@ func (config *VarGridConfig) LoadCTMData(rw cdf.ReaderWriterAt) (*CTMData, error
 	return o, nil
 }
 
-// Write writes d to w. x0 and y0 are the left and y coordinates of the
-// lower-left corner of the domain, and dx and dy are the x and y edge
-// lengths of the grid cells, respectively.
-func (d *CTMData) Write(w *os.File, x0, y0, dx, dy float64) error {
+// Write writes d to netcdf file w.
+func (d *CTMData) Write(w *os.File) error {
 	windSpeed := d.Data["WindSpeed"].Data
 	uAvg := d.Data["UAvg"].Data
 	vAvg := d.Data["VAvg"].Data
@@ -197,10 +195,10 @@ func (d *CTMData) Write(w *os.File, x0, y0, dx, dy float64) error {
 			uAvg.Shape[2], vAvg.Shape[1], wAvg.Shape[0]})
 	h.AddAttribute("", "comment", "InMAP meteorology and baseline chemistry data file")
 
-	h.AddAttribute("", "x0", []float64{x0})
-	h.AddAttribute("", "y0", []float64{y0})
-	h.AddAttribute("", "dx", []float64{dx})
-	h.AddAttribute("", "dy", []float64{dy})
+	h.AddAttribute("", "x0", []float64{d.xo})
+	h.AddAttribute("", "y0", []float64{d.yo})
+	h.AddAttribute("", "dx", []float64{d.dx})
+	h.AddAttribute("", "dy", []float64{d.dy})
 	h.AddAttribute("", "nx", []int32{int32(windSpeed.Shape[2])})
 	h.AddAttribute("", "ny", []int32{int32(windSpeed.Shape[1])})
 
@@ -1081,16 +1079,16 @@ func (c *Cell) loadData(data *CTMData, k int) error {
 }
 
 // make a vector representation of the chemical transport model grid
-func (config *VarGridConfig) makeCTMgrid(nlayers int) *rtree.Rtree {
-	tree := rtree.NewTree(25, 50)
+func (data *CTMData) makeCTMgrid(nlayers int) {
+	data.gridTree = rtree.NewTree(25, 50)
 	for k := 0; k < nlayers; k++ {
-		for ix := 0; ix < config.ctmGridNx; ix++ {
-			for iy := 0; iy < config.ctmGridNy; iy++ {
+		for ix := 0; ix < data.ctmGridNx; ix++ {
+			for iy := 0; iy < data.ctmGridNy; iy++ {
 				cell := new(gridCellLight)
-				x0 := config.ctmGridXo + config.ctmGridDx*float64(ix)
-				x1 := config.ctmGridXo + config.ctmGridDx*float64(ix+1)
-				y0 := config.ctmGridYo + config.ctmGridDy*float64(iy)
-				y1 := config.ctmGridYo + config.ctmGridDy*float64(iy+1)
+				x0 := data.xo + data.dx*float64(ix)
+				x1 := data.xo + data.dx*float64(ix+1)
+				y0 := data.yo + data.dy*float64(iy)
+				y1 := data.yo + data.dy*float64(iy+1)
 				cell.Polygonal = &geom.Bounds{
 					Min: geom.Point{X: x0, Y: y0},
 					Max: geom.Point{X: x1, Y: y1},
@@ -1098,11 +1096,10 @@ func (config *VarGridConfig) makeCTMgrid(nlayers int) *rtree.Rtree {
 				cell.Row = iy
 				cell.Col = ix
 				cell.layer = k
-				tree.Insert(cell)
+				data.gridTree.Insert(cell)
 			}
 		}
 	}
-	return tree
 }
 
 type gridCellLight struct {

@@ -851,7 +851,7 @@ func TestReadWriteCTMData(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err = ctmdata.Write(f, cfg.ctmGridXo, cfg.ctmGridYo, cfg.ctmGridDx, cfg.ctmGridDy); err != nil {
+	if err = ctmdata.Write(f); err != nil {
 		t.Fatal(err)
 	}
 

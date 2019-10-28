@@ -40,12 +40,12 @@ func init() {
 }
 
 // regenGoldenFile writes out the given data to the given FilePath.
-func regenGoldenFile(data *CTMData, filePath string, x0, y0, dx, dy float64) error {
+func regenGoldenFile(data *CTMData, filePath string) error {
 	f, err := os.Create(filePath)
 	if err != nil {
 		return err
 	}
-	return data.Write(f, x0, y0, dx, dy)
+	return data.Write(f)
 }
 
 func TestWRFChemToInMAP(t *testing.T) {
@@ -56,7 +56,7 @@ func TestWRFChemToInMAP(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	newData, err := Preprocess(wrf)
+	newData, err := Preprocess(wrf, -2004000, -540000, 12000, 12000)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +64,7 @@ func TestWRFChemToInMAP(t *testing.T) {
 	goldenFileName := "cmd/inmap/testdata/preproc/inmapData_WRFChem_golden.ncf"
 
 	if regenGoldenFiles {
-		err := regenGoldenFile(newData, goldenFileName, -2004000, -540000, 12000, 12000)
+		err := regenGoldenFile(newData, goldenFileName)
 		if err != nil {
 			t.Errorf("regenerating golden file: %v", err)
 		}
@@ -87,7 +87,7 @@ func BenchmarkWRFChemToInMAP(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	_, err = Preprocess(wrf)
+	_, err = Preprocess(wrf, -2004000, -540000, 12000, 12000)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -117,7 +117,7 @@ func TestGEOSChemToInMAP(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	newData, err := Preprocess(gc)
+	newData, err := Preprocess(gc, -2.5, 50, 2.5, 2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -125,7 +125,7 @@ func TestGEOSChemToInMAP(t *testing.T) {
 	goldenFileName := "cmd/inmap/testdata/preproc/inmapData_GEOSChem_golden.ncf"
 
 	if regenGoldenFiles {
-		err := regenGoldenFile(newData, goldenFileName, -2.5, 50, 2.5, 2)
+		err := regenGoldenFile(newData, goldenFileName)
 		if err != nil {
 			t.Errorf("regenerating golden file: %v", err)
 		}
@@ -164,7 +164,7 @@ func BenchmarkGEOSChemToInMAP(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	_, err = Preprocess(gc)
+	_, err = Preprocess(gc, -2.5, 50, 2.5, 2)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -194,7 +194,7 @@ func TestGEOSChemToInMAP_new(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	newData, err := Preprocess(gc)
+	newData, err := Preprocess(gc, -2.5, 50, 2.5, 2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -202,7 +202,7 @@ func TestGEOSChemToInMAP_new(t *testing.T) {
 	goldenFileName := "cmd/inmap/testdata/preproc/geoschem-new/inmapData_GEOSChem_golden.ncf"
 
 	if regenGoldenFiles {
-		err := regenGoldenFile(newData, goldenFileName, -2.5, 50, 2.5, 2)
+		err := regenGoldenFile(newData, goldenFileName)
 		if err != nil {
 			t.Errorf("regenerating golden file: %v", err)
 		}
