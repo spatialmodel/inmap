@@ -51,7 +51,7 @@ type Cfg struct {
 	// files.
 	outputFiles []string
 
-	Root, versionCmd, runCmd, preprocCmd, steadyCmd, gridCmd                *cobra.Command
+	Root, versionCmd, runCmd, preprocCmd, combineCmd, steadyCmd, gridCmd    *cobra.Command
 	srCmd, srPredictCmd, srStartCmd, srSaveCmd, srCleanCmd                  *cobra.Command
 	cloudCmd, cloudStartCmd, cloudStatusCmd, cloudOutputCmd, cloudDeleteCmd *cobra.Command
 }
@@ -242,6 +242,40 @@ func InitializeConfig() *Cfg {
 				cfg.GetString("Preproc.GEOSChem.ChemFileInterval"),
 				cfg.GetBool("Preproc.GEOSChem.NoChemHourIndex"),
 			)
+		},
+		DisableAutoGenTag: true,
+	}
+
+	cfg.combineCmd = &cobra.Command{
+		Use:   "combine",
+		Short: "Combine preprocessed CTM output from nested grids",
+		Long: `combine combines preprocessed chemical transport model
+	output from multiple nested grids into a single InMAP input file.
+	It should be run after independently preprocessing the output of
+	each nested grid.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			files := cfg.GetStringSlice("preprocessed_inputs")
+			data := make([]*inmap.CTMData, len(files))
+			for i, file := range files {
+				f, err := os.Open(os.ExpandEnv(file))
+				if err != nil {
+					return fmt.Errorf("opening preprocessed input file: %w", err)
+				}
+				cfg := &inmap.VarGridConfig{}
+				data[i], err = cfg.LoadCTMData(f)
+				if err != nil {
+					return fmt.Errorf("loading preprocessed input file: %w", err)
+				}
+			}
+			combined, err := inmap.CombineCTMData(data...)
+			if err != nil {
+				return fmt.Errorf("combining preprocessed input files: %w", err)
+			}
+			f, err := os.Create(os.ExpandEnv(cfg.GetString("output_file")))
+			if err != nil {
+				return fmt.Errorf("creating output file: %w", err)
+			}
+			return combined.Write(f)
 		},
 		DisableAutoGenTag: true,
 	}
@@ -497,6 +531,7 @@ func InitializeConfig() *Cfg {
 	cfg.Root.AddCommand(cfg.srPredictCmd)
 	cfg.Root.AddCommand(cfg.cloudCmd)
 	cfg.cloudCmd.AddCommand(cfg.cloudStartCmd, cfg.cloudStatusCmd, cfg.cloudOutputCmd, cfg.cloudDeleteCmd)
+	cfg.preprocCmd.AddCommand(cfg.combineCmd)
 
 	// Options are the configuration options available to InMAP.
 	options = []struct {
@@ -1110,6 +1145,20 @@ SpatialCache directory..`,
 							memory_gb specifies the gigabytes of RAM memory required for this job.`,
 			defaultVal: 20,
 			flagsets:   []*pflag.FlagSet{cfg.cloudStartCmd.Flags(), cfg.srStartCmd.Flags()},
+		},
+		{
+			name: "preprocessed_inputs",
+			usage: `preprocessed_inputs is a list of preprocessed
+input files to be combined.`,
+			defaultVal: []string{},
+			flagsets:   []*pflag.FlagSet{cfg.combineCmd.Flags()},
+		},
+		{
+			name: "output_file",
+			usage: `output_file is the location where the combined output
+file should be written.`,
+			defaultVal: "inmapdata_combined.ncf",
+			flagsets:   []*pflag.FlagSet{cfg.combineCmd.Flags()},
 		},
 	}
 
