@@ -19,6 +19,7 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package inmap
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -77,8 +78,8 @@ type CTMData struct {
 	yo float64 // lower left of grid, y
 	dx float64 // m
 	dy float64 // m
-	ctmGridNx int
-	ctmGridNy int
+	nx int
+	ny int
 
 	// Data is a map of information about processed CTM variables,
 	// with the keys being the variable names.
@@ -125,8 +126,8 @@ func (config *VarGridConfig) LoadCTMData(rw cdf.ReaderWriterAt) (*CTMData, error
 	// Get CTM grid attributes
 	o.dx = f.Header.GetAttribute("", "dx").([]float64)[0]
 	o.dy = f.Header.GetAttribute("", "dy").([]float64)[0]
-	o.ctmGridNx = int(f.Header.GetAttribute("", "nx").([]int32)[0])
-	o.ctmGridNy = int(f.Header.GetAttribute("", "ny").([]int32)[0])
+	o.nx = int(f.Header.GetAttribute("", "nx").([]int32)[0])
+	o.ny = int(f.Header.GetAttribute("", "ny").([]int32)[0])
 	o.xo = f.Header.GetAttribute("", "x0").([]float64)[0]
 	o.yo = f.Header.GetAttribute("", "y0").([]float64)[0]
 
@@ -236,6 +237,101 @@ func (d *CTMData) Write(w *os.File) error {
 	}
 	return nil
 }
+
+// CombineCTMData returns the combination of the input data nests.
+// The output will have the extent of the first nest and the horizontal
+// resolution of the highest resolution nest. It is assumed that
+// the nests fit neatly inside each other; no interpolation will be
+// performed. The input nests will be
+// overlayed onto the output in the provided order, so each sequential
+// nest will write over any previous nest(s) that it overlaps with.
+// Vertical layers are assumed to be the same among all nests;
+// no vertical layer interpolation is performed.
+// If the nests do not all have the same number of layers, an
+// error will be returned.
+func CombineCTMData(nests ...*CTMData) (*CTMData, error) {
+	if len(nests) == 0 {
+		return nil, nil
+	}
+
+	o := new(CTMData)
+
+	// Get extent and resolution of resulting grid.
+	o.xo, o.yo = nests[0].xo, nests[0].yo
+	o.dx, o.dy = math.Inf(1), math.Inf(1)
+	var nz int
+	for i, nest := range nests {
+		if _, ok := nest.Data["Dz"]; !ok {
+			return nil, errors.New("inmap: CTM data is missing variable `Dz`")
+		}
+		nestNz := nest.Data["Dz"].Data.Shape[0]
+		if i == 0 {
+			nz = nestNz
+		} else if nz != nestNz {
+			return nil, errors.New("inmap: inconsistent number of layers when combining CTM data files")
+		}
+		if nest.dx < o.dx {
+			o.dx = nest.dx
+		}
+		if nest.dy < o.dy {
+			o.dy = nest.dy
+		}
+	}
+	o.nx = nests[0].nx * round(nests[0].dx/o.dx)
+	o.ny = nests[0].ny * round(nests[0].dy/o.dy)
+
+	// Copy data.
+	for _, nest := range nests {
+		xNestFac := round(nest.dx / o.dx)        // nesting ratio in x-direction
+		yNestFac := round(nest.dy / o.dy)        // nesting ratio in y-direction
+		nestio := round((nest.xo - o.xo) / o.dx) // x-index in output grid of nest ll corner.
+		nestjo := round((nest.yo - o.yo) / o.dy) // y-index in output grid of nest ll corner.
+
+		// Closure for copying one layer
+		copyLayer := func(get func(j, i int) float64, set func(v float64, j, i int)) {
+			for nj := 0; nj < nest.ny; nj++ {
+				for ni := 0; ni < nest.nx; ni++ {
+					v := get(nj, ni)
+					for oj := nestjo + nj*yNestFac; oj < nestjo+(nj+1)*yNestFac; oj++ {
+						for oi := nestio + ni*xNestFac; oi < nestio+(ni+1)*xNestFac; oi++ {
+							if oi >= 0 && oj >= 0 && oi < o.nx && oj < o.ny {
+								set(v, oj, oi)
+							}
+						}
+					}
+				}
+			}
+		}
+
+		for name, data := range nest.Data {
+			switch len(data.Dims) {
+			case 3:
+				if _, ok := o.Data[name]; !ok {
+					o.AddVariable(name, data.Dims, data.Description, data.Units, sparse.ZerosDense(nz, o.ny, o.nx))
+				}
+				od := o.Data[name]
+				for k := 0; k < nz; k++ {
+					get := func(j, i int) float64 { return data.Data.Get(k, j, i) }
+					set := func(v float64, j, i int) { od.Data.Set(v, k, j, i) }
+					copyLayer(get, set)
+				}
+			case 2:
+				if _, ok := o.Data[name]; !ok {
+					o.AddVariable(name, data.Dims, data.Description, data.Units, sparse.ZerosDense(o.ny, o.nx))
+				}
+				od := o.Data[name]
+				get := func(j, i int) float64 { return data.Data.Get(j, i) }
+				set := func(v float64, j, i int) { od.Data.Set(v, j, i) }
+				copyLayer(get, set)
+			default:
+				return nil, fmt.Errorf("inmap: invalid number of dimensions (%d) when combining CTM data", len(data.Dims))
+			}
+		}
+	}
+	return o, nil
+}
+
+func round(v float64) int { return int(v + 0.5) }
 
 func writeNCF(f *cdf.File, Var string, data *sparse.DenseArray) error {
 	// Check that data matches dimensions.
@@ -1082,8 +1178,8 @@ func (c *Cell) loadData(data *CTMData, k int) error {
 func (data *CTMData) makeCTMgrid(nlayers int) {
 	data.gridTree = rtree.NewTree(25, 50)
 	for k := 0; k < nlayers; k++ {
-		for ix := 0; ix < data.ctmGridNx; ix++ {
-			for iy := 0; iy < data.ctmGridNy; iy++ {
+		for ix := 0; ix < data.nx; ix++ {
+			for iy := 0; iy < data.ny; iy++ {
 				cell := new(gridCellLight)
 				x0 := data.xo + data.dx*float64(ix)
 				x1 := data.xo + data.dx*float64(ix+1)

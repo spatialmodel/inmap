@@ -46,3 +46,19 @@ func TestPreprocGEOSChem(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestPreprocCombine(t *testing.T) {
+	cfg := InitializeConfig()
+	// Here we only test whether the program runs. We
+	// check whether the output is correct elsewhere.
+	cfg.Set("preprocessed_inputs", []string{
+		"../cmd/inmap/testdata/inmapData_combine_outerNest.ncf",
+		"../cmd/inmap/testdata/inmapData_combine_innerNest.ncf",
+	})
+	cfg.Root.SetArgs([]string{"preproc", "combine"})
+	defer os.Remove("inmapdata_combined.ncf")
+
+	if err := cfg.Root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+}

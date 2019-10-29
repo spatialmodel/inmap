@@ -289,6 +289,8 @@ func Preprocess(p Preprocessor, xo, yo, dx, dy float64) (*CTMData, error) {
 	data.yo = yo
 	data.dx = dx
 	data.dy = dy
+	data.ny = Dz.Shape[1]
+	data.nx = Dz.Shape[2]
 	data.AddVariable("UAvg", []string{"z", "y", "xStagger"},
 		"Annual average x velocity", "m/s", uAvg)
 	data.AddVariable("VAvg", []string{"z", "yStagger", "x"},

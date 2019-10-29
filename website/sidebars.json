@@ -17,6 +17,7 @@
 			"cmd/inmap_cloud_status",
 			"cmd/inmap_grid",
 			"cmd/inmap_preproc",
+			"cmd/inmap_preproc_combine",
 			"cmd/inmap_run",
 			"cmd/inmap_run_steady",
 			"cmd/inmap_sr",

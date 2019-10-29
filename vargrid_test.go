@@ -19,6 +19,7 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package inmap
 
 import (
+	"flag"
 	"math"
 	"os"
 	"reflect"
@@ -869,6 +870,101 @@ func TestReadWriteCTMData(t *testing.T) {
 	compareCTMData(ctmdata, ctmdata2, tolerance, t)
 	f.Close()
 	os.Remove(TestCTMDataFile)
+}
+
+func TestCombineCTMData(t *testing.T) {
+	flag.Parse()
+
+	const (
+		tolerance      = 1.0e-6
+		outerNestName  = "cmd/inmap/testdata/inmapData_combine_outerNest.ncf"
+		innerNestName  = "cmd/inmap/testdata/inmapData_combine_innerNest.ncf"
+		goldenFileName = "cmd/inmap/testdata/inmapData_combine_golden.ncf"
+	)
+
+	if regenGoldenFiles {
+		gc, err := NewGEOSChem(
+			"cmd/inmap/testdata/preproc/geoschem-new/MERRA2.[DATE].A1.2x25.nc3",
+			"cmd/inmap/testdata/preproc/geoschem-new/MERRA2.[DATE].A3cld.2x25.nc3",
+			"cmd/inmap/testdata/preproc/geoschem-new/MERRA2.[DATE].A3dyn.2x25.nc3",
+			"cmd/inmap/testdata/preproc/geoschem-new/MERRA2.[DATE].I3.2x25.nc3",
+			"cmd/inmap/testdata/preproc/geoschem-new/MERRA2.[DATE].A3mstE.2x25.nc3",
+			"cmd/inmap/testdata/preproc/geoschem-new/GEOSFP.ApBp.nc",
+			"cmd/inmap/testdata/preproc/geoschem-new/ts.[DATE].nc",
+			"cmd/inmap/testdata/preproc/geoschem-new/Olson_2001_Land_Map.025x025.generic.nc",
+			"20160102",
+			"20160103",
+			false,
+			"3h",
+			"24h",
+			false,
+			nil,
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		outerNest, err := Preprocess(gc, -2.5, 50, 2.5, 2)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		innerNest, err := Preprocess(gc, 0, 52, 1.25, 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err := regenGoldenFile(outerNest, outerNestName); err != nil {
+			t.Errorf("regenerating golden file: %v", err)
+		}
+		if err := regenGoldenFile(innerNest, innerNestName); err != nil {
+			t.Errorf("regenerating golden file: %v", err)
+		}
+
+		combined, err := CombineCTMData(outerNest, innerNest)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := regenGoldenFile(combined, goldenFileName); err != nil {
+			t.Errorf("regenerating golden file: %v", err)
+		}
+	}
+
+	cfg := VarGridConfig{}
+	f, err := os.Open(outerNestName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	outerNest, err := cfg.LoadCTMData(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.Close()
+
+	f, err = os.Open(innerNestName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	innerNest, err := cfg.LoadCTMData(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.Close()
+
+	combined, err := CombineCTMData(outerNest, innerNest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	f, err = os.Open(goldenFileName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	goldenData, err := cfg.LoadCTMData(f)
+	if err != nil {
+		t.Fatalf("reading golden file: %v", err)
+	}
+	compareCTMData(goldenData, combined, tolerance, t)
 }
 
 func different(a, b, tolerance float64) bool {

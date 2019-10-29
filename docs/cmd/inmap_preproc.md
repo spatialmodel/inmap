@@ -100,3 +100,4 @@ inmap preproc [flags]
 ### SEE ALSO
 
 * [inmap](./inmap)	 - A reduced-form air quality model.
+* [inmap preproc combine](./inmap_preproc_combine)	 - Combine preprocessed CTM output from nested grids

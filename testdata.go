@@ -558,8 +558,8 @@ func CreateTestCTMData() (VarGridConfig, *CTMData) {
 		yo: -12000,
 		dx: 12000,
 		dy: 12000,
-		ctmGridNx: 2,
-		ctmGridNy: 2,
+		nx: 2,
+		ny: 2,
 	}
 	cd.makeCTMgrid(10)
 
