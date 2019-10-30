@@ -151,8 +151,12 @@ func Preproc(StartDate, EndDate, CTMType, WRFOut, GEOSA1, GEOSA3Cld, GEOSA3Dyn, 
 	if err != nil {
 		return fmt.Errorf("inmap: preprocessor writing output file: %v", err)
 	}
-	ctmData.Write(ff)
-	ff.Close()
+	if err := ctmData.Write(ff); err != nil {
+		return fmt.Errorf("inmap: preprocessor writing output file: %v", err)
+	}
+	if err := ff.Close(); err != nil {
+		return fmt.Errorf("inmap: preprocessor closing output file: %v", err)
+	}
 
 	return nil
 }
