@@ -88,6 +88,7 @@ func TestSpatial(t *testing.T) {
 	const (
 		tolerance = 1.e-3
 		pol       = "PM2.5"
+		aqm       = "isrm"
 	)
 	lcadb, slcadb := initCSTDB()
 	var polgas *Gas
@@ -116,7 +117,7 @@ func TestSpatial(t *testing.T) {
 		resultsSum := sum.Emissions[polgas].Value()
 
 		spatialResults := slca.NewSpatialResults(wtpResults, slcadb)
-		emis, err := spatialResults.Emissions()
+		emis, err := spatialResults.Emissions(aqm)
 		handle(err)
 		gridSum := emis[polgas].Sum()
 		passFail := "Pass"
@@ -127,7 +128,7 @@ func TestSpatial(t *testing.T) {
 		t.Logf("%s: %s sum of spatial data equals %v and should equal %v",
 			passFail, pathway.Name, gridSum, resultsSum)
 
-		conc, err := spatialResults.Concentrations()
+		conc, err := spatialResults.Concentrations(aqm)
 		handle(err)
 		if conc == nil {
 			t.Errorf("FAIL: %s concentration is nil", pathway.Name)
@@ -141,7 +142,7 @@ func TestSpatial(t *testing.T) {
 		t.Logf("%s: %s sum of concentrations equals %v and should equal %v",
 			passFail, pathway.Name, concSum, expectedConcSum)
 
-		health, err := spatialResults.Health("NasariACS")
+		health, err := spatialResults.Health("NasariACS", aqm)
 		handle(err)
 		h := health["TotalPop"]["PrimaryPM25"]
 		healthSum := h.Sum()

@@ -20,6 +20,7 @@ package slca
 import (
 	"context"
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -31,7 +32,6 @@ import (
 	"github.com/spatialmodel/inmap/emissions/aep/aeputil"
 	"github.com/spatialmodel/inmap/epi"
 
-	"github.com/ctessum/cdf"
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/index/rtree"
 	"github.com/ctessum/requestcache"
@@ -56,8 +56,10 @@ type CSTConfig struct {
 	// a corresponding InMAP species should be set equal to "none".
 	PolTrans map[string]string
 
-	// SRFile gives the location of the InMAP SR matrix data file.
-	SRFile string
+	// SRFile gives the location of the InMAP SR matrix data files in a
+	// map where each key is an identifying name of an air quality model
+	// and each value is the path to an SR matrix file.
+	SRFiles map[string]string
 
 	// SRCacheSize specifies the number of SR records to hold in an in-memory
 	// cache to speed up air pollution computations. 1 GB of RAM is required for
@@ -191,11 +193,9 @@ type CSTConfig struct {
 	// geometryCache is a cache for grid cell geometry.
 	geometryCache *requestcache.Cache
 
-	sp                    *aep.SpatialProcessor
 	speciator             *aep.Speciator
 	speciateOnce          sync.Once
 	loadSROnce            sync.Once
-	loadInventoryOnce     sync.Once
 	loadSpatialOnce       sync.Once
 	loadConcentrationOnce sync.Once
 	loadHealthOnce        sync.Once
@@ -206,12 +206,30 @@ type CSTConfig struct {
 	loadCROnce            sync.Once
 	loadGeometryOnce      sync.Once
 
-	// NEI emissions data. Format: map[Year][sector][]records
-	emis map[int]map[string][]aep.RecordGridded
+	// NEI emissions data cache
+	emisCache struct {
+		mx sync.Mutex
 
-	sr *sr.Reader
+		// year and aqm identify the setup we currently have loaded.
+		year int
+		aqm  string
 
-	gridIndex *rtree.Rtree
+		// emissions records: Format: map[Year][sector][]records
+		emisRecords map[string][]aep.RecordGridded
+	}
+
+	// sr matrix data cache. These fields should never be accessed
+	// directly, instead use c.srSetup.
+	srCache struct {
+		mx sync.Mutex
+
+		// aqm identifies the setup we currently have loaded.
+		aqm string
+
+		sr            *sr.Reader
+		spatialConfig *aeputil.SpatialConfig
+		gridIndex     *rtree.Rtree
+	}
 
 	// hr holds the registered hazard ratio functions.
 	hr map[string]epi.HRer
@@ -224,6 +242,10 @@ func (c *CSTConfig) Setup(hr ...epi.HRer) error {
 
 	if c.DefaultFIPS == "" {
 		c.DefaultFIPS = "00000"
+	}
+
+	for k, v := range c.SRFiles {
+		c.SRFiles[k] = os.ExpandEnv(v)
 	}
 
 	c.censusFile = make(map[int]string)
@@ -262,13 +284,14 @@ func init() {
 	gob.Register(geom.Polygon{})
 }
 
-// Geometry returns the air quality model grid cell geometry.
-func (c *CSTConfig) Geometry() ([]geom.Polygonal, error) {
+// Geometry returns the air quality model grid cell geometry when
+// given an identifier for which air quality model to use.
+func (c *CSTConfig) Geometry(aqm string) ([]geom.Polygonal, error) {
 	c.loadGeometryOnce.Do(func() {
 		c.geometryCache = loadCacheOnce(c.geometry, 1, 1, c.SpatialCache,
 			requestcache.MarshalGob, requestcache.UnmarshalGob)
 	})
-	req := c.geometryCache.NewRequest(context.Background(), nil, "geometry")
+	req := c.geometryCache.NewRequest(context.Background(), aqm, "geometry_"+aqm)
 	iface, err := req.Result()
 	if err != nil {
 		return nil, err
@@ -277,40 +300,68 @@ func (c *CSTConfig) Geometry() ([]geom.Polygonal, error) {
 }
 
 // geometry returns the air quality model grid cell geometry.
-func (c *CSTConfig) geometry(ctx context.Context, _ interface{}) (interface{}, error) {
-	if err := c.lazyLoadSR(); err != nil {
+func (c *CSTConfig) geometry(ctx context.Context, aqmI interface{}) (interface{}, error) {
+	spatialConfig, _, _, err := c.srSetup(aqmI.(string))
+	if err != nil {
 		return nil, err
 	}
-	return c.SpatialConfig.GridCells, nil
+	return spatialConfig.GridCells, nil
 }
 
-func (c *CSTConfig) lazyLoadSR() error {
-	var err error
-	c.loadSROnce.Do(func() {
-		var f cdf.ReaderWriterAt
-		f, err = os.Open(c.SRFile)
-		if err != nil {
-			return
-		}
-		c.sr, err = sr.NewReader(f)
-		if err != nil {
-			return
-		}
-		if c.SRCacheSize != 0 {
-			c.sr.CacheSize = c.SRCacheSize
-		}
-		if c.SpatialConfig.GridCells == nil {
-			c.SpatialConfig.GridCells = c.sr.Geometry()
-		}
-		c.gridIndex = rtree.NewTree(25, 50)
-		for i, g := range c.SpatialConfig.GridCells {
-			c.gridIndex.Insert(gridIndex{Polygonal: g, i: i})
-		}
-	})
-	if err != nil {
-		return fmt.Errorf("slca: opening SR matrix: %v", err)
+// srSetup returns a spatial processing configuration for the
+// specified air quality model.
+func (c *CSTConfig) srSetup(aqm string) (*aeputil.SpatialConfig, *sr.Reader, *rtree.Rtree, error) {
+	c.srCache.mx.Lock()
+	defer c.srCache.mx.Unlock()
+
+	if aqm == "" {
+		return nil, nil, nil, errors.New("air quality model is not specified")
 	}
-	return nil
+
+	if aqm == c.srCache.aqm {
+		// If the air quality model we want is already loaded, return it.
+		return c.srCache.spatialConfig, c.srCache.sr, c.srCache.gridIndex, nil
+	}
+
+	// Make a copy of the spatial configuration to allow the
+	// use of multiple grids.
+	c.srCache.spatialConfig = &aeputil.SpatialConfig{
+		SrgSpec:               c.SpatialConfig.SrgSpec,
+		SrgSpecType:           c.SpatialConfig.SrgSpecType,
+		SrgShapefileDirectory: c.SpatialConfig.SrgShapefileDirectory,
+		SCCExactMatch:         c.SpatialConfig.SCCExactMatch,
+		GridRef:               c.SpatialConfig.GridRef,
+		OutputSR:              c.SpatialConfig.OutputSR,
+		InputSR:               c.SpatialConfig.InputSR,
+		SimplifyTolerance:     c.SpatialConfig.SimplifyTolerance,
+		SpatialCache:          c.SpatialConfig.SpatialCache,
+		MaxCacheEntries:       c.SpatialConfig.MaxCacheEntries,
+		GridName:              aqm,
+	}
+
+	srFile, ok := c.SRFiles[aqm]
+	if !ok {
+		return nil, nil, nil, fmt.Errorf("air quality model `%s` is not included in config.SRFiles; valid aqms include %v", aqm, c.SRFiles)
+	}
+
+	f, err := os.Open(srFile)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("slca: opening sr matrix file: %w", err)
+	}
+	c.srCache.sr, err = sr.NewReader(f)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("slca: opening sr matrix file: %w", err)
+	}
+	if c.SRCacheSize != 0 {
+		c.srCache.sr.CacheSize = c.SRCacheSize
+	}
+	c.srCache.spatialConfig.GridCells = c.srCache.sr.Geometry()
+	c.srCache.gridIndex = rtree.NewTree(25, 50)
+	for i, g := range c.srCache.spatialConfig.GridCells {
+		c.srCache.gridIndex.Insert(gridIndex{Polygonal: g, i: i})
+	}
+	c.srCache.aqm = aqm
+	return c.srCache.spatialConfig, c.srCache.sr, c.srCache.gridIndex, nil
 }
 
 // expandEnv expands the environment variables in v.

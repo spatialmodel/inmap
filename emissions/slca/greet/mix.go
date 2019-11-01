@@ -197,6 +197,6 @@ func (db *DB) GetMix(ID ModelID) *Mix {
 }
 
 // SpatialRef returns this spatial reference for this mix (which is NoSpatial).
-func (m *Mix) SpatialRef() *slca.SpatialRef {
-	return &slca.SpatialRef{NoSpatial: true, Type: slca.NoSpatial}
+func (m *Mix) SpatialRef(aqm string) *slca.SpatialRef {
+	return &slca.SpatialRef{NoSpatial: true, Type: slca.NoSpatial, AQM: aqm}
 }

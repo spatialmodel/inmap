@@ -44,10 +44,10 @@ func NewSpatialResults(res *Results, db *DB) *SpatialResults {
 }
 
 // Emissions gets the total spatially explicit emissions caused by life cycle sr.
-func (sr *SpatialResults) Emissions() (map[Gas]*sparse.SparseArray, error) {
+func (sr *SpatialResults) Emissions(aqm string) (map[Gas]*sparse.SparseArray, error) {
 	o := make(map[Gas]*sparse.SparseArray)
 	for _, e := range sr.Edges {
-		emis, err := sr.EdgeEmissions(e)
+		emis, err := sr.EdgeEmissions(e, aqm)
 		if err != nil {
 			return nil, err
 		}
@@ -67,10 +67,10 @@ func (sr *SpatialResults) Emissions() (map[Gas]*sparse.SparseArray, error) {
 
 // ResourceUse gets the total spatially explicit resource
 // use caused by life cycle sr.
-func (sr *SpatialResults) ResourceUse() (map[Resource]*sparse.SparseArray, error) {
+func (sr *SpatialResults) ResourceUse(aqm string) (map[Resource]*sparse.SparseArray, error) {
 	o := make(map[Resource]*sparse.SparseArray)
 	for _, e := range sr.Edges {
-		res, err := sr.EdgeResourceUse(e)
+		res, err := sr.EdgeResourceUse(e, aqm)
 		if err != nil {
 			return nil, err
 		}
@@ -90,10 +90,10 @@ func (sr *SpatialResults) ResourceUse() (map[Resource]*sparse.SparseArray, error
 
 // Concentrations gets the total change in concentrations of PM2.5 and its
 // subspecies caused by life cycle sr.
-func (sr *SpatialResults) Concentrations() (map[string]*sparse.DenseArray, error) {
+func (sr *SpatialResults) Concentrations(aqm string) (map[string]*sparse.DenseArray, error) {
 	o := make(map[string]*sparse.DenseArray)
 	for _, e := range sr.Edges {
-		conc, err := sr.EdgeConcentrations(e)
+		conc, err := sr.EdgeConcentrations(e, aqm)
 		if err != nil {
 			return nil, err
 		}
@@ -114,10 +114,10 @@ func (sr *SpatialResults) Concentrations() (map[string]*sparse.DenseArray, error
 // Health gets the total PM2.5 health impacts caused by life cycle sr.
 // The format of the output is map[population][pollutant]impacts.
 // HR specifies the function used to calculate the hazard ratio.
-func (sr *SpatialResults) Health(HR string) (map[string]map[string]*sparse.DenseArray, error) {
+func (sr *SpatialResults) Health(HR, aqm string) (map[string]map[string]*sparse.DenseArray, error) {
 	o := make(map[string]map[string]*sparse.DenseArray)
 	for _, e := range sr.Edges {
-		health, err := sr.EdgeHealth(e, HR)
+		health, err := sr.EdgeHealth(e, HR, aqm)
 		if err != nil {
 			return nil, err
 		}
@@ -140,9 +140,10 @@ func (sr *SpatialResults) Health(HR string) (map[string]map[string]*sparse.Dense
 	return o, nil
 }
 
-// EdgeEmissions returns the spatialized emissions associated with edge e.
-func (sr *SpatialResults) EdgeEmissions(e *ResultEdge) (map[SubProcess]map[Gas]*sparse.SparseArray, error) {
-	spatialSrg, err := sr.spatialize(e)
+// EdgeEmissions returns the spatialized emissions associated with edge e,
+// for the given air quality model.
+func (sr *SpatialResults) EdgeEmissions(e *ResultEdge, aqm string) (map[SubProcess]map[Gas]*sparse.SparseArray, error) {
+	spatialSrg, err := sr.spatialize(e, aqm)
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +151,7 @@ func (sr *SpatialResults) EdgeEmissions(e *ResultEdge) (map[SubProcess]map[Gas]*
 	for sp, ee := range e.FromResults.Emissions {
 		o[sp] = make(map[Gas]*sparse.SparseArray)
 		for gas, emis := range ee {
-			o[sp][gas], err = sr.db.CSTConfig.scaleFlattenSrg(spatialSrg, PM25, emis.Value())
+			o[sp][gas], err = sr.db.CSTConfig.scaleFlattenSrg(spatialSrg, aqm, PM25, emis.Value())
 			if err != nil {
 				return nil, err
 			}
@@ -160,8 +161,8 @@ func (sr *SpatialResults) EdgeEmissions(e *ResultEdge) (map[SubProcess]map[Gas]*
 }
 
 // EdgeResourceUse returns the spatialized resource use associated with edge e.
-func (sr *SpatialResults) EdgeResourceUse(e *ResultEdge) (map[SubProcess]map[Resource]*sparse.SparseArray, error) {
-	spatialSrg, err := sr.spatialize(e)
+func (sr *SpatialResults) EdgeResourceUse(e *ResultEdge, aqm string) (map[SubProcess]map[Resource]*sparse.SparseArray, error) {
+	spatialSrg, err := sr.spatialize(e, aqm)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +170,7 @@ func (sr *SpatialResults) EdgeResourceUse(e *ResultEdge) (map[SubProcess]map[Res
 	for sp, rr := range e.FromResults.Resources {
 		o[sp] = make(map[Resource]*sparse.SparseArray)
 		for res, val := range rr {
-			o[sp][res], err = sr.db.CSTConfig.scaleFlattenSrg(spatialSrg, PM25, val.Value())
+			o[sp][res], err = sr.db.CSTConfig.scaleFlattenSrg(spatialSrg, aqm, PM25, val.Value())
 			if err != nil {
 				return nil, err
 			}
@@ -178,9 +179,9 @@ func (sr *SpatialResults) EdgeResourceUse(e *ResultEdge) (map[SubProcess]map[Res
 	return o, nil
 }
 
-func (sr *SpatialResults) spatialize(e *ResultEdge) ([]*inmap.EmisRecord, error) {
+func (sr *SpatialResults) spatialize(e *ResultEdge, aqm string) ([]*inmap.EmisRecord, error) {
 	ctx := context.TODO()
-	req, err := newRequestPayload(sr, e)
+	req, err := newRequestPayload(sr, e, aqm)
 	if err != nil {
 		return nil, err
 	}
@@ -191,12 +192,12 @@ const totalPM25 = "TotalPM2_5"
 
 // EdgeConcentrations gets the change in concentrations of PM2.5 and its
 // subspecies caused by the emissions in e.
-func (sr *SpatialResults) EdgeConcentrations(e *ResultEdge) (map[SubProcess]map[string]*sparse.DenseArray, error) {
+func (sr *SpatialResults) EdgeConcentrations(e *ResultEdge, aqm string) (map[SubProcess]map[string]*sparse.DenseArray, error) {
 	ctx := context.TODO()
 
 	concs := make(map[SubProcess]map[string]*sparse.DenseArray)
 
-	req, err := newRequestPayload(sr, e)
+	req, err := newRequestPayload(sr, e, aqm)
 	if err != nil {
 		return nil, err
 	}
@@ -264,8 +265,8 @@ func (sr *SpatialResults) EdgeConcentrations(e *ResultEdge) (map[SubProcess]map[
 // It calculates the number of deaths in each demographic group caused by these
 // emissions. The format of the output is map[population][pollutant]effects.
 // HR specifies the function used to calculate the hazard ratio.
-func (sr *SpatialResults) EdgeHealth(e *ResultEdge, HR string) (map[SubProcess]map[string]map[string]*sparse.DenseArray, error) {
-	req, err := newRequestPayload(sr, e)
+func (sr *SpatialResults) EdgeHealth(e *ResultEdge, HR, aqm string) (map[SubProcess]map[string]map[string]*sparse.DenseArray, error) {
+	req, err := newRequestPayload(sr, e, aqm)
 	if err != nil {
 		return nil, err
 	}
@@ -336,12 +337,12 @@ func (sr *SpatialResults) EdgeHealth(e *ResultEdge, HR string) (map[SubProcess]m
 // emissions.
 // HR specifies the function used to calculate the hazard ratio.
 // The format of the output is map[population][pollutant]total effects.
-func (sr *SpatialResults) EdgeHealthTotals(e *ResultEdge, HR string) (map[SubProcess]map[string]map[string]float64, error) {
+func (sr *SpatialResults) EdgeHealthTotals(e *ResultEdge, HR, aqm string) (map[SubProcess]map[string]map[string]float64, error) {
 	if h, ok := sr.edgeHealthTotals[e]; ok {
 		return h, nil // Return the cached value if it exists.
 	}
 	o := make(map[SubProcess]map[string]map[string]float64)
-	health, err := sr.EdgeHealth(e, HR)
+	health, err := sr.EdgeHealth(e, HR, aqm)
 	if err != nil {
 		return nil, err
 	}
@@ -363,11 +364,11 @@ func (sr *SpatialResults) EdgeHealthTotals(e *ResultEdge, HR string) (map[SubPro
 // Less is used to implement the sort.Sort interface and returns whether
 // the health impacts of edge i are less than the health impacts of edge j.
 func (sr spatialResultsSorter) Less(i, j int) bool {
-	iHealth, err := sr.EdgeHealthTotals(sr.Edges[i], sr.hr)
+	iHealth, err := sr.EdgeHealthTotals(sr.Edges[i], sr.hr, sr.aqm)
 	if err != nil {
 		panic(err)
 	}
-	jHealth, err := sr.EdgeHealthTotals(sr.Edges[j], sr.hr)
+	jHealth, err := sr.EdgeHealthTotals(sr.Edges[j], sr.hr, sr.aqm)
 	if err != nil {
 		panic(err)
 	}
@@ -422,17 +423,19 @@ func (a getNameSorter) Less(i, j int) bool { return a[i].GetName() < a[j].GetNam
 
 type spatialResultsSorter struct {
 	*SpatialResults
-	hr string
+	hr  string
+	aqm string
 }
 
 // Table creates a table from the results, suitable for outputting to a
 // CSV file.
-// HR specifies the function used to calculate the hazard ratio.
-func (sr *SpatialResults) Table(HR string) ([][]string, error) {
+// HR specifies the function used to calculate the hazard ratio,
+// and aqm specifies the air quality model.
+func (sr *SpatialResults) Table(HR, aqm string) ([][]string, error) {
 	var out [][]string
-	sort.Sort(sort.Reverse(spatialResultsSorter{SpatialResults: sr, hr: HR}))
+	sort.Sort(sort.Reverse(spatialResultsSorter{SpatialResults: sr, hr: HR, aqm: aqm}))
 	nonHealthTotals := sr.Sum()
-	health, err := sr.Health(HR)
+	health, err := sr.Health(HR, aqm)
 	if err != nil {
 		return nil, err
 	}
@@ -525,7 +528,7 @@ func (sr *SpatialResults) Table(HR string) ([][]string, error) {
 					o = append(o, "")
 				}
 			}
-			health, err := sr.EdgeHealth(e, HR)
+			health, err := sr.EdgeHealth(e, HR, aqm)
 			if err != nil {
 				return nil, err
 			}
@@ -538,7 +541,7 @@ func (sr *SpatialResults) Table(HR string) ([][]string, error) {
 					}
 				}
 			}
-			req, err := newRequestPayload(sr, e)
+			req, err := newRequestPayload(sr, e, aqm)
 			if err != nil {
 				return nil, err
 			}

@@ -28,8 +28,8 @@ type TransportationProcess struct {
 
 // SpatialRef returns the spatial reference for the receiver.
 // TODO: Need to implement something for this.
-func (p *TransportationProcess) SpatialRef() *slca.SpatialRef {
-	return &slca.SpatialRef{Type: slca.Transportation}
+func (p *TransportationProcess) SpatialRef(aqm string) *slca.SpatialRef {
+	return &slca.SpatialRef{Type: slca.Transportation, AQM: aqm}
 }
 
 // moisture gets the moisture in the item being transported. Units = [unitless]

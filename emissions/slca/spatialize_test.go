@@ -25,8 +25,8 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/gonum/floats"
 
-	"github.com/spatialmodel/inmap/epi"
 	"github.com/spatialmodel/inmap/emissions/slca/eieio/eieiorpc"
+	"github.com/spatialmodel/inmap/epi"
 )
 
 func TestCSTConfig_EmissionsSurrogate(t *testing.T) {
@@ -52,6 +52,7 @@ func TestCSTConfig_EmissionsSurrogate(t *testing.T) {
 			ref: &SpatialRef{
 				SCCs: []SCC{"2280003010"},
 				Type: Stationary,
+				AQM:  "inmap",
 			},
 			sum: 1,
 		},
@@ -61,6 +62,7 @@ func TestCSTConfig_EmissionsSurrogate(t *testing.T) {
 				SCCs:            []SCC{"2280003010"},
 				Type:            Stationary,
 				NoNormalization: true,
+				AQM:             "inmap",
 			},
 			sum: 2.6536626364130992e+06,
 		},
@@ -71,6 +73,7 @@ func TestCSTConfig_EmissionsSurrogate(t *testing.T) {
 				SCCFractions:    []float64{0.5},
 				Type:            Stationary,
 				NoNormalization: true,
+				AQM:             "inmap",
 			},
 			sum: 2.6536626364130992e+06 / 2,
 		},
@@ -81,6 +84,7 @@ func TestCSTConfig_EmissionsSurrogate(t *testing.T) {
 				EmisYear:        2011,
 				Type:            Stationary,
 				NoNormalization: true,
+				AQM:             "inmap",
 			},
 			sum: 2.6536626364130992e+06,
 		},
@@ -134,6 +138,7 @@ func TestCSTConfig_EmissionsSurrogate_adjusted(t *testing.T) {
 			ref: &SpatialRef{
 				SCCs: []SCC{"2280003010"},
 				Type: Stationary,
+				AQM:  "inmap",
 			},
 			sum: 1,
 		},
@@ -143,6 +148,7 @@ func TestCSTConfig_EmissionsSurrogate_adjusted(t *testing.T) {
 				SCCs:            []SCC{"2280003010"},
 				Type:            Stationary,
 				NoNormalization: true,
+				AQM:             "inmap",
 			},
 			sum: 2.6536626364130992e+06 / 2,
 		},
@@ -153,6 +159,7 @@ func TestCSTConfig_EmissionsSurrogate_adjusted(t *testing.T) {
 				SCCFractions:    []float64{0.5},
 				Type:            Stationary,
 				NoNormalization: true,
+				AQM:             "inmap",
 			},
 			sum: 2.6536626364130992e+06 / 2 / 2,
 		},
@@ -163,6 +170,7 @@ func TestCSTConfig_EmissionsSurrogate_adjusted(t *testing.T) {
 				EmisYear:        2011,
 				Type:            Stationary,
 				NoNormalization: true,
+				AQM:             "inmap",
 			},
 			sum: 1.3268313182065496e+06,
 		},
@@ -210,6 +218,7 @@ func TestCSTConfig_ConcentrationSurrogate(t *testing.T) {
 			ref: &SpatialRef{
 				SCCs: []SCC{"2280003010"},
 				Type: Stationary,
+				AQM:  "inmap",
 			},
 			sum: 1.5468779703503674e-09,
 		},
@@ -219,6 +228,7 @@ func TestCSTConfig_ConcentrationSurrogate(t *testing.T) {
 				SCCs:            []SCC{"2280003010"},
 				Type:            Stationary,
 				NoNormalization: true,
+				AQM:             "inmap",
 			},
 			sum: 0.003240866726950201,
 		},
@@ -229,6 +239,7 @@ func TestCSTConfig_ConcentrationSurrogate(t *testing.T) {
 				SCCFractions:    []float64{0.5},
 				Type:            Stationary,
 				NoNormalization: true,
+				AQM:             "inmap",
 			},
 			sum: 0.003240866726950201 / 2,
 		},
@@ -239,6 +250,7 @@ func TestCSTConfig_ConcentrationSurrogate(t *testing.T) {
 				EmisYear:        2011,
 				Type:            Stationary,
 				NoNormalization: true,
+				AQM:             "inmap",
 			},
 			sum: 0.003240866726950201,
 		},
@@ -300,7 +312,7 @@ func TestCSTConfig_EvaluationConcentrations(t *testing.T) {
 		}
 		t.Run(test.name, func(t *testing.T) {
 			result, err := c.EvaluationConcentrations(context.Background(), &eieiorpc.EvaluationConcentrationsInput{
-				Year: test.year, Pollutant: eieiorpc.Pollutant_TotalPM25})
+				Year: test.year, Pollutant: eieiorpc.Pollutant_TotalPM25, AQM: "inmap"})
 			if err != nil {
 				failed = true
 				t.Fatal(err)
@@ -350,7 +362,12 @@ func TestCSTConfig_EvaluationHealth(t *testing.T) {
 		}
 		t.Run(test.name, func(t *testing.T) {
 			result, err := c.EvaluationHealth(context.Background(), &eieiorpc.EvaluationHealthInput{
-				Year: int32(test.year), HR: "NasariACS", Population: "TotalPop", Pollutant: eieiorpc.Pollutant_TotalPM25})
+				Year:       int32(test.year),
+				HR:         "NasariACS",
+				Population: "TotalPop",
+				Pollutant:  eieiorpc.Pollutant_TotalPM25,
+				AQM:        "inmap",
+			})
 			if err != nil {
 				failed = true
 				t.Fatal(err)
@@ -387,6 +404,7 @@ func TestCSTConfig_HealthSurrogate(t *testing.T) {
 				EmisYear: 2014,
 				SCCs:     []SCC{"2280003010"},
 				Type:     Stationary,
+				AQM:      "inmap",
 			},
 			sum: 3.617337147934318e-10,
 		},
@@ -397,6 +415,7 @@ func TestCSTConfig_HealthSurrogate(t *testing.T) {
 				SCCs:            []SCC{"2280003010"},
 				Type:            Stationary,
 				NoNormalization: true,
+				AQM:             "inmap",
 			},
 			sum: 0.0007516069350078184,
 		},
@@ -408,6 +427,7 @@ func TestCSTConfig_HealthSurrogate(t *testing.T) {
 				SCCFractions:    []float64{0.5},
 				Type:            Stationary,
 				NoNormalization: true,
+				AQM:             "inmap",
 			},
 			sum: 0.0003758034675039092,
 		},
@@ -418,6 +438,7 @@ func TestCSTConfig_HealthSurrogate(t *testing.T) {
 				EmisYear:        2011,
 				Type:            Stationary,
 				NoNormalization: true,
+				AQM:             "inmap",
 			},
 			sum: 0.0007516069350078184,
 		},

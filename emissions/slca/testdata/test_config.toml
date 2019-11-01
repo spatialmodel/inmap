@@ -1,4 +1,3 @@
-SRFile = "testdata/testSR.ncf"
 
 NEIBaseYear = 2014
 NEITrends = "${INMAP_ROOT_DIR}/emissions/aep/aeputil/testdata/state_tier1_90-16.xlsx"
@@ -16,6 +15,9 @@ FugitiveDustAdjustment = "testdata/fugitive_dust_adj.csv"
 # be included as population estimates in the model. They can be population
 # of different demographics or for different population scenarios.
 CensusPopColumns= ["TotalPop", "WhiteNoLat", "Black", "Native", "Asian", "Latino"]
+
+[SRFiles]
+  inmap = "testdata/testSR.ncf"
 
 # CensusFile is the path to the shapefile holding population information.
 [CensusFile]

@@ -45,6 +45,7 @@ func TestHealth(t *testing.T) {
 		Year:       2011,
 		Location:   eieiorpc.Location_Domestic,
 		HR:         "NasariACS",
+		AQM:        "isrm",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -75,6 +76,7 @@ func TestHealthMatrix(t *testing.T) {
 		Year:       2011,
 		Location:   eieiorpc.Location_Domestic,
 		HR:         "NasariACS",
+		AQM:        "isrm",
 	})
 	if err != nil {
 		t.Fatal(err)

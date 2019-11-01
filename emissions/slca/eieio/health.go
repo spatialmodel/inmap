@@ -39,6 +39,7 @@ type healthRequest struct {
 	year       Year
 	loc        Location
 	hr         epi.HRer
+	aqm        string
 }
 
 func (er *healthRequest) Key() string {
@@ -58,7 +59,7 @@ func (er *healthRequest) Key() string {
 	b5 := []byte(strconv.Itoa((int)(er.loc)))
 	bAll := append(append(append(append(append(append(b, b2...), b3...), []byte(er.pop)...), b4...), b5...), []byte(er.hr.Name())...)
 	bytes := sha256.Sum256(bAll)
-	return fmt.Sprintf("health_%x", bytes[0:sha256.Size])
+	return fmt.Sprintf("health_%s_%x", er.aqm, bytes[0:sha256.Size])
 }
 
 // Health returns spatially-explicit pollutant air quality-related health impacts caused by the
@@ -74,7 +75,7 @@ func (e *SpatialEIO) Health(ctx context.Context, request *eieiorpc.HealthInput) 
 		}
 		e.healthCache = loadCacheOnce(func(ctx context.Context, request interface{}) (interface{}, error) {
 			r := request.(*healthRequest)
-			return e.health(ctx, r.demand, r.industries, r.pol, r.pop, r.year, r.loc, r.hr) // Actually calculate the health impacts.
+			return e.health(ctx, r.demand, r.industries, r.aqm, r.pol, r.pop, r.year, r.loc, r.hr) // Actually calculate the health impacts.
 		}, 1, e.MemCacheSize, c, vectorMarshal, vectorUnmarshal)
 	})
 	hr, ok := e.hr[request.HR]
@@ -89,6 +90,7 @@ func (e *SpatialEIO) Health(ctx context.Context, request *eieiorpc.HealthInput) 
 		year:       Year(request.Year),
 		loc:        Location(request.Location),
 		hr:         hr,
+		aqm:        request.AQM,
 	}
 	rr := e.healthCache.NewRequest(ctx, req, req.Key())
 	resultI, err := rr.Result()
@@ -103,8 +105,8 @@ func (e *SpatialEIO) Health(ctx context.Context, request *eieiorpc.HealthInput) 
 // specify the emitters health impacts should be calculated for.
 // If emitters == nil, combined health impacts for all emitters are calculated.
 // Population must be one of the population types defined in the configuration file.
-func (e *SpatialEIO) health(ctx context.Context, demand *mat.VecDense, industries *Mask, pol Pollutant, pop string, year Year, loc Location, HR epi.HRer) (*mat.VecDense, error) {
-	hf, err := e.healthFactors(ctx, pol, pop, year, HR)
+func (e *SpatialEIO) health(ctx context.Context, demand *mat.VecDense, industries *Mask, aqm string, pol Pollutant, pop string, year Year, loc Location, HR epi.HRer) (*mat.VecDense, error) {
+	hf, err := e.healthFactors(ctx, aqm, pol, pop, year, HR)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +135,7 @@ func (e *SpatialEIO) HealthMatrix(ctx context.Context, request *eieiorpc.HealthM
 	if !ok {
 		return nil, fmt.Errorf("eieio: hazard ratio function `%s` is not registered", request.HR)
 	}
-	hf, err := e.healthFactors(ctx, Pollutant(request.Pollutant), request.Population, Year(request.Year), hr) // rows = grid cells, cols = industries
+	hf, err := e.healthFactors(ctx, request.AQM, Pollutant(request.Pollutant), request.Population, Year(request.Year), hr) // rows = grid cells, cols = industries
 	if err != nil {
 		return nil, err
 	}
@@ -152,22 +154,23 @@ func (e *SpatialEIO) HealthMatrix(ctx context.Context, request *eieiorpc.HealthM
 	return mat2rpc(health), nil
 }
 
-type concPolPopYearHR struct {
+type concPolPopYearHRAQM struct {
 	pol  Pollutant
 	year Year
 	pop  string
 	hr   epi.HRer
+	aqm  string
 }
 
 // healthFactors returns spatially-explicit air quality-related health impacts per unit of economic
 // production for each industry. In the result matrix, the rows represent
 // air quality model grid cells and the columns represent industries.
-func (e *SpatialEIO) healthFactors(ctx context.Context, pol Pollutant, pop string, year Year, HR epi.HRer) (*mat.Dense, error) {
+func (e *SpatialEIO) healthFactors(ctx context.Context, aqm string, pol Pollutant, pop string, year Year, HR epi.HRer) (*mat.Dense, error) {
 	e.loadHealthFactorsOnce.Do(func() {
 		e.healthFactorCache = loadCacheOnce(e.healthFactorsWorker, 1, 1, e.EIEIOCache, matrixMarshal, matrixUnmarshal)
 	})
-	key := fmt.Sprintf("healthFactors_%v_%v_%d_%s", pol, pop, year, HR.Name())
-	rr := e.healthFactorCache.NewRequest(ctx, concPolPopYearHR{pol: pol, year: year, pop: pop, hr: HR}, key)
+	key := fmt.Sprintf("healthFactors_%s_%v_%v_%d_%s", aqm, pol, pop, year, HR.Name())
+	rr := e.healthFactorCache.NewRequest(ctx, concPolPopYearHRAQM{pol: pol, year: year, pop: pop, hr: HR, aqm: aqm}, key)
 	resultI, err := rr.Result()
 	if err != nil {
 		return nil, fmt.Errorf("bea: healthFactors: %s: %v", key, err)
@@ -179,7 +182,7 @@ func (e *SpatialEIO) healthFactors(ctx context.Context, pol Pollutant, pop strin
 // production for each industry. In the result matrix, the rows represent
 // air quality model grid cells and the columns represent industries.
 func (e *SpatialEIO) healthFactorsWorker(ctx context.Context, request interface{}) (interface{}, error) {
-	polyearHR := request.(concPolPopYearHR)
+	polyearHR := request.(concPolPopYearHRAQM)
 	prod, err := e.domesticProductionSCC(polyearHR.year)
 	if err != nil {
 		return nil, err
@@ -191,6 +194,7 @@ func (e *SpatialEIO) healthFactorsWorker(ctx context.Context, request interface{
 		}
 		ref := refTemp
 		ref.EmisYear = int(polyearHR.year)
+		ref.AQM = polyearHR.aqm
 		health, err := e.CSTConfig.HealthSurrogate(ctx, &ref, polyearHR.hr.Name())
 		if err != nil {
 			return nil, err

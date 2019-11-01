@@ -99,7 +99,8 @@ func (e *SpatialEIO) domesticProductionSCC(year Year) (*mat.VecDense, error) {
 	return e.economicImpactsSCC(array2vec(demand.Data), year, Domestic)
 }
 
-type polYear struct {
+type aqmPolYear struct {
+	aqm  string
 	pol  slca.Pollutant
 	year Year
 }

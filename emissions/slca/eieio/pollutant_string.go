@@ -4,6 +4,18 @@ package eieio
 
 import "strconv"
 
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[PNH4-0]
+	_ = x[PNO3-1]
+	_ = x[PSO4-2]
+	_ = x[SOA-3]
+	_ = x[PrimaryPM25-4]
+	_ = x[TotalPM25-5]
+}
+
 const _Pollutant_name = "PNH4PNO3PSO4SOAPrimaryPM25TotalPM25"
 
 var _Pollutant_index = [...]uint8{0, 4, 8, 12, 15, 26, 35}

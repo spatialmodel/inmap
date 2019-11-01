@@ -71,7 +71,7 @@ func TestPopulationIncidence(t *testing.T) {
 	for _, test := range tests {
 		t.Run(fmt.Sprint(test.year), func(t *testing.T) {
 			p, err := c.PopulationIncidence(context.Background(), &eieiorpc.PopulationIncidenceInput{
-				Year: test.year, Population: "TotalPop", HR: "NasariACS"})
+				Year: test.year, Population: "TotalPop", HR: "NasariACS", AQM: "inmap"})
 			if err != nil {
 				t.Fatal(err)
 			}

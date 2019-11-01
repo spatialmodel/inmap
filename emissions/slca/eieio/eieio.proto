@@ -88,6 +88,7 @@ message Selection {
     Pollutant Pollutant = 9;
     Emission Emission = 10;
   }
+  string AQM = 11;
 }
 
 message Year {
@@ -112,6 +113,7 @@ message Rectangles {
 
 message GeometryInput {
   string SpatialReference = 1;
+  string AQM = 2;
 }
 
 message ColorInfo {
@@ -196,6 +198,7 @@ message ConcentrationMatrixInput {
   Pollutant Pollutant = 2;
   int32 Year = 3;
   Location Location = 4;
+  string AQM = 5;
 }
 
 message ConcentrationInput {
@@ -204,6 +207,7 @@ message ConcentrationInput {
   Pollutant Pollutant = 3;
   int32 Year = 4;
   Location Location = 5;
+  string AQM = 6;
 }
 
 
@@ -212,6 +216,7 @@ message EmissionsMatrixInput {
   Emission Emission = 2;
   int32 Year = 3;
   Location Location = 4;
+  string AQM = 5;
 }
 
 message EmissionsInput {
@@ -220,6 +225,7 @@ message EmissionsInput {
   Emission Emission = 3;
   int32 Year = 4;
   Location Location = 5;
+  string AQM = 6;
 }
 
 message HealthMatrixInput {
@@ -229,6 +235,7 @@ message HealthMatrixInput {
   int32 Year = 4;
   Location Location = 5;
   string HR = 6;
+  string AQM = 7;
 }
 
 message HealthInput {
@@ -239,6 +246,7 @@ message HealthInput {
   int32 Year = 5;
   Location Location = 6;
   string HR = 7;
+  string AQM = 8;
 }
 
 message Vector {
@@ -260,23 +268,27 @@ message EvaluationHealthInput {
   Pollutant Pollutant = 2;
   string Population = 3;
   string HR = 4;
+  string AQM = 5;
 }
 
 message EvaluationConcentrationsInput {
   int32 Year = 1;
   Pollutant Pollutant = 2;
+  string AQM = 3;
 }
 
 message ConcentrationResponseAverageInput {
   int32 Year = 1;
   string Population = 2;
   string HR = 3;
+  string AQM = 4;
 }
 
 message PopulationIncidenceInput {
   int32 Year = 1;
   string Population = 2;
   string HR = 3;
+  string AQM = 4;
 }
 
 message PopulationIncidenceOutput {

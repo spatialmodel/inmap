@@ -68,8 +68,8 @@ type Process interface {
 	Type() ProcessType
 
 	// SpatialRef returns the spatial reference information associated
-	// with the receiver.
-	SpatialRef() *SpatialRef
+	// with the receiver, for the given air quality model.
+	SpatialRef(aqm string) *SpatialRef
 
 	// GetName returns the name of the receiver.
 	GetName() string

@@ -47,7 +47,7 @@ func (c *CSTConfig) EmissionsSurrogate(ctx context.Context, pol Pollutant, spati
 	if err != nil {
 		return nil, err
 	}
-	return c.scaleFlattenSrg(recs, pol, 1)
+	return c.scaleFlattenSrg(recs, spatialRef.AQM, pol, 1)
 }
 
 // spatialSurrogate gets spatial information for a given spatial reference.
@@ -67,28 +67,24 @@ func (c *CSTConfig) spatialSurrogate(ctx context.Context, spatialRef *SpatialRef
 // spatialSurrogateWorker gets spatial information for a given spatial reference
 // request.
 func (c *CSTConfig) spatialSurrogateWorker(ctx context.Context, request interface{}) (interface{}, error) {
-	if err := c.lazyLoadSR(); err != nil { // We need the SR geometry.
-		return nil, err
-	}
-
 	spatialRef := request.(*SpatialRef)
 	switch spatialRef.Type {
 	case Stationary:
 		if spatialRef.NoSpatial {
 			// Allocate NoSpatial processes using population density
-			return c.neiSpatialSrg(populationSrg, c.DefaultFIPS)
+			return c.neiSpatialSrg(populationSrg, spatialRef.AQM, c.DefaultFIPS)
 		} else if spatialRef.Surrogate != "" {
-			return c.neiSpatialSrg(spatialRef.Surrogate, spatialRef.SurrogateFIPS)
+			return c.neiSpatialSrg(spatialRef.Surrogate, spatialRef.AQM, spatialRef.SurrogateFIPS)
 		} else if len(spatialRef.SCCs) > 0 {
 			return c.neiEmisSrg(spatialRef)
 		}
 		return nil, fmt.Errorf("in slca.spatialSurrogate: no spatial information for spatial reference %#v", spatialRef)
 	case Transportation, Vehicle:
 		// surrogate 240 is total road miles
-		return c.neiSpatialSrg("240", c.DefaultFIPS) //TODO: make proper surrogates for TransportationProcesses
+		return c.neiSpatialSrg("240", spatialRef.AQM, c.DefaultFIPS) //TODO: make proper surrogates for TransportationProcesses
 	case NoSpatial:
 		// Allocate mixes using population density
-		return c.neiSpatialSrg(populationSrg, c.DefaultFIPS)
+		return c.neiSpatialSrg(populationSrg, spatialRef.AQM, c.DefaultFIPS)
 
 	default:
 		return nil, fmt.Errorf("in slca.spatialSurrogate: unsupported Type %v", spatialRef.Type)
@@ -121,6 +117,10 @@ type SpatialRef struct {
 
 	Type ProcessType
 
+	// AQM is an identifier for the air quality model grid emissions should be
+	// allocated to.
+	AQM string
+
 	// NoNormalization specifies whether the spatial surrogate
 	// should be normalized so that its sum==1. The default is
 	// to perform normalization.
@@ -139,8 +139,12 @@ func (sr *SpatialRef) Key() string {
 
 // neiSpatialSrg creates a spatial surrogate from the spatial surrogate associated
 // with srgCode.
-func (c *CSTConfig) neiSpatialSrg(srgCode, FIPS string) ([]*inmap.EmisRecord, error) {
-	sp, err := c.SpatialConfig.SpatialProcessor()
+func (c *CSTConfig) neiSpatialSrg(srgCode, aqm, FIPS string) ([]*inmap.EmisRecord, error) {
+	spatialConfig, _, _, err := c.srSetup(aqm)
+	if err != nil {
+		return nil, err
+	}
+	sp, err := spatialConfig.SpatialProcessor()
 	if err != nil {
 		return nil, err
 	}
@@ -168,7 +172,7 @@ func (c *CSTConfig) neiSpatialSrg(srgCode, FIPS string) ([]*inmap.EmisRecord, er
 	if srg == nil {
 		return nil, fmt.Errorf("in slca.neiSpatialSrg: nil surrogate for FIPS %v in %#v", FIPS, srgSpec)
 	}
-	recs := make([]*inmap.EmisRecord, len(c.SpatialConfig.GridCells))
+	recs := make([]*inmap.EmisRecord, len(spatialConfig.GridCells))
 	for i, v := range srg.Elements {
 		recs[i] = &inmap.EmisRecord{
 			PM25: v,
@@ -176,7 +180,7 @@ func (c *CSTConfig) neiSpatialSrg(srgCode, FIPS string) ([]*inmap.EmisRecord, er
 			NOx:  v,
 			SOx:  v,
 			VOC:  v,
-			Geom: c.SpatialConfig.GridCells[i].Centroid(),
+			Geom: spatialConfig.GridCells[i].Centroid(),
 		}
 	}
 	return recs, nil
@@ -185,17 +189,18 @@ func (c *CSTConfig) neiSpatialSrg(srgCode, FIPS string) ([]*inmap.EmisRecord, er
 // neiEmisSrg creates a spatial surrogate from emissions records in the NEI
 // matching the SCCs in spatialRef.
 func (c *CSTConfig) neiEmisSrg(spatialRef *SpatialRef) ([]*inmap.EmisRecord, error) {
-	c.loadInventoryOnce.Do(func() {
-		// Initialize emissions record holder.
-		c.emis = make(map[int]map[string][]aep.RecordGridded)
-	})
-
-	sp, err := c.SpatialConfig.SpatialProcessor()
+	c.emisCache.mx.Lock()
+	defer c.emisCache.mx.Unlock()
+	spatialConfig, _, _, err := c.srSetup(spatialRef.AQM)
+	if err != nil {
+		return nil, err
+	}
+	sp, err := spatialConfig.SpatialProcessor()
 	if err != nil {
 		return nil, err
 	}
 
-	if _, ok := c.emis[spatialRef.EmisYear]; !ok {
+	if c.emisCache.aqm != spatialRef.AQM || c.emisCache.year != spatialRef.EmisYear {
 		fmt.Println("Filtering out New York State commercial cooking emissions, dog waste emissions, and human perspiration.")
 		c.InventoryConfig.FilterFunc = func(r aep.Record) bool {
 			switch r.GetSCC() {
@@ -236,14 +241,15 @@ func (c *CSTConfig) neiEmisSrg(spatialRef *SpatialRef) ([]*inmap.EmisRecord, err
 		if err != nil {
 			return nil, err
 		}
-		c.emis[spatialRef.EmisYear] = emisGridded
+		c.emisCache.emisRecords = emisGridded
+		c.emisCache.aqm = spatialRef.AQM
+		c.emisCache.year = spatialRef.EmisYear
 	}
-	emis := c.emis[spatialRef.EmisYear]
 
 	foundData := false
 	var aepRecs []aep.RecordGridded
 	for i, scc := range spatialRef.SCCs {
-		recs, ok := emis[string(scc)]
+		recs, ok := c.emisCache.emisRecords[string(scc)]
 		if ok {
 			foundData = true
 		}
@@ -325,16 +331,17 @@ const (
 // scaleFlattenSrg converts srg into a spatial array by multiplying the
 // PM2.5 emissions value in each record by scale and allocating it
 // the the grid cell(s) it falls within.
-func (c *CSTConfig) scaleFlattenSrg(srg []*inmap.EmisRecord, pol Pollutant, scale float64) (*sparse.SparseArray, error) {
-	if err := c.lazyLoadSR(); err != nil {
+func (c *CSTConfig) scaleFlattenSrg(srg []*inmap.EmisRecord, aqm string, pol Pollutant, scale float64) (*sparse.SparseArray, error) {
+	spatialConfig, _, aqmIndex, err := c.srSetup(aqm)
+	if err != nil {
 		return nil, err
 	}
-	o := sparse.ZerosSparse(len(c.SpatialConfig.GridCells))
+	o := sparse.ZerosSparse(len(spatialConfig.GridCells))
 	for _, rec := range srg {
 		if rec == nil {
 			continue
 		}
-		cells := c.gridIndex.SearchIntersect(rec.Geom.Bounds())
+		cells := aqmIndex.SearchIntersect(rec.Geom.Bounds())
 		for _, cI := range cells {
 			c := cI.(gridIndex)
 			if rec.Geom.(geom.Point).Within(c) == geom.Outside {

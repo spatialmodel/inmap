@@ -84,7 +84,7 @@ func (c *GUI) update(query string) {
 		c.selection = selectionFromQuery(query)
 	}
 	var wg sync.WaitGroup
-	wg.Add(len(c.selectionCallbacks) + 1)
+	wg.Add(len(c.selectionCallbacks) + 2)
 	go func() {
 		check(c.SetMapColors())
 		wg.Done()
@@ -95,6 +95,12 @@ func (c *GUI) update(query string) {
 			wg.Done()
 		}(i)
 	}
+
+	go func() {
+		check(c.LoadGeometry())
+		wg.Done()
+	}()
+
 	wg.Wait()
 }
 
@@ -109,6 +115,7 @@ func queryFromSelection(s eieiorpc.Selection) url.Values {
 	v.Set("dt", fmt.Sprintf("%d", s.FinalDemandType))
 	v.Set("y", fmt.Sprint(s.Year))
 	v.Set("pop", s.Population)
+	v.Set("aqm", s.AQM)
 	switch s.ImpactType {
 	case "health", "conc":
 		v.Set("pol", fmt.Sprintf("%d", s.GetPollutant()))
@@ -134,6 +141,7 @@ func selectionFromQuery(q string) eieiorpc.Selection {
 	s.EndUseSector = v.Get("ds")
 	s.EmitterGroup = v.Get("pg")
 	s.EmitterSector = v.Get("ps")
+	s.AQM = v.Get("aqm")
 	s.ImpactType = v.Get("it")
 	dt, err := strconv.ParseInt(v.Get("dt"), 10, 32)
 	check(err)
@@ -164,6 +172,7 @@ func selectionFromForm() eieiorpc.Selection {
 	s.EmitterGroup = selected("#pg")
 	s.EmitterSector = selected("#ps")
 	s.ImpactType = selected("#it")
+	s.AQM = selected("#aqm")
 	dt, err := strconv.ParseInt(selected("#dt"), 10, 32)
 	check(err)
 	s.FinalDemandType = eieiorpc.FinalDemandType(dt)
@@ -208,6 +217,7 @@ func (c *GUI) Render() vecty.ComponentOrHTML {
 							&selector{c: c, id: "it", label: "Impact type", options: c.impactTypeOptions()},
 							&selector{c: c, id: "pop", label: "Impacted population", options: c.populationOptions()},
 							&selector{c: c, id: "pol", label: "Pollutant", options: c.pollutantOptions()},
+							&selector{c: c, id: "aqm", label: "Air quality model", options: c.aqmOptions()},
 						),
 					),
 					elem.Div(vecty.Markup(prop.ID("eiolegend"))), // Div for the legend.
@@ -323,6 +333,22 @@ func (c *GUI) yearOptions() optionFunc {
 			for _, y := range years.Years {
 				sel.InsertBefore(c.createOption(fmt.Sprint(y), "", y == c.selection.Year), nil)
 			}
+		}
+	}
+}
+
+// aqmOptions returns a function that lists the available air quality models.
+func (c *GUI) aqmOptions() optionFunc {
+	return func(id string) func() {
+		return func() {
+			sel := c.doc.GetElementByID(id).(*dom.HTMLSelectElement)
+			sel.SetInnerHTML("")
+			sel.InsertBefore(c.createOption("InMAP", "isrm", "isrm" == c.selection.AQM), nil)
+			sel.InsertBefore(c.createOption("APSCA Annual", "apsca_q0", "apsca_q0" == c.selection.AQM), nil)
+			sel.InsertBefore(c.createOption("APSCA Q1", "apsca_q1", "apsca_q1" == c.selection.AQM), nil)
+			sel.InsertBefore(c.createOption("APSCA Q2", "apsca_q2", "apsca_q2" == c.selection.AQM), nil)
+			sel.InsertBefore(c.createOption("APSCA Q3", "apsca_q3", "apsca_q3" == c.selection.AQM), nil)
+			sel.InsertBefore(c.createOption("APSCA Q4", "apsca_q4", "apsca_q4" == c.selection.AQM), nil)
 		}
 	}
 }
