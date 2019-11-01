@@ -34,7 +34,11 @@ type StationaryProcess struct {
 }
 
 // SpatialRef returns the spatial reference for the receiver.
-func (p *StationaryProcess) SpatialRef() *slca.SpatialRef { return p.SpatialReference }
+func (p *StationaryProcess) SpatialRef(aqm string) *slca.SpatialRef {
+	r := *p.SpatialReference
+	r.AQM = aqm
+	return &r
+}
 
 // GetOutput gets the output (or coproduct) of this process that outputs the
 // given resource. It assumes that there is only one output or coproduct for

@@ -155,6 +155,7 @@ func TestCES(t *testing.T) {
 				Year:       2014,
 				Location:   eieiorpc.Location_Domestic,
 				HR:         "NasariACS",
+				AQM:        "isrm",
 			})
 			if err != nil {
 				t.Fatal(err)
@@ -191,6 +192,7 @@ func TestCES(t *testing.T) {
 					Year:       2014,
 					Location:   eieiorpc.Location_Domestic,
 					HR:         "NasariACS",
+					AQM:        "isrm",
 				})
 				if err != nil {
 					t.Fatal(err)

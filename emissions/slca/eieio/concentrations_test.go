@@ -72,6 +72,7 @@ func TestConcentrations(t *testing.T) {
 		Pollutant: eieiorpc.Pollutant_TotalPM25,
 		Year:      2011,
 		Location:  eieiorpc.Location_Domestic,
+		AQM:       "isrm",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -100,6 +101,7 @@ func TestConcentrationMatrix(t *testing.T) {
 		Pollutant: eieiorpc.Pollutant_TotalPM25,
 		Year:      2011,
 		Location:  eieiorpc.Location_Domestic,
+		AQM:       "isrm",
 	})
 	if err != nil {
 		t.Fatal(err)

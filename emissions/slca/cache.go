@@ -31,16 +31,16 @@ type requestPayload struct {
 	key        string
 }
 
-func newRequestPayload(sr *SpatialResults, e *ResultEdge) (*requestPayload, error) {
+func newRequestPayload(sr *SpatialResults, e *ResultEdge, aqm string) (*requestPayload, error) {
 	var key string
 	r := sr.Results
 	p := r.GetFromNode(e).Process
 	switch p.Type() {
 	case Stationary:
-		if p.SpatialRef() == nil {
+		if p.SpatialRef(aqm) == nil {
 			return nil, fmt.Errorf("stationary process %s (id=%s) has no SpatialRef", p.GetName(), p.GetIDStr())
 		}
-		key = p.SpatialRef().Key()
+		key = p.SpatialRef(aqm).Key()
 	case Transportation, Vehicle: // TODO: vehicle needs its own key.
 		key = "transportation"
 	case NoSpatial:
@@ -52,7 +52,7 @@ func newRequestPayload(sr *SpatialResults, e *ResultEdge) (*requestPayload, erro
 	return &requestPayload{
 		edge:       e,
 		results:    r,
-		spatialRef: p.SpatialRef(),
+		spatialRef: p.SpatialRef(aqm),
 		key:        key,
 	}, nil
 }

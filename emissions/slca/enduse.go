@@ -29,7 +29,7 @@ func (e endUse) Type() ProcessType { return Stationary }
 
 func (e endUse) OnsiteResults(Pathway, Output, LCADB) *OnsiteResults { return nil }
 
-func (e endUse) SpatialRef() *SpatialRef { return &SpatialRef{NoSpatial: true} }
+func (e endUse) SpatialRef(aqm string) *SpatialRef { return &SpatialRef{NoSpatial: true, AQM: aqm} }
 
 func (e endUse) GetOutput(Resource, LCADB) Output { return nil }
 func (e endUse) GetMainOutput(LCADB) Output       { return nil }

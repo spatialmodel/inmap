@@ -23,8 +23,6 @@ DefaultYear = 2011
 [SpatialEIO]
   EIEIOCache = ""
 
-  SRFile = "${INMAP_ROOT_DIR}/emissions/slca/testdata/testSR.ncf"
-
   NEIBaseYear = 2014
   NEITrends = "${INMAP_ROOT_DIR}/emissions/aep/aeputil/testdata/state_tier1_90-16.xlsx"
   SCCReference = "${INMAP_ROOT_DIR}/emissions/aep/aeputil/testdata/SCCDownload-2017-0622-080147.csv"
@@ -38,6 +36,10 @@ DefaultYear = 2011
   FugitiveDustAdjustment = "${INMAP_ROOT_DIR}/emissions/slca/testdata/fugitive_dust_adj.csv"
 
   CensusPopColumns = ["TotalPop", "WhiteNoLat", "Black", "Native", "Asian", "Latino"]
+
+  [SpatialEIO.SRFiles]
+    isrm = "${INMAP_ROOT_DIR}/emissions/slca/testdata/testSR.ncf"
+
 
   # CensusFile is the path to the shapefile holding population information.
   [SpatialEIO.CensusFile]

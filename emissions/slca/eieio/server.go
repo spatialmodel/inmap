@@ -259,6 +259,7 @@ func (s *Server) impactsMenu(ctx context.Context, selection *eieiorpc.Selection,
 			Year:        selection.Year,
 			Location:    eieiorpc.Location_Domestic,
 			HR:          "NasariACS",
+			AQM:         selection.AQM,
 		})
 	case "emis":
 		return s.SpatialEIO.Emissions(ctx, &eieiorpc.EmissionsInput{
@@ -267,6 +268,7 @@ func (s *Server) impactsMenu(ctx context.Context, selection *eieiorpc.Selection,
 			Emission: selection.GetEmission(),
 			Year:     selection.Year,
 			Location: eieiorpc.Location_Domestic,
+			AQM:      selection.AQM,
 		})
 	default:
 		return nil, fmt.Errorf("invalid impact type request: %s", selection.ImpactType)
@@ -285,7 +287,7 @@ func (s *Server) impactsMap(ctx context.Context, selection *eieiorpc.Selection, 
 	}
 	switch selection.ImpactType {
 	case "health":
-		return s.perArea(s.SpatialEIO.Health(ctx, &eieiorpc.HealthInput{
+		h, err := s.SpatialEIO.Health(ctx, &eieiorpc.HealthInput{
 			Demand:      demand,
 			EmitterMask: mask2rpc(industryMask),
 			Pollutant:   selection.GetPollutant(),
@@ -293,7 +295,9 @@ func (s *Server) impactsMap(ctx context.Context, selection *eieiorpc.Selection, 
 			Year:        selection.Year,
 			Location:    eieiorpc.Location_Domestic,
 			HR:          "NasariACS",
-		}))
+			AQM:         selection.AQM,
+		})
+		return s.perArea(h, selection.AQM, err)
 	case "conc":
 		return s.SpatialEIO.Concentrations(ctx, &eieiorpc.ConcentrationInput{
 			Demand:    demand,
@@ -301,25 +305,28 @@ func (s *Server) impactsMap(ctx context.Context, selection *eieiorpc.Selection, 
 			Pollutant: selection.GetPollutant(),
 			Year:      selection.Year,
 			Location:  eieiorpc.Location(Domestic),
+			AQM:       selection.AQM,
 		})
 	case "emis":
-		return s.perArea(s.SpatialEIO.Emissions(ctx, &eieiorpc.EmissionsInput{
+		e, err := s.SpatialEIO.Emissions(ctx, &eieiorpc.EmissionsInput{
 			Demand:   demand,
 			Emitters: mask2rpc(industryMask),
 			Emission: selection.GetEmission(),
 			Year:     selection.Year,
 			Location: eieiorpc.Location_Domestic,
-		}))
+			AQM:      selection.AQM,
+		})
+		return s.perArea(e, selection.AQM, err)
 	default:
 		return nil, fmt.Errorf("invalid impact type request: %s", selection.ImpactType)
 	}
 }
 
-func (s *Server) perArea(v *eieiorpc.Vector, err error) (*eieiorpc.Vector, error) {
+func (s *Server) perArea(v *eieiorpc.Vector, aqm string, err error) (*eieiorpc.Vector, error) {
 	if err != nil {
 		return nil, err
 	}
-	area, err := s.inverseArea()
+	area, err := s.inverseArea(aqm)
 	if err != nil {
 		return nil, err
 	}
@@ -750,7 +757,7 @@ func (s *Server) getGeometry(ctx context.Context, inputI interface{}) (interface
 		return nil, fmt.Errorf("eioserve: getting geometry: %v", err)
 	}
 
-	g, err := s.SpatialEIO.CSTConfig.Geometry()
+	g, err := s.SpatialEIO.CSTConfig.Geometry(input.AQM)
 	if err != nil {
 		return nil, fmt.Errorf("eioserve: getting geometry: %v", err)
 	}
@@ -781,7 +788,7 @@ func (s *Server) Geometry(ctx context.Context, input *eieiorpc.GeometryInput) (*
 			requestcache.MarshalGob, requestcache.UnmarshalGob)
 	})
 	keyHash := sha256.Sum256([]byte(input.SpatialReference))
-	key := fmt.Sprintf("geometry_%x", keyHash[0:sha256.Size])
+	key := fmt.Sprintf("geometry_%s_%x", input.AQM, keyHash[0:sha256.Size])
 	req := s.geomCache.NewRequest(ctx, input, key)
 	iface, err := req.Result()
 	if err != nil {
@@ -794,9 +801,9 @@ func (s *Server) Geometry(ctx context.Context, input *eieiorpc.GeometryInput) (*
 }
 
 // inverseArea returns the inverse of the area of each grid cell in km^-2.
-func (s *Server) inverseArea() (*mat.VecDense, error) {
-	f := func(ctx context.Context, requestPayload interface{}) (resultPayload interface{}, err error) {
-		g, err := s.SpatialEIO.CSTConfig.Geometry()
+func (s *Server) inverseArea(aqm string) (*mat.VecDense, error) {
+	f := func(ctx context.Context, aqmI interface{}) (resultPayload interface{}, err error) {
+		g, err := s.SpatialEIO.CSTConfig.Geometry(aqmI.(string))
 		if err != nil {
 			return nil, err
 		}
@@ -810,7 +817,7 @@ func (s *Server) inverseArea() (*mat.VecDense, error) {
 		s.areaCache = loadCacheOnce(f, 1, 1, s.SpatialEIO.EIEIOCache,
 			vectorMarshal, vectorUnmarshal)
 	})
-	req := s.areaCache.NewRequest(context.Background(), nil, "grid_area")
+	req := s.areaCache.NewRequest(context.Background(), aqm, "grid_area_"+aqm)
 	iface, err := req.Result()
 	if err != nil {
 		return nil, err
@@ -829,6 +836,7 @@ func (s *Server) DefaultSelection(ctx context.Context, in *eieiorpc.Selection) (
 		Year:            int32(s.defaultYear),
 		Population:      s.SpatialEIO.CSTConfig.CensusPopColumns[0],
 		Pol:             &eieiorpc.Selection_Pollutant{eieiorpc.Pollutant_TotalPM25},
+		AQM:             "isrm",
 	}, nil
 }
 

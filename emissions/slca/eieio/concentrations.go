@@ -37,6 +37,7 @@ type concRequest struct {
 	pol        Pollutant
 	year       Year
 	loc        Location
+	aqm        string
 }
 
 func (er *concRequest) Key() string {
@@ -56,7 +57,7 @@ func (er *concRequest) Key() string {
 	b5 := []byte(strconv.Itoa((int)(er.loc)))
 	bAll := append(append(append(append(b, b2...), b3...), b4...), b5...)
 	bytes := sha256.Sum256(bAll)
-	return fmt.Sprintf("conc_%x", bytes[0:sha256.Size])
+	return fmt.Sprintf("conc_%s_%x", er.aqm, bytes[0:sha256.Size])
 }
 
 // Concentrations returns spatially-explicit pollutant concentrations caused by the
@@ -71,7 +72,7 @@ func (e *SpatialEIO) Concentrations(ctx context.Context, request *eieiorpc.Conce
 		}
 		e.concentrationsCache = loadCacheOnce(func(ctx context.Context, request interface{}) (interface{}, error) {
 			r := request.(*concRequest)
-			return e.concentrations(ctx, r.demand, r.industries, r.pol, r.year, r.loc) // Actually calculate the concentrations.
+			return e.concentrations(ctx, r.demand, r.industries, r.aqm, r.pol, r.year, r.loc) // Actually calculate the concentrations.
 		}, 1, e.MemCacheSize, c, vectorMarshal, vectorUnmarshal)
 	})
 	req := &concRequest{
@@ -80,6 +81,7 @@ func (e *SpatialEIO) Concentrations(ctx context.Context, request *eieiorpc.Conce
 		pol:        Pollutant(request.Pollutant),
 		year:       Year(request.Year),
 		loc:        Location(request.Location),
+		aqm:        request.AQM,
 	}
 	rr := e.concentrationsCache.NewRequest(ctx, req, req.Key())
 	resultI, err := rr.Result()
@@ -93,8 +95,8 @@ func (e *SpatialEIO) Concentrations(ctx context.Context, request *eieiorpc.Conce
 // specified economic demand. industries
 // specifies the industries emissions should be calculated for.
 // If industries == nil, combined emissions for all industries are calculated.
-func (e *SpatialEIO) concentrations(ctx context.Context, demand *mat.VecDense, industries *Mask, pol Pollutant, year Year, loc Location) (*mat.VecDense, error) {
-	cf, err := e.concentrationFactors(ctx, pol, year)
+func (e *SpatialEIO) concentrations(ctx context.Context, demand *mat.VecDense, industries *Mask, aqm string, pol Pollutant, year Year, loc Location) (*mat.VecDense, error) {
+	cf, err := e.concentrationFactors(ctx, aqm, pol, year)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +121,7 @@ func (e *SpatialEIO) concentrations(ctx context.Context, demand *mat.VecDense, i
 // specified economic demand. In the result matrix, the rows represent air quality
 // model grid cells and the columns represent emitters.
 func (e *SpatialEIO) ConcentrationMatrix(ctx context.Context, request *eieiorpc.ConcentrationMatrixInput) (*eieiorpc.Matrix, error) {
-	cf, err := e.concentrationFactors(ctx, Pollutant(request.Pollutant), Year(request.Year)) // rows = grid cells, cols = industries
+	cf, err := e.concentrationFactors(ctx, request.AQM, Pollutant(request.Pollutant), Year(request.Year)) // rows = grid cells, cols = industries
 	if err != nil {
 		return nil, err
 	}
@@ -153,9 +155,10 @@ const (
 	TotalPM25
 )
 
-type concPolYear struct {
+type concAQMPolYear struct {
 	pol  Pollutant
 	year Year
+	aqm  string
 }
 
 // loadCacheOnce inititalizes a request cache.
@@ -185,12 +188,12 @@ func loadCacheOnce(f requestcache.ProcessFunc, workers, memCacheSize int, cacheL
 // concentrationFactors returns spatially-explicit pollutant concentrations per unit of economic
 // production for each industry. In the result matrix, the rows represent
 // air quality model grid cells and the columns represent industries.
-func (e *SpatialEIO) concentrationFactors(ctx context.Context, pol Pollutant, year Year) (*mat.Dense, error) {
+func (e *SpatialEIO) concentrationFactors(ctx context.Context, aqm string, pol Pollutant, year Year) (*mat.Dense, error) {
 	e.loadConcOnce.Do(func() {
 		e.concentrationFactorCache = loadCacheOnce(e.concentrationFactorsWorker, 1, 1, e.EIEIOCache, matrixMarshal, matrixUnmarshal)
 	})
-	key := fmt.Sprintf("concentrationFactors_%v_%d", pol, year)
-	rr := e.concentrationFactorCache.NewRequest(ctx, concPolYear{pol: pol, year: year}, key)
+	key := fmt.Sprintf("concentrationFactors_%s_%v_%d", aqm, pol, year)
+	rr := e.concentrationFactorCache.NewRequest(ctx, concAQMPolYear{aqm: aqm, pol: pol, year: year}, key)
 	resultI, err := rr.Result()
 	if err != nil {
 		return nil, fmt.Errorf("eieio.concentrationFactors: %s, %v", key, err)
@@ -202,8 +205,8 @@ func (e *SpatialEIO) concentrationFactors(ctx context.Context, pol Pollutant, ye
 // production for each industry. In the result matrix, the rows represent
 // air quality model grid cells and the columns represent industries.
 func (e *SpatialEIO) concentrationFactorsWorker(ctx context.Context, request interface{}) (interface{}, error) {
-	polyear := request.(concPolYear)
-	prod, err := e.domesticProductionSCC(polyear.year)
+	aqmPolyear := request.(concAQMPolYear)
+	prod, err := e.domesticProductionSCC(aqmPolyear.year)
 	if err != nil {
 		return nil, err
 	}
@@ -213,13 +216,14 @@ func (e *SpatialEIO) concentrationFactorsWorker(ctx context.Context, request int
 			return nil, fmt.Errorf("bea: industry %d; no SCCs", i)
 		}
 		ref := refTemp
-		ref.EmisYear = int(polyear.year)
+		ref.EmisYear = int(aqmPolyear.year)
+		ref.AQM = aqmPolyear.aqm
 		concentrations, err := e.CSTConfig.ConcentrationSurrogate(ctx, &ref)
 		if err != nil {
 			return nil, err
 		}
 		var industryConc []float64
-		switch polyear.pol {
+		switch aqmPolyear.pol {
 		case PNH4:
 			industryConc = concentrations.PNH4
 		case PNO3:
@@ -233,7 +237,7 @@ func (e *SpatialEIO) concentrationFactorsWorker(ctx context.Context, request int
 		case TotalPM25:
 			industryConc = concentrations.TotalPM25()
 		default:
-			return nil, fmt.Errorf("eieio.concentrations: invalid pollutant %v", polyear.pol)
+			return nil, fmt.Errorf("eieio.concentrations: invalid pollutant %v", aqmPolyear.pol)
 		}
 		if i == 0 {
 			concFac = mat.NewDense(len(industryConc), len(e.SpatialRefs), nil)

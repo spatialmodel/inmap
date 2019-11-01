@@ -4,6 +4,15 @@ package eieio
 
 import "strconv"
 
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[Domestic-0]
+	_ = x[Imported-1]
+	_ = x[Total-2]
+}
+
 const _Location_name = "DomesticImportedTotal"
 
 var _Location_index = [...]uint8{0, 8, 16, 21}

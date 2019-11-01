@@ -22,7 +22,6 @@ DefaultYear = 2014
 [SpatialEIO]
   EIEIOCache = "${SLCASpatialCache}/bea"
 
-  SRFile = "${ISRM}"
   SRCacheSize = 480000 # This will take about 100GB of RAM. Reduce the number to decrease RAM requirements.
 
   CensusPopColumns = ["all", "white", "latino", "native", "asian", "black"]
@@ -42,6 +41,14 @@ DefaultYear = 2014
   AdditionalEmissionsShapefilesForEvaluation = [
     "${evaldata}/2005_emissions/bioFireEmis.shp",
   ]
+  [SpatialEIO.SRFiles]
+    isrm = "/data/isrmv121/isrm_v1.2.1.ncf"
+    apsca_q0 = "/data/apsca/apsca_sr_Q0_v1.2.1.ncf"
+    apsca_q1 = "/data/apsca/apsca_sr_Q1_v1.2.1.ncf"
+    apsca_q2 = "/data/apsca/apsca_sr_Q2_v1.2.1.ncf"
+    apsca_q3 = "/data/apsca/apsca_sr_Q3_v1.2.1.ncf"
+    apsca_q4 = "/data/apsca/apsca_sr_Q4_v1.2.1.ncf"
+
 
 [SpatialEIO.CensusFile]
   2000 = "${POP_MORT_DATA}/pop/pop_2000.shp"
@@ -49,7 +56,7 @@ DefaultYear = 2014
   2008 = "${POP_MORT_DATA}/pop/pop_2008.shp"
   2009 = "${POP_MORT_DATA}/pop/pop_2009.shp"
   2010 = "${POP_MORT_DATA}/pop/pop_2010.shp"
-  #2011 = "${POP_MORT_DATA}/pop/pop_2011.shp"
+  2011 = "${POP_MORT_DATA}/pop/pop_2011.shp"
   2012 = "${POP_MORT_DATA}/pop/pop_2012.shp"
   2013 = "${POP_MORT_DATA}/pop/pop_2013.shp"
   2014 = "${POP_MORT_DATA}/pop/pop_2014.shp"

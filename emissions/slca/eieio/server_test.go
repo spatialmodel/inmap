@@ -95,6 +95,7 @@ func TestServer_grpc(t *testing.T) {
 				FinalDemandType: eieiorpc.FinalDemandType_AllDemand,
 				Year:            2011,
 				Pol:             &eieiorpc.Selection_Pollutant{eieiorpc.Pollutant_TotalPM25},
+				AQM:             "isrm",
 			},
 			selectors: &eieiorpc.Selectors{
 				Names:  []string{"All", "Food", "Goods", "Transportation", "Services", "Shelter", "Information and Entertainment", "Electricity"},
@@ -114,6 +115,7 @@ func TestServer_grpc(t *testing.T) {
 				FinalDemandType: eieiorpc.FinalDemandType_AllDemand,
 				Year:            2011,
 				Pol:             &eieiorpc.Selection_Pollutant{eieiorpc.Pollutant_TotalPM25},
+				AQM:             "isrm",
 			},
 			selectors: &eieiorpc.Selectors{
 				Names:  []string{"All"},
@@ -133,6 +135,7 @@ func TestServer_grpc(t *testing.T) {
 				FinalDemandType: eieiorpc.FinalDemandType_AllDemand,
 				Year:            2011,
 				Pol:             &eieiorpc.Selection_Pollutant{eieiorpc.Pollutant_TotalPM25},
+				AQM:             "isrm",
 			},
 			selectors: &eieiorpc.Selectors{
 				Names:  []string{"All", "Electric power generation, transmission, and distribution"},
@@ -151,6 +154,7 @@ func TestServer_grpc(t *testing.T) {
 				FinalDemandType: eieiorpc.FinalDemandType_AllDemand,
 				Year:            2011,
 				Pol:             &eieiorpc.Selection_Emission{eieiorpc.Emission_PM25},
+				AQM:             "isrm",
 			},
 			selectors: &eieiorpc.Selectors{
 				Names: []string{"All", "Other Industrial Processes", "Industrial Fuel Comb.",
@@ -173,6 +177,7 @@ func TestServer_grpc(t *testing.T) {
 				FinalDemandType: eieiorpc.FinalDemandType_AllDemand,
 				Year:            2011,
 				Pol:             &eieiorpc.Selection_Emission{eieiorpc.Emission_PM25},
+				AQM:             "isrm",
 			},
 			selectors: &eieiorpc.Selectors{
 				Codes:  []string{"All"},
@@ -192,6 +197,7 @@ func TestServer_grpc(t *testing.T) {
 				FinalDemandType: eieiorpc.FinalDemandType_AllDemand,
 				Year:            2011,
 				Pol:             &eieiorpc.Selection_Emission{eieiorpc.Emission_PM25},
+				AQM:             "isrm",
 			},
 			selectors: &eieiorpc.Selectors{
 				Codes: []string{"All", "0030501403", "0030500505", "0030500622", "0030501062", "0030501207", "0030500310",
@@ -228,6 +234,7 @@ func TestServer_grpc(t *testing.T) {
 	t.Run("Geometry", func(t *testing.T) {
 		r, err := s.getGeometry(context.Background(), &eieiorpc.GeometryInput{
 			SpatialReference: "+proj=longlat",
+			AQM:              "isrm",
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -339,6 +346,7 @@ func TestServer_grpc(t *testing.T) {
 					Year:            2011,
 					Pol:             &eieiorpc.Selection_Pollutant{eieiorpc.Pollutant_TotalPM25},
 					Population:      "TotalPop",
+					AQM:             "isrm",
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -365,6 +373,7 @@ func TestServer_grpc(t *testing.T) {
 			Year:            2011,
 			Population:      "TotalPop",
 			Pol:             &eieiorpc.Selection_Pollutant{eieiorpc.Pollutant_TotalPM25},
+			AQM:             "isrm",
 		}
 		if !reflect.DeepEqual(ds, want) {
 			t.Errorf("%+v != %+v", ds, want)
@@ -396,5 +405,4 @@ func TestServer_grpc(t *testing.T) {
 			t.Errorf("%+v != %+v", y, want)
 		}
 	})
-
 }

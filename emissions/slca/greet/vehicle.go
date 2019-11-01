@@ -87,7 +87,9 @@ type Vehicle struct {
 
 // SpatialRef returns the spatial reference for the receiver.
 // TODO: Need to implement something for this.
-func (v *Vehicle) SpatialRef() *slca.SpatialRef { return &slca.SpatialRef{Type: slca.Vehicle} }
+func (v *Vehicle) SpatialRef(aqm string) *slca.SpatialRef {
+	return &slca.SpatialRef{Type: slca.Vehicle, AQM: aqm}
+}
 
 // GetName returns the name of this vehicle.
 func (v *Vehicle) GetName() string {

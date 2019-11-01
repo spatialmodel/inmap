@@ -43,6 +43,7 @@ func TestEmissions(t *testing.T) {
 		Emission: eieiorpc.Emission_PM25,
 		Year:     2011,
 		Location: eieiorpc.Location_Domestic,
+		AQM:      "isrm",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -73,6 +74,7 @@ func TestEmissionsMatrix(t *testing.T) {
 		Emission: eieiorpc.Emission_PM25,
 		Year:     2011,
 		Location: eieiorpc.Location_Domestic,
+		AQM:      "isrm",
 	})
 	if err != nil {
 		t.Fatal(err)

@@ -100,16 +100,17 @@ func (c *CSTConfig) ConcentrationSurrogate(ctx context.Context, spatialRef *Spat
 // inMAPSurrogate calculates the impact of each type of
 // emissions from request.
 func (c *CSTConfig) inMAPSurrogate(ctx context.Context, request interface{}) (interface{}, error) {
-	if err := c.lazyLoadSR(); err != nil {
+	r := request.(*SpatialRef)
+	_, srReader, _, err := c.srSetup(r.AQM)
+	if err != nil {
 		return nil, err
 	}
-	r := request.(*SpatialRef)
 	// Get the spatial surrogate.
 	emis, err := c.spatialSurrogate(ctx, r)
 	if err != nil {
 		return nil, err
 	}
-	conc, err := c.sr.Concentrations(emis...)
+	conc, err := srReader.Concentrations(emis...)
 	if err != nil {
 		if _, ok := err.(sr.AboveTopErr); !ok {
 			return nil, err
@@ -142,10 +143,6 @@ func (c *CSTConfig) HealthSurrogate(ctx context.Context, spatialRef *SpatialRef,
 // healthSurrogate calculates the health impact of 1 kg/year of each type of
 // emissions from request. Output format = map[popType][pol]values
 func (c *CSTConfig) healthSurrogate(ctx context.Context, request interface{}) (interface{}, error) {
-	if err := c.lazyLoadSR(); err != nil {
-		return nil, err
-	}
-
 	health := make(map[string]map[string]*sparse.DenseArray)
 	req := request.(sRHR)
 	// The inmapSurrogate contains PM2.5 impacts of this SpatialRef.
@@ -160,7 +157,7 @@ func (c *CSTConfig) healthSurrogate(ctx context.Context, request interface{}) (i
 
 	for _, popType := range c.CensusPopColumns {
 		pop, err := c.PopulationIncidence(ctx, &eieiorpc.PopulationIncidenceInput{
-			Year: int32(req.sr.EmisYear), Population: popType, HR: req.hr})
+			Year: int32(req.sr.EmisYear), Population: popType, HR: req.hr, AQM: req.sr.AQM})
 		if err != nil {
 			return nil, err
 		}
@@ -168,6 +165,7 @@ func (c *CSTConfig) healthSurrogate(ctx context.Context, request interface{}) (i
 			Year:       int32(req.sr.EmisYear),
 			Population: popType,
 			HR:         req.hr,
+			AQM:        req.sr.AQM,
 		})
 		if err != nil {
 			return nil, err
@@ -208,8 +206,9 @@ func (c *CSTConfig) ConcentrationResponseAverage(ctx context.Context, request *e
 		year    int
 		popType string
 		hr      string
-	}{year: int(request.Year), popType: request.Population, hr: request.HR},
-		fmt.Sprintf("concentrationResponse_%s_%d_%s", request.Population, request.Year, request.HR))
+		aqm     string
+	}{year: int(request.Year), popType: request.Population, hr: request.HR, aqm: request.AQM},
+		fmt.Sprintf("concentrationResponse_%s_%d_%s_%s", request.Population, request.Year, request.HR, request.AQM))
 
 	result, err := r.Result()
 	if err != nil {
@@ -221,17 +220,19 @@ func (c *CSTConfig) ConcentrationResponseAverage(ctx context.Context, request *e
 // concentrationResponseAverageWorker calculates the average concentration response
 // for PM2.5 (deaths per year per ug/m3 per capita) for a non-linear concentration-
 // response function.
-func (c *CSTConfig) concentrationResponseAverageWorker(ctx context.Context, yearPopTypeI interface{}) (interface{}, error) {
-	ypt := yearPopTypeI.(struct {
+func (c *CSTConfig) concentrationResponseAverageWorker(ctx context.Context, yearPopTypeAQMI interface{}) (interface{}, error) {
+	yptaqm := yearPopTypeAQMI.(struct {
 		year    int
 		popType string
 		hr      string
+		aqm     string
 	})
-	HR, ok := c.hr[ypt.hr]
+	HR, ok := c.hr[yptaqm.hr]
 	if !ok {
-		return nil, fmt.Errorf("slca.CSTConfig: hazard ratio `%s` has not been registered", ypt.hr)
+		return nil, fmt.Errorf("slca.CSTConfig: hazard ratio `%s` has not been registered", yptaqm.hr)
 	}
-	r := c.evalConcRequestCache.NewRequest(ctx, ypt.year, fmt.Sprintf("evaluation_%d", ypt.year))
+	r := c.evalConcRequestCache.NewRequest(ctx, aqmYear{aqm: yptaqm.aqm, year: yptaqm.year},
+		fmt.Sprintf("evaluation_%s_%d", yptaqm.aqm, yptaqm.year))
 	result, err := r.Result()
 	if err != nil {
 		return nil, err
@@ -249,7 +250,7 @@ func (c *CSTConfig) concentrationResponseAverageWorker(ctx context.Context, year
 	conc := concentrations.TotalPM25()
 	o := make([]float64, len(conc))
 	io, err := c.PopulationIncidence(ctx, &eieiorpc.PopulationIncidenceInput{
-		Year: int32(ypt.year), Population: ypt.popType, HR: ypt.hr})
+		Year: int32(yptaqm.year), Population: yptaqm.popType, HR: yptaqm.hr, AQM: yptaqm.aqm})
 	if err != nil {
 		return nil, err
 	}
@@ -262,13 +263,14 @@ func (c *CSTConfig) concentrationResponseAverageWorker(ctx context.Context, year
 
 // EvaluationEmissions returns an array of emissions records calculated using
 // the EvaluationInventoryConfig and AdditionalEmissionsShapefilesForEvaluation
-// fields of the receiver, adjusting emissions to the specified year.
-func (c *CSTConfig) EvaluationEmissions(ctx context.Context, year int) ([]*inmap.EmisRecord, error) {
+// fields of the receiver, adjusting emissions to the specified year and
+// gridding them to match the specified air quality model (aqm).
+func (c *CSTConfig) EvaluationEmissions(ctx context.Context, aqm string, year int) ([]*inmap.EmisRecord, error) {
 	c.loadEvalEmisOnce.Do(func() {
 		c.evalEmisRequestCache = loadCacheOnce(c.evaluationEmissions, 1, 1, c.SpatialCache,
 			requestcache.MarshalGob, requestcache.UnmarshalGob)
 	})
-	r := c.evalEmisRequestCache.NewRequest(ctx, year, fmt.Sprintf("evaluation_%d", year))
+	r := c.evalEmisRequestCache.NewRequest(ctx, aqmYear{aqm: aqm, year: year}, fmt.Sprintf("evaluation_%s_%d", aqm, year))
 	result, err := r.Result()
 	if err != nil {
 		return nil, err
@@ -284,7 +286,8 @@ func (c *CSTConfig) EvaluationConcentrations(ctx context.Context, request *eieio
 		c.evalConcRequestCache = loadCacheOnce(c.inMAPEval, 1, 1, c.ConcentrationCache,
 			requestcache.MarshalGob, requestcache.UnmarshalGob)
 	})
-	r := c.evalConcRequestCache.NewRequest(ctx, int(request.Year), fmt.Sprintf("evaluation_%d", request.Year))
+	r := c.evalConcRequestCache.NewRequest(ctx, aqmYear{aqm: request.AQM, year: int(request.Year)},
+		fmt.Sprintf("evaluationConc_%s_%d", request.AQM, request.Year))
 	result, err := r.Result()
 	if err != nil {
 		return nil, err
@@ -328,9 +331,10 @@ func (c *CSTConfig) EvaluationHealth(ctx context.Context, request *eieiorpc.Eval
 			requestcache.MarshalGob, requestcache.UnmarshalGob)
 	})
 	r := c.evalHealthRequestCache.NewRequest(ctx, struct {
+		aqm  string
 		year int
 		hr   string
-	}{year: int(request.Year), hr: request.HR}, fmt.Sprintf("evaluation_%d_%s", request.Year, request.HR))
+	}{year: int(request.Year), hr: request.HR, aqm: request.AQM}, fmt.Sprintf("evaluationHealth_%s_%d_%s", request.AQM, request.Year, request.HR))
 	result, err := r.Result()
 	if err != nil {
 		return nil, err
@@ -363,19 +367,20 @@ func (c *CSTConfig) EvaluationHealth(ctx context.Context, request *eieiorpc.Eval
 	return &eieiorpc.Vector{Data: r3.Elements}, nil
 }
 
+type aqmYear struct {
+	aqm  string
+	year int
+}
+
 // evaluationEmissions returns an array of emissions calculated using
 // the EvaluationInventoryConfig and AdditionalEmissionsShapefilesForEvaluation
 // fields of the receiver, adjusting emissions to the specified year.
-func (c *CSTConfig) evaluationEmissions(ctx context.Context, yearI interface{}) (interface{}, error) {
+func (c *CSTConfig) evaluationEmissions(ctx context.Context, aqmYearI interface{}) (interface{}, error) {
 	VOC, NOx, NH3, SOx, PM25, err := inmapPols(c.EvaluationInventoryConfig.PolsToKeep)
 	if err != nil {
 		return nil, err
 	}
-
-	if err = c.lazyLoadSR(); err != nil {
-		return nil, err
-	}
-	year := yearI.(int)
+	req := aqmYearI.(aqmYear)
 
 	fmt.Println("Filtering out New York State commercial cooking emissions, dog waste emissions, and human perspiration.")
 	c.EvaluationInventoryConfig.FilterFunc = func(r aep.Record) bool {
@@ -402,8 +407,8 @@ func (c *CSTConfig) evaluationEmissions(ctx context.Context, yearI interface{}) 
 	if err != nil {
 		return nil, fmt.Errorf("slca: opening SCCReference: %v", err)
 	}
-	if c.NEIBaseYear != 0 && year != 0 {
-		emisScale, err := aeputil.ScaleNEIStateTrends(c.NEITrends, f, c.NEIBaseYear, year)
+	if c.NEIBaseYear != 0 && req.year != 0 {
+		emisScale, err := aeputil.ScaleNEIStateTrends(c.NEITrends, f, c.NEIBaseYear, req.year)
 		if err != nil {
 			return nil, fmt.Errorf("slca: Scaling NEI emissions: %v", err)
 		}
@@ -412,7 +417,12 @@ func (c *CSTConfig) evaluationEmissions(ctx context.Context, yearI interface{}) 
 		}
 	}
 
-	sp, err := c.SpatialConfig.SpatialProcessor()
+	spatialConfig, _, _, err := c.srSetup(req.aqm)
+	if err != nil {
+		return nil, err
+	}
+
+	sp, err := spatialConfig.SpatialProcessor()
 	if err != nil {
 		return nil, err
 	}
@@ -430,7 +440,7 @@ func (c *CSTConfig) evaluationEmissions(ctx context.Context, yearI interface{}) 
 	if err != nil {
 		return nil, err
 	}
-	gridSR, err := proj.Parse(c.SpatialConfig.OutputSR)
+	gridSR, err := proj.Parse(spatialConfig.OutputSR)
 	if err != nil {
 		return nil, err
 	}
@@ -446,17 +456,20 @@ func (c *CSTConfig) evaluationEmissions(ctx context.Context, yearI interface{}) 
 // inMAPEval returns an array of emissions calculated using
 // the EvaluationInventoryConfig and AdditionalEmissionsShapefilesForEvaluation
 // fields of the receiver, adjusting emissions to the specified year.
-func (c *CSTConfig) inMAPEval(ctx context.Context, yearI interface{}) (interface{}, error) {
-	if err := c.lazyLoadSR(); err != nil {
-		return nil, err
-	}
+func (c *CSTConfig) inMAPEval(ctx context.Context, aqmYearI interface{}) (interface{}, error) {
+	req := aqmYearI.(aqmYear)
 
-	spatialEmis, err := c.EvaluationEmissions(ctx, yearI.(int))
+	spatialEmis, err := c.EvaluationEmissions(ctx, req.aqm, req.year)
 	if err != nil {
 		return nil, err
 	}
 
-	conc, err := c.sr.Concentrations(spatialEmis...)
+	_, srMatrix, _, err := c.srSetup(req.aqm)
+	if err != nil {
+		return nil, err
+	}
+
+	conc, err := srMatrix.Concentrations(spatialEmis...)
 	if err != nil {
 		if _, ok := err.(sr.AboveTopErr); !ok {
 			return nil, err
@@ -469,13 +482,10 @@ func (c *CSTConfig) inMAPEval(ctx context.Context, yearI interface{}) (interface
 // the EvaluationInventoryConfig and AdditionalEmissionsShapefilesForEvaluation
 // fields of the receiver, adjusting emissions to the specified year.
 // Output format = map[popType][pol]values
-func (c *CSTConfig) evaluationHealth(ctx context.Context, yearHRI interface{}) (interface{}, error) {
-	if err := c.lazyLoadSR(); err != nil {
-		return nil, err
-	}
-
+func (c *CSTConfig) evaluationHealth(ctx context.Context, aqmYearHRI interface{}) (interface{}, error) {
 	health := make(map[string]map[string]*sparse.DenseArray)
-	yearHR := yearHRI.(struct {
+	aqmYearHR := aqmYearHRI.(struct {
+		aqm  string
 		year int
 		hr   string
 	})
@@ -485,7 +495,8 @@ func (c *CSTConfig) evaluationHealth(ctx context.Context, yearHRI interface{}) (
 		c.evalConcRequestCache = loadCacheOnce(c.inMAPEval, 1, 1, c.ConcentrationCache,
 			requestcache.MarshalGob, requestcache.UnmarshalGob)
 	})
-	r := c.evalConcRequestCache.NewRequest(ctx, yearHR.year, fmt.Sprintf("evaluation_%d", yearHR.year))
+	r := c.evalConcRequestCache.NewRequest(ctx, aqmYear{aqm: aqmYearHR.aqm, year: aqmYearHR.year},
+		fmt.Sprintf("evaluationConc_%s_%d", aqmYearHR.aqm, aqmYearHR.year))
 	result, err := r.Result()
 	if err != nil {
 		return nil, err
@@ -507,14 +518,19 @@ func (c *CSTConfig) evaluationHealth(ctx context.Context, yearHRI interface{}) (
 
 	for _, popType := range c.CensusPopColumns {
 		pop, err := c.PopulationIncidence(ctx, &eieiorpc.PopulationIncidenceInput{
-			Year: int32(yearHR.year), Population: popType, HR: yearHR.hr})
+			AQM:        aqmYearHR.aqm,
+			Year:       int32(aqmYearHR.year),
+			Population: popType,
+			HR:         aqmYearHR.hr},
+		)
 		if err != nil {
 			return nil, err
 		}
 		cr, err := c.ConcentrationResponseAverage(ctx, &eieiorpc.ConcentrationResponseAverageInput{
-			Year:       int32(yearHR.year),
+			AQM:        aqmYearHR.aqm,
+			Year:       int32(aqmYearHR.year),
 			Population: popType,
-			HR:         yearHR.hr,
+			HR:         aqmYearHR.hr,
 		})
 		if err != nil {
 			return nil, err

@@ -472,6 +472,7 @@ type Selection struct {
 	//	*Selection_Pollutant
 	//	*Selection_Emission
 	Pol isSelection_Pol
+	AQM string
 }
 
 // isSelection_Pol is used to distinguish types assignable to Pol
@@ -578,6 +579,14 @@ func (m *Selection) GetEmission() (x Emission) {
 	return x
 }
 
+// GetAQM gets the AQM of the Selection.
+func (m *Selection) GetAQM() (x string) {
+	if m == nil {
+		return x
+	}
+	return m.AQM
+}
+
 // MarshalToWriter marshals Selection to the provided writer.
 func (m *Selection) MarshalToWriter(writer jspb.Writer) {
 	if m == nil {
@@ -627,6 +636,10 @@ func (m *Selection) MarshalToWriter(writer jspb.Writer) {
 		writer.WriteString(8, m.Population)
 	}
 
+	if len(m.AQM) > 0 {
+		writer.WriteString(11, m.AQM)
+	}
+
 	return
 }
 
@@ -669,6 +682,8 @@ func (m *Selection) UnmarshalFromReader(reader jspb.Reader) *Selection {
 			m.Pol = &Selection_Emission{
 				Emission: Emission(reader.ReadEnum()),
 			}
+		case 11:
+			m.AQM = reader.ReadString()
 		default:
 			reader.SkipField()
 		}
@@ -1024,6 +1039,7 @@ func (m *Rectangles) Unmarshal(rawBytes []byte) (*Rectangles, error) {
 
 type GeometryInput struct {
 	SpatialReference string
+	AQM              string
 }
 
 // GetSpatialReference gets the SpatialReference of the GeometryInput.
@@ -1034,6 +1050,14 @@ func (m *GeometryInput) GetSpatialReference() (x string) {
 	return m.SpatialReference
 }
 
+// GetAQM gets the AQM of the GeometryInput.
+func (m *GeometryInput) GetAQM() (x string) {
+	if m == nil {
+		return x
+	}
+	return m.AQM
+}
+
 // MarshalToWriter marshals GeometryInput to the provided writer.
 func (m *GeometryInput) MarshalToWriter(writer jspb.Writer) {
 	if m == nil {
@@ -1042,6 +1066,10 @@ func (m *GeometryInput) MarshalToWriter(writer jspb.Writer) {
 
 	if len(m.SpatialReference) > 0 {
 		writer.WriteString(1, m.SpatialReference)
+	}
+
+	if len(m.AQM) > 0 {
+		writer.WriteString(2, m.AQM)
 	}
 
 	return
@@ -1064,6 +1092,8 @@ func (m *GeometryInput) UnmarshalFromReader(reader jspb.Reader) *GeometryInput {
 		switch reader.GetFieldNumber() {
 		case 1:
 			m.SpatialReference = reader.ReadString()
+		case 2:
+			m.AQM = reader.ReadString()
 		default:
 			reader.SkipField()
 		}
@@ -1377,6 +1407,7 @@ type ConcentrationMatrixInput struct {
 	Pollutant Pollutant
 	Year      int32
 	Location  Location
+	AQM       string
 }
 
 // GetDemand gets the Demand of the ConcentrationMatrixInput.
@@ -1411,6 +1442,14 @@ func (m *ConcentrationMatrixInput) GetLocation() (x Location) {
 	return m.Location
 }
 
+// GetAQM gets the AQM of the ConcentrationMatrixInput.
+func (m *ConcentrationMatrixInput) GetAQM() (x string) {
+	if m == nil {
+		return x
+	}
+	return m.AQM
+}
+
 // MarshalToWriter marshals ConcentrationMatrixInput to the provided writer.
 func (m *ConcentrationMatrixInput) MarshalToWriter(writer jspb.Writer) {
 	if m == nil {
@@ -1433,6 +1472,10 @@ func (m *ConcentrationMatrixInput) MarshalToWriter(writer jspb.Writer) {
 
 	if int(m.Location) != 0 {
 		writer.WriteEnum(4, int(m.Location))
+	}
+
+	if len(m.AQM) > 0 {
+		writer.WriteString(5, m.AQM)
 	}
 
 	return
@@ -1463,6 +1506,8 @@ func (m *ConcentrationMatrixInput) UnmarshalFromReader(reader jspb.Reader) *Conc
 			m.Year = reader.ReadInt32()
 		case 4:
 			m.Location = Location(reader.ReadEnum())
+		case 5:
+			m.AQM = reader.ReadString()
 		default:
 			reader.SkipField()
 		}
@@ -1490,6 +1535,7 @@ type ConcentrationInput struct {
 	Pollutant Pollutant
 	Year      int32
 	Location  Location
+	AQM       string
 }
 
 // GetDemand gets the Demand of the ConcentrationInput.
@@ -1532,6 +1578,14 @@ func (m *ConcentrationInput) GetLocation() (x Location) {
 	return m.Location
 }
 
+// GetAQM gets the AQM of the ConcentrationInput.
+func (m *ConcentrationInput) GetAQM() (x string) {
+	if m == nil {
+		return x
+	}
+	return m.AQM
+}
+
 // MarshalToWriter marshals ConcentrationInput to the provided writer.
 func (m *ConcentrationInput) MarshalToWriter(writer jspb.Writer) {
 	if m == nil {
@@ -1560,6 +1614,10 @@ func (m *ConcentrationInput) MarshalToWriter(writer jspb.Writer) {
 
 	if int(m.Location) != 0 {
 		writer.WriteEnum(5, int(m.Location))
+	}
+
+	if len(m.AQM) > 0 {
+		writer.WriteString(6, m.AQM)
 	}
 
 	return
@@ -1594,6 +1652,8 @@ func (m *ConcentrationInput) UnmarshalFromReader(reader jspb.Reader) *Concentrat
 			m.Year = reader.ReadInt32()
 		case 5:
 			m.Location = Location(reader.ReadEnum())
+		case 6:
+			m.AQM = reader.ReadString()
 		default:
 			reader.SkipField()
 		}
@@ -1620,6 +1680,7 @@ type EmissionsMatrixInput struct {
 	Emission Emission
 	Year     int32
 	Location Location
+	AQM      string
 }
 
 // GetDemand gets the Demand of the EmissionsMatrixInput.
@@ -1654,6 +1715,14 @@ func (m *EmissionsMatrixInput) GetLocation() (x Location) {
 	return m.Location
 }
 
+// GetAQM gets the AQM of the EmissionsMatrixInput.
+func (m *EmissionsMatrixInput) GetAQM() (x string) {
+	if m == nil {
+		return x
+	}
+	return m.AQM
+}
+
 // MarshalToWriter marshals EmissionsMatrixInput to the provided writer.
 func (m *EmissionsMatrixInput) MarshalToWriter(writer jspb.Writer) {
 	if m == nil {
@@ -1676,6 +1745,10 @@ func (m *EmissionsMatrixInput) MarshalToWriter(writer jspb.Writer) {
 
 	if int(m.Location) != 0 {
 		writer.WriteEnum(4, int(m.Location))
+	}
+
+	if len(m.AQM) > 0 {
+		writer.WriteString(5, m.AQM)
 	}
 
 	return
@@ -1706,6 +1779,8 @@ func (m *EmissionsMatrixInput) UnmarshalFromReader(reader jspb.Reader) *Emission
 			m.Year = reader.ReadInt32()
 		case 4:
 			m.Location = Location(reader.ReadEnum())
+		case 5:
+			m.AQM = reader.ReadString()
 		default:
 			reader.SkipField()
 		}
@@ -1733,6 +1808,7 @@ type EmissionsInput struct {
 	Emission Emission
 	Year     int32
 	Location Location
+	AQM      string
 }
 
 // GetDemand gets the Demand of the EmissionsInput.
@@ -1775,6 +1851,14 @@ func (m *EmissionsInput) GetLocation() (x Location) {
 	return m.Location
 }
 
+// GetAQM gets the AQM of the EmissionsInput.
+func (m *EmissionsInput) GetAQM() (x string) {
+	if m == nil {
+		return x
+	}
+	return m.AQM
+}
+
 // MarshalToWriter marshals EmissionsInput to the provided writer.
 func (m *EmissionsInput) MarshalToWriter(writer jspb.Writer) {
 	if m == nil {
@@ -1803,6 +1887,10 @@ func (m *EmissionsInput) MarshalToWriter(writer jspb.Writer) {
 
 	if int(m.Location) != 0 {
 		writer.WriteEnum(5, int(m.Location))
+	}
+
+	if len(m.AQM) > 0 {
+		writer.WriteString(6, m.AQM)
 	}
 
 	return
@@ -1837,6 +1925,8 @@ func (m *EmissionsInput) UnmarshalFromReader(reader jspb.Reader) *EmissionsInput
 			m.Year = reader.ReadInt32()
 		case 5:
 			m.Location = Location(reader.ReadEnum())
+		case 6:
+			m.AQM = reader.ReadString()
 		default:
 			reader.SkipField()
 		}
@@ -1865,6 +1955,7 @@ type HealthMatrixInput struct {
 	Year       int32
 	Location   Location
 	HR         string
+	AQM        string
 }
 
 // GetDemand gets the Demand of the HealthMatrixInput.
@@ -1915,6 +2006,14 @@ func (m *HealthMatrixInput) GetHR() (x string) {
 	return m.HR
 }
 
+// GetAQM gets the AQM of the HealthMatrixInput.
+func (m *HealthMatrixInput) GetAQM() (x string) {
+	if m == nil {
+		return x
+	}
+	return m.AQM
+}
+
 // MarshalToWriter marshals HealthMatrixInput to the provided writer.
 func (m *HealthMatrixInput) MarshalToWriter(writer jspb.Writer) {
 	if m == nil {
@@ -1945,6 +2044,10 @@ func (m *HealthMatrixInput) MarshalToWriter(writer jspb.Writer) {
 
 	if len(m.HR) > 0 {
 		writer.WriteString(6, m.HR)
+	}
+
+	if len(m.AQM) > 0 {
+		writer.WriteString(7, m.AQM)
 	}
 
 	return
@@ -1979,6 +2082,8 @@ func (m *HealthMatrixInput) UnmarshalFromReader(reader jspb.Reader) *HealthMatri
 			m.Location = Location(reader.ReadEnum())
 		case 6:
 			m.HR = reader.ReadString()
+		case 7:
+			m.AQM = reader.ReadString()
 		default:
 			reader.SkipField()
 		}
@@ -2008,6 +2113,7 @@ type HealthInput struct {
 	Year        int32
 	Location    Location
 	HR          string
+	AQM         string
 }
 
 // GetDemand gets the Demand of the HealthInput.
@@ -2066,6 +2172,14 @@ func (m *HealthInput) GetHR() (x string) {
 	return m.HR
 }
 
+// GetAQM gets the AQM of the HealthInput.
+func (m *HealthInput) GetAQM() (x string) {
+	if m == nil {
+		return x
+	}
+	return m.AQM
+}
+
 // MarshalToWriter marshals HealthInput to the provided writer.
 func (m *HealthInput) MarshalToWriter(writer jspb.Writer) {
 	if m == nil {
@@ -2104,6 +2218,10 @@ func (m *HealthInput) MarshalToWriter(writer jspb.Writer) {
 		writer.WriteString(7, m.HR)
 	}
 
+	if len(m.AQM) > 0 {
+		writer.WriteString(8, m.AQM)
+	}
+
 	return
 }
 
@@ -2140,6 +2258,8 @@ func (m *HealthInput) UnmarshalFromReader(reader jspb.Reader) *HealthInput {
 			m.Location = Location(reader.ReadEnum())
 		case 7:
 			m.HR = reader.ReadString()
+		case 8:
+			m.AQM = reader.ReadString()
 		default:
 			reader.SkipField()
 		}
@@ -2385,6 +2505,7 @@ type EvaluationHealthInput struct {
 	Pollutant  Pollutant
 	Population string
 	HR         string
+	AQM        string
 }
 
 // GetYear gets the Year of the EvaluationHealthInput.
@@ -2419,6 +2540,14 @@ func (m *EvaluationHealthInput) GetHR() (x string) {
 	return m.HR
 }
 
+// GetAQM gets the AQM of the EvaluationHealthInput.
+func (m *EvaluationHealthInput) GetAQM() (x string) {
+	if m == nil {
+		return x
+	}
+	return m.AQM
+}
+
 // MarshalToWriter marshals EvaluationHealthInput to the provided writer.
 func (m *EvaluationHealthInput) MarshalToWriter(writer jspb.Writer) {
 	if m == nil {
@@ -2439,6 +2568,10 @@ func (m *EvaluationHealthInput) MarshalToWriter(writer jspb.Writer) {
 
 	if len(m.HR) > 0 {
 		writer.WriteString(4, m.HR)
+	}
+
+	if len(m.AQM) > 0 {
+		writer.WriteString(5, m.AQM)
 	}
 
 	return
@@ -2467,6 +2600,8 @@ func (m *EvaluationHealthInput) UnmarshalFromReader(reader jspb.Reader) *Evaluat
 			m.Population = reader.ReadString()
 		case 4:
 			m.HR = reader.ReadString()
+		case 5:
+			m.AQM = reader.ReadString()
 		default:
 			reader.SkipField()
 		}
@@ -2491,6 +2626,7 @@ func (m *EvaluationHealthInput) Unmarshal(rawBytes []byte) (*EvaluationHealthInp
 type EvaluationConcentrationsInput struct {
 	Year      int32
 	Pollutant Pollutant
+	AQM       string
 }
 
 // GetYear gets the Year of the EvaluationConcentrationsInput.
@@ -2509,6 +2645,14 @@ func (m *EvaluationConcentrationsInput) GetPollutant() (x Pollutant) {
 	return m.Pollutant
 }
 
+// GetAQM gets the AQM of the EvaluationConcentrationsInput.
+func (m *EvaluationConcentrationsInput) GetAQM() (x string) {
+	if m == nil {
+		return x
+	}
+	return m.AQM
+}
+
 // MarshalToWriter marshals EvaluationConcentrationsInput to the provided writer.
 func (m *EvaluationConcentrationsInput) MarshalToWriter(writer jspb.Writer) {
 	if m == nil {
@@ -2521,6 +2665,10 @@ func (m *EvaluationConcentrationsInput) MarshalToWriter(writer jspb.Writer) {
 
 	if int(m.Pollutant) != 0 {
 		writer.WriteEnum(2, int(m.Pollutant))
+	}
+
+	if len(m.AQM) > 0 {
+		writer.WriteString(3, m.AQM)
 	}
 
 	return
@@ -2545,6 +2693,8 @@ func (m *EvaluationConcentrationsInput) UnmarshalFromReader(reader jspb.Reader) 
 			m.Year = reader.ReadInt32()
 		case 2:
 			m.Pollutant = Pollutant(reader.ReadEnum())
+		case 3:
+			m.AQM = reader.ReadString()
 		default:
 			reader.SkipField()
 		}
@@ -2570,6 +2720,7 @@ type ConcentrationResponseAverageInput struct {
 	Year       int32
 	Population string
 	HR         string
+	AQM        string
 }
 
 // GetYear gets the Year of the ConcentrationResponseAverageInput.
@@ -2596,6 +2747,14 @@ func (m *ConcentrationResponseAverageInput) GetHR() (x string) {
 	return m.HR
 }
 
+// GetAQM gets the AQM of the ConcentrationResponseAverageInput.
+func (m *ConcentrationResponseAverageInput) GetAQM() (x string) {
+	if m == nil {
+		return x
+	}
+	return m.AQM
+}
+
 // MarshalToWriter marshals ConcentrationResponseAverageInput to the provided writer.
 func (m *ConcentrationResponseAverageInput) MarshalToWriter(writer jspb.Writer) {
 	if m == nil {
@@ -2612,6 +2771,10 @@ func (m *ConcentrationResponseAverageInput) MarshalToWriter(writer jspb.Writer) 
 
 	if len(m.HR) > 0 {
 		writer.WriteString(3, m.HR)
+	}
+
+	if len(m.AQM) > 0 {
+		writer.WriteString(4, m.AQM)
 	}
 
 	return
@@ -2638,6 +2801,8 @@ func (m *ConcentrationResponseAverageInput) UnmarshalFromReader(reader jspb.Read
 			m.Population = reader.ReadString()
 		case 3:
 			m.HR = reader.ReadString()
+		case 4:
+			m.AQM = reader.ReadString()
 		default:
 			reader.SkipField()
 		}
@@ -2663,6 +2828,7 @@ type PopulationIncidenceInput struct {
 	Year       int32
 	Population string
 	HR         string
+	AQM        string
 }
 
 // GetYear gets the Year of the PopulationIncidenceInput.
@@ -2689,6 +2855,14 @@ func (m *PopulationIncidenceInput) GetHR() (x string) {
 	return m.HR
 }
 
+// GetAQM gets the AQM of the PopulationIncidenceInput.
+func (m *PopulationIncidenceInput) GetAQM() (x string) {
+	if m == nil {
+		return x
+	}
+	return m.AQM
+}
+
 // MarshalToWriter marshals PopulationIncidenceInput to the provided writer.
 func (m *PopulationIncidenceInput) MarshalToWriter(writer jspb.Writer) {
 	if m == nil {
@@ -2705,6 +2879,10 @@ func (m *PopulationIncidenceInput) MarshalToWriter(writer jspb.Writer) {
 
 	if len(m.HR) > 0 {
 		writer.WriteString(3, m.HR)
+	}
+
+	if len(m.AQM) > 0 {
+		writer.WriteString(4, m.AQM)
 	}
 
 	return
@@ -2731,6 +2909,8 @@ func (m *PopulationIncidenceInput) UnmarshalFromReader(reader jspb.Reader) *Popu
 			m.Population = reader.ReadString()
 		case 3:
 			m.HR = reader.ReadString()
+		case 4:
+			m.AQM = reader.ReadString()
 		default:
 			reader.SkipField()
 		}

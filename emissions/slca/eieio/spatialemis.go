@@ -35,6 +35,7 @@ type emissionsRequest struct {
 	pol        slca.Pollutant
 	year       Year
 	loc        Location
+	aqm        string
 }
 
 func (er *emissionsRequest) Key() string {
@@ -54,7 +55,7 @@ func (er *emissionsRequest) Key() string {
 	b5 := []byte(strconv.Itoa((int)(er.loc)))
 	bAll := append(append(append(append(b, b2...), b3...), b4...), b5...)
 	bytes := sha256.Sum256(bAll)
-	return fmt.Sprintf("emis_%x", bytes[0:sha256.Size])
+	return fmt.Sprintf("emis_%s_%x", er.aqm, bytes[0:sha256.Size])
 }
 
 // Emissions returns spatially-explicit emissions caused by the
@@ -69,7 +70,7 @@ func (e *SpatialEIO) Emissions(ctx context.Context, request *eieiorpc.EmissionsI
 		}
 		e.emissionsCache = loadCacheOnce(func(ctx context.Context, request interface{}) (interface{}, error) {
 			r := request.(*emissionsRequest)
-			return e.emissions(ctx, r.demand, r.industries, r.pol, r.year, r.loc) // Actually calculate the emissions.
+			return e.emissions(ctx, r.demand, r.industries, r.aqm, r.pol, r.year, r.loc) // Actually calculate the emissions.
 		}, 1, e.MemCacheSize, c, vectorMarshal, vectorUnmarshal)
 	})
 	req := &emissionsRequest{
@@ -78,6 +79,7 @@ func (e *SpatialEIO) Emissions(ctx context.Context, request *eieiorpc.EmissionsI
 		pol:        slca.Pollutant(request.Emission),
 		year:       Year(request.Year),
 		loc:        Location(request.Location),
+		aqm:        request.AQM,
 	}
 	rr := e.emissionsCache.NewRequest(ctx, req, req.Key())
 	resultI, err := rr.Result()
@@ -91,9 +93,9 @@ func (e *SpatialEIO) Emissions(ctx context.Context, request *eieiorpc.EmissionsI
 // specified economic demand. industries
 // specifies the industries emissions should be calculated for.
 // If industries == nil, combined emissions for all industries are calculated.
-func (e *SpatialEIO) emissions(ctx context.Context, demand *mat.VecDense, industries *Mask, pol slca.Pollutant, year Year, loc Location) (*mat.VecDense, error) {
+func (e *SpatialEIO) emissions(ctx context.Context, demand *mat.VecDense, industries *Mask, aqm string, pol slca.Pollutant, year Year, loc Location) (*mat.VecDense, error) {
 	// Calculate emission factors. matrix dimension: [# grid cells, # industries]
-	ef, err := e.emissionFactors(ctx, pol, year)
+	ef, err := e.emissionFactors(ctx, aqm, pol, year)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +121,7 @@ func (e *SpatialEIO) emissions(ctx context.Context, demand *mat.VecDense, indust
 // specified economic demand. In the result matrix, the rows represent air quality
 // model grid cells and the columns represent emitters.
 func (e *SpatialEIO) EmissionsMatrix(ctx context.Context, request *eieiorpc.EmissionsMatrixInput) (*eieiorpc.Matrix, error) {
-	ef, err := e.emissionFactors(ctx, slca.Pollutant(request.Emission), Year(request.Year)) // rows = grid cells, cols = industries
+	ef, err := e.emissionFactors(ctx, request.AQM, slca.Pollutant(request.Emission), Year(request.Year)) // rows = grid cells, cols = industries
 	if err != nil {
 		return nil, err
 	}
@@ -141,13 +143,13 @@ func (e *SpatialEIO) EmissionsMatrix(ctx context.Context, request *eieiorpc.Emis
 // emissionFactors returns spatially-explicit emissions per unit of economic
 // production for each industry. In the result matrix, the rows represent
 // air quality model grid cells and the columns represent industries.
-func (e *SpatialEIO) emissionFactors(ctx context.Context, pol slca.Pollutant, year Year) (*mat.Dense, error) {
+func (e *SpatialEIO) emissionFactors(ctx context.Context, aqm string, pol slca.Pollutant, year Year) (*mat.Dense, error) {
 	e.loadEFOnce.Do(func() {
 		e.emissionFactorCache = loadCacheOnce(e.emissionFactorsWorker, 1, 1, e.EIEIOCache,
 			matrixMarshal, matrixUnmarshal)
 	})
-	key := fmt.Sprintf("emissionFactors_%v_%d", pol, year)
-	rr := e.emissionFactorCache.NewRequest(ctx, polYear{pol: pol, year: year}, key)
+	key := fmt.Sprintf("emissionFactors_%s_%v_%d", aqm, pol, year)
+	rr := e.emissionFactorCache.NewRequest(ctx, aqmPolYear{aqm: aqm, pol: pol, year: year}, key)
 	resultI, err := rr.Result()
 	if err != nil {
 		return nil, fmt.Errorf("eieio.emissionFactors: %s: %v", key, err)
@@ -159,8 +161,8 @@ func (e *SpatialEIO) emissionFactors(ctx context.Context, pol slca.Pollutant, ye
 // production for each industry. In the result matrix, the rows represent
 // air quality model grid cells and the columns represent industries.
 func (e *SpatialEIO) emissionFactorsWorker(ctx context.Context, request interface{}) (interface{}, error) {
-	polyear := request.(polYear)
-	prod, err := e.domesticProductionSCC(polyear.year)
+	aqmpolyear := request.(aqmPolYear)
+	prod, err := e.domesticProductionSCC(aqmpolyear.year)
 	if err != nil {
 		return nil, err
 	}
@@ -170,8 +172,9 @@ func (e *SpatialEIO) emissionFactorsWorker(ctx context.Context, request interfac
 			return nil, fmt.Errorf("bea: industry %d; no SCCs", i)
 		}
 		ref := refTemp
-		ref.EmisYear = int(polyear.year)
-		industryEmis, err := e.CSTConfig.EmissionsSurrogate(ctx, polyear.pol, &ref)
+		ref.EmisYear = int(aqmpolyear.year)
+		ref.AQM = aqmpolyear.aqm
+		industryEmis, err := e.CSTConfig.EmissionsSurrogate(ctx, aqmpolyear.pol, &ref)
 		if err != nil {
 			return nil, err
 		}

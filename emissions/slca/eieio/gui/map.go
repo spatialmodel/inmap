@@ -50,10 +50,6 @@ func (c *GUI) LoadMap(div string) error {
 	layer := leaflet.NewTileLayer("https://api.mapbox.com/styles/v1/ctessum/cixuwgf55003e2roe7z5ouk2w/tiles/256/{z}/{x}/{y}?access_token=pk.eyJ1IjoiY3Rlc3N1bSIsImEiOiJjaXh1dnZxYjAwMDRjMzNxcWczZ3JqZDd4In0.972k4y-Xc-PpYTdeUTbufA", options)
 	layer.AddTo(c.Map)
 
-	if err := c.LoadGeometry(); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -65,6 +61,7 @@ type gridCell struct {
 func (c *GUI) LoadGeometry() error {
 	rects, err := c.Geometry(context.Background(), &eieiorpc.GeometryInput{
 		SpatialReference: "+proj=longlat",
+		AQM:              c.selection.AQM,
 	})
 	if err != nil {
 		return err

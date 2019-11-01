@@ -34,12 +34,12 @@ import (
 	"gonum.org/v1/plot/vg/vgimg"
 )
 
-func (db *DB) mapDataServer(resultRequestChan chan *resultRequest,
-	mapDataRequestChan chan *mapDataRequest) {
+func (db *DB) mapDataServer(resultRequestChan chan *resultRequest, mapDataRequestChan chan *mapDataRequest) {
 
 	const (
 		GridProj   = "+proj=lcc +lat_1=33.000000 +lat_2=45.000000 +lat_0=40.000000 +lon_0=-97.000000 +x_0=0 +y_0=0 +a=6370997.000000 +b=6370997.000000 +to_meter=1"
 		webMapProj = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs"
+		aqm        = "isrm"
 	)
 
 	// webMapSR is the spatial reference for web mapping.
@@ -57,7 +57,7 @@ func (db *DB) mapDataServer(resultRequestChan chan *resultRequest,
 		panic(fmt.Errorf("slca: while creating transform: %v", err))
 	}
 
-	srCells, err := db.CSTConfig.Geometry()
+	srCells, err := db.CSTConfig.Geometry(aqm)
 	if err != nil {
 		panic(err)
 	}
@@ -81,7 +81,7 @@ func (db *DB) mapDataServer(resultRequestChan chan *resultRequest,
 		spatialResults := NewSpatialResults(result.Results, db)
 
 		// Add the emissions
-		emisGridData, err := spatialResults.Emissions()
+		emisGridData, err := spatialResults.Emissions(aqm)
 		if request.handleErr(err) {
 			continue
 		}
@@ -98,7 +98,7 @@ func (db *DB) mapDataServer(resultRequestChan chan *resultRequest,
 		}
 
 		// Add the air quality results
-		aqData, err := spatialResults.Concentrations()
+		aqData, err := spatialResults.Concentrations(aqm)
 		if request.handleErr(err) {
 			continue
 		}
@@ -115,7 +115,7 @@ func (db *DB) mapDataServer(resultRequestChan chan *resultRequest,
 		}
 
 		// Add the health results
-		healthData, err := spatialResults.Health("NasariACS")
+		healthData, err := spatialResults.Health("NasariACS", aqm)
 		if request.handleErr(err) {
 			continue
 		}
