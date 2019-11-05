@@ -29,6 +29,7 @@ import (
 	"github.com/spatialmodel/inmap/emissions/aep"
 	"github.com/spatialmodel/inmap/emissions/aep/aeputil"
 	"github.com/spatialmodel/inmap/emissions/slca/eieio/eieiorpc"
+	"github.com/spatialmodel/inmap/internal/hash"
 	"github.com/spatialmodel/inmap/sr"
 
 	"github.com/ctessum/geom"
@@ -81,7 +82,7 @@ func (c *CSTConfig) ConcentrationSurrogate(ctx context.Context, spatialRef *Spat
 		c.concRequestCache = loadCacheOnce(c.inMAPSurrogate, 1, c.MaxCacheEntries, c.ConcentrationCache,
 			requestcache.MarshalGob, requestcache.UnmarshalGob)
 	})
-	r := c.concRequestCache.NewRequest(ctx, spatialRef, spatialRef.Key())
+	r := c.concRequestCache.NewRequest(ctx, spatialRef, "concsrg_"+hash.Hash(spatialRef))
 	result, err := r.Result()
 	if err != nil {
 		return nil, err
@@ -132,7 +133,7 @@ func (c *CSTConfig) HealthSurrogate(ctx context.Context, spatialRef *SpatialRef,
 		c.healthRequestCache = loadCacheOnce(c.healthSurrogate, 1, c.MaxCacheEntries, c.HealthCache,
 			requestcache.MarshalGob, requestcache.UnmarshalGob)
 	})
-	r := c.healthRequestCache.NewRequest(ctx, sRHR{sr: spatialRef, hr: HR}, fmt.Sprintf("%s_%s", spatialRef.Key(), HR))
+	r := c.healthRequestCache.NewRequest(ctx, sRHR{sr: spatialRef, hr: HR}, fmt.Sprintf("%s_%s", hash.Hash(spatialRef), HR))
 	result, err := r.Result()
 	if err != nil {
 		return nil, err

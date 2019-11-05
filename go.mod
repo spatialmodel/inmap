@@ -17,6 +17,7 @@ require (
 	github.com/ctessum/requestcache v1.0.0
 	github.com/ctessum/sparse v0.0.0-20181201011727-57d6234a2c9d
 	github.com/ctessum/unit v0.0.0-20160621200450-755774ac2fcb
+	github.com/davecgh/go-spew v1.1.1
 	github.com/evanphx/json-patch v4.1.0+incompatible // indirect
 	github.com/go-humble/detect v0.1.2 // indirect
 	github.com/go-humble/router v0.5.0

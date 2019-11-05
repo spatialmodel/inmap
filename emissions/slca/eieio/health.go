@@ -19,14 +19,13 @@ package eieio
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
-	"strconv"
 
 	"github.com/ctessum/sparse"
 
 	"github.com/spatialmodel/inmap/emissions/slca/eieio/eieiorpc"
 	"github.com/spatialmodel/inmap/epi"
+	"github.com/spatialmodel/inmap/internal/hash"
 
 	"gonum.org/v1/gonum/mat"
 )
@@ -40,26 +39,6 @@ type healthRequest struct {
 	loc        Location
 	hr         epi.HRer
 	aqm        string
-}
-
-func (er *healthRequest) Key() string {
-	b, err := er.demand.MarshalBinary()
-	if err != nil {
-		panic(err)
-	}
-	var b2 []byte
-	if er.industries != nil {
-		b2, err = (*mat.VecDense)(er.industries).MarshalBinary()
-		if err != nil {
-			panic(err)
-		}
-	}
-	b3 := []byte(strconv.Itoa((int)(er.pol)))
-	b4 := []byte(strconv.Itoa((int)(er.year)))
-	b5 := []byte(strconv.Itoa((int)(er.loc)))
-	bAll := append(append(append(append(append(append(b, b2...), b3...), []byte(er.pop)...), b4...), b5...), []byte(er.hr.Name())...)
-	bytes := sha256.Sum256(bAll)
-	return fmt.Sprintf("health_%s_%x", er.aqm, bytes[0:sha256.Size])
 }
 
 // Health returns spatially-explicit pollutant air quality-related health impacts caused by the
@@ -92,7 +71,7 @@ func (e *SpatialEIO) Health(ctx context.Context, request *eieiorpc.HealthInput) 
 		hr:         hr,
 		aqm:        request.AQM,
 	}
-	rr := e.healthCache.NewRequest(ctx, req, req.Key())
+	rr := e.healthCache.NewRequest(ctx, req, "health_"+hash.Hash(req))
 	resultI, err := rr.Result()
 	if err != nil {
 		return nil, err

@@ -197,7 +197,7 @@ func readSrgSpec(srgSpecPath, srgShapefileDirectory, srgSpecType string, sccExac
 	var srgSpecs *aep.SrgSpecs
 	switch srgSpecType {
 	case "SMOKE":
-		srgSpecs, err = aep.ReadSrgSpecSMOKE(f, os.ExpandEnv(srgShapefileDirectory), sccExactMatch)
+		srgSpecs, err = aep.ReadSrgSpecSMOKE(f, os.ExpandEnv(srgShapefileDirectory), sccExactMatch, diskCachePath, memCacheEntries)
 		if err != nil {
 			return nil, err
 		}

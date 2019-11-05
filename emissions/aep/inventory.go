@@ -19,8 +19,6 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package aep
 
 import (
-	"bytes"
-	"crypto/sha256"
 	"encoding/gob"
 	"fmt"
 	"io"
@@ -50,17 +48,6 @@ func init() {
 type Location struct {
 	geom.Geom
 	SR *proj.SR
-}
-
-// Key returns a unique key for this location.
-func (l *Location) Key() string {
-	b := new(bytes.Buffer)
-	e := gob.NewEncoder(b)
-	if err := e.Encode(l); err != nil {
-		panic(err)
-	}
-	bKey := sha256.Sum256(b.Bytes())
-	return fmt.Sprintf("%x", bKey[0:sha256.Size])
 }
 
 func (l *Location) Reproject(sr *proj.SR) (geom.Geom, error) {

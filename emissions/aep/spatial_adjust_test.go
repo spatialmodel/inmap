@@ -42,7 +42,7 @@ func TestSpatialAdjustRecord(t *testing.T) {
 		t.Error(err)
 	}
 	r := strings.NewReader(srgSpecFileString)
-	srgSpecs, err := ReadSrgSpecSMOKE(r, "testdata", true)
+	srgSpecs, err := ReadSrgSpecSMOKE(r, "testdata", true, "", 1)
 	if err != nil {
 		t.Fatal(err)
 	}

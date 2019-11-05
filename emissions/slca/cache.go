@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"github.com/ctessum/sparse"
+	"github.com/spatialmodel/inmap/internal/hash"
 )
 
 type requestPayload struct {
@@ -40,7 +41,7 @@ func newRequestPayload(sr *SpatialResults, e *ResultEdge, aqm string) (*requestP
 		if p.SpatialRef(aqm) == nil {
 			return nil, fmt.Errorf("stationary process %s (id=%s) has no SpatialRef", p.GetName(), p.GetIDStr())
 		}
-		key = p.SpatialRef(aqm).Key()
+		key = hash.Hash(p.SpatialRef(aqm))
 	case Transportation, Vehicle: // TODO: vehicle needs its own key.
 		key = "transportation"
 	case NoSpatial:

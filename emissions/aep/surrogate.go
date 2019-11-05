@@ -32,6 +32,7 @@ import (
 	"github.com/ctessum/geom/index/rtree"
 	"github.com/ctessum/geom/op"
 	"github.com/ctessum/sparse"
+	"github.com/spatialmodel/inmap/internal/hash"
 )
 
 type srgGenWorker struct {
@@ -162,11 +163,6 @@ type srgGrid struct {
 	loc      *Location
 }
 
-// key returns a unique key for this surrogate request.
-func (s *srgGrid) key() string {
-	return fmt.Sprintf("%s_%s_%s_%s", s.srg.region(), s.srg.code(), s.gridData.Name, s.loc.Key())
-}
-
 // createSurrogate creates a new gridding surrogate based on a
 // surrogate specification and grid definition.
 func (sp *SpatialProcessor) createSurrogate(_ context.Context, inData interface{}) (interface{}, error) {
@@ -232,7 +228,7 @@ func (g *GriddedSrgData) WriteToShp(file string) error {
 
 	for _, cell := range g.Cells {
 		err := s.EncodeFields(cell.Polygonal,
-			cell.Row, cell.Col, g.InputLocation.Key(), cell.Weight, covered)
+			cell.Row, cell.Col, hash.Hash(g.InputLocation), cell.Weight, covered)
 		if err != nil {
 			return err
 		}

@@ -20,7 +20,6 @@ package slca
 import (
 	"bytes"
 	"context"
-	"crypto/md5"
 	"encoding/csv"
 	"encoding/gob"
 	"fmt"
@@ -32,6 +31,7 @@ import (
 	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/emissions/aep"
 	"github.com/spatialmodel/inmap/emissions/aep/aeputil"
+	"github.com/spatialmodel/inmap/internal/hash"
 
 	"github.com/ctessum/sparse"
 
@@ -57,7 +57,7 @@ func (c *CSTConfig) spatialSurrogate(ctx context.Context, spatialRef *SpatialRef
 		c.spatializeRequestCache = loadCacheOnce(c.spatialSurrogateWorker, 1, c.MaxCacheEntries, c.SpatialCache,
 			requestcache.MarshalGob, requestcache.UnmarshalGob)
 	})
-	rr := c.spatializeRequestCache.NewRequest(ctx, spatialRef, spatialRef.Key())
+	rr := c.spatializeRequestCache.NewRequest(ctx, spatialRef, "spatialsrg_"+hash.Hash(spatialRef))
 	resultI, err := rr.Result()
 	if err != nil {
 		return nil, err
@@ -126,16 +126,6 @@ type SpatialRef struct {
 	// should be normalized so that its sum==1. The default is
 	// to perform normalization.
 	NoNormalization bool
-}
-
-// Key returns a unique identifier for this SpatialRef.
-func (sr *SpatialRef) Key() string {
-	b := bytes.NewBuffer(nil)
-	e := gob.NewEncoder(b)
-	if err := e.Encode(sr); err != nil {
-		panic(err)
-	}
-	return fmt.Sprintf("%x", md5.Sum(b.Bytes()))
 }
 
 // neiSpatialSrg creates a spatial surrogate from the spatial surrogate associated

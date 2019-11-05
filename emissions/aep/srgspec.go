@@ -19,6 +19,7 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package aep
 
 import (
+	"context"
 	"encoding/csv"
 	"fmt"
 	"io"
@@ -31,6 +32,8 @@ import (
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/encoding/shp"
 	"github.com/ctessum/geom/index/rtree"
+	"github.com/ctessum/requestcache"
+	"github.com/spatialmodel/inmap/internal/hash"
 )
 
 type SrgSpec interface {
@@ -85,6 +88,8 @@ type SrgSpecSMOKE struct {
 	progressLock sync.Mutex
 	// status specifies what the surrogate generator is currently doing.
 	status string
+
+	cache *requestcache.Cache
 }
 
 // Status returns information about the status of the receiver.
@@ -123,7 +128,10 @@ const none = "NONE"
 // true, then it is okay for the shapefiles to be in any subdirectory of
 // shapefileDir, otherwise all shapefiles must be in shapefileDir itself and
 // not a subdirectory.
-func ReadSrgSpecSMOKE(fid io.Reader, shapefileDir string, checkShapefiles bool) (*SrgSpecs, error) {
+// diskCachePath specifies a path to a directory where an on-disk cache should
+// be created (if "", no cache will be created), and memCacheSize specifies the
+// number of surrogate data entries to hold in an in-memory cache.
+func ReadSrgSpecSMOKE(fid io.Reader, shapefileDir string, checkShapefiles bool, diskCachePath string, memCacheSize int) (*SrgSpecs, error) {
 	srgs := NewSrgSpecs()
 	reader := csv.NewReader(fid)
 	reader.Comment = '#'
@@ -241,6 +249,7 @@ func ReadSrgSpecSMOKE(fid io.Reader, shapefileDir string, checkShapefiles bool) 
 				shpf.Close()
 			}
 		}
+		srg.cache = newCache(srg.readSrgData, diskCachePath, memCacheSize, marshalSrgHolders, unmarshalSrgHolders)
 		srgs.Add(srg)
 	}
 	return srgs, nil
@@ -294,6 +303,45 @@ func (srg *SrgSpecSMOKE) InputShapes() (map[string]*Location, error) {
 
 // get surrogate shapes and weights. tol is a geometry simplification tolerance.
 func (srg *SrgSpecSMOKE) getSrgData(gridData *GridDef, inputLoc *Location, tol float64) (*rtree.Rtree, error) {
+	srg.setStatus(0, "getting surrogate weight data")
+
+	// Calculate the area of interest for our surrogate data.
+	inputShapeT, err := inputLoc.Reproject(gridData.SR)
+	if err != nil {
+		return nil, err
+	}
+	inputShapeBounds := inputShapeT.Bounds()
+	srgBounds := inputShapeBounds.Copy()
+	for _, cell := range gridData.Cells {
+		b := cell.Bounds()
+		if b.Overlaps(inputShapeBounds) {
+			srgBounds.Extend(b)
+		}
+	}
+
+	key := fmt.Sprintf("smoke_srgdata_%s_%s_%g", hash.Hash(srg), hash.Hash(gridData.SR), tol)
+	request := srg.cache.NewRequest(context.TODO(), &readSrgDataInput{gridData: gridData, tol: tol}, key)
+	srgs, err := request.Result()
+	if err != nil {
+		return nil, err
+	}
+
+	srgData := rtree.NewTree(25, 50)
+	for _, s := range srgs.([]*srgHolder) {
+		if s.Bounds().Overlaps(srgBounds) {
+			srgData.Insert(s)
+		}
+	}
+
+	return srgData, nil
+}
+
+// readSrgData returns all of the spatial surrogate information for this
+// surrogate definition, inputI is of type *osmReadSrgDataInput and
+// inputI.tol is tolerance for geometry simplification.
+func (srg *SrgSpecSMOKE) readSrgData(ctx context.Context, inputI interface{}) (interface{}, error) {
+	input := inputI.(*readSrgDataInput)
+
 	srgShp, err := shp.NewDecoder(srg.WEIGHTSHAPEFILE)
 	if err != nil {
 		return nil, err
@@ -305,32 +353,9 @@ func (srg *SrgSpecSMOKE) getSrgData(gridData *GridDef, inputLoc *Location, tol f
 		return nil, err
 	}
 
-	srgCT, err := srgSR.NewTransform(gridData.SR)
+	srgCT, err := srgSR.NewTransform(input.gridData.SR)
 	if err != nil {
 		return nil, err
-	}
-
-	gridSrgCT, err := gridData.SR.NewTransform(srgSR)
-	if err != nil {
-		return nil, err
-	}
-
-	// Calculate the area of interest for our surrogate data.
-	inputShapeT, err := inputLoc.Reproject(srgSR)
-	if err != nil {
-		return nil, err
-	}
-	inputShapeBounds := inputShapeT.Bounds()
-	srgBounds := inputShapeBounds.Copy()
-	for _, cell := range gridData.Cells {
-		cellT, err := cell.Transform(gridSrgCT)
-		if err != nil {
-			return nil, err
-		}
-		b := cellT.Bounds()
-		if b.Overlaps(inputShapeBounds) {
-			srgBounds.Extend(b)
-		}
 	}
 
 	var fieldNames []string
@@ -340,7 +365,7 @@ func (srg *SrgSpecSMOKE) getSrgData(gridData *GridDef, inputLoc *Location, tol f
 	if srg.WeightColumns != nil {
 		fieldNames = append(fieldNames, srg.WeightColumns...)
 	}
-	srgData := rtree.NewTree(25, 50)
+	var srgs []*srgHolder
 	var recGeom geom.Geom
 	var data map[string]string
 	var keepFeature bool
@@ -351,10 +376,6 @@ func (srg *SrgSpecSMOKE) getSrgData(gridData *GridDef, inputLoc *Location, tol f
 		recGeom, data, more = srgShp.DecodeRowFields(fieldNames...)
 		if !more {
 			break
-		}
-
-		if !recGeom.Bounds().Overlaps(srgBounds) {
-			continue
 		}
 
 		if srg.FilterFunction == nil {
@@ -381,12 +402,12 @@ func (srg *SrgSpecSMOKE) getSrgData(gridData *GridDef, inputLoc *Location, tol f
 			srgH := new(srgHolder)
 			srgH.Geom, err = recGeom.Transform(srgCT)
 			if err != nil {
-				return srgData, err
+				return nil, err
 			}
-			if tol > 0 {
+			if input.tol > 0 {
 				switch srgH.Geom.(type) {
 				case geom.Simplifier:
-					srgH.Geom = srgH.Geom.(geom.Simplifier).Simplify(tol)
+					srgH.Geom = srgH.Geom.(geom.Simplifier).Simplify(input.tol)
 				}
 			}
 			if len(srg.WeightColumns) != 0 {
@@ -400,7 +421,7 @@ func (srg *SrgSpecSMOKE) getSrgData(gridData *GridDef, inputLoc *Location, tol f
 					} else {
 						v, err = strconv.ParseFloat(data[name], 64)
 						if err != nil {
-							return srgData, fmt.Errorf("aep.getSrgData: shapefile %s column %s, %v", srg.WEIGHTSHAPEFILE, name, err)
+							return nil, fmt.Errorf("aep.getSrgData: shapefile %s column %s, %v", srg.WEIGHTSHAPEFILE, name, err)
 						}
 						v = math.Max(v, 0) // Get rid of any negative weights.
 					}
@@ -410,7 +431,7 @@ func (srg *SrgSpecSMOKE) getSrgData(gridData *GridDef, inputLoc *Location, tol f
 				case geom.Polygonal:
 					size = srgH.Geom.(geom.Polygonal).Area()
 					if size == 0. {
-						if tol > 0 {
+						if input.tol > 0 {
 							// We probably simplified the shape down to zero area.
 							continue
 						} else {
@@ -429,7 +450,7 @@ func (srg *SrgSpecSMOKE) getSrgData(gridData *GridDef, inputLoc *Location, tol f
 					if size == 0. {
 						err = fmt.Errorf("Length should not equal "+
 							"zero in %v", srg.WEIGHTSHAPEFILE)
-						return srgData, err
+						return nil, err
 					}
 					srgH.Weight = weightval / size
 				case geom.Point:
@@ -437,7 +458,7 @@ func (srg *SrgSpecSMOKE) getSrgData(gridData *GridDef, inputLoc *Location, tol f
 				default:
 					err = fmt.Errorf("aep: in file %s, unsupported geometry type %#v",
 						srg.WEIGHTSHAPEFILE, srgH.Geom)
-					return srgData, err
+					return nil, err
 				}
 			} else {
 				srgH.Weight = 1.
@@ -445,14 +466,14 @@ func (srg *SrgSpecSMOKE) getSrgData(gridData *GridDef, inputLoc *Location, tol f
 			if srgH.Weight < 0. || math.IsInf(srgH.Weight, 0) ||
 				math.IsNaN(srgH.Weight) {
 				err = fmt.Errorf("Surrogate weight is %v, which is not acceptable.", srgH.Weight)
-				return srgData, err
+				return nil, err
 			} else if srgH.Weight != 0. {
-				srgData.Insert(srgH)
+				srgs = append(srgs, srgH)
 			}
 		}
 	}
 	if srgShp.Error() != nil {
 		return nil, fmt.Errorf("in file %s, %v", srg.WEIGHTSHAPEFILE, srgShp.Error())
 	}
-	return srgData, nil
+	return srgs, nil
 }
