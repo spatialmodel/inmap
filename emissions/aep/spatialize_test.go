@@ -66,7 +66,7 @@ var coveredByGrid = map[string]bool{
 
 func TestReadSrgSpec(t *testing.T) {
 	r := strings.NewReader(srgSpecFileString)
-	srgSpecs, err := ReadSrgSpecSMOKE(r, "testdata", true)
+	srgSpecs, err := ReadSrgSpecSMOKE(r, "testdata", true, "", 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -173,7 +173,7 @@ func TestCreateSurrogates(t *testing.T) {
 		t.Error(err)
 	}
 	r := strings.NewReader(srgSpecFileString)
-	srgSpecs, err := ReadSrgSpecSMOKE(r, "testdata", true)
+	srgSpecs, err := ReadSrgSpecSMOKE(r, "testdata", true, "", 1)
 	if err != nil {
 		t.Error(err)
 	}
@@ -273,7 +273,7 @@ func TestSpatializeRecord(t *testing.T) {
 		t.Error(err)
 	}
 	r := strings.NewReader(srgSpecFileString)
-	srgSpecs, err := ReadSrgSpecSMOKE(r, "testdata", true)
+	srgSpecs, err := ReadSrgSpecSMOKE(r, "testdata", true, "", 1)
 	if err != nil {
 		t.Error(err)
 	}

@@ -19,13 +19,12 @@ package eieio
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
 	"net/url"
-	"strconv"
 	"strings"
 
 	"github.com/spatialmodel/inmap/emissions/slca/eieio/eieiorpc"
+	"github.com/spatialmodel/inmap/internal/hash"
 
 	"github.com/ctessum/requestcache"
 	"gonum.org/v1/gonum/mat"
@@ -38,26 +37,6 @@ type concRequest struct {
 	year       Year
 	loc        Location
 	aqm        string
-}
-
-func (er *concRequest) Key() string {
-	b, err := er.demand.MarshalBinary()
-	if err != nil {
-		panic(err)
-	}
-	var b2 []byte
-	if er.industries != nil {
-		b2, err = (*mat.VecDense)(er.industries).MarshalBinary()
-		if err != nil {
-			panic(err)
-		}
-	}
-	b3 := []byte(strconv.Itoa((int)(er.pol)))
-	b4 := []byte(strconv.Itoa((int)(er.year)))
-	b5 := []byte(strconv.Itoa((int)(er.loc)))
-	bAll := append(append(append(append(b, b2...), b3...), b4...), b5...)
-	bytes := sha256.Sum256(bAll)
-	return fmt.Sprintf("conc_%s_%x", er.aqm, bytes[0:sha256.Size])
 }
 
 // Concentrations returns spatially-explicit pollutant concentrations caused by the
@@ -83,7 +62,7 @@ func (e *SpatialEIO) Concentrations(ctx context.Context, request *eieiorpc.Conce
 		loc:        Location(request.Location),
 		aqm:        request.AQM,
 	}
-	rr := e.concentrationsCache.NewRequest(ctx, req, req.Key())
+	rr := e.concentrationsCache.NewRequest(ctx, req, "conc_"+hash.Hash(req))
 	resultI, err := rr.Result()
 	if err != nil {
 		return nil, err

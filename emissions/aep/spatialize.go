@@ -38,6 +38,7 @@ import (
 	"github.com/ctessum/requestcache"
 	"github.com/ctessum/sparse"
 	"github.com/ctessum/unit"
+	"github.com/spatialmodel/inmap/internal/hash"
 )
 
 // SpatialProcessor spatializes emissions records.
@@ -262,7 +263,7 @@ func (sp *SpatialProcessor) Surrogate(srgSpec SrgSpec, grid *GridDef, loc *Locat
 	sp.lazyLoad.Do(sp.load)
 
 	s := &srgGrid{srg: srgSpec, gridData: grid, loc: loc}
-	req := sp.cache.NewRequest(context.Background(), s, s.key())
+	req := sp.cache.NewRequest(context.Background(), s, "surrogate_"+hash.Hash(s))
 	resultI, err := req.Result()
 	if err != nil {
 		return nil, false, err
@@ -279,7 +280,7 @@ func (sp *SpatialProcessor) Surrogate(srgSpec SrgSpec, grid *GridDef, loc *Locat
 			return nil, false, err
 		}
 		s := &srgGrid{srg: newSrgSpec, gridData: grid, loc: loc}
-		req := sp.cache.NewRequest(context.Background(), s, s.key())
+		req := sp.cache.NewRequest(context.Background(), s, "surrogate_"+hash.Hash(s))
 		resultI, err := req.Result()
 		if err != nil {
 			return nil, false, err

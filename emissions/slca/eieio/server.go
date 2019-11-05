@@ -20,7 +20,6 @@ package eieio
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/gob"
 	"fmt"
@@ -42,6 +41,7 @@ import (
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"github.com/sirupsen/logrus"
 	"github.com/spatialmodel/inmap/emissions/slca/eieio/ces"
+	"github.com/spatialmodel/inmap/internal/hash"
 	"gonum.org/v1/gonum/mat"
 	"gonum.org/v1/plot"
 	"gonum.org/v1/plot/palette"
@@ -787,8 +787,7 @@ func (s *Server) Geometry(ctx context.Context, input *eieiorpc.GeometryInput) (*
 		s.geomCache = loadCacheOnce(s.getGeometry, 1, 1, s.SpatialEIO.EIEIOCache,
 			requestcache.MarshalGob, requestcache.UnmarshalGob)
 	})
-	keyHash := sha256.Sum256([]byte(input.SpatialReference))
-	key := fmt.Sprintf("geometry_%s_%x", input.AQM, keyHash[0:sha256.Size])
+	key := fmt.Sprintf("geometry_%s", hash.Hash(input))
 	req := s.geomCache.NewRequest(ctx, input, key)
 	iface, err := req.Result()
 	if err != nil {

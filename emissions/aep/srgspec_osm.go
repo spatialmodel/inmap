@@ -19,10 +19,7 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package aep
 
 import (
-	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -34,6 +31,7 @@ import (
 	"github.com/ctessum/geom/index/rtree"
 	"github.com/ctessum/geom/proj"
 	"github.com/ctessum/requestcache"
+	"github.com/spatialmodel/inmap/internal/hash"
 )
 
 // SrgSpecOSM holds OpenStreetMap spatial surrogate specification information.
@@ -64,16 +62,6 @@ type SrgSpecOSM struct {
 	status string
 
 	cache *requestcache.Cache
-}
-
-// Key returns a unique identifier for this surrogate specification.
-func (srg *SrgSpecOSM) Key() string {
-	b, err := json.Marshal(srg)
-	if err != nil {
-		panic(err)
-	}
-	bKey := sha256.Sum256(b)
-	return fmt.Sprintf("%x", bKey[0:sha256.Size])
 }
 
 // ReadSrgSpec reads a OpenStreetMap surrogate specification formated as a
@@ -129,17 +117,6 @@ func (srg *SrgSpecOSM) incrementStatus(percent float64) {
 	srg.progressLock.Unlock()
 }
 
-// srKey returns a unique key for a proj.SR
-func srKey(sr *proj.SR) string {
-	b := new(bytes.Buffer)
-	e := gob.NewEncoder(b)
-	if err := e.Encode(sr); err != nil {
-		panic(err)
-	}
-	bKey := sha256.Sum256(b.Bytes())
-	return fmt.Sprintf("%x", bKey[0:sha256.Size])
-}
-
 // getSrgData returns the spatial surrogate information for this
 // surrogate definition and location, where tol is tolerance for geometry simplification.
 func (srg *SrgSpecOSM) getSrgData(gridData *GridDef, inputLoc *Location, tol float64) (*rtree.Rtree, error) {
@@ -159,8 +136,8 @@ func (srg *SrgSpecOSM) getSrgData(gridData *GridDef, inputLoc *Location, tol flo
 		}
 	}
 
-	key := fmt.Sprintf("osm_srgdata_%s_%s_%g", srg.Key(), srKey(gridData.SR), tol)
-	request := srg.cache.NewRequest(context.TODO(), &osmReadSrgDataInput{gridData: gridData, tol: tol}, key)
+	key := fmt.Sprintf("osm_srgdata_%s_%s_%g", hash.Hash(srg), hash.Hash(gridData.SR), tol)
+	request := srg.cache.NewRequest(context.TODO(), &readSrgDataInput{gridData: gridData, tol: tol}, key)
 	srgs, err := request.Result()
 	if err != nil {
 		return nil, err
@@ -176,7 +153,7 @@ func (srg *SrgSpecOSM) getSrgData(gridData *GridDef, inputLoc *Location, tol flo
 	return srgData, nil
 }
 
-type osmReadSrgDataInput struct {
+type readSrgDataInput struct {
 	gridData *GridDef
 	tol      float64
 }
@@ -185,7 +162,7 @@ type osmReadSrgDataInput struct {
 // surrogate definition, inputI is of type *osmReadSrgDataInput and
 // inputI.tol is tolerance for geometry simplification.
 func (srg *SrgSpecOSM) readSrgData(ctx context.Context, inputI interface{}) (interface{}, error) {
-	input := inputI.(*osmReadSrgDataInput)
+	input := inputI.(*readSrgDataInput)
 
 	srgSR, err := proj.Parse("+proj=longlat")
 	if err != nil {

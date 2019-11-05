@@ -27,6 +27,7 @@ import (
 	"github.com/ctessum/geom/encoding/shp"
 	"github.com/ctessum/geom/proj"
 	"github.com/gonum/floats"
+	"github.com/spatialmodel/inmap/internal/hash"
 )
 
 func TestCreateSurrogates_osm(t *testing.T) {
@@ -67,9 +68,10 @@ func TestCreateSurrogates_osm(t *testing.T) {
 
 	inputLoc := &Location{Geom: g, SR: sr}
 
-	wantKey := "596d17c2bdb148b3649ed0d19c523942a42e1d240765da23ce60ec0f98f004ac"
-	if k := inputLoc.Key(); k != wantKey {
-		t.Errorf("location key: have %s, want %s", inputLoc.Key(), wantKey)
+	key := hash.Hash(inputLoc)
+	wantKey := "1b71cbac08f7dd9d754fd41b4d1fcc70"
+	if key != wantKey {
+		t.Errorf("location key: have %s, want %s", key, wantKey)
 	}
 
 	matchFullSCC := true
