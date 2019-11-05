@@ -112,8 +112,8 @@ type SpatialIterator struct {
 	ungridded map[aep.Pollutant]*unit.Unit // Emissions before gridding
 }
 
-// Next spatializes a record from the
-func (si *SpatialIterator) Next() (aep.Record, error) {
+// NextGridded returns a spatialized a record from the parent iterator.
+func (si *SpatialIterator) NextGridded() (aep.RecordGridded, error) {
 	rec, err := si.parent.Next()
 	if err != nil {
 		return nil, err
@@ -159,6 +159,12 @@ func (si *SpatialIterator) Next() (aep.Record, error) {
 		}
 	}
 	return recG, nil
+}
+
+// Next returns a spatialized a record from the parent iterator
+// to fulfill the iterator interface.
+func (si *SpatialIterator) Next() (aep.Record, error) {
+	return si.NextGridded()
 }
 
 // SpatialTotals returns spatial arrays of the total emissions

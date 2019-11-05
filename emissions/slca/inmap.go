@@ -427,7 +427,7 @@ func (c *CSTConfig) evaluationEmissions(ctx context.Context, aqmYearI interface{
 		return nil, err
 	}
 
-	emisGridded, err := c.groupBySCCAndApplyAdj(emis, sp)
+	emisGridded, err := c.groupBySCCAndApplyAdj(emis, req.aqm)
 	if err != nil {
 		return nil, err
 	}
