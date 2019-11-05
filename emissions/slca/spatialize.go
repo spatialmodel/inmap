@@ -24,6 +24,7 @@ import (
 	"encoding/csv"
 	"encoding/gob"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -237,7 +238,7 @@ func (c *CSTConfig) neiEmisSrg(spatialRef *SpatialRef) ([]*inmap.EmisRecord, err
 			}
 		}
 
-		emisGridded, err := c.groupBySCCAndApplyAdj(emis, sp)
+		emisGridded, err := c.groupBySCCAndApplyAdj(emis, spatialRef.AQM)
 		if err != nil {
 			return nil, err
 		}
@@ -376,7 +377,12 @@ func (a *arrayAdjuster) Adjustment() (*sparse.DenseArray, error) {
 
 // groupBySCCAndApplyAdj groups the records by SCC code instead of by sector
 // and applies a fugitive dust adjustment.
-func (c *CSTConfig) groupBySCCAndApplyAdj(emis map[string][]aep.Record, sp *aep.SpatialProcessor) (map[string][]aep.RecordGridded, error) {
+func (c *CSTConfig) groupBySCCAndApplyAdj(emis map[string][]aep.Record, aqm string) (map[string][]aep.RecordGridded, error) {
+	spatialConfig, _, _, err := c.srSetup(aqm)
+	if err != nil {
+		return nil, err
+	}
+
 	// Read the fugitive dust adjustment file.
 	f, err := os.Open(c.FugitiveDustAdjustment)
 	if err != nil {
@@ -408,14 +414,22 @@ func (c *CSTConfig) groupBySCCAndApplyAdj(emis map[string][]aep.Record, sp *aep.
 	// Reorganize records and apply adjustments.
 	o := make(map[string][]aep.RecordGridded)
 	for sector, recs := range emis {
-		for _, rec := range recs {
+		it := spatialConfig.Iterator(aeputil.IteratorFromMap(map[string][]aep.Record{sector: recs}), 0)
+		for {
+			rec, err := it.NextGridded()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				return nil, err
+			}
 			if _, ok := fugitiveDustSectors[sector]; ok {
 				o[rec.GetSCC()] = append(o[rec.GetSCC()], &aep.RecordGriddedAdjusted{
-					RecordGridded:   sp.GridRecord(rec),
+					RecordGridded:   rec.(aep.RecordGridded),
 					SpatialAdjuster: &adj,
 				})
 			} else {
-				o[rec.GetSCC()] = append(o[rec.GetSCC()], sp.GridRecord(rec))
+				o[rec.GetSCC()] = append(o[rec.GetSCC()], rec)
 			}
 		}
 	}
