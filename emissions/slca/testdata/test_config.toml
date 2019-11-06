@@ -8,13 +8,15 @@ SpatialCache = ""
 MaxCacheEntries= 30
 DefaultFIPS = "00000"
 
-FugitiveDustSectors = ["test_adj"]
-FugitiveDustAdjustment = "testdata/fugitive_dust_adj.csv"
 
 # CensusPopColumns is a list of the data fields in CensusFile that should
 # be included as population estimates in the model. They can be population
 # of different demographics or for different population scenarios.
 CensusPopColumns= ["TotalPop", "WhiteNoLat", "Black", "Native", "Asian", "Latino"]
+
+FugitiveDustSectors = ["test_adj"]
+[FugitiveDustAdjustment]
+  inmap = "testdata/fugitive_dust_adj.csv"
 
 [SRFiles]
   inmap = "testdata/testSR.ncf"
