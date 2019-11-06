@@ -92,9 +92,10 @@ type CSTConfig struct {
 	// that should have a fugitive dust adjustment applied to them.
 	FugitiveDustSectors []string
 
-	// FugitiveDustAdjustment specifies the path to the file that contains
+	// FugitiveDustAdjustment specifies the path to the files---one for
+	// each air quality model--that contain
 	// grid-cell specific fugitive dust adjustment factors.
-	FugitiveDustAdjustment string
+	FugitiveDustAdjustment map[string]string
 
 	// InventoryConfig specifies the configuration of the emissions inventory
 	// data used for air quality model evaluation and calculating average

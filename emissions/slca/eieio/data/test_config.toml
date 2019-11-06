@@ -32,10 +32,11 @@ DefaultYear = 2011
   MaxCacheEntries=30
   DefaultFIPS = "00000"
 
-  FugitiveDustSectors = ["test_adj"]
-  FugitiveDustAdjustment = "${INMAP_ROOT_DIR}/emissions/slca/testdata/fugitive_dust_adj.csv"
-
   CensusPopColumns = ["TotalPop", "WhiteNoLat", "Black", "Native", "Asian", "Latino"]
+
+  FugitiveDustSectors = ["test_adj"]
+  [SpatialEIO.FugitiveDustAdjustment]
+    isrm = "${INMAP_ROOT_DIR}/emissions/slca/testdata/fugitive_dust_adj.csv"
 
   [SpatialEIO.SRFiles]
     isrm = "${INMAP_ROOT_DIR}/emissions/slca/testdata/testSR.ncf"

@@ -35,12 +35,18 @@ DefaultYear = 2014
   MaxCacheEntries=30
   DefaultFIPS = "00000"
 
-  FugitiveDustSectors = ["afdust", "othafdust"]
-  FugitiveDustAdjustment = "${INMAP_ROOT_DIR}/emissions/slca/eieio/data/dust_adjustment_isrm.csv"
-
   AdditionalEmissionsShapefilesForEvaluation = [
-    "${evaldata}/2005_emissions/bioFireEmis.shp",
+  "${evaldata}/2005_emissions/bioFireEmis.shp",
   ]
+
+  FugitiveDustSectors = ["afdust", "othafdust"]
+  [SpatialEIO.FugitiveDustAdjustment]
+    isrm = "${INMAP_ROOT_DIR}/emissions/slca/eieio/data/dust_adjustment_isrm.csv"
+    apsca_q0 = "apsca_dust_adj.csv"
+    apsca_q1 = "apsca_dust_adj.csv"
+    apsca_q2 = "apsca_dust_adj.csv"
+    apsca_q3 = "apsca_dust_adj.csv"
+    apsca_q4 = "apsca_dust_adj.csv"
   [SpatialEIO.SRFiles]
     isrm = "/data/isrmv121/isrm_v1.2.1.ncf"
     apsca_q0 = "/data/apsca/apsca_sr_Q0_v1.2.1.ncf"

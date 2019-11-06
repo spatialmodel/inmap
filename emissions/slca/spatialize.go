@@ -374,7 +374,11 @@ func (c *CSTConfig) groupBySCCAndApplyAdj(emis map[string][]aep.Record, aqm stri
 	}
 
 	// Read the fugitive dust adjustment file.
-	f, err := os.Open(c.FugitiveDustAdjustment)
+	file, ok := c.FugitiveDustAdjustment[aqm]
+	if !ok {
+		return nil, fmt.Errorf("slca: FugitiveDustAdjustment file not specified for aqm `%s`", aqm)
+	}
+	f, err := os.Open(os.ExpandEnv(file))
 	if err != nil {
 		return nil, fmt.Errorf("slca: opening FugitiveDustAdjustment file: %v", err)
 	}
