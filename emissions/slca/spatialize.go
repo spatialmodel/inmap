@@ -24,6 +24,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -408,6 +409,7 @@ func (c *CSTConfig) groupBySCCAndApplyAdj(emis map[string][]aep.Record, aqm stri
 	// Reorganize records and apply adjustments.
 	o := make(map[string][]aep.RecordGridded)
 	for sector, recs := range emis {
+		log.Printf("slca: processing NEI for sector %s, aqm %s", sector, aqm)
 		it := spatialConfig.Iterator(aeputil.IteratorFromMap(map[string][]aep.Record{sector: recs}), 0)
 		for {
 			rec, err := it.NextGridded()
