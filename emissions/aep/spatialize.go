@@ -352,6 +352,15 @@ func (s *SrgSpecs) Add(ss SrgSpec) {
 	s.byCode[ss.region()][ss.code()] = ss
 }
 
+// AddAll adds all surrogates in srgs to the receiver.
+func (s *SrgSpecs) AddAll(srgs *SrgSpecs) {
+	for _, sp := range srgs.byName {
+		for _, srg := range sp {
+			s.Add(srg)
+		}
+	}
+}
+
 // GetByName gets the surrogate matching the given region and name.
 func (s *SrgSpecs) GetByName(region Country, name string) (SrgSpec, error) {
 	ss, ok := s.byName[region][name]
