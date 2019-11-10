@@ -23,6 +23,7 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
+	"log"
 	"runtime"
 	"strings"
 	"sync"
@@ -175,6 +176,7 @@ func (sp *SpatialProcessor) createSurrogate(_ context.Context, inData interface{
 	if len(srg.mergeNames()) != 0 {
 		return sp.createMerged(srg, gridData, in.loc)
 	}
+	log.Printf("creating surrogate `%s` for location %+v", srg.name(), in.loc.Bounds())
 
 	srgData, err := srg.getSrgData(gridData, in.loc, sp.SimplifyTolerance)
 	if err != nil {
