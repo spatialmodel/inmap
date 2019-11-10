@@ -303,9 +303,6 @@ func FromAEP(r []aep.RecordGridded, grids []*aep.GridDef, gi int, VOC, NOx, NH3,
 						break
 					}
 				}
-				if !found {
-					return nil, fmt.Errorf("inmap: no match for pollutant '%s'", pRec.Name)
-				}
 			}
 
 			if ptRec, ok := rec.Parent().(aep.RecordElevated); ok && !ptRec.GroundLevel() {
