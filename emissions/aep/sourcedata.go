@@ -141,7 +141,7 @@ func (sdl *sourceDataLocator) Locate(sd *SourceDataLocation) error {
 		return err
 	}
 	if _, ok := sdl.inputShapes[srgSpec]; !ok {
-		sdl.inputShapes[srgSpec], err = srgSpec.(*SrgSpecSMOKE).InputShapes()
+		sdl.inputShapes[srgSpec], err = srgSpec.(*SrgSpecSMOKECache).InputShapes()
 		if err != nil {
 			return err
 		}

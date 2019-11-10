@@ -76,7 +76,7 @@ func TestReadSrgSpec(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		srgSpec := srgSpecI.(*SrgSpecSMOKE)
+		srgSpec := srgSpecI.(*SrgSpecSMOKECache)
 		testResult += fmt.Sprintf("&{Region:%s Name:%s Code:%s DATASHAPEFILE:%s "+
 			"DATAATTRIBUTE:%s WEIGHTSHAPEFILE:%s Details:%s "+
 			"BackupSurrogateNames:%v WeightColumns:%v MergeNames:%v MergeMultipliers:%v}\n",
@@ -201,7 +201,7 @@ func TestCreateSurrogates(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			inputShapes, err := srgSpec.(*SrgSpecSMOKE).InputShapes()
+			inputShapes, err := srgSpec.(*SrgSpecSMOKECache).InputShapes()
 			if err != nil {
 				t.Fatal(err)
 			}

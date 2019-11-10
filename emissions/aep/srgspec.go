@@ -27,7 +27,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/encoding/shp"
@@ -42,11 +41,8 @@ type SrgSpec interface {
 	region() Country
 	code() string
 	name() string
-	Status() Status
 	mergeNames() []string
 	mergeMultipliers() []float64
-	setStatus(percent float64, status string)
-	incrementStatus(percent float64)
 }
 
 // SrgSpecSMOKE holds SMOKE-formatted spatial surrogate specification information.
@@ -82,40 +78,11 @@ type SrgSpecSMOKE struct {
 	// MergeMultipliers specifies multipliers associated with the surrogates
 	// in MergeNames.
 	MergeMultipliers []float64
+}
 
-	// progress specifies the progress in generating the surrogate.
-	progress     float64
-	progressLock sync.Mutex
-	// status specifies what the surrogate generator is currently doing.
-	status string
-
+type SrgSpecSMOKECache struct {
+	*SrgSpecSMOKE
 	cache *requestcache.Cache
-}
-
-// Status returns information about the status of the receiver.
-func (srg *SrgSpecSMOKE) Status() Status {
-	srg.progressLock.Lock()
-	o := Status{
-		Name:     srg.Name,
-		Code:     srg.Code,
-		Status:   srg.status,
-		Progress: srg.progress,
-	}
-	srg.progressLock.Unlock()
-	return o
-}
-
-func (srg *SrgSpecSMOKE) setStatus(percent float64, status string) {
-	srg.progressLock.Lock()
-	srg.progress = percent
-	srg.status = status
-	srg.progressLock.Unlock()
-}
-
-func (srg *SrgSpecSMOKE) incrementStatus(percent float64) {
-	srg.progressLock.Lock()
-	srg.progress += percent
-	srg.progressLock.Unlock()
 }
 
 const none = "NONE"
@@ -249,8 +216,11 @@ func ReadSrgSpecSMOKE(fid io.Reader, shapefileDir string, checkShapefiles bool, 
 				shpf.Close()
 			}
 		}
-		srg.cache = newCache(srg.readSrgData, diskCachePath, memCacheSize, marshalSrgHolders, unmarshalSrgHolders)
-		srgs.Add(srg)
+		srgCache := &SrgSpecSMOKECache{
+			SrgSpecSMOKE: srg,
+			cache:        newCache(srg.readSrgData, diskCachePath, memCacheSize, marshalSrgHolders, unmarshalSrgHolders),
+		}
+		srgs.Add(srgCache)
 	}
 	return srgs, nil
 }
@@ -302,9 +272,7 @@ func (srg *SrgSpecSMOKE) InputShapes() (map[string]*Location, error) {
 }
 
 // get surrogate shapes and weights. tol is a geometry simplification tolerance.
-func (srg *SrgSpecSMOKE) getSrgData(gridData *GridDef, inputLoc *Location, tol float64) (*rtree.Rtree, error) {
-	srg.setStatus(0, "getting surrogate weight data")
-
+func (srg *SrgSpecSMOKECache) getSrgData(gridData *GridDef, inputLoc *Location, tol float64) (*rtree.Rtree, error) {
 	// Calculate the area of interest for our surrogate data.
 	inputShapeT, err := inputLoc.Reproject(gridData.SR)
 	if err != nil {
@@ -319,7 +287,7 @@ func (srg *SrgSpecSMOKE) getSrgData(gridData *GridDef, inputLoc *Location, tol f
 		}
 	}
 
-	key := fmt.Sprintf("smoke_srgdata_%s_%s_%g", hash.Hash(srg), hash.Hash(gridData.SR), tol)
+	key := fmt.Sprintf("smoke_srgdata_%s_%s_%g", hash.Hash(srg.SrgSpecSMOKE), hash.Hash(gridData.SR), tol)
 	request := srg.cache.NewRequest(context.TODO(), &readSrgDataInput{gridData: gridData, tol: tol}, key)
 	srgs, err := request.Result()
 	if err != nil {

@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"sync"
 
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/encoding/osm"
@@ -54,13 +53,10 @@ type SrgSpecOSM struct {
 	// MergeMultipliers specifies multipliers associated with the surrogates
 	// in MergeNames.
 	MergeMultipliers []float64 `json:"merge_multipliers"`
+}
 
-	// progress specifies the progress in generating the surrogate.
-	progress     float64
-	progressLock sync.Mutex
-	// status specifies what the surrogate generator is currently doing.
-	status string
-
+type srgSpecOSMCache struct {
+	*SrgSpecOSM
 	cache *requestcache.Cache
 }
 
@@ -78,8 +74,11 @@ func ReadSrgSpecOSM(r io.Reader, diskCachePath string, memCacheSize int) (*SrgSp
 	}
 	srgs := NewSrgSpecs()
 	for _, s := range o {
-		s.cache = newCache(s.readSrgData, diskCachePath, memCacheSize, marshalSrgHolders, unmarshalSrgHolders)
-		srgs.Add(s)
+		sCache := &srgSpecOSMCache{
+			SrgSpecOSM: s,
+			cache:      newCache(s.readSrgData, diskCachePath, memCacheSize, marshalSrgHolders, unmarshalSrgHolders),
+		}
+		srgs.Add(sCache)
 	}
 	return srgs, nil
 }
@@ -91,37 +90,9 @@ func (srg *SrgSpecOSM) name() string                   { return srg.Name }
 func (srg *SrgSpecOSM) mergeNames() []string           { return srg.MergeNames }
 func (srg *SrgSpecOSM) mergeMultipliers() []float64    { return srg.MergeMultipliers }
 
-// Status returns information about the status of the receiver.
-func (srg *SrgSpecOSM) Status() Status {
-	srg.progressLock.Lock()
-	o := Status{
-		Name:     srg.Name,
-		Code:     srg.Code,
-		Status:   srg.status,
-		Progress: srg.progress,
-	}
-	srg.progressLock.Unlock()
-	return o
-}
-
-func (srg *SrgSpecOSM) setStatus(percent float64, status string) {
-	srg.progressLock.Lock()
-	srg.progress = percent
-	srg.status = status
-	srg.progressLock.Unlock()
-}
-
-func (srg *SrgSpecOSM) incrementStatus(percent float64) {
-	srg.progressLock.Lock()
-	srg.progress += percent
-	srg.progressLock.Unlock()
-}
-
 // getSrgData returns the spatial surrogate information for this
 // surrogate definition and location, where tol is tolerance for geometry simplification.
-func (srg *SrgSpecOSM) getSrgData(gridData *GridDef, inputLoc *Location, tol float64) (*rtree.Rtree, error) {
-	srg.setStatus(0, "getting surrogate weight data")
-
+func (srg *srgSpecOSMCache) getSrgData(gridData *GridDef, inputLoc *Location, tol float64) (*rtree.Rtree, error) {
 	// Calculate the area of interest for our surrogate data.
 	inputShapeT, err := inputLoc.Reproject(gridData.SR)
 	if err != nil {
@@ -136,7 +107,7 @@ func (srg *SrgSpecOSM) getSrgData(gridData *GridDef, inputLoc *Location, tol flo
 		}
 	}
 
-	key := fmt.Sprintf("osm_srgdata_%s_%s_%g", hash.Hash(srg), hash.Hash(gridData.SR), tol)
+	key := fmt.Sprintf("osm_srgdata_%s_%s_%g", hash.Hash(srg.SrgSpecOSM), hash.Hash(gridData.SR), tol)
 	request := srg.cache.NewRequest(context.TODO(), &readSrgDataInput{gridData: gridData, tol: tol}, key)
 	srgs, err := request.Result()
 	if err != nil {

@@ -29,7 +29,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -369,18 +368,6 @@ func (s *SrgSpecs) GetByCode(region Country, code string) (SrgSpec, error) {
 		return ss, nil
 	}
 	return nil, fmt.Errorf("can't find surrogate for region=%s, code=%s", region, code)
-}
-
-// Status returns the status of the spatial surrogates in s.
-func (s *SrgSpecs) Status() []Status {
-	var o statuses
-	for _, ss := range s.byName {
-		for _, sss := range ss {
-			o = append(o, sss.Status())
-		}
-	}
-	sort.Sort(statuses(o))
-	return o
 }
 
 // findFile finds a file in dir or any of its subdirectories.

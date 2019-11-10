@@ -28,10 +28,12 @@ import (
 func Hash(object interface{}) string {
 	h := fnv.New128a()
 	printer := spew.ConfigState{
-		Indent:         " ",
-		SortKeys:       true,
-		DisableMethods: true,
-		SpewKeys:       true,
+		Indent:                  " ",
+		SortKeys:                true,
+		DisableMethods:          true,
+		SpewKeys:                true,
+		DisablePointerAddresses: true,
+		DisableCapacities:       true,
 	}
 	printer.Fprintf(h, "%#v", object)
 	bKey := h.Sum([]byte{})
