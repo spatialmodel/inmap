@@ -31,14 +31,14 @@ import (
 )
 
 type healthRequest struct {
-	demand     *mat.VecDense
-	industries *Mask
-	pol        Pollutant
-	pop        string
-	year       Year
-	loc        Location
-	hr         epi.HRer
-	aqm        string
+	Demand     *mat.VecDense
+	Industries *Mask
+	Pol        Pollutant
+	Pop        string
+	Year       Year
+	Loc        Location
+	HR         epi.HRer
+	AQM        string
 }
 
 // Health returns spatially-explicit pollutant air quality-related health impacts caused by the
@@ -54,7 +54,7 @@ func (e *SpatialEIO) Health(ctx context.Context, request *eieiorpc.HealthInput) 
 		}
 		e.healthCache = loadCacheOnce(func(ctx context.Context, request interface{}) (interface{}, error) {
 			r := request.(*healthRequest)
-			return e.health(ctx, r.demand, r.industries, r.aqm, r.pol, r.pop, r.year, r.loc, r.hr) // Actually calculate the health impacts.
+			return e.health(ctx, r.Demand, r.Industries, r.AQM, r.Pol, r.Pop, r.Year, r.Loc, r.HR) // Actually calculate the health impacts.
 		}, 1, e.MemCacheSize, c, vectorMarshal, vectorUnmarshal)
 	})
 	hr, ok := e.hr[request.HR]
@@ -62,14 +62,14 @@ func (e *SpatialEIO) Health(ctx context.Context, request *eieiorpc.HealthInput) 
 		return nil, fmt.Errorf("eieio: hazard ratio function `%s` is not registered", request.HR)
 	}
 	req := &healthRequest{
-		demand:     array2vec(request.Demand.Data),
-		industries: rpc2mask(request.EmitterMask),
-		pol:        Pollutant(request.Pollutant),
-		pop:        request.Population,
-		year:       Year(request.Year),
-		loc:        Location(request.Location),
-		hr:         hr,
-		aqm:        request.AQM,
+		Demand:     array2vec(request.Demand.Data),
+		Industries: rpc2mask(request.EmitterMask),
+		Pol:        Pollutant(request.Pollutant),
+		Pop:        request.Population,
+		Year:       Year(request.Year),
+		Loc:        Location(request.Location),
+		HR:         hr,
+		AQM:        request.AQM,
 	}
 	rr := e.healthCache.NewRequest(ctx, req, "health_"+hash.Hash(req))
 	resultI, err := rr.Result()

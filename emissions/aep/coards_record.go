@@ -142,9 +142,10 @@ func ReadCOARDSFile(file string, begin, end time.Time, units InputUnits, sourceD
 		max := geom.Point{X: x + dx/2, Y: y + dy/2}
 
 		r := &basicPolygonRecord{
-			Polygon:    geom.Polygon{{min, {max.X, min.Y}, max, {min.X, max.Y}}},
-			SourceData: sourceData,
-			SR:         sr,
+			Polygon:      geom.Polygon{{min, {X: max.X, Y: min.Y}, max, {X: min.X, Y: max.Y}}},
+			SourceData:   sourceData,
+			SR:           sr,
+			LocationName: fmt.Sprintf("%d_%d", j, i),
 		}
 
 		e := new(Emissions)

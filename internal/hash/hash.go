@@ -18,6 +18,7 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.*/
 package hash
 
 import (
+	"encoding/gob"
 	"fmt"
 	"hash/fnv"
 
@@ -26,7 +27,18 @@ import (
 
 // Hash returns a hash key for the specified object.
 func Hash(object interface{}) string {
+	if s, ok := object.(fmt.Stringer); ok {
+		return s.String()
+	}
 	h := fnv.New128a()
+
+	e := gob.NewEncoder(h)
+	if err := e.Encode(object); err == nil {
+		bKey := h.Sum([]byte{})
+		return fmt.Sprintf("%x", bKey[0:h.Size()])
+	}
+	// If there is an error (e.g., there are NaN values)
+	// use spew instead of gob.
 	printer := spew.ConfigState{
 		Indent:                  " ",
 		SortKeys:                true,

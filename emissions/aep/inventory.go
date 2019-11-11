@@ -47,7 +47,15 @@ func init() {
 
 type Location struct {
 	geom.Geom
-	SR *proj.SR
+	SR   *proj.SR
+	Name string
+}
+
+func (l *Location) String() string {
+	if l.Name == "" {
+		panic("location must have name")
+	}
+	return l.Name
 }
 
 func (l *Location) Reproject(sr *proj.SR) (geom.Geom, error) {
@@ -155,6 +163,7 @@ type basicPolygonRecord struct {
 	SR *proj.SR
 	SourceData
 	Emissions
+	LocationName string
 }
 
 // PointData exists to fulfill the Record interface but always returns
@@ -163,7 +172,7 @@ func (r *basicPolygonRecord) PointData() *PointSourceData { return nil }
 
 // Location returns the polygon representing the location of emissions.
 func (r *basicPolygonRecord) Location() *Location {
-	return &Location{r.Polygon, r.SR}
+	return &Location{Geom: r.Polygon, SR: r.SR, Name: r.LocationName}
 }
 
 type supplementalPointRecord struct {

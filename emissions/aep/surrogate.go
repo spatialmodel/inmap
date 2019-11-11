@@ -164,6 +164,11 @@ type srgGrid struct {
 	loc      *Location
 }
 
+func (sg *srgGrid) key() string {
+	return fmt.Sprintf("surrogate_%s%s_%s_%s", sg.srg.region(), sg.srg.code(),
+		sg.gridData.Name, sg.loc.String())
+}
+
 // createSurrogate creates a new gridding surrogate based on a
 // surrogate specification and grid definition.
 func (sp *SpatialProcessor) createSurrogate(_ context.Context, inData interface{}) (interface{}, error) {
@@ -176,7 +181,7 @@ func (sp *SpatialProcessor) createSurrogate(_ context.Context, inData interface{
 	if len(srg.mergeNames()) != 0 {
 		return sp.createMerged(srg, gridData, in.loc)
 	}
-	log.Printf("creating surrogate `%s` for location %+v", srg.name(), in.loc.Bounds())
+	log.Printf("creating surrogate `%s` for location %s", srg.name(), in.loc)
 
 	srgData, err := srg.getSrgData(gridData, in.loc, sp.SimplifyTolerance)
 	if err != nil {

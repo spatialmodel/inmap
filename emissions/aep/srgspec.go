@@ -23,6 +23,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"log"
 	"math"
 	"path/filepath"
 	"strconv"
@@ -32,7 +33,6 @@ import (
 	"github.com/ctessum/geom/encoding/shp"
 	"github.com/ctessum/geom/index/rtree"
 	"github.com/ctessum/requestcache"
-	"github.com/spatialmodel/inmap/internal/hash"
 )
 
 type SrgSpec interface {
@@ -78,10 +78,7 @@ type SrgSpecSMOKE struct {
 	// MergeMultipliers specifies multipliers associated with the surrogates
 	// in MergeNames.
 	MergeMultipliers []float64
-}
 
-type SrgSpecSMOKECache struct {
-	*SrgSpecSMOKE
 	cache *requestcache.Cache
 }
 
@@ -216,11 +213,8 @@ func ReadSrgSpecSMOKE(fid io.Reader, shapefileDir string, checkShapefiles bool, 
 				shpf.Close()
 			}
 		}
-		srgCache := &SrgSpecSMOKECache{
-			SrgSpecSMOKE: srg,
-			cache:        newCache(srg.readSrgData, diskCachePath, memCacheSize, marshalSrgHolders, unmarshalSrgHolders),
-		}
-		srgs.Add(srgCache)
+		srg.cache = newCache(srg.readSrgData, diskCachePath, memCacheSize, marshalSrgHolders, unmarshalSrgHolders)
+		srgs.Add(srg)
 	}
 	return srgs, nil
 }
@@ -260,6 +254,7 @@ func (srg *SrgSpecSMOKE) InputShapes() (map[string]*Location, error) {
 			inputData[inputID] = &Location{
 				Geom: ggeom,
 				SR:   inputSR,
+				Name: srg.region().String() + inputID,
 			}
 		} else {
 			inputData[inputID].Geom = append(inputData[inputID].Geom.(geom.Polygon), ggeom...)
@@ -272,7 +267,7 @@ func (srg *SrgSpecSMOKE) InputShapes() (map[string]*Location, error) {
 }
 
 // get surrogate shapes and weights. tol is a geometry simplification tolerance.
-func (srg *SrgSpecSMOKECache) getSrgData(gridData *GridDef, inputLoc *Location, tol float64) (*rtree.Rtree, error) {
+func (srg *SrgSpecSMOKE) getSrgData(gridData *GridDef, inputLoc *Location, tol float64) (*rtree.Rtree, error) {
 	// Calculate the area of interest for our surrogate data.
 	inputShapeT, err := inputLoc.Reproject(gridData.SR)
 	if err != nil {
@@ -287,7 +282,7 @@ func (srg *SrgSpecSMOKECache) getSrgData(gridData *GridDef, inputLoc *Location, 
 		}
 	}
 
-	key := fmt.Sprintf("smoke_srgdata_%s_%s_%g", hash.Hash(srg.SrgSpecSMOKE), hash.Hash(gridData.SR), tol)
+	key := fmt.Sprintf("smoke_srgdata_%s%s_%s_%g", srg.region(), srg.code(), gridData.SR.Name, tol)
 	request := srg.cache.NewRequest(context.TODO(), &readSrgDataInput{gridData: gridData, tol: tol}, key)
 	srgs, err := request.Result()
 	if err != nil {
@@ -308,6 +303,7 @@ func (srg *SrgSpecSMOKECache) getSrgData(gridData *GridDef, inputLoc *Location, 
 // surrogate definition, inputI is of type *osmReadSrgDataInput and
 // inputI.tol is tolerance for geometry simplification.
 func (srg *SrgSpecSMOKE) readSrgData(ctx context.Context, inputI interface{}) (interface{}, error) {
+	log.Printf("processing surrogate `%s` spatial data", srg.Name)
 	input := inputI.(*readSrgDataInput)
 
 	srgShp, err := shp.NewDecoder(srg.WEIGHTSHAPEFILE)

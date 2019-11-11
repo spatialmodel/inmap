@@ -148,7 +148,7 @@ func (c *CSTConfig) neiSpatialSrg(srgCode, aqm, FIPS string) ([]*inmap.EmisRecor
 		FIPS = c.DefaultFIPS
 	}
 
-	inputShapes, err := srgSpec.(*aep.SrgSpecSMOKECache).InputShapes()
+	inputShapes, err := srgSpec.(*aep.SrgSpecSMOKE).InputShapes()
 	if err != nil {
 		return nil, err
 	}
@@ -421,7 +421,7 @@ func (c *CSTConfig) groupBySCCAndApplyAdj(emis map[string][]aep.Record, aqm stri
 			}
 			if _, ok := fugitiveDustSectors[sector]; ok {
 				o[rec.GetSCC()] = append(o[rec.GetSCC()], &aep.RecordGriddedAdjusted{
-					RecordGridded:   rec.(aep.RecordGridded),
+					RecordGridded:   rec,
 					SpatialAdjuster: &adj,
 				})
 			} else {

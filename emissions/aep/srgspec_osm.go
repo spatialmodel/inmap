@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"os"
 
 	"github.com/ctessum/geom"
@@ -30,7 +31,6 @@ import (
 	"github.com/ctessum/geom/index/rtree"
 	"github.com/ctessum/geom/proj"
 	"github.com/ctessum/requestcache"
-	"github.com/spatialmodel/inmap/internal/hash"
 )
 
 // SrgSpecOSM holds OpenStreetMap spatial surrogate specification information.
@@ -53,10 +53,7 @@ type SrgSpecOSM struct {
 	// MergeMultipliers specifies multipliers associated with the surrogates
 	// in MergeNames.
 	MergeMultipliers []float64 `json:"merge_multipliers"`
-}
 
-type srgSpecOSMCache struct {
-	*SrgSpecOSM
 	cache *requestcache.Cache
 }
 
@@ -74,11 +71,8 @@ func ReadSrgSpecOSM(r io.Reader, diskCachePath string, memCacheSize int) (*SrgSp
 	}
 	srgs := NewSrgSpecs()
 	for _, s := range o {
-		sCache := &srgSpecOSMCache{
-			SrgSpecOSM: s,
-			cache:      newCache(s.readSrgData, diskCachePath, memCacheSize, marshalSrgHolders, unmarshalSrgHolders),
-		}
-		srgs.Add(sCache)
+		s.cache = newCache(s.readSrgData, diskCachePath, memCacheSize, marshalSrgHolders, unmarshalSrgHolders)
+		srgs.Add(s)
 	}
 	return srgs, nil
 }
@@ -92,7 +86,7 @@ func (srg *SrgSpecOSM) mergeMultipliers() []float64    { return srg.MergeMultipl
 
 // getSrgData returns the spatial surrogate information for this
 // surrogate definition and location, where tol is tolerance for geometry simplification.
-func (srg *srgSpecOSMCache) getSrgData(gridData *GridDef, inputLoc *Location, tol float64) (*rtree.Rtree, error) {
+func (srg *SrgSpecOSM) getSrgData(gridData *GridDef, inputLoc *Location, tol float64) (*rtree.Rtree, error) {
 	// Calculate the area of interest for our surrogate data.
 	inputShapeT, err := inputLoc.Reproject(gridData.SR)
 	if err != nil {
@@ -107,7 +101,7 @@ func (srg *srgSpecOSMCache) getSrgData(gridData *GridDef, inputLoc *Location, to
 		}
 	}
 
-	key := fmt.Sprintf("osm_srgdata_%s_%s_%g", hash.Hash(srg.SrgSpecOSM), hash.Hash(gridData.SR), tol)
+	key := fmt.Sprintf("osm_srgdata_%s%s_%s_%g", srg.region(), srg.code(), gridData.SR.Name, tol)
 	request := srg.cache.NewRequest(context.TODO(), &readSrgDataInput{gridData: gridData, tol: tol}, key)
 	srgs, err := request.Result()
 	if err != nil {
@@ -133,6 +127,7 @@ type readSrgDataInput struct {
 // surrogate definition, inputI is of type *osmReadSrgDataInput and
 // inputI.tol is tolerance for geometry simplification.
 func (srg *SrgSpecOSM) readSrgData(ctx context.Context, inputI interface{}) (interface{}, error) {
+	log.Printf("processing surrogate `%s` spatial data", srg.Name)
 	input := inputI.(*readSrgDataInput)
 
 	srgSR, err := proj.Parse("+proj=longlat")

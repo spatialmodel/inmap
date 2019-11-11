@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -76,7 +77,7 @@ func TestReadSrgSpec(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		srgSpec := srgSpecI.(*SrgSpecSMOKECache)
+		srgSpec := srgSpecI.(*SrgSpecSMOKE)
 		testResult += fmt.Sprintf("&{Region:%s Name:%s Code:%s DATASHAPEFILE:%s "+
 			"DATAATTRIBUTE:%s WEIGHTSHAPEFILE:%s Details:%s "+
 			"BackupSurrogateNames:%v WeightColumns:%v MergeNames:%v MergeMultipliers:%v}\n",
@@ -201,7 +202,7 @@ func TestCreateSurrogates(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			inputShapes, err := srgSpec.(*SrgSpecSMOKECache).InputShapes()
+			inputShapes, err := srgSpec.(*SrgSpecSMOKE).InputShapes()
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -379,6 +380,113 @@ func TestSpatializeRecord(t *testing.T) {
 					}
 				}
 			}
+		}
+	}
+}
+
+// Test to make sure surrogate cache is working
+func TestSpatializeRecord_srgCache(t *testing.T) {
+	inputSR, err := proj.Parse("+proj=longlat")
+	if err != nil {
+		t.Error(err)
+	}
+	r := strings.NewReader(srgSpecFileString)
+	srgSpecs, err := ReadSrgSpecSMOKE(r, "testdata", true, "", 1)
+	if err != nil {
+		t.Error(err)
+	}
+	r = strings.NewReader(gridRefFileString)
+	gridRef, err := ReadGridRef(r, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	grid, err := createGrid()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sp := NewSpatialProcessor(srgSpecs, []*GridDef{grid}, gridRef, inputSR, true)
+	//sp.DiskCachePath = "testcache"
+
+	sdl := newSourceDataLocator(gridRef, srgSpecs)
+
+	emis := new(Emissions)
+	begin, _ := time.Parse("Jan 2006", "Jan 2005")
+	end, _ := time.Parse("Jan 2006", "Jan 2006")
+	rate, err := parseEmisRateAnnual("1", "-9", func(v float64) *unit.Unit { return unit.New(v, unit.Kilogram) })
+	if err != nil {
+		t.Fatal(err)
+	}
+	emis.Add(begin, end, "testpol", "", rate)
+
+	rec := &PolygonRecord{
+		SourceDataLocation: SourceDataLocation{SourceData: SourceData{
+			FIPS:    "36061",
+			SCC:     "0010200501",
+			Country: USA,
+		}},
+		Emissions: *emis,
+	}
+	sdl.Locate(rec.getSourceDataLocation())
+	srgRec := sp.AddSurrogate(rec)
+
+	for i := 0; i < 3; i++ {
+		gr := sp.GridRecord(srgRec)
+		_, _, err = gr.GriddedEmissions(begin, end, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		requestsWant := []int{i + 1, i + 1, 1}
+		requests := sp.cache.Requests()
+		if !reflect.DeepEqual(requests, requestsWant) {
+			t.Errorf("%d: %v != %v", i, requests, requestsWant)
+		}
+
+		srgSpec, err := srgRec.SurrogateSpecification()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		requestsWant = []int{1, 1, 1}
+		requests = srgSpec.(*SrgSpecSMOKE).cache.Requests()
+		if !reflect.DeepEqual(requests, requestsWant) {
+			t.Errorf("%d: %v != %v", i, requests, requestsWant)
+		}
+	}
+
+	rec2 := &PolygonRecord{
+		SourceDataLocation: SourceDataLocation{SourceData: SourceData{
+			FIPS:    "36047",
+			SCC:     "0010200501",
+			Country: USA,
+		}},
+		Emissions: *emis,
+	}
+	sdl.Locate(rec2.getSourceDataLocation())
+	srgRec2 := sp.AddSurrogate(rec2)
+
+	for i := 0; i < 2; i++ {
+		gr := sp.GridRecord(srgRec2)
+		_, _, err = gr.GriddedEmissions(begin, end, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		requestsWant := []int{i + 4, i + 4, 2}
+		requests := sp.cache.Requests()
+		if !reflect.DeepEqual(requests, requestsWant) {
+			t.Errorf("%d: %v != %v", i, requests, requestsWant)
+		}
+
+		srgSpec, err := srgRec.SurrogateSpecification()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		requestsWant = []int{2, 2, 1}
+		requests = srgSpec.(*SrgSpecSMOKE).cache.Requests()
+		if !reflect.DeepEqual(requests, requestsWant) {
+			t.Errorf("%d: %v != %v", i, requests, requestsWant)
 		}
 	}
 }
