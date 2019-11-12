@@ -22,6 +22,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -392,16 +393,16 @@ func (e *EmissionsReader) ReadFiles(files []*InventoryFile, f RecFilter) ([]Reco
 	for _, file := range files {
 		report.AddData(file)
 	}
-	recordList := make([]Record, len(records))
-	i := 0
+	recordList := make([]Record, 0, len(records))
 	for _, r := range records {
 		if ar, ok := r.(sourceDataLocationer); ok {
 			if err := e.sourceDataLocator.Locate(ar.getSourceDataLocation()); err != nil {
-				return nil, nil, err
+				log.Println(err)
+				continue // Drop records we can't find a location for.
+				// return nil, nil, err
 			}
 		}
-		recordList[i] = r
-		i++
+		recordList = append(recordList, r)
 	}
 	return recordList, report, nil
 }

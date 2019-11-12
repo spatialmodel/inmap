@@ -146,8 +146,11 @@ func (sdl *sourceDataLocator) Locate(sd *SourceDataLocation) error {
 			return err
 		}
 	}
-	sd.location = sdl.inputShapes[srgSpec][sd.FIPS]
-	return nil
+	if l, ok := sdl.inputShapes[srgSpec][sd.FIPS]; ok {
+		sd.location = l
+		return nil
+	}
+	return fmt.Errorf("aep: missing input shape for spatial surrogate %s%s FIPS %s", srgSpec.region(), srgSpec.code(), sd.FIPS)
 }
 
 // Location returns the polygon representing the location of emissions.
