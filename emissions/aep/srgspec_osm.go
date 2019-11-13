@@ -107,15 +107,7 @@ func (srg *SrgSpecOSM) getSrgData(gridData *GridDef, inputLoc *Location, tol flo
 	if err != nil {
 		return nil, err
 	}
-
-	srgData := rtree.NewTree(25, 50)
-	for _, s := range srgs.([]*srgHolder) {
-		if s.Bounds().Overlaps(srgBounds) {
-			srgData.Insert(s)
-		}
-	}
-
-	return srgData, nil
+	return srgs.(readSrgDataOutput).index, nil
 }
 
 type readSrgDataInput struct {
@@ -152,7 +144,9 @@ func (srg *SrgSpecOSM) readSrgData(ctx context.Context, inputI interface{}) (int
 	if err != nil {
 		return nil, fmt.Errorf("aep: extracting OSM spatial surrogate data for tags %v: %v", srg.Tags, err)
 	}
-	var srgs []*srgHolder
+	srgs := readSrgDataOutput{
+		index: rtree.NewTree(25, 50),
+	}
 	for _, geomTag := range geomTags {
 		g, err := osmGeometry(geomTag.Geom, dominantType)
 		if err != nil {
@@ -175,7 +169,8 @@ func (srg *SrgSpecOSM) readSrgData(ctx context.Context, inputI interface{}) (int
 			Geom:   g,
 			Weight: 1,
 		}
-		srgs = append(srgs, srgData)
+		srgs.srgs = append(srgs.srgs, srgData)
+		srgs.index.Insert(srgData)
 	}
 	return srgs, nil
 }

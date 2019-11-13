@@ -503,7 +503,14 @@ func unmarshalSrgHolders(b []byte) (interface{}, error) {
 	if err := d.Decode(&data); err != nil {
 		return nil, err
 	}
-	return data, nil
+	o := readSrgDataOutput{
+		srgs:  data,
+		index: rtree.NewTree(25, 50),
+	}
+	for _, s := range data {
+		o.index.Insert(s)
+	}
+	return o, nil
 }
 
 // marshalSrgHolders marshals an interface to a byte array and fulfills
@@ -512,8 +519,8 @@ func marshalSrgHolders(data interface{}) ([]byte, error) {
 	w := bytes.NewBuffer(nil)
 	e := gob.NewEncoder(w)
 	d := *data.(*interface{})
-	dd := d.([]*srgHolder)
-	if err := e.Encode(dd); err != nil {
+	dd := d.(readSrgDataOutput)
+	if err := e.Encode(dd.srgs); err != nil {
 		return nil, err
 	}
 	return w.Bytes(), nil

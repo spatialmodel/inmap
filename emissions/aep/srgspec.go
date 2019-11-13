@@ -288,15 +288,12 @@ func (srg *SrgSpecSMOKE) getSrgData(gridData *GridDef, inputLoc *Location, tol f
 	if err != nil {
 		return nil, err
 	}
+	return srgs.(readSrgDataOutput).index, nil
+}
 
-	srgData := rtree.NewTree(25, 50)
-	for _, s := range srgs.([]*srgHolder) {
-		if s.Bounds().Overlaps(srgBounds) {
-			srgData.Insert(s)
-		}
-	}
-
-	return srgData, nil
+type readSrgDataOutput struct {
+	srgs  []*srgHolder
+	index *rtree.Rtree
 }
 
 // readSrgData returns all of the spatial surrogate information for this
@@ -329,7 +326,9 @@ func (srg *SrgSpecSMOKE) readSrgData(ctx context.Context, inputI interface{}) (i
 	if srg.WeightColumns != nil {
 		fieldNames = append(fieldNames, srg.WeightColumns...)
 	}
-	var srgs []*srgHolder
+	srgs := readSrgDataOutput{
+		index: rtree.NewTree(25, 50),
+	}
 	var recGeom geom.Geom
 	var data map[string]string
 	var keepFeature bool
@@ -432,7 +431,8 @@ func (srg *SrgSpecSMOKE) readSrgData(ctx context.Context, inputI interface{}) (i
 				err = fmt.Errorf("Surrogate weight is %v, which is not acceptable.", srgH.Weight)
 				return nil, err
 			} else if srgH.Weight != 0. {
-				srgs = append(srgs, srgH)
+				srgs.srgs = append(srgs.srgs, srgH)
+				srgs.index.Insert(srgH)
 			}
 		}
 	}
