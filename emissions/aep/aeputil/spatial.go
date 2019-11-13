@@ -130,7 +130,10 @@ func (si *SpatialIterator) NextGridded() (aep.RecordGridded, error) {
 	// if SrgSpecs and a GridRef have been specified.
 	loc := rec.Location()
 	if _, ok := loc.Geom.(geom.Polygonal); ok && si.c.sp.SrgSpecs != nil && si.c.sp.GridRef != nil {
-		rec = si.c.sp.AddSurrogate(rec)
+		if _, err := si.c.sp.GridRef.GetSrgCode(rec.GetSCC(), rec.GetCountry(), rec.GetFIPS()); err == nil {
+			// Only add spatial surrogate if there is one available for this record.
+			rec = si.c.sp.AddSurrogate(rec)
+		}
 	}
 
 	recG := si.c.sp.GridRecord(rec)
