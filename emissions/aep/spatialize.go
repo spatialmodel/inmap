@@ -160,7 +160,7 @@ type RecordGridded interface {
 	// Parent returns the record that this record was created from.
 	Parent() Record
 
-	// RecordToGrid returns the normalized fractions of emissions in each
+	// GridFactors returns the normalized fractions of emissions in each
 	// grid cell (gridSrg) of grid index gi.
 	// coveredByGrid indicates whether the emissions source is completely
 	// covered by the grid, and inGrid indicates whether it is in the
@@ -209,18 +209,22 @@ func (r *recordGridded) GridFactors(gi int) (
 		}
 		return gridSrg, coveredByGrid, inGrid, nil
 	}
+	return r.sp.recordToGrid(loc, r.sp.Grids[gi])
+}
 
+// recordToGrid allocates the reciever to the specifed grid
+// without any spatial surrogate.
+func (sp *SpatialProcessor) recordToGrid(loc *Location, grid *GridDef) (gridSrg *sparse.SparseArray, coveredByGrid, inGrid bool, err error) {
 	// Otherwise, directly allocate emissions to grid.
-	gridLoc, err := loc.Reproject(r.sp.Grids[gi].SR)
+	gridLoc, err := loc.Reproject(grid.SR)
 	if err != nil {
 		return
 	}
-
 	var rows, cols []int
 	var fracs []float64
-	rows, cols, fracs, inGrid, coveredByGrid = r.sp.Grids[gi].GetIndex(gridLoc)
+	rows, cols, fracs, inGrid, coveredByGrid = grid.GetIndex(gridLoc)
 	if inGrid {
-		gridSrg = sparse.ZerosSparse(r.sp.Grids[gi].Ny, r.sp.Grids[gi].Nx)
+		gridSrg = sparse.ZerosSparse(grid.Ny, grid.Nx)
 		// A point can be allocated to more than one grid cell if it lies
 		// on the boundary between two cells.
 		for i, row := range rows {
@@ -289,7 +293,10 @@ func (sp *SpatialProcessor) Surrogate(srgSpec SrgSpec, grid *GridDef, loc *Locat
 			return srg, coveredByGrid, nil
 		}
 	}
-	return nil, false, nil
+	// If there are no backup surrogates, allocate emissions evenly across
+	// all relevant grid cells.
+	srg, coveredByGrid, _, err = sp.recordToGrid(loc, grid)
+	return srg, coveredByGrid, err
 }
 
 type srgRequest struct {
