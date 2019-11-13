@@ -20,7 +20,9 @@ package aeputil
 
 import (
 	"fmt"
+	"io"
 	"os"
+	"runtime"
 	"sync"
 
 	"github.com/ctessum/sparse"
@@ -90,14 +92,57 @@ var _ Iterator = &SpatialIterator{} // Ensure that SpatialIterator fulfills the 
 // Iterator creates a SpatialIterator from the given parent iterator
 // for the given gridIndex.
 func (c *SpatialConfig) Iterator(parent Iterator, gridIndex int) *SpatialIterator {
-	return &SpatialIterator{
+	si := &SpatialIterator{
 		parent:    parent,
 		c:         c,
 		gridIndex: gridIndex,
 		emis:      make(map[aep.Pollutant]*sparse.SparseArray),
 		units:     make(map[aep.Pollutant]unit.Dimensions),
 		ungridded: make(map[aep.Pollutant]*unit.Unit),
+		inChan:    make(chan recordErr, 100),
+		outChan:   make(chan recordGriddedErr, 100),
 	}
+
+	// Read all records from the parent
+	// and send them for asynchronous processing.
+	go func() {
+		for {
+			rec, err := si.parent.Next()
+			if err == io.EOF {
+				close(si.inChan)
+				return
+			}
+			si.inChan <- recordErr{Record: rec, err: err}
+		}
+	}()
+
+	wg := sync.WaitGroup{}
+	nprocs := runtime.GOMAXPROCS(-1)
+	wg.Add(nprocs)
+	for i := 0; i < nprocs; i++ {
+		go func() {
+			for recErr := range si.inChan {
+				recGridded, err := si.processRecord(recErr)
+				si.outChan <- recordGriddedErr{RecordGridded: recGridded, err: err}
+			}
+			wg.Done()
+		}()
+	}
+	go func() {
+		// Close channel after processing is finished.
+		wg.Wait()
+		close(si.outChan)
+	}()
+	return si
+}
+
+type recordErr struct {
+	aep.Record
+	err error
+}
+type recordGriddedErr struct {
+	aep.RecordGridded
+	err error
 }
 
 // SpatialIterator is an Iterator that spatializes the records that it
@@ -107,18 +152,22 @@ type SpatialIterator struct {
 	c         *SpatialConfig
 	gridIndex int
 
+	inChan  chan recordErr
+	outChan chan recordGriddedErr
+
 	emis      map[aep.Pollutant]*sparse.SparseArray // Gridded emissions
 	units     map[aep.Pollutant]unit.Dimensions
 	ungridded map[aep.Pollutant]*unit.Unit // Emissions before gridding
+
+	mx sync.Mutex
 }
 
-// NextGridded returns a spatialized a record from the parent iterator.
-func (si *SpatialIterator) NextGridded() (aep.RecordGridded, error) {
-	rec, err := si.parent.Next()
-	if err != nil {
-		return nil, err
+// processRecord allocates one record to a grid.
+func (si *SpatialIterator) processRecord(r recordErr) (aep.RecordGridded, error) {
+	if r.err != nil {
+		return nil, r.err
 	}
-
+	var err error
 	si.c.loadOnce.Do(func() {
 		si.c.sp, err = si.c.setupSpatialProcessor()
 	})
@@ -126,6 +175,7 @@ func (si *SpatialIterator) NextGridded() (aep.RecordGridded, error) {
 		return nil, err
 	}
 
+	rec := r.Record
 	// Add a spatial surrogate for records that are polygons,
 	// if SrgSpecs and a GridRef have been specified.
 	loc := rec.Location()
@@ -146,6 +196,7 @@ func (si *SpatialIterator) NextGridded() (aep.RecordGridded, error) {
 		return recG, nil
 	}
 	t := rec.Totals()
+	si.mx.Lock()
 	for p, totalEmis := range t {
 		spatialEmis := srg.ScaleCopy(totalEmis.Value())
 		if _, ok := si.emis[p]; !ok {
@@ -161,7 +212,17 @@ func (si *SpatialIterator) NextGridded() (aep.RecordGridded, error) {
 			si.ungridded[p].Add(totalEmis)
 		}
 	}
+	si.mx.Unlock()
 	return recG, nil
+}
+
+// NextGridded returns a spatialized a record from the parent iterator.
+func (si *SpatialIterator) NextGridded() (aep.RecordGridded, error) {
+	out, ok := <-si.outChan
+	if !ok {
+		return nil, io.EOF
+	}
+	return out.RecordGridded, out.err
 }
 
 // Next returns a spatialized a record from the parent iterator
