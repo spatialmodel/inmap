@@ -148,7 +148,8 @@ func (sp *SpatialProcessor) createMerged(srg SrgSpec, gridData *GridDef, loc *Lo
 		}
 		// If we use the cache here it is possible to end up with a channel deadlock,
 		// so we generate the surrogate from scratch here.
-		data, err := sp.createSurrogate(context.Background(), &srgGrid{srg: newSrg, gridData: gridData, loc: loc})
+		sg := &srgGrid{srg: newSrg, gridData: gridData, loc: loc, sp: sp}
+		data, err := sg.Run(context.Background())
 		if err != nil {
 			return nil, err
 		}
@@ -162,28 +163,30 @@ type srgGrid struct {
 	srg      SrgSpec
 	gridData *GridDef
 	loc      *Location
+	sp       *SpatialProcessor
 }
 
-func (sg *srgGrid) key() string {
+func (sg *srgGrid) Key() string {
 	return fmt.Sprintf("surrogate_%s%s_%s_%s", sg.srg.region(), sg.srg.code(),
 		sg.gridData.Name, sg.loc.String())
 }
 
-// createSurrogate creates a new gridding surrogate based on a
+// Run creates a new gridding surrogate based on a
 // surrogate specification and grid definition.
-func (sp *SpatialProcessor) createSurrogate(_ context.Context, inData interface{}) (interface{}, error) {
-	in := inData.(*srgGrid)
-	srg := in.srg
-	gridData := in.gridData
-	if in.loc == nil {
+func (sg *srgGrid) Run(_ context.Context) (interface{}, error) {
+	srg := sg.srg
+	gridData := sg.gridData
+	sp := sg.sp
+	loc := sg.loc
+	if loc == nil {
 		return nil, fmt.Errorf("aep.SpatialProcessor.createSurrogate: missing location: %+v", gridData)
 	}
 	if len(srg.mergeNames()) != 0 {
-		return sp.createMerged(srg, gridData, in.loc)
+		return sp.createMerged(srg, gridData, loc)
 	}
-	log.Printf("creating surrogate `%s` for location %s", srg.name(), in.loc)
+	log.Printf("creating surrogate `%s` for location %s", srg.name(), loc)
 
-	srgData, err := srg.getSrgData(gridData, in.loc, sp.SimplifyTolerance)
+	srgData, err := srg.getSrgData(gridData, loc, sp.SimplifyTolerance)
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +202,7 @@ func (sp *SpatialProcessor) createSurrogate(_ context.Context, inData interface{
 		workersRunning++
 	}
 
-	singleShapeData := &GriddedSrgData{InputLocation: in.loc}
+	singleShapeData := &GriddedSrgData{InputLocation: loc}
 	singleShapeChan <- singleShapeData
 	close(singleShapeChan)
 	// wait for remaining results

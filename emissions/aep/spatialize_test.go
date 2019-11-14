@@ -208,7 +208,8 @@ func TestCreateSurrogates(t *testing.T) {
 			}
 			for fips, covered := range coveredByGrid {
 				t.Run(fips, func(t *testing.T) {
-					srgI, err := sp.createSurrogate(context.Background(), &srgGrid{srg: srgSpec, gridData: grid, loc: inputShapes[fips]})
+					sg := &srgGrid{srg: srgSpec, gridData: grid, loc: inputShapes[fips], sp: sp}
+					srgI, err := sg.Run(context.Background())
 					if err != nil {
 						t.Fatalf("creating surrogate %s, FIPS %s: %v", code, fips, err)
 					}

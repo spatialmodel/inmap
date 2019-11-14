@@ -32,7 +32,7 @@ import (
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/encoding/shp"
 	"github.com/ctessum/geom/index/rtree"
-	"github.com/ctessum/requestcache"
+	"github.com/ctessum/requestcache/v2"
 )
 
 type SrgSpec interface {
@@ -103,6 +103,10 @@ func ReadSrgSpecSMOKE(fid io.Reader, shapefileDir string, checkShapefiles bool, 
 	records, err := reader.ReadAll()
 	if err != nil {
 		return nil, fmt.Errorf("in ReadSrgSpec: %v", err)
+	}
+	cache, err := newCache(diskCachePath, memCacheSize, marshalSrgHolders, unmarshalSrgHolders)
+	if err != nil {
+		return nil, err
 	}
 	for i := 1; i < len(records); i++ {
 		record := records[i]
@@ -213,10 +217,7 @@ func ReadSrgSpecSMOKE(fid io.Reader, shapefileDir string, checkShapefiles bool, 
 				shpf.Close()
 			}
 		}
-		srg.cache, err = newCache(srg.readSrgData, diskCachePath, memCacheSize, marshalSrgHolders, unmarshalSrgHolders)
-		if err != nil {
-			return nil, err
-		}
+		srg.cache = cache
 		srgs.Add(srg)
 	}
 	return srgs, nil
@@ -285,8 +286,8 @@ func (srg *SrgSpecSMOKE) getSrgData(gridData *GridDef, inputLoc *Location, tol f
 		}
 	}
 
-	key := fmt.Sprintf("smoke_srgdata_%s%s_%s_%g", srg.region(), srg.code(), gridData.SR.Name, tol)
-	request := srg.cache.NewRequest(context.TODO(), &readSrgDataInput{gridData: gridData, tol: tol}, key)
+	in := &readSrgDataSMOKEInput{gridData: gridData, tol: tol, srg: srg}
+	request := srg.cache.NewRequest(context.TODO(), in)
 	srgs, err := request.Result()
 	if err != nil {
 		return nil, err
@@ -294,17 +295,26 @@ func (srg *SrgSpecSMOKE) getSrgData(gridData *GridDef, inputLoc *Location, tol f
 	return srgs.(readSrgDataOutput).index, nil
 }
 
+type readSrgDataSMOKEInput struct {
+	gridData *GridDef
+	tol      float64
+	srg      *SrgSpecSMOKE
+}
+
+func (s *readSrgDataSMOKEInput) Key() string {
+	return fmt.Sprintf("smoke_srgdata_%s%s_%s_%g", s.srg.region(), s.srg.code(), s.gridData.SR.Name, s.tol)
+}
+
 type readSrgDataOutput struct {
 	srgs  []*srgHolder
 	index *rtree.Rtree
 }
 
-// readSrgData returns all of the spatial surrogate information for this
-// surrogate definition, inputI is of type *osmReadSrgDataInput and
-// inputI.tol is tolerance for geometry simplification.
-func (srg *SrgSpecSMOKE) readSrgData(ctx context.Context, inputI interface{}) (interface{}, error) {
+// Run returns all of the spatial surrogate information for this
+// surrogate definition.
+func (input *readSrgDataSMOKEInput) Run(ctx context.Context) (interface{}, error) {
+	srg := input.srg
 	log.Printf("processing surrogate `%s` spatial data", srg.Name)
-	input := inputI.(*readSrgDataInput)
 
 	srgShp, err := shp.NewDecoder(srg.WEIGHTSHAPEFILE)
 	if err != nil {

@@ -61,8 +61,10 @@ github.com/ctessum/plotextra v0.0.0-20180623195436-96488e3f1996 h1:kOR5vpmJ6tUaF
 github.com/ctessum/plotextra v0.0.0-20180623195436-96488e3f1996/go.mod h1:uhWEDow2kQayrGUrnESm3nIsGjq0Oc2unMZCGz21zW0=
 github.com/ctessum/polyclip-go v1.0.1 h1:y+qTvBa6KLRTq/mZKOHciTaHv939nU5zl9mThLbK/m8=
 github.com/ctessum/polyclip-go v1.0.1/go.mod h1:e/Lh1JOGyynZwLr0M4tZGIyx07wXw9T+pu6hFut+kFQ=
-github.com/ctessum/requestcache v1.0.0 h1:ishqaBiLSyk18peeHqXsHypAoh6KaksJUozuxZU1xEs=
-github.com/ctessum/requestcache v1.0.0/go.mod h1:xVlz88TkYBiJfpGe9Xo8KvAmfdmaGyvhBJyltQx4WVQ=
+github.com/ctessum/requestcache v1.0.1 h1:YDoBJSQw+kQE0hEs+2x4CYB6IXHLZdcpYgKbh8qinok=
+github.com/ctessum/requestcache v1.0.1/go.mod h1:xVlz88TkYBiJfpGe9Xo8KvAmfdmaGyvhBJyltQx4WVQ=
+github.com/ctessum/requestcache/v2 v2.0.0 h1:rT1SSj8Yx2nQi19m6cPexlO59FuaX4JbhLYPlr74Fbg=
+github.com/ctessum/requestcache/v2 v2.0.0/go.mod h1:5NbYIrgAaq500bz6iir80Byxex209I5gHg8IqVCO7w8=
 github.com/ctessum/sparse v0.0.0-20181201011727-57d6234a2c9d h1:R6rUEdBcieof5DgG6UGkRH6FPBcfI60qRD6KusHIv+c=
 github.com/ctessum/sparse v0.0.0-20181201011727-57d6234a2c9d/go.mod h1:UGiTsb4CQb8URion27d8H9aXu3UTbtCI0AgV1frKZsA=
 github.com/ctessum/unit v0.0.0-20160621200450-755774ac2fcb h1:/S9w9JroTJ0Zo70VXUutYAI6YVBDwuYMUZt73fBq5r0=

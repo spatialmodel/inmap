@@ -30,7 +30,7 @@ import (
 	"github.com/ctessum/geom/encoding/osm"
 	"github.com/ctessum/geom/index/rtree"
 	"github.com/ctessum/geom/proj"
-	"github.com/ctessum/requestcache"
+	"github.com/ctessum/requestcache/v2"
 )
 
 // SrgSpecOSM holds OpenStreetMap spatial surrogate specification information.
@@ -70,11 +70,12 @@ func ReadSrgSpecOSM(r io.Reader, diskCachePath string, memCacheSize int) (*SrgSp
 		return nil, err
 	}
 	srgs := NewSrgSpecs()
+	cache, err := newCache(diskCachePath, memCacheSize, marshalSrgHolders, unmarshalSrgHolders)
+	if err != nil {
+		return nil, err
+	}
 	for _, s := range o {
-		s.cache, err = newCache(s.readSrgData, diskCachePath, memCacheSize, marshalSrgHolders, unmarshalSrgHolders)
-		if err != nil {
-			return nil, err
-		}
+		s.cache = cache
 		srgs.Add(s)
 	}
 	return srgs, nil
@@ -104,8 +105,8 @@ func (srg *SrgSpecOSM) getSrgData(gridData *GridDef, inputLoc *Location, tol flo
 		}
 	}
 
-	key := fmt.Sprintf("osm_srgdata_%s%s_%s_%g", srg.region(), srg.code(), gridData.SR.Name, tol)
-	request := srg.cache.NewRequest(context.TODO(), &readSrgDataInput{gridData: gridData, tol: tol}, key)
+	sd := &readSrgDataOSMInput{gridData: gridData, tol: tol, srg: srg}
+	request := srg.cache.NewRequest(context.TODO(), sd)
 	srgs, err := request.Result()
 	if err != nil {
 		return nil, err
@@ -113,17 +114,23 @@ func (srg *SrgSpecOSM) getSrgData(gridData *GridDef, inputLoc *Location, tol flo
 	return srgs.(readSrgDataOutput).index, nil
 }
 
-type readSrgDataInput struct {
+type readSrgDataOSMInput struct {
 	gridData *GridDef
 	tol      float64
+	srg      *SrgSpecOSM
 }
 
-// readSrgData returns all of the spatial surrogate information for this
+func (sd *readSrgDataOSMInput) Key() string {
+	return fmt.Sprintf("osm_srgdata_%s%s_%s_%g", sd.srg.region(), sd.srg.code(),
+		sd.gridData.SR.Name, sd.tol)
+}
+
+// Run returns all of the spatial surrogate information for this
 // surrogate definition, inputI is of type *osmReadSrgDataInput and
 // inputI.tol is tolerance for geometry simplification.
-func (srg *SrgSpecOSM) readSrgData(ctx context.Context, inputI interface{}) (interface{}, error) {
+func (input *readSrgDataOSMInput) Run(ctx context.Context) (interface{}, error) {
+	srg := input.srg
 	log.Printf("processing surrogate `%s` spatial data", srg.Name)
-	input := inputI.(*readSrgDataInput)
 
 	srgSR, err := proj.Parse("+proj=longlat")
 	if err != nil {

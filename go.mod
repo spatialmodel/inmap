@@ -14,7 +14,8 @@ require (
 	github.com/ctessum/go-leaflet v0.0.0-20170724133759-2f9e4c38fb5e
 	github.com/ctessum/gobra v0.0.0-20180516235632-ddfa5eeb3017
 	github.com/ctessum/plotextra v0.0.0-20180623195436-96488e3f1996
-	github.com/ctessum/requestcache v1.0.0
+	github.com/ctessum/requestcache v1.0.1
+	github.com/ctessum/requestcache/v2 v2.0.0
 	github.com/ctessum/sparse v0.0.0-20181201011727-57d6234a2c9d
 	github.com/ctessum/unit v0.0.0-20160621200450-755774ac2fcb
 	github.com/davecgh/go-spew v1.1.1

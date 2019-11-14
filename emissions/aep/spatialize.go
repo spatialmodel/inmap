@@ -35,7 +35,7 @@ import (
 	"time"
 
 	"github.com/ctessum/geom/proj"
-	"github.com/ctessum/requestcache"
+	"github.com/ctessum/requestcache/v2"
 	"github.com/ctessum/sparse"
 	"github.com/ctessum/unit"
 
@@ -129,16 +129,16 @@ func marshalGriddedSrgData(data interface{}) ([]byte, error) {
 
 func (sp *SpatialProcessor) load() error {
 	var err error
-	sp.cache, err = newCache(sp.createSurrogate, sp.DiskCachePath, sp.MemCacheSize, marshalGriddedSrgData, unmarshalGriddedSrgData)
+	sp.cache, err = newCache(sp.DiskCachePath, sp.MemCacheSize, marshalGriddedSrgData, unmarshalGriddedSrgData)
 	return err
 }
 
-func newCache(f requestcache.ProcessFunc, diskCachePath string, memCacheSize int, marshalFunc func(interface{}) ([]byte, error), unmarshalFunc func([]byte) (interface{}, error)) (*requestcache.Cache, error) {
+func newCache(diskCachePath string, memCacheSize int, marshalFunc func(interface{}) ([]byte, error), unmarshalFunc func([]byte) (interface{}, error)) (*requestcache.Cache, error) {
 	dedup := requestcache.Deduplicate()
 	nprocs := runtime.GOMAXPROCS(-1)
 	mc := requestcache.Memory(memCacheSize)
 	if diskCachePath == "" {
-		return requestcache.NewCache(f, nprocs, dedup, mc), nil
+		return requestcache.NewCache(nprocs, dedup, mc), nil
 	} else {
 		if strings.HasPrefix(diskCachePath, "gs://") {
 			loc, err := url.Parse(diskCachePath)
@@ -149,7 +149,7 @@ func newCache(f requestcache.ProcessFunc, diskCachePath string, memCacheSize int
 			if err != nil {
 				return nil, err
 			}
-			return requestcache.NewCache(f, nprocs, dedup, mc, cf), nil
+			return requestcache.NewCache(nprocs, dedup, mc, cf), nil
 		} else if filepath.Ext(diskCachePath) == ".sqlite3" {
 			db, err := sql.Open("sqlite3", diskCachePath)
 			if err != nil {
@@ -159,9 +159,9 @@ func newCache(f requestcache.ProcessFunc, diskCachePath string, memCacheSize int
 			if err != nil {
 				return nil, err
 			}
-			return requestcache.NewCache(f, nprocs, dedup, mc, cf), nil
+			return requestcache.NewCache(nprocs, dedup, mc, cf), nil
 		} else {
-			return requestcache.NewCache(f, nprocs, dedup, mc,
+			return requestcache.NewCache(nprocs, dedup, mc,
 				requestcache.Disk(diskCachePath, marshalFunc, unmarshalFunc)), nil
 		}
 	}
@@ -285,8 +285,8 @@ func (sp *SpatialProcessor) Surrogate(srgSpec SrgSpec, grid *GridDef, loc *Locat
 		return nil, false, err
 	}
 
-	s := &srgGrid{srg: srgSpec, gridData: grid, loc: loc}
-	req := sp.cache.NewRequest(context.Background(), s, s.key())
+	s := &srgGrid{srg: srgSpec, gridData: grid, loc: loc, sp: sp}
+	req := sp.cache.NewRequest(context.Background(), s)
 	resultI, err := req.Result()
 	if err != nil {
 		return nil, false, err
@@ -302,8 +302,8 @@ func (sp *SpatialProcessor) Surrogate(srgSpec SrgSpec, grid *GridDef, loc *Locat
 		if err != nil {
 			return nil, false, err
 		}
-		s := &srgGrid{srg: newSrgSpec, gridData: grid, loc: loc}
-		req := sp.cache.NewRequest(context.Background(), s, s.key())
+		s := &srgGrid{srg: newSrgSpec, gridData: grid, loc: loc, sp: sp}
+		req := sp.cache.NewRequest(context.Background(), s)
 		resultI, err := req.Result()
 		if err != nil {
 			return nil, false, err

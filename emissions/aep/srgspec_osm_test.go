@@ -93,7 +93,8 @@ func TestCreateSurrogates_osm(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			srgsI, err := sp.createSurrogate(context.Background(), &srgGrid{srg: srgSpec, gridData: grid, loc: inputLoc})
+			sg := &srgGrid{srg: srgSpec, gridData: grid, loc: inputLoc, sp: sp}
+			srgsI, err := sg.Run(context.Background())
 			if err != nil {
 				t.Fatalf("creating surrogate %s: %v", code, err)
 			}
