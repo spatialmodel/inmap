@@ -22,6 +22,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/gob"
 	"fmt"
 	"io"
@@ -37,6 +38,8 @@ import (
 	"github.com/ctessum/requestcache"
 	"github.com/ctessum/sparse"
 	"github.com/ctessum/unit"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 // SpatialProcessor spatializes emissions records.
@@ -124,30 +127,42 @@ func marshalGriddedSrgData(data interface{}) ([]byte, error) {
 	return w.Bytes(), nil
 }
 
-func (sp *SpatialProcessor) load() {
-	sp.cache = newCache(sp.createSurrogate, sp.DiskCachePath, sp.MemCacheSize, marshalGriddedSrgData, unmarshalGriddedSrgData)
+func (sp *SpatialProcessor) load() error {
+	var err error
+	sp.cache, err = newCache(sp.createSurrogate, sp.DiskCachePath, sp.MemCacheSize, marshalGriddedSrgData, unmarshalGriddedSrgData)
+	return err
 }
 
-func newCache(f requestcache.ProcessFunc, diskCachePath string, memCacheSize int, marshalFunc func(interface{}) ([]byte, error), unmarshalFunc func([]byte) (interface{}, error)) *requestcache.Cache {
+func newCache(f requestcache.ProcessFunc, diskCachePath string, memCacheSize int, marshalFunc func(interface{}) ([]byte, error), unmarshalFunc func([]byte) (interface{}, error)) (*requestcache.Cache, error) {
+	dedup := requestcache.Deduplicate()
+	nprocs := runtime.GOMAXPROCS(-1)
+	mc := requestcache.Memory(memCacheSize)
 	if diskCachePath == "" {
-		return requestcache.NewCache(f, runtime.GOMAXPROCS(-1),
-			requestcache.Deduplicate(), requestcache.Memory(memCacheSize))
+		return requestcache.NewCache(f, nprocs, dedup, mc), nil
 	} else {
 		if strings.HasPrefix(diskCachePath, "gs://") {
 			loc, err := url.Parse(diskCachePath)
 			if err != nil {
-				panic(err)
+				return nil, err
 			}
 			cf, err := requestcache.GoogleCloudStorage(context.TODO(), loc.Host, strings.TrimLeft(loc.Path, "/"), marshalFunc, unmarshalFunc)
 			if err != nil {
-				panic(err)
+				return nil, err
 			}
-			return requestcache.NewCache(f, runtime.GOMAXPROCS(-1), requestcache.Deduplicate(),
-				requestcache.Memory(memCacheSize), cf)
+			return requestcache.NewCache(f, nprocs, dedup, mc, cf), nil
+		} else if filepath.Ext(diskCachePath) == ".sqlite3" {
+			db, err := sql.Open("sqlite3", diskCachePath)
+			if err != nil {
+				return nil, err
+			}
+			cf, err := requestcache.SQL(context.Background(), db, marshalFunc, unmarshalFunc)
+			if err != nil {
+				return nil, err
+			}
+			return requestcache.NewCache(f, nprocs, dedup, mc, cf), nil
 		} else {
-			return requestcache.NewCache(f, runtime.GOMAXPROCS(-1),
-				requestcache.Deduplicate(), requestcache.Memory(memCacheSize),
-				requestcache.Disk(diskCachePath, marshalFunc, unmarshalFunc))
+			return requestcache.NewCache(f, nprocs, dedup, mc,
+				requestcache.Disk(diskCachePath, marshalFunc, unmarshalFunc)), nil
 		}
 	}
 }
@@ -262,7 +277,13 @@ func (r *recordGridded) Parent() Record { return r.Record }
 // same copy is used over and over again. The second return value indicates
 // whether the shape corresponding to fips is completely covered by the grid.
 func (sp *SpatialProcessor) Surrogate(srgSpec SrgSpec, grid *GridDef, loc *Location) (*sparse.SparseArray, bool, error) {
-	sp.lazyLoad.Do(sp.load)
+	var err error
+	sp.lazyLoad.Do(func() {
+		err = sp.load()
+	})
+	if err != nil {
+		return nil, false, err
+	}
 
 	s := &srgGrid{srg: srgSpec, gridData: grid, loc: loc}
 	req := sp.cache.NewRequest(context.Background(), s, s.key())

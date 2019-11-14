@@ -71,7 +71,10 @@ func ReadSrgSpecOSM(r io.Reader, diskCachePath string, memCacheSize int) (*SrgSp
 	}
 	srgs := NewSrgSpecs()
 	for _, s := range o {
-		s.cache = newCache(s.readSrgData, diskCachePath, memCacheSize, marshalSrgHolders, unmarshalSrgHolders)
+		s.cache, err = newCache(s.readSrgData, diskCachePath, memCacheSize, marshalSrgHolders, unmarshalSrgHolders)
+		if err != nil {
+			return nil, err
+		}
 		srgs.Add(s)
 	}
 	return srgs, nil

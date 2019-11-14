@@ -40,6 +40,7 @@ require (
 	github.com/kr/pretty v0.1.0
 	github.com/lnashier/viper v0.0.0-20180730210402-cc7336125d12
 	github.com/magiconair/properties v1.7.3 // indirect
+	github.com/mattn/go-sqlite3 v1.11.0
 	github.com/mitchellh/mapstructure v0.0.0-20171017171808-06020f85339e // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v0.0.0-20180701023420-4b7aa43c6742 // indirect

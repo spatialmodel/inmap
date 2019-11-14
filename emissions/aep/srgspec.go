@@ -213,7 +213,10 @@ func ReadSrgSpecSMOKE(fid io.Reader, shapefileDir string, checkShapefiles bool, 
 				shpf.Close()
 			}
 		}
-		srg.cache = newCache(srg.readSrgData, diskCachePath, memCacheSize, marshalSrgHolders, unmarshalSrgHolders)
+		srg.cache, err = newCache(srg.readSrgData, diskCachePath, memCacheSize, marshalSrgHolders, unmarshalSrgHolders)
+		if err != nil {
+			return nil, err
+		}
 		srgs.Add(srg)
 	}
 	return srgs, nil
