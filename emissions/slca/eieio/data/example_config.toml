@@ -109,6 +109,7 @@ DefaultYear = 2014
    InputSR = "+proj=longlat"
    SimplifyTolerance = 0.0
    SpatialCache="${SLCASpatialCache}/nei"
+   MaxCacheEntries=30000
    GridName = "InMAP"
 
 
