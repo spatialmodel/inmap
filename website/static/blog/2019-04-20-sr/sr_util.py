@@ -75,26 +75,30 @@ def run_sr(emis, model, output_variables, emis_units="tons/year"):
         ost = platform.system()
         print("Downloading InMAP executable for %s               "%ost, end='\r')
         if ost == "Windows":
-            _inmap_exe = os.path.join(_tmpdir.name, "inmap_1.6.0.exe")
-            _download("https://github.com/spatialmodel/inmap/releases/download/v1.6.0/inmap1.6.0windows-amd64.exe", _inmap_exe)
+            _inmap_exe = os.path.join(_tmpdir.name, "inmap_1.6.1.exe")
+            _download("https://github.com/spatialmodel/inmap/releases/download/v1.6.1/inmap1.6.1windows-amd64.exe", _inmap_exe)
         elif ost == "Darwin":
-            _inmap_exe = os.path.join(_tmpdir.name, "inmap_1.6.0")
-            _download("https://github.com/spatialmodel/inmap/releases/download/v1.6.0/inmap1.6.0darwin-amd64", _inmap_exe)
+            _inmap_exe = os.path.join(_tmpdir.name, "inmap_1.6.1")
+            _download("https://github.com/spatialmodel/inmap/releases/download/v1.6.1/inmap1.6.1darwin-amd64", _inmap_exe)
         elif ost == "Linux":
-            _inmap_exe = os.path.join(_tmpdir.name, "inmap_1.6.0")
-            _download("https://github.com/spatialmodel/inmap/releases/download/v1.6.0/inmap1.6.0linux-amd64", _inmap_exe)
+            _inmap_exe = os.path.join(_tmpdir.name, "inmap_1.6.1")
+            _download("https://github.com/spatialmodel/inmap/releases/download/v1.6.1/inmap1.6.1linux-amd64", _inmap_exe)
         else:
             raise(OSError("invalid operating system %s"%(ost)))
         os.chmod(_inmap_exe, stat.S_IXUSR|stat.S_IRUSR|stat.S_IWUSR)
-
-    subprocess.check_call([_inmap_exe, "cloud", "start",
-        "--cmds=srpredict",
-        "--job_name=%s"%job_name,
-        "--memory_gb=2",
-        "--EmissionUnits=%s"%emis_units,
-        "--EmissionsShapefiles=%s"%emis_file,
-        "--OutputVariables=%s"%json.dumps(output_variables),
-        "--SR.OutputFile=%s"%model_path])
+    
+    try:
+        subprocess.check_output([_inmap_exe, "cloud", "start",
+            "--cmds=srpredict",
+            "--job_name=%s"%job_name,
+            "--memory_gb=2",
+            "--EmissionUnits=%s"%emis_units,
+            "--EmissionsShapefiles=%s"%emis_file,
+            "--OutputVariables=%s"%json.dumps(output_variables),
+            "--SR.OutputFile=%s"%model_path])
+    except subprocess.CalledProcessError as err:
+        print(err.output)
+        return
 
     while True:
         status = subprocess.check_output([_inmap_exe, "cloud", "status", "--job_name=%s"%job_name]).decode("utf-8").strip()
