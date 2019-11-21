@@ -178,6 +178,9 @@ func VarGridConfig(cfg *viper.Viper) (*inmap.VarGridConfig, error) {
 			return nil, fmt.Errorf("parsing grid configuration: %s is not specified", varNames[i])
 		}
 	}
+	if len(c.Xnests) != len(c.Ynests) {
+		return nil, fmt.Errorf("parsing grid configuration: VarGrid.Xnests and VarGrid.Ynests must be the same length; %d != %d", len(c.Xnests), len(c.Ynests))
+	}
 
 	for k, v := range c.MortalityRateColumns {
 		c.MortalityRateColumns[os.ExpandEnv(k)] = os.ExpandEnv(v)
