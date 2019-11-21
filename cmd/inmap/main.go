@@ -29,7 +29,7 @@ import (
 func main() {
 	var commands int
 	for _, arg := range os.Args { // Count the number of supplied commands.
-		if arg[0] != '-' {
+		if len(arg) > 0 && arg[0] != '-' {
 			commands++
 		}
 	}
