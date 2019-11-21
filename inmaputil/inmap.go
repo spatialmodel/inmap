@@ -23,6 +23,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"runtime"
 	"sync"
 	"time"
 
@@ -137,6 +138,7 @@ func Run(CobraCommand *cobra.Command, LogFile string, OutputFile string, OutputA
 	log.SetOutput(mw)
 	cConverge := make(chan inmap.ConvergenceStatus)
 	cLog := make(chan *inmap.SimulationStatus)
+	cLogTick := time.Tick(2 * time.Second)
 	msgLog := make(chan string)
 	var wg sync.WaitGroup
 	wg.Add(3)
@@ -148,7 +150,12 @@ func Run(CobraCommand *cobra.Command, LogFile string, OutputFile string, OutputA
 	}()
 	go func() {
 		for msg := range cLog {
-			log.Println(msg.String())
+			select {
+			case <-cLogTick:
+				log.Println(msg.String())
+			default:
+				runtime.Gosched()
+			}
 		}
 		wg.Done()
 	}()
