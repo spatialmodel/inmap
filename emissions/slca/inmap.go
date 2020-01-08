@@ -232,6 +232,11 @@ func (c *CSTConfig) concentrationResponseAverageWorker(ctx context.Context, year
 	if !ok {
 		return nil, fmt.Errorf("slca.CSTConfig: hazard ratio `%s` has not been registered", yptaqm.hr)
 	}
+	// TODO: Refactor this duplicate code.
+	c.loadEvalConcOnce.Do(func() {
+		c.evalConcRequestCache = loadCacheOnce(c.inMAPEval, 1, 1, c.ConcentrationCache,
+			requestcache.MarshalGob, requestcache.UnmarshalGob)
+	})
 	r := c.evalConcRequestCache.NewRequest(ctx, aqmYear{aqm: yptaqm.aqm, year: yptaqm.year},
 		fmt.Sprintf("evaluation_%s_%d", yptaqm.aqm, yptaqm.year))
 	result, err := r.Result()
