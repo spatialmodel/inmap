@@ -777,7 +777,7 @@ func (config *VarGridConfig) cellGeometry(index [][2]int) geom.Polygonal {
 	}
 	r := l + config.VariableGridDx/xResFac
 	u := b + config.VariableGridDy/yResFac
-	return geom.Polygon([]geom.Path{{{X: l, Y: b}, {X: r, Y: b}, {X: r, Y: u}, {X: l, Y: u}, {X: l, Y: b}}})
+	return &geom.Bounds{Min: geom.Point{X: l, Y: b}, Max: geom.Point{X: r, Y: u}}
 }
 
 // createCell creates a new grid cell. If any of the census shapes
@@ -1071,7 +1071,7 @@ func (c *Cell) loadData(data *CTMData, k int) error {
 		// we only want grid cells that match our layer.
 		ccc := cc.(*gridCellLight)
 		if ccc.layer == k {
-			isect := ccc.Intersection(c)
+			isect := ccc.Intersection(c.Polygonal)
 			if isect != nil {
 				fractions = append(fractions, isect.Area()/cellArea)
 				ctmcells = append(ctmcells, ccc)

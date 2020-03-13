@@ -58,7 +58,7 @@ func TestClient_fake(t *testing.T) {
 			"--VarGrid.PopGridColumn=TotalPop", "--VarGrid.PopThreshold=40000", "--VarGrid.VariableGridDx=4000",
 			"--VarGrid.VariableGridDy=4000", "--VarGrid.VariableGridXo=-4000", "--VarGrid.VariableGridYo=-4000",
 			"--VarGrid.Xnests=2,2,2", "--VarGrid.Ynests=2,2,2",
-			"--VariableGridData=file://test/test/test_user/test_job/aa4dd05ac464a1f532480e5f3aae5a7cf20fb97f1250de88e5b5b192f6e752e7.gob",
+			"--VariableGridData=file://test/test/test_user/test_job/43f4ac110e4dc8c4ef5b5285a3a768657078f5428f000bdea590de997ed7afe5.gob",
 			"--aep.GridRef=no_default",
 			"--aep.InventoryConfig.COARDSFiles={}\n",
 			"--aep.InventoryConfig.COARDSYear=0",

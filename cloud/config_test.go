@@ -46,7 +46,7 @@ func TestRunInputFromViper(t *testing.T) {
 		"--VarGrid.VariableGridDx":            "4000",
 		"--NumIterations":                     "0",
 		"--VarGrid.CensusPopColumns":          "TotalPop,WhiteNoLat,Black,Native,Asian,Latino",
-		"--VariableGridData":                  "aa4dd05ac464a1f532480e5f3aae5a7cf20fb97f1250de88e5b5b192f6e752e7.gob",
+		"--VariableGridData":                  "43f4ac110e4dc8c4ef5b5285a3a768657078f5428f000bdea590de997ed7afe5.gob",
 		"--OutputVariables":                   "{\"TotalPM25\":\"PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA\",\"TotalPopD\":\"(exp(log(1.078)/10 * TotalPM25) - 1) * TotalPop * AllCause / 100000\"}\n",
 		"--OutputFile":                        "inmap_output.shp",
 		"--VarGrid.PopThreshold":              "40000",
@@ -107,7 +107,7 @@ func TestRunInputFromViper(t *testing.T) {
 		"764874ad5081665459c67d40607f68df6fc689aa695b4822e012aef84cba5394.shx": 108,
 		"764874ad5081665459c67d40607f68df6fc689aa695b4822e012aef84cba5394.dbf": 341,
 		"764874ad5081665459c67d40607f68df6fc689aa695b4822e012aef84cba5394.prj": 432,
-		"aa4dd05ac464a1f532480e5f3aae5a7cf20fb97f1250de88e5b5b192f6e752e7.gob": 23985,
+		"43f4ac110e4dc8c4ef5b5285a3a768657078f5428f000bdea590de997ed7afe5.gob": 18427,
 		"434bf26e3fda1ef9cef7e1fa6cc6b5174d11a22b19cbe10d256adc83b2a97d44.ncf": 14284,
 	}
 	if len(js.FileData) != len(wantFiles) {

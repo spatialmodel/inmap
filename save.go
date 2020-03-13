@@ -30,6 +30,7 @@ import (
 func init() {
 	gob.Register(geom.Polygon{})
 	gob.Register(geom.MultiPolygon{})
+	gob.Register(&geom.Bounds{})
 	gob.Register(geom.Point{})
 	gob.Register(geom.MultiPoint{})
 	gob.Register(geom.LineString{})
