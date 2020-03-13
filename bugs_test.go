@@ -8,7 +8,7 @@ import (
 )
 
 func TestGridBug1(t *testing.T) {
-	cfg, _, _, _, mr, mortIndices := VarGridTestData()
+	cfg, _, _, _, _, _ := VarGridTestData()
 	emis := &Emissions{
 		data: rtree.NewTree(25, 50),
 	}
