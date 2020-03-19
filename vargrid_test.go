@@ -27,6 +27,7 @@ import (
 
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/index/rtree"
+	"github.com/ctessum/geom/proj"
 )
 
 func TestVarGridCreate(t *testing.T) {
@@ -734,24 +735,8 @@ func TestGetGeometry(t *testing.T) {
 	g0 := d.GetGeometry(0, true)
 	g5 := d.GetGeometry(5, true)
 
-	want0 := []geom.Polygonal{
-		&geom.Bounds{Min: geom.Point{X: -1.0803243503695702e+07, Y: 4.860686654254725e+06}, Max: geom.Point{X: -1.0801930791146653e+07, Y: 4.862000560256863e+06}},
-		&geom.Bounds{Min: geom.Point{X: -1.080324418567307e+07, Y: 4.861999963449156e+06}, Max: geom.Point{X: -1.0801931302762568e+07, Y: 4.8633140401226785e+06}},
-		&geom.Bounds{Min: geom.Point{X: -1.0803244867827544e+07, Y: 4.863313443159976e+06}, Max: geom.Point{X: -1.0800618419985117e+07, Y: 4.865941938204324e+06}},
-		&geom.Bounds{Min: geom.Point{X: -1.0801930279663565e+07, Y: 4.860687250907495e+06}, Max: geom.Point{X: -1.0800617396487407e+07, Y: 4.862000986548126e+06}},
-		&geom.Bounds{Min: geom.Point{X: -1.0801930791146653e+07, Y: 4.862000560256863e+06}, Max: geom.Point{X: -1.080061773756471e+07, Y: 4.86331446652465e+06}},
-		&geom.Bounds{Min: geom.Point{X: -1.0803246232668078e+07, Y: 4.865940914307926e+06}, Max: geom.Point{X: -1.0797990606947536e+07, Y: 4.871199271364988e+06}},
-		&geom.Bounds{Min: geom.Point{X: -1.0800617055498654e+07, Y: 4.86068767708809e+06}, Max: geom.Point{X: -1.0797990606947536e+07, Y: 4.863314807646255e+06}},
-		&geom.Bounds{Min: geom.Point{X: -1.080061773756471e+07, Y: 4.86331446652465e+06}, Max: geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06}},
-		&geom.Bounds{Min: geom.Point{X: -1.0797990606947536e+07, Y: 4.860688018032593e+06}, Max: geom.Point{X: -1.0792734981226994e+07, Y: 4.865940914307926e+06}},
-		&geom.Bounds{Min: geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06}, Max: geom.Point{X: -1.0792732249417646e+07, Y: 4.87119790475015e+06}},
-	}
-	want5 := []geom.Polygonal{
-		&geom.Bounds{Min: geom.Point{X: -1.0803243503695702e+07, Y: 4.860686654254725e+06}, Max: geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06}},
-		&geom.Bounds{Min: geom.Point{X: -1.0803246232668078e+07, Y: 4.865940914307926e+06}, Max: geom.Point{X: -1.0797990606947536e+07, Y: 4.871199271364988e+06}},
-		&geom.Bounds{Min: geom.Point{X: -1.0797990606947536e+07, Y: 4.860688018032593e+06}, Max: geom.Point{X: -1.0792734981226994e+07, Y: 4.865940914307926e+06}},
-		&geom.Bounds{Min: geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06}, Max: geom.Point{X: -1.0792732249417646e+07, Y: 4.87119790475015e+06}},
-	}
+	want0 := []geom.Polygonal{geom.Polygon{geom.Path{geom.Point{X: -1.0803243503695702e+07, Y: 4.860686654254725e+06}, geom.Point{X: -1.0801930279663565e+07, Y: 4.860687250907495e+06}, geom.Point{X: -1.0801930791146653e+07, Y: 4.862000560256863e+06}, geom.Point{X: -1.080324418567307e+07, Y: 4.861999963449156e+06}}}, geom.Polygon{geom.Path{geom.Point{X: -1.080324418567307e+07, Y: 4.861999963449156e+06}, geom.Point{X: -1.0801930791146653e+07, Y: 4.862000560256863e+06}, geom.Point{X: -1.0801931302762568e+07, Y: 4.8633140401226785e+06}, geom.Point{X: -1.0803244867827544e+07, Y: 4.863313443159976e+06}}}, geom.Polygon{geom.Path{geom.Point{X: -1.0803244867827544e+07, Y: 4.863313443159976e+06}, geom.Point{X: -1.080061773756471e+07, Y: 4.86331446652465e+06}, geom.Point{X: -1.0800618419985117e+07, Y: 4.865941938204324e+06}, geom.Point{X: -1.0803246232668078e+07, Y: 4.865940914307926e+06}}}, geom.Polygon{geom.Path{geom.Point{X: -1.0801930279663565e+07, Y: 4.860687250907495e+06}, geom.Point{X: -1.0800617055498654e+07, Y: 4.86068767708809e+06}, geom.Point{X: -1.0800617396487407e+07, Y: 4.862000986548126e+06}, geom.Point{X: -1.0801930791146653e+07, Y: 4.862000560256863e+06}}}, geom.Polygon{geom.Path{geom.Point{X: -1.0801930791146653e+07, Y: 4.862000560256863e+06}, geom.Point{X: -1.0800617396487407e+07, Y: 4.862000986548126e+06}, geom.Point{X: -1.080061773756471e+07, Y: 4.86331446652465e+06}, geom.Point{X: -1.0801931302762568e+07, Y: 4.8633140401226785e+06}}}, geom.Polygon{geom.Path{geom.Point{X: -1.0803246232668078e+07, Y: 4.865940914307926e+06}, geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06}, geom.Point{X: -1.0797990606947536e+07, Y: 4.871199271364988e+06}, geom.Point{X: -1.0803248964477425e+07, Y: 4.87119790475015e+06}}}, geom.Polygon{geom.Path{geom.Point{X: -1.0800617055498654e+07, Y: 4.86068767708809e+06}, geom.Point{X: -1.0797990606947536e+07, Y: 4.860688018032593e+06}, geom.Point{X: -1.0797990606947536e+07, Y: 4.863314807646255e+06}, geom.Point{X: -1.080061773756471e+07, Y: 4.86331446652465e+06}}}, geom.Polygon{geom.Path{geom.Point{X: -1.080061773756471e+07, Y: 4.86331446652465e+06}, geom.Point{X: -1.0797990606947536e+07, Y: 4.863314807646255e+06}, geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06}, geom.Point{X: -1.0800618419985117e+07, Y: 4.865941938204324e+06}}}, geom.Polygon{geom.Path{geom.Point{X: -1.0797990606947536e+07, Y: 4.860688018032593e+06}, geom.Point{X: -1.0792737710199371e+07, Y: 4.860686654254725e+06}, geom.Point{X: -1.0792734981226994e+07, Y: 4.865940914307926e+06}, geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06}}}, geom.Polygon{geom.Path{geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06}, geom.Point{X: -1.0792734981226994e+07, Y: 4.865940914307926e+06}, geom.Point{X: -1.0792732249417646e+07, Y: 4.87119790475015e+06}, geom.Point{X: -1.0797990606947536e+07, Y: 4.871199271364988e+06}}}}
+	want5 := []geom.Polygonal{geom.Polygon{geom.Path{geom.Point{X: -1.0803243503695702e+07, Y: 4.860686654254725e+06}, geom.Point{X: -1.0797990606947536e+07, Y: 4.860688018032593e+06}, geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06}, geom.Point{X: -1.0803246232668078e+07, Y: 4.865940914307926e+06}}}, geom.Polygon{geom.Path{geom.Point{X: -1.0803246232668078e+07, Y: 4.865940914307926e+06}, geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06}, geom.Point{X: -1.0797990606947536e+07, Y: 4.871199271364988e+06}, geom.Point{X: -1.0803248964477425e+07, Y: 4.87119790475015e+06}}}, geom.Polygon{geom.Path{geom.Point{X: -1.0797990606947536e+07, Y: 4.860688018032593e+06}, geom.Point{X: -1.0792737710199371e+07, Y: 4.860686654254725e+06}, geom.Point{X: -1.0792734981226994e+07, Y: 4.865940914307926e+06}, geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06}}}, geom.Polygon{geom.Path{geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06}, geom.Point{X: -1.0792734981226994e+07, Y: 4.865940914307926e+06}, geom.Point{X: -1.0792732249417646e+07, Y: 4.87119790475015e+06}, geom.Point{X: -1.0797990606947536e+07, Y: 4.871199271364988e+06}}}}
 	if !reflect.DeepEqual(g0, want0) {
 		t.Errorf("layer 0 not matching")
 	}
@@ -888,4 +873,50 @@ func different(a, b, tolerance float64) bool {
 		return true
 	}
 	return false
+}
+
+func TestLoadPopulationCOARDS(t *testing.T) {
+	cfg, _ := CreateTestCTMData()
+	cfg.CensusFile = "cmd/inmap/testdata/havana_ppp_2020.ncf"
+	cfg.CensusPopColumns = cfg.CensusPopColumns[0:1]
+	sr, err := proj.Parse(cfg.GridProj)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, index, err := cfg.loadPopulation(sr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(index, map[string]int{"TotalPop": 0}) {
+		t.Errorf("invalid index %v", index)
+	}
+	b := &geom.Bounds{
+		Min: geom.Point{X: 1528594, Y: -1771972},
+		Max: geom.Point{X: 1546419, Y: -1748640},
+	}
+	var popSum float64
+	min, max := math.Inf(1), math.Inf(-1)
+	for _, popI := range data.SearchIntersect(b) {
+		pop := popI.(*population)
+		v := pop.PopData[0]
+		popSum += v
+		min = math.Min(min, v)
+		max = math.Max(max, v)
+	}
+
+	const (
+		wantMin = 6.7580990791321
+		wantMax = 84.202423095703
+		wantSum = 351202.19796419144
+	)
+	if different(min, wantMin, 1.0e-8) {
+		t.Errorf("minimum: %g != %g", min, wantMin)
+	}
+	if different(max, wantMax, 1.0e-8) {
+		t.Errorf("maximum: %g != %g", max, wantMax)
+	}
+	if different(popSum, wantSum, 1.0e-8) {
+		t.Errorf("sum: %g != %g", popSum, wantSum)
+	}
 }

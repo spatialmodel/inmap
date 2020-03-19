@@ -31,7 +31,6 @@ import (
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/encoding/shp"
 	"github.com/ctessum/geom/index/rtree"
-	"github.com/ctessum/geom/op"
 	"github.com/ctessum/sparse"
 	"github.com/spatialmodel/inmap/internal/hash"
 )
@@ -291,10 +290,8 @@ func (s *srgGenWorker) Calculate(data, result *GriddedSrgData) (err error) {
 	}
 
 	// Figure out if inputShape is completely within the grid
-	result.CoveredByGrid, err = op.Within(inputGeom, s.GridCells.Extent)
-	if err != nil {
-		return
-	}
+	within := inputGeom.(geom.Withiner).Within(s.GridCells.Extent)
+	result.CoveredByGrid = within == geom.Inside || within == geom.OnEdge
 
 	var GridCells []*GridCell
 	var InputShapeSrgs []*srgHolder
@@ -415,7 +412,7 @@ func geomWeight(w float64, g geom.Geom) float64 {
 	case geom.Point, geom.MultiPoint:
 		return w * float64(g.Len())
 	default:
-		panic(op.UnsupportedGeometryError{G: g})
+		panic(fmt.Errorf("invalid geometry type %T", g))
 	}
 }
 

@@ -160,7 +160,7 @@ type nocontrolPolygonRecord struct {
 
 // basicPolygonRecord is a basic polygon record information.
 type basicPolygonRecord struct {
-	geom.Polygon
+	geom.Polygonal
 	SR *proj.SR
 	SourceData
 	Emissions
@@ -173,7 +173,7 @@ func (r *basicPolygonRecord) PointData() *PointSourceData { return nil }
 
 // Location returns the polygon representing the location of emissions.
 func (r *basicPolygonRecord) Location() *Location {
-	return &Location{Geom: r.Polygon, SR: r.SR, Name: r.LocationName}
+	return &Location{Geom: r.Polygonal, SR: r.SR, Name: r.LocationName}
 }
 
 type supplementalPointRecord struct {

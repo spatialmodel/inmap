@@ -695,7 +695,7 @@ func InitializeConfig() *Cfg {
 		{
 			name: "VarGrid.CensusFile",
 			usage: `
-              VarGrid.CensusFile is the path to the shapefile holding population information.`,
+              VarGrid.CensusFile is the path to the shapefile or COARDs-compliant NetCDF file holding population information.`,
 			defaultVal:  "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testPopulation.shp",
 			isInputFile: true,
 			flagsets:    []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.gridCmd.Flags(), cfg.cloudStartCmd.Flags(), cfg.srStartCmd.Flags()},
