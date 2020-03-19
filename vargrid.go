@@ -21,15 +21,19 @@ package inmap
 import (
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"os"
+	"path/filepath"
 	"runtime"
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ctessum/cdf"
 	"github.com/ctessum/sparse"
+	"github.com/spatialmodel/inmap/emissions/aep"
 
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/encoding/shp"
@@ -57,7 +61,7 @@ type VarGridConfig struct {
 	// See the documentation for PopConcMutator for more information.
 	PopConcThreshold float64
 
-	CensusFile        string   // Path to census shapefile
+	CensusFile        string   // Path to census shapefile or COARDS-compliant NetCDF file
 	CensusPopColumns  []string // Shapefile fields containing populations for multiple demographics
 	PopGridColumn     string   // Name of field in shapefile to be used for determining variable grid resolution
 	MortalityRateFile string   // Path to the mortality rate shapefile
@@ -851,7 +855,7 @@ func (c *Cell) loadPopMortalityRate(config *VarGridConfig, mortRates *MortalityR
 	// Second, intersect each grid cell with population polygons
 	for _, pInterface := range pop.tree.SearchIntersect(c.Bounds()) {
 		p := pInterface.(*population)
-		pIntersection := c.Intersection(p)
+		pIntersection := c.Polygonal.Intersection(p.Polygonal)
 		pAreaIntersect := pIntersection.Area()
 		if pAreaIntersect == 0 {
 			continue
@@ -873,7 +877,7 @@ func (c *Cell) loadPopMortalityRate(config *VarGridConfig, mortRates *MortalityR
 		// Third, intersect each intersection from first step with
 		// mortality rate polygons.
 		for _, m := range cellMort {
-			mIntersection := pIntersection.Intersection(m)
+			mIntersection := pIntersection.Intersection(m.Polygonal)
 			mAreaIntersect := mIntersection.Area()
 			if mAreaIntersect == 0 {
 				continue
@@ -883,7 +887,7 @@ func (c *Cell) loadPopMortalityRate(config *VarGridConfig, mortRates *MortalityR
 		}
 		for _, mInterface := range mortRates.tree.SearchIntersect(pIntersection.Bounds()) {
 			m := mInterface.(*mortality)
-			mIntersection := pIntersection.Intersection(m)
+			mIntersection := pIntersection.Intersection(m.Polygonal)
 			mAreaIntersect := mIntersection.Area()
 			if mAreaIntersect == 0 {
 				continue
@@ -915,10 +919,24 @@ type mortality struct {
 	MortData []float64 // Deaths per 100,000 people per year
 }
 
-// loadPopulation loads population information from a shapefile, converting it
+// loadPopulation loads population information from a shapefile or
+// COARDS-compliant NetCDF file (determined by file extension), converting it
 // to spatial reference sr. The function outputs an index holding the population
 // information and a map giving the array index of each population type.
 func (config *VarGridConfig) loadPopulation(sr *proj.SR) (*rtree.Rtree, map[string]int, error) {
+	x := filepath.Ext(config.CensusFile)
+	if x == ".shp" {
+		return config.loadPopulationShapefile(sr)
+	} else if x == ".ncf" || x == ".nc" {
+		return config.loadPopulationCOARDS(sr)
+	}
+	return nil, nil, fmt.Errorf("inmap: invalid CensusFile type %s; valid types are .shp, .nc and .ncf", x)
+}
+
+// loadPopulationShapefile loads population information from a shapefile, converting it
+// to spatial reference sr. The function outputs an index holding the population
+// information and a map giving the array index of each population type.
+func (config *VarGridConfig) loadPopulationShapefile(sr *proj.SR) (*rtree.Rtree, map[string]int, error) {
 	var err error
 	popshp, err := shp.NewDecoder(config.CensusFile)
 	if err != nil {
@@ -945,8 +963,7 @@ func (config *VarGridConfig) loadPopulation(sr *proj.SR) (*rtree.Rtree, map[stri
 		if !more {
 			break
 		}
-		p := new(population)
-		p.PopData = make([]float64, len(config.CensusPopColumns))
+		p := &population{PopData: make([]float64, len(config.CensusPopColumns))}
 		for i, pop := range config.CensusPopColumns {
 			s, ok := fields[pop]
 			if !ok {
@@ -978,6 +995,76 @@ func (config *VarGridConfig) loadPopulation(sr *proj.SR) (*rtree.Rtree, map[stri
 
 	popshp.Close()
 	return pop, popIndices, nil
+}
+
+// loadPopulationCOARDS loads population information from a
+// COARDS-compliant NetCDF file (NetCDF 4 and greater not supported), converting it
+// to spatial reference sr. The function outputs an index holding the population
+// information and a map giving the array index of each population type.
+// Data in the COARDS file are assumed to be row-major (i.e., latitude-major).
+// Information regarding the COARDS NetCDF conventions are
+// available here: https://ferret.pmel.noaa.gov/Ferret/documentation/coards-netcdf-conventions.COARDs.
+func (config *VarGridConfig) loadPopulationCOARDS(sr *proj.SR) (*rtree.Rtree, map[string]int, error) {
+	// Pretend this is an emissions file to avoid rewriting the COARDS reader.
+	recs, err := aep.ReadCOARDSFile(config.CensusFile, time.Unix(0, 0), time.Unix(1, 0), aep.Kg, aep.SourceData{})
+	if err != nil {
+		return nil, nil, fmt.Errorf("inmap: reading NetCDF CensusFile: %w", err)
+	}
+
+	inputSR, err := proj.Parse("+proj=longlat")
+	if err != nil {
+		panic(err)
+	}
+	ct, err := inputSR.NewTransform(sr)
+	if err != nil {
+		return nil, nil, fmt.Errorf("inmap: creating population geotiff transform: %w", err)
+	}
+
+	index := rtree.NewTree(25, 50)
+	for {
+		rec, err := recs()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, nil, fmt.Errorf("inmap: reading NetCDF CensusFile records: %w", err)
+		}
+		loc := rec.Location()
+		g, err := loc.Geom.Transform(ct)
+		if err != nil {
+			return nil, nil, fmt.Errorf("inmap: reading NetCDF CensusFile records: %w", err)
+		}
+
+		vals := rec.Totals()
+		pops := make([]float64, len(config.CensusPopColumns))
+		var nonZero bool
+		for i, p := range config.CensusPopColumns {
+			u, ok := vals[aep.Pollutant{Name: p}]
+			if !ok {
+				return nil, nil, fmt.Errorf("inmap: missing CensusFIle CensusPopColumn %s", p)
+			}
+			v := u.Value()
+			if math.IsNaN(v) {
+				continue
+			}
+			nonZero = true
+			pops[i] = v
+		}
+
+		if nonZero {
+			index.Insert(&population{
+				Polygonal: g.(geom.Polygonal),
+				PopData:   pops,
+			})
+		}
+	}
+
+	popIndex := make(map[string]int)
+	for i, p := range config.CensusPopColumns {
+		popIndex[p] = i
+	}
+
+	return index, popIndex, nil
 }
 
 func s2f(s string) (float64, error) {

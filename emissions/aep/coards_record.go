@@ -20,6 +20,7 @@ package aep
 import (
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"time"
 
@@ -66,6 +67,16 @@ func readCOARDSVar(nc *cdf.File, v string) ([]float64, error) {
 		}
 	default:
 		panic("this shouldn't happen")
+	}
+
+	noDataI := nc.Header.GetAttribute(v, "_FillValue")
+	if noDataI != nil {
+		noData := float64(noDataI.([]float32)[0])
+		for i, d := range data {
+			if d == noData {
+				data[i] = math.NaN()
+			}
+		}
 	}
 	return data, nil
 }
@@ -142,7 +153,7 @@ func ReadCOARDSFile(file string, begin, end time.Time, units InputUnits, sourceD
 		max := geom.Point{X: x + dx/2, Y: y + dy/2}
 
 		r := &basicPolygonRecord{
-			Polygon:      geom.Polygon{{min, {X: max.X, Y: min.Y}, max, {X: min.X, Y: max.Y}}},
+			Polygonal:    &geom.Bounds{Min:min, Max:max},
 			SourceData:   sourceData,
 			SR:           sr,
 			LocationName: fmt.Sprintf("%d_%d", j, i),

@@ -360,7 +360,7 @@ func calcWeightFactor(e geom.Geom, c *Cell) float64 {
 		}
 	case geom.Polygonal:
 		poly := e.(geom.Polygonal)
-		intersection := poly.Intersection(c)
+		intersection := poly.Intersection(c.Polygonal)
 		if intersection == nil {
 			return 0.
 		}

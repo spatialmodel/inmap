@@ -131,7 +131,7 @@ func (c *CSTConfig) gridPopulation(pop *rtree.Rtree, aqm string, popIndices map[
 					// First, intersect each grid cell with population polygons
 					for _, pInterface := range pop.SearchIntersect(g.Bounds()) {
 						p := pInterface.(*population)
-						pIntersection := g.Intersection(p)
+						pIntersection := g.Intersection(p.Polygonal)
 						pAreaIntersect := pIntersection.Area()
 						if pAreaIntersect == 0 {
 							continue
@@ -195,14 +195,14 @@ func (c *CSTConfig) regionalIncidence(ctx context.Context, popIndex *rtree.Rtree
 					for i, pI := range regionPopIsect {
 						pp := pI.(*population)
 						pArea := pp.Area()
-						isectFrac := pp.Intersection(m).Area() / pArea
+						isectFrac := pp.Polygonal.Intersection(m.Polygonal).Area() / pArea
 						if pArea == 0 || isectFrac == 0 {
 							continue
 						}
 						regionPop[i] = pp.PopData[pi] * isectFrac
 						for _, gI := range aqmIndex.SearchIntersect(pp.Bounds()) {
 							g := gI.(gridIndex)
-							regionConc[i] += conc.Data[g.i] * g.Intersection(pp).Area() / pArea
+							regionConc[i] += conc.Data[g.i] * g.Polygonal.Intersection(pp.Polygonal).Area() / pArea
 						}
 					}
 					m.Io[mi] = epi.IoRegional(regionPop, regionConc, HR, m.MortData[mi])
@@ -259,7 +259,7 @@ func (c *CSTConfig) griddedIncidence(aqm string, mortIndex, popIndex *rtree.Rtre
 						m := mI.(*mortality)
 						for _, pI := range cellPop {
 							p := pI.(*population)
-							popTemp := p.Intersection(g).Intersection(m).Area() / p.Area() * p.PopData[pi]
+							popTemp := p.Polygonal.Intersection(g).Intersection(m.Polygonal).Area() / p.Area() * p.PopData[pi]
 							mPop += m.Io[mi] * popTemp
 							popTotal += popTemp
 						}

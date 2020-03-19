@@ -39,22 +39,22 @@ func TestReadCOARDSFile(t *testing.T) {
 
 	totalEmis := new(Emissions)
 
-	wantGeometry := []geom.Polygon{
-		{{{X: -161.25, Y: 15}, {X: -158.75, Y: 15}, {X: -158.75, Y: 17}, {X: -161.25, Y: 17}}},
-		{{{X: -158.75, Y: 15}, {X: -156.25, Y: 15}, {X: -156.25, Y: 17}, {X: -158.75, Y: 17}}},
-		{{{X: -156.25, Y: 15}, {X: -153.75, Y: 15}, {X: -153.75, Y: 17}, {X: -156.25, Y: 17}}},
-		{{{X: -161.25, Y: 17}, {X: -158.75, Y: 17}, {X: -158.75, Y: 19}, {X: -161.25, Y: 19}}},
-		{{{X: -158.75, Y: 17}, {X: -156.25, Y: 17}, {X: -156.25, Y: 19}, {X: -158.75, Y: 19}}},
-		{{{X: -156.25, Y: 17}, {X: -153.75, Y: 17}, {X: -153.75, Y: 19}, {X: -156.25, Y: 19}}},
-		{{{X: -161.25, Y: 19}, {X: -158.75, Y: 19}, {X: -158.75, Y: 21}, {X: -161.25, Y: 21}}},
-		{{{X: -158.75, Y: 19}, {X: -156.25, Y: 19}, {X: -156.25, Y: 21}, {X: -158.75, Y: 21}}},
-		{{{X: -156.25, Y: 19}, {X: -153.75, Y: 19}, {X: -153.75, Y: 21}, {X: -156.25, Y: 21}}},
-		{{{X: -161.25, Y: 21}, {X: -158.75, Y: 21}, {X: -158.75, Y: 23}, {X: -161.25, Y: 23}}},
-		{{{X: -158.75, Y: 21}, {X: -156.25, Y: 21}, {X: -156.25, Y: 23}, {X: -158.75, Y: 23}}},
-		{{{X: -156.25, Y: 21}, {X: -153.75, Y: 21}, {X: -153.75, Y: 23}, {X: -156.25, Y: 23}}},
-		{{{X: -161.25, Y: 23}, {X: -158.75, Y: 23}, {X: -158.75, Y: 25}, {X: -161.25, Y: 25}}},
-		{{{X: -158.75, Y: 23}, {X: -156.25, Y: 23}, {X: -156.25, Y: 25}, {X: -158.75, Y: 25}}},
-		{{{X: -156.25, Y: 23}, {X: -153.75, Y: 23}, {X: -153.75, Y: 25}, {X: -156.25, Y: 25}}},
+	wantGeometry := []*geom.Bounds{
+		&geom.Bounds{Min: geom.Point{X: -161.25, Y: 15}, Max: geom.Point{X: -158.75, Y: 17}},
+		&geom.Bounds{Min: geom.Point{X: -158.75, Y: 15}, Max: geom.Point{X: -156.25, Y: 17}},
+		&geom.Bounds{Min: geom.Point{X: -156.25, Y: 15}, Max: geom.Point{X: -153.75, Y: 17}},
+		&geom.Bounds{Min: geom.Point{X: -161.25, Y: 17}, Max: geom.Point{X: -158.75, Y: 19}},
+		&geom.Bounds{Min: geom.Point{X: -158.75, Y: 17}, Max: geom.Point{X: -156.25, Y: 19}},
+		&geom.Bounds{Min: geom.Point{X: -156.25, Y: 17}, Max: geom.Point{X: -153.75, Y: 19}},
+		&geom.Bounds{Min: geom.Point{X: -161.25, Y: 19}, Max: geom.Point{X: -158.75, Y: 21}},
+		&geom.Bounds{Min: geom.Point{X: -158.75, Y: 19}, Max: geom.Point{X: -156.25, Y: 21}},
+		&geom.Bounds{Min: geom.Point{X: -156.25, Y: 19}, Max: geom.Point{X: -153.75, Y: 21}},
+		&geom.Bounds{Min: geom.Point{X: -161.25, Y: 21}, Max: geom.Point{X: -158.75, Y: 23}},
+		&geom.Bounds{Min: geom.Point{X: -158.75, Y: 21}, Max: geom.Point{X: -156.25, Y: 23}},
+		&geom.Bounds{Min: geom.Point{X: -156.25, Y: 21}, Max: geom.Point{X: -153.75, Y: 23}},
+		&geom.Bounds{Min: geom.Point{X: -161.25, Y: 23}, Max: geom.Point{X: -158.75, Y: 25}},
+		&geom.Bounds{Min: geom.Point{X: -158.75, Y: 23}, Max: geom.Point{X: -156.25, Y: 25}},
+		&geom.Bounds{Min: geom.Point{X: -156.25, Y: 23}, Max: geom.Point{X: -153.75, Y: 25}},
 	}
 
 	var i int
@@ -66,7 +66,7 @@ func TestReadCOARDSFile(t *testing.T) {
 			t.Error(err)
 		}
 
-		g := rec.(*basicPolygonRecord).Polygon
+		g := rec.(*basicPolygonRecord).Polygonal
 		if !reflect.DeepEqual(g, wantGeometry[i]) {
 			t.Errorf("%v != %v", g, wantGeometry[i])
 		}

@@ -189,13 +189,13 @@ func (grid *GridDef) GetIndex(g geom.Geom) (rows, cols []int, fracs []float64, i
 			coveredByGrid = true
 		}
 		return
-	case geom.Polygon:
-		p := g.(geom.Polygon)
+	case geom.Polygonal:
+		p := g.(geom.Polygonal)
 		area := p.Area()
 		var areaSum float64
 		for _, cI := range grid.rtree.SearchIntersect(p.Bounds()) {
 			c := cI.(*GridCell)
-			iSect := p.Intersection(c)
+			iSect := p.Intersection(c.Polygonal)
 			if iSect == nil {
 				continue
 			}
