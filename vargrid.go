@@ -1166,7 +1166,10 @@ func (c *Cell) loadData(data *CTMData, k int) error {
 		}
 	}
 	if sum := floats.Sum(fractions); sum < 0.9 {
-		return fmt.Errorf("there is not CTM data overlapping at least 90 percent of the InMAP cell at %+v", c.Centroid())
+		return fmt.Errorf("there is not CTM data overlapping at least 90 percent of the "+
+			"InMAP cell at %+v; grid dimensions: X=%g -- %g; Y=%g -- %g",
+			c.Polygonal, data.xo, data.xo+data.dx*float64(data.nx),
+			data.yo, data.yo+data.dy*float64(data.ny))
 	}
 	for i, ctmcell := range ctmcells {
 		ctmrow := ctmcell.Row
