@@ -74,6 +74,16 @@ type VarGridConfig struct {
 	GridProj string // projection info for CTM grid; Proj4 format
 }
 
+func (c *VarGridConfig) bounds() *geom.Bounds {
+	return &geom.Bounds{
+		Min: geom.Point{X: c.VariableGridXo, Y: c.VariableGridYo},
+		Max: geom.Point{
+			X: c.VariableGridXo + c.VariableGridDx*float64(c.Xnests[0]),
+			Y: c.VariableGridYo + c.VariableGridDy*float64(c.Ynests[0]),
+		},
+	}
+}
+
 // CTMData holds processed data from a chemical transport model
 type CTMData struct {
 	gridTree *rtree.Rtree
@@ -390,7 +400,7 @@ func (config *VarGridConfig) LoadPopMort() (*Population, PopIndices, *MortalityR
 		return nil, nil, nil, nil, fmt.Errorf("inmap: while parsing GridProj: %v", err)
 	}
 
-	pop, popIndex, err := config.loadPopulation(gridSR)
+	pop, popIndex, err := config.loadPopulation(gridSR, config.bounds())
 	if err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("inmap: while loading population: %v", err)
 	}
@@ -921,22 +931,24 @@ type mortality struct {
 
 // loadPopulation loads population information from a shapefile or
 // COARDS-compliant NetCDF file (determined by file extension), converting it
-// to spatial reference sr. The function outputs an index holding the population
+// to spatial reference sr and then discarding any geometries that do not
+// overlap with bounds. The function outputs an index holding the population
 // information and a map giving the array index of each population type.
-func (config *VarGridConfig) loadPopulation(sr *proj.SR) (*rtree.Rtree, map[string]int, error) {
+func (config *VarGridConfig) loadPopulation(sr *proj.SR, bounds *geom.Bounds) (*rtree.Rtree, map[string]int, error) {
 	x := filepath.Ext(config.CensusFile)
 	if x == ".shp" {
-		return config.loadPopulationShapefile(sr)
+		return config.loadPopulationShapefile(sr, bounds)
 	} else if x == ".ncf" || x == ".nc" {
-		return config.loadPopulationCOARDS(sr)
+		return config.loadPopulationCOARDS(sr, bounds)
 	}
 	return nil, nil, fmt.Errorf("inmap: invalid CensusFile type %s; valid types are .shp, .nc and .ncf", x)
 }
 
 // loadPopulationShapefile loads population information from a shapefile, converting it
-// to spatial reference sr. The function outputs an index holding the population
+// to spatial reference sr and discarding any geometryies that do not overlap
+// with bounds. The function outputs an index holding the population
 // information and a map giving the array index of each population type.
-func (config *VarGridConfig) loadPopulationShapefile(sr *proj.SR) (*rtree.Rtree, map[string]int, error) {
+func (config *VarGridConfig) loadPopulationShapefile(sr *proj.SR, bounds *geom.Bounds) (*rtree.Rtree, map[string]int, error) {
 	var err error
 	popshp, err := shp.NewDecoder(config.CensusFile)
 	if err != nil {
@@ -987,7 +999,9 @@ func (config *VarGridConfig) loadPopulationShapefile(sr *proj.SR) (*rtree.Rtree,
 		default:
 			return nil, nil, fmt.Errorf("inmap: loadPopulation: population shapes need to be polygons")
 		}
-		pop.Insert(p)
+		if bounds.Overlaps(p.Bounds()) {
+			pop.Insert(p)
+		}
 	}
 	if err := popshp.Error(); err != nil {
 		return nil, nil, err
@@ -999,12 +1013,13 @@ func (config *VarGridConfig) loadPopulationShapefile(sr *proj.SR) (*rtree.Rtree,
 
 // loadPopulationCOARDS loads population information from a
 // COARDS-compliant NetCDF file (NetCDF 4 and greater not supported), converting it
-// to spatial reference sr. The function outputs an index holding the population
+// to spatial reference sr and discarding any geometryies that do not overlap
+// with bounds. The function outputs an index holding the population
 // information and a map giving the array index of each population type.
 // Data in the COARDS file are assumed to be row-major (i.e., latitude-major).
 // Information regarding the COARDS NetCDF conventions are
 // available here: https://ferret.pmel.noaa.gov/Ferret/documentation/coards-netcdf-conventions.COARDs.
-func (config *VarGridConfig) loadPopulationCOARDS(sr *proj.SR) (*rtree.Rtree, map[string]int, error) {
+func (config *VarGridConfig) loadPopulationCOARDS(sr *proj.SR, bounds *geom.Bounds) (*rtree.Rtree, map[string]int, error) {
 	// Pretend this is an emissions file to avoid rewriting the COARDS reader.
 	recs, err := aep.ReadCOARDSFile(config.CensusFile, time.Unix(0, 0), time.Unix(1, 0), aep.Kg, aep.SourceData{})
 	if err != nil {
@@ -1033,6 +1048,9 @@ func (config *VarGridConfig) loadPopulationCOARDS(sr *proj.SR) (*rtree.Rtree, ma
 		g, err := loc.Geom.Transform(ct)
 		if err != nil {
 			return nil, nil, fmt.Errorf("inmap: reading NetCDF CensusFile records: %w", err)
+		}
+		if !bounds.Overlaps(g.Bounds()) {
+			continue // Discard if not within area of interest
 		}
 
 		vals := rec.Totals()

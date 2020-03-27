@@ -883,7 +883,13 @@ func TestLoadPopulationCOARDS(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	data, index, err := cfg.loadPopulation(sr)
+	cfg.VariableGridXo = 1528594
+	cfg.VariableGridYo = -1771972
+	cfg.VariableGridDx = 1546419 - 1528594
+	cfg.VariableGridDy = -1748640 - -1771972
+	cfg.Xnests = []int{1}
+	cfg.Ynests = []int{1}
+	data, index, err := cfg.loadPopulation(sr, cfg.bounds())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -891,13 +897,9 @@ func TestLoadPopulationCOARDS(t *testing.T) {
 	if !reflect.DeepEqual(index, map[string]int{"TotalPop": 0}) {
 		t.Errorf("invalid index %v", index)
 	}
-	b := &geom.Bounds{
-		Min: geom.Point{X: 1528594, Y: -1771972},
-		Max: geom.Point{X: 1546419, Y: -1748640},
-	}
 	var popSum float64
 	min, max := math.Inf(1), math.Inf(-1)
-	for _, popI := range data.SearchIntersect(b) {
+	for _, popI := range data.SearchIntersect(cfg.bounds()) {
 		pop := popI.(*population)
 		v := pop.PopData[0]
 		popSum += v
