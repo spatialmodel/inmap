@@ -866,6 +866,9 @@ func (c *Cell) loadPopMortalityRate(config *VarGridConfig, mortRates *MortalityR
 	for _, pInterface := range pop.tree.SearchIntersect(c.Bounds()) {
 		p := pInterface.(*population)
 		pIntersection := c.Polygonal.Intersection(p.Polygonal)
+		if pIntersection == nil {
+			continue
+		}
 		pAreaIntersect := pIntersection.Area()
 		if pAreaIntersect == 0 {
 			continue
@@ -888,6 +891,9 @@ func (c *Cell) loadPopMortalityRate(config *VarGridConfig, mortRates *MortalityR
 		// mortality rate polygons.
 		for _, m := range cellMort {
 			mIntersection := pIntersection.Intersection(m.Polygonal)
+			if mIntersection == nil {
+				continue
+			}
 			mAreaIntersect := mIntersection.Area()
 			if mAreaIntersect == 0 {
 				continue
