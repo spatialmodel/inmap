@@ -20,12 +20,15 @@ package aep
 
 import (
 	"context"
+	"database/sql"
 	"encoding/csv"
 	"fmt"
 	"io"
 	"log"
 	"math"
+	"net/url"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -84,6 +87,40 @@ type SrgSpecSMOKE struct {
 
 const none = "NONE"
 
+func newCacheV2(diskCachePath string, memCacheSize int, marshalFunc func(interface{}) ([]byte, error), unmarshalFunc func([]byte) (interface{}, error)) (*requestcache.Cache, error) {
+	dedup := requestcache.Deduplicate()
+	nprocs := runtime.GOMAXPROCS(-1)
+	mc := requestcache.Memory(memCacheSize)
+	if diskCachePath == "" {
+		return requestcache.NewCache(nprocs, dedup, mc), nil
+	} else {
+		if strings.HasPrefix(diskCachePath, "gs://") {
+			loc, err := url.Parse(diskCachePath)
+			if err != nil {
+				return nil, err
+			}
+			cf, err := requestcache.GoogleCloudStorage(context.TODO(), loc.Host, strings.TrimLeft(loc.Path, "/"), marshalFunc, unmarshalFunc)
+			if err != nil {
+				return nil, err
+			}
+			return requestcache.NewCache(nprocs, dedup, mc, cf), nil
+		} else if filepath.Ext(diskCachePath) == ".sqlite3" {
+			db, err := sql.Open("sqlite3", diskCachePath)
+			if err != nil {
+				return nil, err
+			}
+			cf, err := requestcache.SQL(context.Background(), db, marshalFunc, unmarshalFunc)
+			if err != nil {
+				return nil, err
+			}
+			return requestcache.NewCache(nprocs, dedup, mc, cf), nil
+		} else {
+			return requestcache.NewCache(nprocs, dedup, mc,
+				requestcache.Disk(diskCachePath, marshalFunc, unmarshalFunc)), nil
+		}
+	}
+}
+
 // ReadSrgSpecSMOKE reads a SMOKE formatted spatial surrogate specification file.
 // Results are returned as a map of surrogate specifications as indexed by
 // their unique ID, which is Region+SurrogateCode. shapefileDir specifies the
@@ -104,7 +141,7 @@ func ReadSrgSpecSMOKE(fid io.Reader, shapefileDir string, checkShapefiles bool, 
 	if err != nil {
 		return nil, fmt.Errorf("in ReadSrgSpec: %v", err)
 	}
-	cache, err := newCache(diskCachePath, memCacheSize, marshalSrgHolders, unmarshalSrgHolders)
+	cache, err := newCacheV2(diskCachePath, memCacheSize, marshalSrgHolders, unmarshalSrgHolders)
 	if err != nil {
 		return nil, err
 	}
