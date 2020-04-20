@@ -194,6 +194,7 @@ func TestCreateSurrogates(t *testing.T) {
 	// surrogates that should be nil based on manual inspection.
 	nilSrgs := map[string]map[string]bool{
 		"200": map[string]bool{"09001": true, "36103": true},
+		"500": map[string]bool{"09001": true},
 	}
 
 	for _, code := range []string{"100", "137", "140", "500", "200"} {
