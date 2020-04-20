@@ -70,7 +70,7 @@ func ReadSrgSpecOSM(r io.Reader, diskCachePath string, memCacheSize int) (*SrgSp
 		return nil, err
 	}
 	srgs := NewSrgSpecs()
-	cache, err := newCache(diskCachePath, memCacheSize, marshalSrgHolders, unmarshalSrgHolders)
+	cache, err := newCacheV2(diskCachePath, memCacheSize, marshalSrgHolders, unmarshalSrgHolders)
 	if err != nil {
 		return nil, err
 	}

@@ -32,6 +32,7 @@ import (
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/encoding/shp"
 	"github.com/ctessum/geom/index/rtree"
+	"github.com/ctessum/requestcache/v4"
 	"github.com/ctessum/sparse"
 	"github.com/spatialmodel/inmap/internal/hash"
 )
@@ -139,23 +140,24 @@ func ParseSurrogateFilter(filterFunction string) *SurrogateFilter {
 }
 
 // createMerged creates a surrogate by creating and merging other surrogates.
-func (sp *SpatialProcessor) createMerged(srg SrgSpec, gridData *GridDef, loc *Location) (*GriddedSrgData, error) {
+func (sp *SpatialProcessor) createMerged(srg SrgSpec, gridData *GridDef, loc *Location, result *GriddedSrgData) error {
 	mrgSrgs := make([]*GriddedSrgData, len(srg.mergeNames()))
 	for i, mrgName := range srg.mergeNames() {
 		newSrg, err := sp.SrgSpecs.GetByName(srg.region(), mrgName)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		// If we use the cache here it is possible to end up with a channel deadlock,
-		// so we generate the surrogate from scratch here.
 		sg := &srgGrid{srg: newSrg, gridData: gridData, loc: loc, sp: sp}
-		data, err := sg.Run(context.Background())
-		if err != nil {
-			return nil, err
+		req := sp.cache.NewRequestRecursive(context.Background(), sg)
+		data := new(GriddedSrgData)
+		if err := req.Result(data); err != nil {
+			return err
 		}
-		mrgSrgs[i] = data.(*GriddedSrgData)
+		mrgSrgs[i] = data
 	}
-	return mergeSrgs(mrgSrgs, srg.mergeMultipliers()), nil
+	res := mergeSrgs(mrgSrgs, srg.mergeMultipliers())
+	*result = *res
+	return nil
 }
 
 // srgGrid holds a surrogate specification and a grid definition.
@@ -173,22 +175,22 @@ func (sg *srgGrid) Key() string {
 
 // Run creates a new gridding surrogate based on a
 // surrogate specification and grid definition.
-func (sg *srgGrid) Run(_ context.Context) (interface{}, error) {
+func (sg *srgGrid) Run(_ context.Context, _ *requestcache.Cache, res requestcache.Result) error {
 	srg := sg.srg
 	gridData := sg.gridData
 	sp := sg.sp
 	loc := sg.loc
 	if loc == nil {
-		return nil, fmt.Errorf("aep.SpatialProcessor.createSurrogate: missing location: %+v", gridData)
+		return fmt.Errorf("aep.SpatialProcessor.createSurrogate: missing location: %+v", gridData)
 	}
 	if len(srg.mergeNames()) != 0 {
-		return sp.createMerged(srg, gridData, loc)
+		return sp.createMerged(srg, gridData, loc, res.(*GriddedSrgData))
 	}
 	log.Printf("creating surrogate `%s` for location %s", srg.name(), loc)
 
 	srgData, err := srg.getSrgData(gridData, loc, sp.SimplifyTolerance)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Start workers
@@ -213,10 +215,11 @@ func (sg *srgGrid) Run(_ context.Context) (interface{}, error) {
 	for i := 0; i < workersRunning; i++ {
 		err = <-errchan
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
-	return grdsrg, nil
+	*(res.(*GriddedSrgData)) = *grdsrg
+	return nil
 }
 
 // WriteToShp write an individual gridding surrogate to a shapefile.

@@ -210,15 +210,14 @@ func TestCreateSurrogates(t *testing.T) {
 			for fips, covered := range coveredByGrid {
 				t.Run(fips, func(t *testing.T) {
 					sg := &srgGrid{srg: srgSpec, gridData: grid, loc: inputShapes[fips], sp: sp}
-					srgI, err := sg.Run(context.Background())
-					if err != nil {
+					srg := new(GriddedSrgData)
+					if err := sg.Run(context.Background(), nil, srg); err != nil {
 						t.Fatalf("creating surrogate %s, FIPS %s: %v", code, fips, err)
 					}
-					if srgI == nil {
+
+					if srg == nil {
 						t.Fatalf("county %s is not in surrogate %s", fips, code)
 					}
-
-					srg := srgI.(*GriddedSrgData)
 
 					if srg.CoveredByGrid != covered {
 						t.Errorf("county %s should %v be covered by the grid but it is %v",
