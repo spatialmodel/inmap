@@ -24,6 +24,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"log"
+	"math"
 	"runtime"
 	"strings"
 	"sync"
@@ -324,23 +325,9 @@ func (s *srgGenWorker) intersections1(
 	// Figure out which grid cells might intersect with the input shape
 	inputBounds := inputGeom.Bounds()
 	GridCells = make([]*GridCell, 0, 30)
-	wg.Add(nprocs)
-	for procnum := 0; procnum < nprocs; procnum++ {
-		go func(procnum int) {
-			defer wg.Done()
-			var intersects bool
-			for i := procnum; i < len(s.GridCells.Cells); i += nprocs {
-				cell := s.GridCells.Cells[i]
-				intersects = cell.Polygonal.Bounds().Overlaps(inputBounds)
-				if intersects {
-					mu.Lock()
-					GridCells = append(GridCells, cell)
-					mu.Unlock()
-				}
-			}
-		}(procnum)
+	for _, gcI := range s.GridCells.rtree.SearchIntersect(inputBounds) {
+		GridCells = append(GridCells, gcI.(*GridCell))
 	}
-	wg.Wait()
 
 	// get all of the surrogates which intersect with the input
 	// shape, and save only the intersecting parts.
@@ -348,12 +335,13 @@ func (s *srgGenWorker) intersections1(
 	srgs = make([]*srgHolder, 0, 500)
 	wg.Add(nprocs)
 	srgsWithinBounds := s.surrogates.SearchIntersect(inputBounds)
+	inputGeomArea := inputGeom.Area()
 	errChan := make(chan error)
 	for procnum := 0; procnum < nprocs; procnum++ {
 		go func(procnum int) {
 			for i := procnum; i < len(srgsWithinBounds); i += nprocs {
 				srg := srgsWithinBounds[i].(*srgHolder)
-				intersection := intersection(srg.Geom, inputGeom)
+				intersection := intersection(srg.Geom, inputGeom, inputGeomArea)
 				if intersection == nil {
 					continue
 				}
@@ -377,7 +365,7 @@ func (s *srgGenWorker) intersections1(
 }
 
 // intersection calculates the intersection of g and poly
-func intersection(g geom.Geom, poly geom.Polygonal) geom.Geom {
+func intersection(g geom.Geom, poly geom.Polygonal, polyArea float64) geom.Geom {
 	switch g.(type) {
 	case geom.Point, geom.MultiPoint:
 		o := make(geom.MultiPoint, 0, g.Len())
@@ -394,9 +382,27 @@ func intersection(g geom.Geom, poly geom.Polygonal) geom.Geom {
 		}
 		return nil
 	case geom.Polygonal:
-		return g.(geom.Polygonal).Intersection(poly)
+		p := g.(geom.Polygonal)
+		if a := p.Area(); a > 0 && a < polyArea/50 {
+			// If p is small compared to poly, and the centroid of p is
+			// within poly, return p.
+			if in := p.Centroid().Within(poly); in == geom.Inside {
+				return p
+			}
+			return nil
+		}
+		return p.Intersection(poly)
 	case geom.Linear:
-		return g.(geom.Linear).Clip(poly)
+		l := g.(geom.Linear)
+		if length := l.Length(); length > 0 && length < math.Sqrt(polyArea)/50 {
+			// If l is small compared to poly, and the first point in l is within
+			// poly, return l.
+			if in := l.Points()().Within(poly); in == geom.Inside {
+				return l
+			}
+			return nil
+		}
+		return l.Clip(poly)
 	default:
 		panic(fmt.Errorf("unsupported intersection geometry type %#v", g))
 	}
@@ -432,8 +438,9 @@ func (s *srgGenWorker) intersections2(data *GriddedSrgData,
 		go func(procnum int) {
 			for i := procnum; i < len(GridCells); i += nprocs {
 				cell := GridCells[i].Copy()
+				cellArea := cell.Area()
 				for _, srg := range InputShapeSrgs {
-					intersection := intersection(srg.Geom, cell.Polygonal)
+					intersection := intersection(srg.Geom, cell.Polygonal, cellArea)
 					if intersection == nil {
 						continue
 					}
