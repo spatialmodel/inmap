@@ -100,6 +100,7 @@ func NewSpatialProcessor(srgSpecs *SrgSpecs, grids []*GridDef, gridRef *GridRef,
 
 type griddedSrgDataHolder GriddedSrgData
 
+
 // UnmarshalBinary unmarshals the receiver from a byte array.
 func (data *griddedSrgDataHolder) UnmarshalBinary(b []byte) error {
 	r := bytes.NewBuffer(b)
