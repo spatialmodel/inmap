@@ -98,23 +98,22 @@ func NewSpatialProcessor(srgSpecs *SrgSpecs, grids []*GridDef, gridRef *GridRef,
 	return sp
 }
 
-func init() {
-	gob.Register(GriddedSrgData{})
-}
+type griddedSrgDataHolder GriddedSrgData
 
-// unmarshalGriddedSrgData unmarshals an interface from a byte array and fulfills
-// the requirements for the Disk cache unmarshalFunc input.
-func (data *GriddedSrgData) UnmarshalBinary(b []byte) error {
+
+// UnmarshalBinary unmarshals the receiver from a byte array.
+func (data *griddedSrgDataHolder) UnmarshalBinary(b []byte) error {
 	r := bytes.NewBuffer(b)
 	d := gob.NewDecoder(r)
-	return d.Decode(data)
+	dd := (*GriddedSrgData)(data)
+	return d.Decode(dd)
 }
 
 // MarshalBinary marshals the data to a byte array.
-func (data *GriddedSrgData) MarshalBinary() ([]byte, error) {
+func (data *griddedSrgDataHolder) MarshalBinary() ([]byte, error) {
 	w := bytes.NewBuffer(nil)
 	e := gob.NewEncoder(w)
-	if err := e.Encode(data); err != nil {
+	if err := e.Encode((*GriddedSrgData)(data)); err != nil {
 		return nil, err
 	}
 	return w.Bytes(), nil
@@ -281,7 +280,7 @@ func (sp *SpatialProcessor) Surrogate(srgSpec SrgSpec, grid *GridDef, loc *Locat
 	s := &srgGrid{srg: srgSpec, gridData: grid, loc: loc, sp: sp}
 	req := sp.cache.NewRequestRecursive(context.Background(), s)
 	result := new(GriddedSrgData)
-	if err := req.Result(result); err != nil {
+	if err := req.Result((*griddedSrgDataHolder)(result)); err != nil {
 		return nil, false, err
 	}
 	srg, coveredByGrid := result.ToGrid()
@@ -297,7 +296,7 @@ func (sp *SpatialProcessor) Surrogate(srgSpec SrgSpec, grid *GridDef, loc *Locat
 		s := &srgGrid{srg: newSrgSpec, gridData: grid, loc: loc, sp: sp}
 		result := new(GriddedSrgData)
 		req := sp.cache.NewRequestRecursive(context.Background(), s)
-		if err := req.Result(result); err != nil {
+		if err := req.Result((*griddedSrgDataHolder)(result)); err != nil {
 			return nil, false, err
 		}
 		srg, coveredByGrid := result.ToGrid()

@@ -95,7 +95,7 @@ func TestCreateSurrogates_osm(t *testing.T) {
 			}
 			sg := &srgGrid{srg: srgSpec, gridData: grid, loc: inputLoc, sp: sp}
 			srgs := new(GriddedSrgData)
-			if err := sg.Run(context.Background(), nil, srgs); err != nil {
+			if err := sg.Run(context.Background(), nil, (*griddedSrgDataHolder)(srgs)); err != nil {
 				t.Fatalf("creating surrogate %s: %v", code, err)
 			}
 			griddedSrg, covered := srgs.ToGrid()

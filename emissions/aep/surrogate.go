@@ -140,7 +140,7 @@ func ParseSurrogateFilter(filterFunction string) *SurrogateFilter {
 }
 
 // createMerged creates a surrogate by creating and merging other surrogates.
-func (sp *SpatialProcessor) createMerged(srg SrgSpec, gridData *GridDef, loc *Location, result *GriddedSrgData) error {
+func (sp *SpatialProcessor) createMerged(srg SrgSpec, gridData *GridDef, loc *Location, result requestcache.Result) error {
 	mrgSrgs := make([]*GriddedSrgData, len(srg.mergeNames()))
 	for i, mrgName := range srg.mergeNames() {
 		newSrg, err := sp.SrgSpecs.GetByName(srg.region(), mrgName)
@@ -150,13 +150,15 @@ func (sp *SpatialProcessor) createMerged(srg SrgSpec, gridData *GridDef, loc *Lo
 		sg := &srgGrid{srg: newSrg, gridData: gridData, loc: loc, sp: sp}
 		req := sp.cache.NewRequestRecursive(context.Background(), sg)
 		data := new(GriddedSrgData)
-		if err := req.Result(data); err != nil {
+		if err := req.Result((*griddedSrgDataHolder)(data)); err != nil {
 			return err
 		}
 		mrgSrgs[i] = data
 	}
 	res := mergeSrgs(mrgSrgs, srg.mergeMultipliers())
-	*result = *res
+	resH := result.(*griddedSrgDataHolder)
+	res2 := (*griddedSrgDataHolder)(res)
+	*resH = *res2
 	return nil
 }
 
@@ -184,7 +186,7 @@ func (sg *srgGrid) Run(_ context.Context, _ *requestcache.Cache, res requestcach
 		return fmt.Errorf("aep.SpatialProcessor.createSurrogate: missing location: %+v", gridData)
 	}
 	if len(srg.mergeNames()) != 0 {
-		return sp.createMerged(srg, gridData, loc, res.(*GriddedSrgData))
+		return sp.createMerged(srg, gridData, loc, res)
 	}
 	log.Printf("creating surrogate `%s` for location %s", srg.name(), loc)
 
@@ -218,7 +220,9 @@ func (sg *srgGrid) Run(_ context.Context, _ *requestcache.Cache, res requestcach
 			return err
 		}
 	}
-	*(res.(*GriddedSrgData)) = *grdsrg
+	rr := res.(*griddedSrgDataHolder)
+	grdsrg2 := (*griddedSrgDataHolder)(grdsrg)
+	*rr = *grdsrg2
 	return nil
 }
 
