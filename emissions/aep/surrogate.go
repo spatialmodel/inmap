@@ -40,6 +40,12 @@ import (
 type srgGenWorker struct {
 	surrogates *rtree.Rtree
 	GridCells  *GridDef
+
+	// srgCellRatio is the number of surrogate shapes to process per
+	// grid cell for each input shape. Larger numbers require
+	// longer to compute. If srgCellRatio > 1, all surrogate
+	// shapes will be processed.
+	srgCellRatio int
 }
 
 type srgGenWorkerInitData struct {
@@ -202,7 +208,7 @@ func (sg *srgGrid) Run(_ context.Context, _ *requestcache.Cache, res requestcach
 	errchan := make(chan error, nprocs*2)
 	workersRunning := 0
 	for i := 0; i < nprocs; i++ {
-		go genSrgWorker(singleShapeChan, griddedSrgChan, errchan, gridData, srgData)
+		go genSrgWorker(singleShapeChan, griddedSrgChan, errchan, gridData, srgData, sg.sp.SrgCellRatio)
 		workersRunning++
 	}
 
@@ -255,10 +261,11 @@ func (g *GriddedSrgData) WriteToShp(file string) error {
 }
 
 func genSrgWorker(singleShapeChan, griddedSrgChan chan *GriddedSrgData,
-	errchan chan error, gridData *GridDef, srgData *rtree.Rtree) {
+	errchan chan error, gridData *GridDef, srgData *rtree.Rtree, srgCellRatio int) {
 	var err error
 
 	s := new(srgGenWorker)
+	s.srgCellRatio = srgCellRatio
 
 	var data *GriddedSrgData
 	first := true
@@ -342,11 +349,27 @@ func (s *srgGenWorker) intersections1(
 	srgs = make([]*srgHolder, 0, 500)
 	wg.Add(nprocs)
 	srgsWithinBounds := s.surrogates.SearchIntersect(inputBounds)
+
+	// We want to limit the number of surrogates we're processing
+	// so that it's about 10 per grid cell.
+	srgMod := 1
+	if s.srgCellRatio > 0 {
+		if srgRatio := len(srgsWithinBounds) / len(GridCells); srgRatio > s.srgCellRatio {
+			srgMod = srgRatio / s.srgCellRatio
+			if srgMod < 1 {
+				srgMod = 1
+			}
+		}
+	}
+
 	inputGeomArea := inputGeom.Area()
 	errChan := make(chan error)
 	for procnum := 0; procnum < nprocs; procnum++ {
 		go func(procnum int) {
 			for i := procnum; i < len(srgsWithinBounds); i += nprocs {
+				if i%srgMod != 0 {
+					continue
+				}
 				srg := srgsWithinBounds[i].(*srgHolder)
 				intersection := intersection(srg.Geom, inputGeom, inputGeomArea)
 				if intersection == nil {

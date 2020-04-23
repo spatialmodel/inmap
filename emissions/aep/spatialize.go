@@ -82,6 +82,12 @@ type SpatialProcessor struct {
 	// memory use. The value should be in the units of the output grid
 	// (e.g., meters or degrees).
 	SimplifyTolerance float64
+
+	// SrgCellRatio is the number of surrogate shapes to process per
+	// grid cell for each input shape. Larger numbers require
+	// longer to compute. If srgCellRatio > 1, all surrogate
+	// shapes will be processed.
+	SrgCellRatio int
 }
 
 // NewSpatialProcessor creates a new spatial processor.
@@ -99,7 +105,6 @@ func NewSpatialProcessor(srgSpecs *SrgSpecs, grids []*GridDef, gridRef *GridRef,
 }
 
 type griddedSrgDataHolder GriddedSrgData
-
 
 // UnmarshalBinary unmarshals the receiver from a byte array.
 func (data *griddedSrgDataHolder) UnmarshalBinary(b []byte) error {

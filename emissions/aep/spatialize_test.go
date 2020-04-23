@@ -285,6 +285,7 @@ func TestSpatializeRecord(t *testing.T) {
 		t.Fatal(err)
 	}
 	sp := NewSpatialProcessor(srgSpecs, []*GridDef{grid}, gridRef, inputSR, true)
+	sp.SrgCellRatio = 1000
 	//sp.DiskCachePath = "testcache"
 
 	sourceData := SourceData{
