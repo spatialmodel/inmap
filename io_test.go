@@ -147,7 +147,7 @@ func TestEmissions(t *testing.T) {
 		t.Error(err)
 		t.FailNow()
 	}
-	emis, err := ReadEmissionShapefiles(sr, "tons/year", nil, TestEmisFilename)
+	emis, err := ReadEmissionShapefiles(sr, "tons/year", nil, nil, TestEmisFilename)
 	if err != nil {
 		t.Error(err)
 		t.FailNow()
@@ -211,6 +211,58 @@ func TestEmissions(t *testing.T) {
 		}
 	}
 	DeleteShapefile(TestEmisFilename)
+}
+
+func TestEmissions_mask(t *testing.T) {
+	e := NewEmissions()
+	e.Mask = geom.Polygon{{{X: 0, Y: 0}, {X: 1, Y: 0}, {X: 1, Y: 1}, {X: 0, Y: 1}}}
+	tests := []struct {
+		rec, result *EmisRecord
+	}{
+		{
+			rec: &EmisRecord{
+				Geom: geom.Polygon{{{X: 0, Y: 0}, {X: 2, Y: 0}, {X: 2, Y: 1}, {X: 0, Y: 1}}},
+				VOC:  1, NOx: 2, NH3: 3, SOx: 4, PM25: 1,
+				Height: 1, Diam: 1, Temp: 1, Velocity: 1,
+			},
+			result: &EmisRecord{
+				Geom: geom.Polygon{{{X: 0, Y: 1}, {X: 0, Y: 0}, {X: 1, Y: 0}, {X: 1, Y: 1}, {X: 0, Y: 1}}},
+				VOC:  0.5, NOx: 1, NH3: 1.5, SOx: 2, PM25: 0.5,
+				Height: 1, Diam: 1, Temp: 1, Velocity: 1,
+			},
+		},
+		{
+			rec: &EmisRecord{
+				Geom: geom.LineString{{X: 0, Y: 0.5}, {X: 2, Y: 0.5}},
+				VOC:  1,
+			},
+			result: &EmisRecord{
+				Geom: geom.MultiLineString{{{X: 1, Y: 0.5}, {X: 0, Y: 0.5}}},
+				VOC:  0.5,
+			},
+		},
+		{
+			rec: &EmisRecord{
+				Geom: geom.Point{X: 0.5, Y: 0.5},
+				VOC:  1,
+			},
+			result: &EmisRecord{
+				Geom: geom.Point{X: 0.5, Y: 0.5},
+				VOC:  1,
+			},
+		},
+	}
+	for i, test := range tests {
+		t.Run(fmt.Sprint(i), func(t *testing.T) {
+			e := NewEmissions()
+			e.Mask = geom.Polygon{{{X: 0, Y: 0}, {X: 1, Y: 0}, {X: 1, Y: 1}, {X: 0, Y: 1}}}
+			e.Add(test.rec)
+			result := e.dataSlice[0]
+			if !reflect.DeepEqual(result, test.result) {
+				t.Errorf("%+v != %+v", result, test.result)
+			}
+		})
+	}
 }
 
 func TestOutputEquation(t *testing.T) {

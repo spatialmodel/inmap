@@ -28,6 +28,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ctessum/geom"
+	"github.com/ctessum/geom/encoding/geojson"
 	"github.com/ctessum/geom/proj"
 	"github.com/lnashier/viper"
 	"github.com/spatialmodel/inmap"
@@ -295,4 +297,18 @@ func getStringMapStringSlice(varName string, cfg *viper.Viper) (map[string][]str
 	default:
 		panic(fmt.Errorf("invalid type for getStringMapString variable %s: %#v", varName, i))
 	}
+}
+
+// parseMask returns a mask polygon represented by the
+// given GeoJSON string.
+func parseMask(maskGeoJSON string) (geom.Polygon, error) {
+	var mask geom.Polygon
+	if maskGeoJSON != "" {
+		m, err := geojson.Decode([]byte(maskGeoJSON))
+		if err != nil {
+			return nil, fmt.Errorf("decoding EmissionMaskGEOJSON: %w", err)
+		}
+		mask = m.(geom.Polygon)
+	}
+	return mask, nil
 }

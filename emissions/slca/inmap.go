@@ -451,7 +451,7 @@ func (c *CSTConfig) evaluationEmissions(ctx context.Context, aqmYearI interface{
 		return nil, err
 	}
 
-	extraEmis, err := inmap.ReadEmissionShapefiles(gridSR, "tons/year", nil, c.AdditionalEmissionsShapefilesForEvaluation...)
+	extraEmis, err := inmap.ReadEmissionShapefiles(gridSR, "tons/year", nil, nil, c.AdditionalEmissionsShapefilesForEvaluation...)
 	if err != nil {
 		return nil, err
 	}

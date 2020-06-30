@@ -162,6 +162,11 @@ func InitializeConfig() *Cfg {
 				shapeFiles[i] = maybeDownload(context.TODO(), shapeFiles[i], outChan)
 			}
 
+			mask, err := parseMask(cfg.GetString("EmissionMaskGeoJSON"))
+			if err != nil {
+				return err
+			}
+
 			inventoryConfig, spatialConfig, err := aeputilConfig(cfg.Viper)
 			if err != nil {
 				return err
@@ -174,7 +179,7 @@ func InitializeConfig() *Cfg {
 				cfg.GetBool("OutputAllLayers"),
 				outputVars,
 				emisUnits,
-				shapeFiles,
+				shapeFiles, mask,
 				vgc,
 				inventoryConfig,
 				spatialConfig,
@@ -504,8 +509,13 @@ func InitializeConfig() *Cfg {
 
 			shapeFiles := expandStringSlice(cfg.GetStringSlice("EmissionsShapefiles"))
 			// This goes over each shapeFile and downloads it.
-			for i, _ := range shapeFiles {
+			for i := range shapeFiles {
 				shapeFiles[i] = maybeDownload(context.TODO(), shapeFiles[i], outChan)
+			}
+
+			mask, err := parseMask(cfg.GetString("EmissionMaskGeoJSON"))
+			if err != nil {
+				return err
 			}
 
 			return SRPredict(
@@ -514,6 +524,7 @@ func InitializeConfig() *Cfg {
 				outputFile,
 				outputVars,
 				shapeFiles,
+				mask,
 				vgc,
 			)
 		},
@@ -778,6 +789,16 @@ func InitializeConfig() *Cfg {
               Can include environment variables.`,
 			defaultVal:  []string{"${INMAP_ROOT_DIR}/cmd/inmap/testdata/testEmis.shp"},
 			isInputFile: true,
+			flagsets:    []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.srPredictCmd.Flags(), cfg.cloudStartCmd.Flags()},
+		},
+		{
+			name: "EmissionMaskGeoJSON",
+			usage: `EmissionMaskGeoJSON is an optional GeoJSON-formatted polygon string
+that specifies the area outside of which emissions will be ignored. The mask is assumed to 
+use the same spatial reference as VarGrid.GridProj. 
+Example="{\'type\': \'Polygon\',\'coordinates\': [ [ [-4000, -4000], [4000, -4000], [4000, 4000], [-4000, 4000] ] ] }"`,
+			defaultVal:  "",
+			isInputFile: false,
 			flagsets:    []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.srPredictCmd.Flags(), cfg.cloudStartCmd.Flags()},
 		},
 		{

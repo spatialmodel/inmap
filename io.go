@@ -59,6 +59,11 @@ func AddEmissionsFlux() CellManipulator {
 type Emissions struct {
 	data      *rtree.Rtree
 	dataSlice []*EmisRecord
+
+	// Mask specifies the region that emissions should be clipped
+	// to. It is assumed to use the same spatial reference as the
+	// InMAP computational grid. It is ignored if nil.
+	Mask geom.Polygon
 }
 
 // EmisRecord is a holder for an emissions record.
@@ -88,10 +93,49 @@ func NewEmissions() *Emissions {
 	}
 }
 
-// Add adds an emissions record to e.
+// Add adds an emissions record to the receiver, clipping
+// it to the Mask if necessary.
 func (e *Emissions) Add(er *EmisRecord) {
-	e.data.Insert(er)
-	e.dataSlice = append(e.dataSlice, er)
+	if e.Mask == nil {
+		e.data.Insert(er)
+		e.dataSlice = append(e.dataSlice, er)
+		return
+	}
+
+	if !er.Bounds().Overlaps(e.Mask.Bounds()) {
+		return
+	}
+
+	var g geom.Geom  // g is the intersection of the emission geometry and the mask.
+	var frac float64 // Frac is the fraction of the geometry overlapping the mask.
+	switch t := er.Geom.(type) {
+	case geom.Polygonal:
+		p := t.Intersection(e.Mask)
+		frac = p.Area() / t.Area()
+		g = p
+	case geom.Linear:
+		l := t.Clip(e.Mask)
+		g = l
+		frac = l.Length() / t.Length()
+	case geom.Point:
+		if w := t.Within(e.Mask); w == geom.Inside || w == geom.OnEdge {
+			g = t
+			frac = 1
+		}
+	default:
+		panic(fmt.Errorf("Invalid geometry %T", t))
+	}
+	if g != nil {
+		er2 := er
+		er2.Geom = g
+		er2.VOC *= frac
+		er2.NOx *= frac
+		er2.NH3 *= frac
+		er2.SOx *= frac
+		er2.PM25 *= frac
+		e.data.Insert(er2)
+		e.dataSlice = append(e.dataSlice, er2)
+	}
 }
 
 // EmisRecords returns all EmisRecords stored in the
@@ -127,7 +171,10 @@ func emisConversionFactor(units string) (float64, error) {
 // by units; options are tons/year, kg/year, ug/s, and μg/s. Output units = μg/s.
 // c is a channel over which status updates will be sent. If c is nil,
 // no updates will be sent.
-func ReadEmissionShapefiles(gridSR *proj.SR, units string, c chan string, shapefiles ...string) (*Emissions, error) {
+// mask specifies the region that emissions should be clipped to, assumed to
+// use the same spatial reference as the InMAP grid. If mask is nil
+// it will be ignored.
+func ReadEmissionShapefiles(gridSR *proj.SR, units string, c chan string, mask geom.Polygon, shapefiles ...string) (*Emissions, error) {
 	emisConv, err := emisConversionFactor(units)
 	if err != nil {
 		return nil, err
@@ -135,6 +182,7 @@ func ReadEmissionShapefiles(gridSR *proj.SR, units string, c chan string, shapef
 	// Add in emissions shapefiles
 	// Load emissions into rtree for fast searching
 	emis := NewEmissions()
+	emis.Mask = mask
 	for _, fname := range shapefiles {
 		if c != nil {
 			c <- fmt.Sprintf("Loading emissions shapefile: %s.", fname)

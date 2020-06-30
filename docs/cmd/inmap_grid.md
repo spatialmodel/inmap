@@ -29,7 +29,7 @@ inmap grid [flags]
                                                             environment variables. If LogFile is left blank, the logfile will be saved in
                                                             the same location as the OutputFile.
       --VarGrid.CensusFile string             
-                                                            VarGrid.CensusFile is the path to the shapefile holding population information. (default "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testPopulation.shp")
+                                                            VarGrid.CensusFile is the path to the shapefile or COARDs-compliant NetCDF file holding population information. (default "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testPopulation.shp")
       --VarGrid.CensusPopColumns strings      
                                                             VarGrid.CensusPopColumns is a list of the data fields in CensusFile that should
                                                             be included as population estimates in the model. They can be population

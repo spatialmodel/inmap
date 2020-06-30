@@ -25,6 +25,10 @@ inmap srpredict [flags]
 ### Options
 
 ```
+      --EmissionMaskGeoJSON string    EmissionMaskGeoJSON is an optional GeoJSON-formatted polygon string
+                                      that specifies the area outside of which emissions will be ignored. The mask is assumed to 
+                                      use the same spatial reference as VarGrid.GridProj. 
+                                      Example="{\'type\': \'Polygon\',\'coordinates\': [ [ [-4000, -4000], [4000, -4000], [4000, 4000], [-4000, 4000] ] ] }"
       --EmissionUnits string          
                                                     EmissionUnits gives the units that the input emissions are in.
                                                     Acceptable values are 'tons/year', 'kg/year', 'ug/s', and 'μg/s'. (default "tons/year")

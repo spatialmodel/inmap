@@ -102,7 +102,11 @@ func TestSRPredictAboveTop(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := SRPredict(cfg.GetString("EmissionUnits"), cfg.GetString("SR.OutputFile"), cfg.GetString("OutputFile"), outputVars, cfg.GetStringSlice("EmissionsShapefiles"), vcfg); err != nil {
+	mask, err := parseMask(cfg.GetString("EmissionMaskGeoJSON"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := SRPredict(cfg.GetString("EmissionUnits"), cfg.GetString("SR.OutputFile"), cfg.GetString("OutputFile"), outputVars, cfg.GetStringSlice("EmissionsShapefiles"), mask, vcfg); err != nil {
 		t.Fatal(err)
 	}
 }
