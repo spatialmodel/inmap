@@ -99,6 +99,10 @@ var DefaultScienceFuncs = []inmap.CellManipulator{
 // to the InMAP computational grid, but the mapping projection of the
 // shapefile must be the same as the projection InMAP uses.
 //
+// EmissionsMask specifies a polygon boundary to constrain emissions, assumed
+// to use the same spatial reference as VarGrid. It will
+// be ignored if it is nil.
+//
 // VarGrid provides information for specifying the variable resolution grid.
 //
 // InMAPData is the path to location of baseline meteorology and pollutant data.
@@ -119,7 +123,7 @@ var DefaultScienceFuncs = []inmap.CellManipulator{
 // notMeters should be set to true if the units of the grid are not meters
 // (e.g., if the grid is in degrees latitude/longitude.)
 func Run(CobraCommand *cobra.Command, LogFile string, OutputFile string, OutputAllLayers bool, OutputVariables map[string]string,
-	EmissionUnits string, EmissionsShapefiles []string, VarGrid *inmap.VarGridConfig,
+	EmissionUnits string, EmissionsShapefiles []string, EmissionsMask geom.Polygon, VarGrid *inmap.VarGridConfig,
 	inventoryConfig *aeputil.InventoryConfig, spatialConfig *aeputil.SpatialConfig,
 	InMAPData, VariableGridData string, NumIterations int,
 	dynamic, createGrid bool, scienceFuncs []inmap.CellManipulator, addInit, addRun, addCleanup []inmap.DomainManipulator,
@@ -188,7 +192,7 @@ func Run(CobraCommand *cobra.Command, LogFile string, OutputFile string, OutputA
 	if err != nil {
 		return err
 	}
-	emis, err := inmap.ReadEmissionShapefiles(sr, EmissionUnits, msgLog, EmissionsShapefiles...)
+	emis, err := inmap.ReadEmissionShapefiles(sr, EmissionUnits, msgLog, EmissionsMask, EmissionsShapefiles...)
 	if err != nil {
 		return err
 	}

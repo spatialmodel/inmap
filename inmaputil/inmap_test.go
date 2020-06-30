@@ -84,6 +84,21 @@ func TestInMAPDynamic(t *testing.T) {
 	}
 }
 
+func TestInMAPDynamic_mask(t *testing.T) {
+	cfg := InitializeConfig()
+	cfg.Set("static", false)
+	cfg.Set("createGrid", false) // this isn't used for the dynamic grid
+	os.Setenv("InMAPRunType", "dynamic")
+	cfg.Set("config", "../cmd/inmap/configExample.toml")
+	cfg.Set("EmissionMaskGeoJSON", `{"type": "Polygon","coordinates": [ [ [-4000, -4000], [4000, -4000], [4000, 4000], [-4000, 4000] ] ] }`)
+	cfg.Root.SetArgs([]string{"run", "steady"})
+	defer os.Remove(os.ExpandEnv("$INMAP_ROOT_DIR/cmd/inmap/testdata/output_dynamic.log"))
+	defer inmap.DeleteShapefile(os.ExpandEnv("$INMAP_ROOT_DIR/cmd/inmap/testdata/output_dynamic.shp"))
+	if err := cfg.Root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestInMAPDynamic_coards(t *testing.T) {
 	cfg := InitializeConfig()
 	cfg.Set("static", false)

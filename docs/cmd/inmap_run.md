@@ -16,6 +16,10 @@ run runs an InMAP simulation. Use the subcommands specified below to
 ### Options
 
 ```
+      --EmissionMaskGeoJSON string            EmissionMaskGeoJSON is an optional GeoJSON-formatted polygon string
+                                              that specifies the area outside of which emissions will be ignored. The mask is assumed to 
+                                              use the same spatial reference as VarGrid.GridProj. 
+                                              Example="{\"type\": \"Polygon\",\"coordinates\": [ [ [-4000, -4000], [4000, -4000], [4000, 4000], [-4000, 4000] ] ] }"
       --EmissionUnits string                  
                                                             EmissionUnits gives the units that the input emissions are in.
                                                             Acceptable values are 'tons/year', 'kg/year', 'ug/s', and 'μg/s'. (default "tons/year")
@@ -45,7 +49,7 @@ run runs an InMAP simulation. Use the subcommands specified below to
                                                             OutputVariables specifies which model variables should be included in the
                                                             output file. It can include environment variables. (default "{\"TotalPM25\":\"PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA\",\"TotalPopD\":\"(exp(log(1.078)/10 * TotalPM25) - 1) * TotalPop * AllCause / 100000\"}\n")
       --VarGrid.CensusFile string             
-                                                            VarGrid.CensusFile is the path to the shapefile holding population information. (default "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testPopulation.shp")
+                                                            VarGrid.CensusFile is the path to the shapefile or COARDs-compliant NetCDF file holding population information. (default "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testPopulation.shp")
       --VarGrid.CensusPopColumns strings      
                                                             VarGrid.CensusPopColumns is a list of the data fields in CensusFile that should
                                                             be included as population estimates in the model. They can be population

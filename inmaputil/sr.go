@@ -24,6 +24,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/ctessum/geom"
 	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/cloud/cloudrpc"
 	"github.com/spatialmodel/inmap/sr"
@@ -108,11 +109,12 @@ func CleanSR(ctx context.Context, jobName, VariableGridData string, VarGrid *inm
 
 // SRPredict uses the SR matrix specified in SROutputFile
 // to predict concentrations resulting
-// from the emissions in EmissionsShapefiles, outputting the
+// from the emissions in EmissionsShapefiles (optionally
+// masked by emissionMask), outputting the
 // results specified by outputVaraibles in OutputFile.
 // EmissionUnits specifies the units
 // of the emissions. VarGrid specifies the variable resolution grid.
-func SRPredict(EmissionUnits, SROutputFile, OutputFile string, outputVariables map[string]string, EmissionsShapefiles []string, VarGrid *inmap.VarGridConfig) error {
+func SRPredict(EmissionUnits, SROutputFile, OutputFile string, outputVariables map[string]string, EmissionsShapefiles []string, emissionMask geom.Polygon, VarGrid *inmap.VarGridConfig) error {
 	msgLog := make(chan string)
 	go func() {
 		for {
@@ -125,7 +127,7 @@ func SRPredict(EmissionUnits, SROutputFile, OutputFile string, outputVariables m
 		return err
 	}
 
-	emis, err := inmap.ReadEmissionShapefiles(vgsr, EmissionUnits, msgLog, EmissionsShapefiles...)
+	emis, err := inmap.ReadEmissionShapefiles(vgsr, EmissionUnits, msgLog, emissionMask, EmissionsShapefiles...)
 	if err != nil {
 		return err
 	}

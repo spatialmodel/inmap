@@ -27,7 +27,7 @@ inmap sr start [flags]
                                                             NumIterations is the number of iterations to calculate. If < 1, convergence
                                                             is automatically calculated.
       --VarGrid.CensusFile string             
-                                                            VarGrid.CensusFile is the path to the shapefile holding population information. (default "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testPopulation.shp")
+                                                            VarGrid.CensusFile is the path to the shapefile or COARDs-compliant NetCDF file holding population information. (default "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testPopulation.shp")
       --VarGrid.CensusPopColumns strings      
                                                             VarGrid.CensusPopColumns is a list of the data fields in CensusFile that should
                                                             be included as population estimates in the model. They can be population

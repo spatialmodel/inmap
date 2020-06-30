@@ -19,6 +19,10 @@ inmap cloud start [flags]
 ### Options
 
 ```
+      --EmissionMaskGeoJSON string               EmissionMaskGeoJSON is an optional GeoJSON-formatted polygon string
+                                                 that specifies the area outside of which emissions will be ignored. The mask is assumed to 
+                                                 use the same spatial reference as VarGrid.GridProj. 
+                                                 Example="{\"type\": \"Polygon\",\"coordinates\": [ [ [-4000, -4000], [4000, -4000], [4000, 4000], [-4000, 4000] ] ] }"
       --EmissionUnits string                     
                                                                EmissionUnits gives the units that the input emissions are in.
                                                                Acceptable values are 'tons/year', 'kg/year', 'ug/s', and 'μg/s'. (default "tons/year")
@@ -47,7 +51,7 @@ inmap cloud start [flags]
                                                                SR.OutputFile is the path where the output file is or should be created
                                                                 when creating a source-receptor matrix. It can contain environment variables. (default "${INMAP_ROOT_DIR}/cmd/inmap/testdata/output_${InMAPRunType}.shp")
       --VarGrid.CensusFile string                
-                                                               VarGrid.CensusFile is the path to the shapefile holding population information. (default "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testPopulation.shp")
+                                                               VarGrid.CensusFile is the path to the shapefile or COARDs-compliant NetCDF file holding population information. (default "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testPopulation.shp")
       --VarGrid.CensusPopColumns strings         
                                                                VarGrid.CensusPopColumns is a list of the data fields in CensusFile that should
                                                                be included as population estimates in the model. They can be population
