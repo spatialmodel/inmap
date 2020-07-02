@@ -14,14 +14,14 @@ You can also compile InMAP from its source code. The instructions here are speci
 
 1. Install the [Go compiler](http://golang.org/doc/install), version 1.11 or higher. Make sure you install the correct version (64 bit) for your system. It may be useful to go through one of the tutorials to make sure the compiler is correctly installed.
 
-3. Install the [git](http://git-scm.com/) and [mercurial](http://mercurial.selenic.com/) version control programs, if they are not already installed. If you are using a shared system or cluster, you may just need to load them with the commands `module load git` and `module load hg`.
+3. Install the [git](http://git-scm.com/) version control program and the [GCC](https://gcc.gnu.org/) compiler if they are not already installed. If you are using a shared system or cluster, you may just need to load them with the commands `module load git` and `module load hg`. If you are using Windows or a Mac, it may work best to install them using [Anaconda](https://anaconda.org/).
 
 4. Download and install the main program:
 
 	``` bash
 	git clone https://github.com/spatialmodel/inmap.git # Download the code.
 	cd inmap # Move into the InMAP directory
-	GO111MODULE=on go build ./cmd/inmap # Compile the InMAP executable.
+	go build ./cmd/inmap # Compile the InMAP executable.
 	```
 
 	There should now be a file named `inmap` or `inmap.exe` in the current dirctory. This is the inmap executable file. It can be copied or moved to any directory of your choosing and run as described below in "Running InMAP".
@@ -31,5 +31,5 @@ You can also compile InMAP from its source code. The instructions here are speci
 	``` bash
 	cd /path/to/inmap # Move to the directory where InMAP is downloaded,
 	# if you are not already there.
-	GO111MODULE=on go test ./... -short
+	go test ./... -short
 	```
