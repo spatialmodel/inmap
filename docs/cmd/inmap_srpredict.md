@@ -11,12 +11,12 @@ Predict concentrations
 ### Synopsis
 
 predict uses the SR matrix specified in the configuration file
-	field SR.OutputFile to predict concentrations resulting
-	from the emissions specified in the EmissionsShapefiles field in the configuration
-	file, outputting the results in the shapefile specified in OutputFile field.
-	of the configuration file. The EmissionUnits field in the configuration
-	file specifies the units of the emissions. The OutputVariables configuration
-	variable specifies the information to be output.
+field SR.OutputFile to predict concentrations resulting
+from the emissions specified in the EmissionsShapefiles field in the configuration
+file, outputting the results in the shapefile specified in OutputFile field.
+of the configuration file. The EmissionUnits field in the configuration
+file specifies the units of the emissions. The OutputVariables configuration
+variable specifies the information to be output.
 
 ```
 inmap srpredict [flags]
@@ -25,43 +25,28 @@ inmap srpredict [flags]
 ### Options
 
 ```
-      --EmissionMaskGeoJSON string    EmissionMaskGeoJSON is an optional GeoJSON-formatted polygon string
-                                      that specifies the area outside of which emissions will be ignored. The mask is assumed to 
-                                      use the same spatial reference as VarGrid.GridProj. 
-                                      Example="{\"type\": \"Polygon\",\"coordinates\": [ [ [-4000, -4000], [4000, -4000], [4000, 4000], [-4000, 4000] ] ] }"
-      --EmissionUnits string          
-                                                    EmissionUnits gives the units that the input emissions are in.
-                                                    Acceptable values are 'tons/year', 'kg/year', 'ug/s', and 'μg/s'. (default "tons/year")
-      --EmissionsShapefiles strings   
-                                                    EmissionsShapefiles are the paths to any emissions shapefiles.
-                                                    Can be elevated or ground level; elevated files need to have columns
-                                                    labeled "height", "diam", "temp", and "velocity" containing stack
-                                                    information in units of m, m, K, and m/s, respectively.
-                                                    Emissions will be allocated from the geometries in the shape file
-                                                    to the InMAP computational grid, but the mapping projection of the
-                                                    shapefile must be the same as the projection InMAP uses.
-                                                    Can include environment variables. (default [${INMAP_ROOT_DIR}/cmd/inmap/testdata/testEmis.shp])
-      --OutputFile string             
-                                                    OutputFile is the path to the desired output shapefile location. It can
-                                                    include environment variables. (default "inmap_output.shp")
-      --OutputVariables string        
-                                                    OutputVariables specifies which model variables should be included in the
-                                                    output file. It can include environment variables. (default "{\"TotalPM25\":\"PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA\",\"TotalPopD\":\"(exp(log(1.078)/10 * TotalPM25) - 1) * TotalPop * AllCause / 100000\"}\n")
-      --SR.OutputFile string          
-                                                    SR.OutputFile is the path where the output file is or should be created
-                                                     when creating a source-receptor matrix. It can contain environment variables. (default "${INMAP_ROOT_DIR}/cmd/inmap/testdata/output_${InMAPRunType}.shp")
-      --VarGrid.GridProj string       
-                                                    GridProj gives projection info for the CTM grid in Proj4 or WKT format. (default "+proj=lcc +lat_1=33.000000 +lat_2=45.000000 +lat_0=40.000000 +lon_0=-97.000000 +x_0=0 +y_0=0 +a=6370997.000000 +b=6370997.000000 +to_meter=1")
+      --EmissionMaskGeoJSON string    EmissionMaskGeoJSON is an optional GeoJSON-formatted polygon string that specifies the area outside of which emissions will be ignored. The mask is assumed to  use the same spatial reference as VarGrid.GridProj. Example="{\"type\": \"Polygon\",\"coordinates\": [ [ [-4000, -4000], [4000, -4000], [4000, 4000], [-4000, 4000] ] ] }"
+                                      
+      --EmissionUnits string          EmissionUnits gives the units that the input emissions are in. Acceptable values are 'tons/year', 'kg/year', 'ug/s', and 'μg/s'.
+                                       (default "tons/year")
+      --EmissionsShapefiles strings   EmissionsShapefiles are the paths to any emissions shapefiles. Can be elevated or ground level; elevated files need to have columns labeled "height", "diam", "temp", and "velocity" containing stack information in units of m, m, K, and m/s, respectively. Emissions will be allocated from the geometries in the shape file to the InMAP computational grid, but the mapping projection of the shapefile must be the same as the projection InMAP uses. Can include environment variables.
+                                       (default [${INMAP_ROOT_DIR}/cmd/inmap/testdata/testEmis.shp])
+      --OutputFile string             OutputFile is the path to the desired output shapefile location. It can include environment variables.
+                                       (default "inmap_output.shp")
+      --OutputVariables string        OutputVariables specifies which model variables should be included in the output file. It can include environment variables.
+                                       (default "{\"TotalPM25\":\"PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA\",\"TotalPopD\":\"(exp(log(1.078)/10 * TotalPM25) - 1) * TotalPop * AllCause / 100000\"}\n")
+      --SR.OutputFile string          SR.OutputFile is the path where the output file is or should be created when creating a source-receptor matrix. It can contain environment variables.
+                                       (default "${INMAP_ROOT_DIR}/cmd/inmap/testdata/output_${InMAPRunType}.shp")
+      --VarGrid.GridProj string       GridProj gives projection info for the CTM grid in Proj4 or WKT format. (default "+proj=lcc +lat_1=33.000000 +lat_2=45.000000 +lat_0=40.000000 +lon_0=-97.000000 +x_0=0 +y_0=0 +a=6370997.000000 +b=6370997.000000 +to_meter=1")
   -h, --help                          help for srpredict
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --config string   
-                                      config specifies the configuration file location.
+      --config string   config specifies the configuration file location.
 ```
 
 ### SEE ALSO
 
-* [inmap](./inmap)	 - A reduced-form air quality model.
+* [inmap](/docs/cmd/inmap)	 - A reduced-form air quality model.

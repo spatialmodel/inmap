@@ -83,16 +83,16 @@ func InitializeConfig() *Cfg {
 		Use:   "inmap",
 		Short: "A reduced-form air quality model.",
 		Long: `InMAP is a reduced-form air quality model for fine particulate matter (PM2.5).
-	Use the subcommands specified below to access the model functionality.
-	Additional information is available at http://inmap.spatialmodel.com.
+Use the subcommands specified below to access the model functionality.
+Additional information is available at http://inmap.spatialmodel.com.
 
-	Refer to the subcommand documentation for configuration options and default settings.
-	Configuration can be changed by using a configuration file (and providing the
-	path to the file using the --config flag), by using command-line arguments,
-	or by setting environment variables in the format 'INMAP_var' where 'var' is the
-	name of the variable to be set. Many configuration variables are additionally
-	allowed to contain environment variables within them.
-	Refer to https://github.com/spf13/viper for additional configuration information.`,
+Refer to the subcommand documentation for configuration options and default settings.
+Configuration can be changed by using a configuration file (and providing the
+path to the file using the --config flag), by using command-line arguments,
+or by setting environment variables in the format 'INMAP_var' where 'var' is the
+name of the variable to be set. Many configuration variables are additionally
+allowed to contain environment variables within them.
+Refer to https://github.com/spf13/viper for additional configuration information.`,
 		DisableAutoGenTag: true,
 		// Tell the Root command to run this function every time it is run.
 		PersistentPreRunE: func(*cobra.Command, []string) error {
@@ -115,7 +115,7 @@ func InitializeConfig() *Cfg {
 		Use:   "run",
 		Short: "Run the model.",
 		Long: `run runs an InMAP simulation. Use the subcommands specified below to
-	choose a run mode. (Currently 'steady' is the only available run mode.)`,
+choose a run mode. (Currently 'steady' is the only available run mode.)`,
 		DisableAutoGenTag: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			if err := setConfig(cfg); err != nil {
@@ -135,7 +135,7 @@ func InitializeConfig() *Cfg {
 		Use:   "steady",
 		Short: "Run InMAP in steady-state mode.",
 		Long: `steady runs InMAP in steady-state mode to calculate annual average
-	concentrations with no temporal variability.`,
+concentrations with no temporal variability.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			outChan := outChan()
 
@@ -197,8 +197,8 @@ func InitializeConfig() *Cfg {
 		Use:   "grid",
 		Short: "Create a variable resolution grid",
 		Long: `grid creates and saves a variable resolution grid as specified by the
-	information in the configuration file. The saved data can then be loaded
-	for future InMAP simulations.`,
+information in the configuration file. The saved data can then be loaded
+for future InMAP simulations.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			outChan := outChan()
 
@@ -218,8 +218,8 @@ func InitializeConfig() *Cfg {
 		Use:   "preproc",
 		Short: "Preprocess CTM output",
 		Long: `preproc preprocesses chemical transport model
-	output as specified by information in the configuration
-	file and saves the result for use in future InMAP simulations.`,
+output as specified by information in the configuration
+file and saves the result for use in future InMAP simulations.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			outChan := outChan()
 			ctx := context.TODO()
@@ -255,9 +255,9 @@ func InitializeConfig() *Cfg {
 		Use:   "combine",
 		Short: "Combine preprocessed CTM output from nested grids",
 		Long: `combine combines preprocessed chemical transport model
-	output from multiple nested grids into a single InMAP input file.
-	It should be run after independently preprocessing the output of
-	each nested grid.`,
+output from multiple nested grids into a single InMAP input file.
+It should be run after independently preprocessing the output of
+each nested grid.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			files := cfg.GetStringSlice("preprocessed_inputs")
 			data := make([]*inmap.CTMData, len(files))
@@ -295,7 +295,7 @@ func InitializeConfig() *Cfg {
 		Use:   "start",
 		Short: "Start simulations to create an SR matrix",
 		Long: `start starts the InMAP simulations necessary to create
-	a source-receptor matrix.`,
+a source-receptor matrix.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			vgc, err := VarGridConfig(cfg.Viper)
 			if err != nil {
@@ -481,12 +481,12 @@ func InitializeConfig() *Cfg {
 		Use:   "srpredict",
 		Short: "Predict concentrations",
 		Long: `predict uses the SR matrix specified in the configuration file
-	field SR.OutputFile to predict concentrations resulting
-	from the emissions specified in the EmissionsShapefiles field in the configuration
-	file, outputting the results in the shapefile specified in OutputFile field.
-	of the configuration file. The EmissionUnits field in the configuration
-	file specifies the units of the emissions. The OutputVariables configuration
-	variable specifies the information to be output.`,
+field SR.OutputFile to predict concentrations resulting
+from the emissions specified in the EmissionsShapefiles field in the configuration
+file, outputting the results in the shapefile specified in OutputFile field.
+of the configuration file. The EmissionUnits field in the configuration
+file specifies the units of the emissions. The OutputVariables configuration
+variable specifies the information to be output.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			outChan := outChan()
 
@@ -553,200 +553,155 @@ func InitializeConfig() *Cfg {
 		isOutputFile           bool // Does the option represent an output file name?
 	}{
 		{
-			name: "config",
-			usage: `
-              config specifies the configuration file location.`,
+			name:        "config",
+			usage:       `config specifies the configuration file location.`,
 			defaultVal:  "",
 			isInputFile: true,
 			flagsets:    []*pflag.FlagSet{cfg.Root.PersistentFlags()},
 		},
 		{
 			name: "static",
-			usage: `
-              static specifies whether to run with a static grid that
-              is determined before the simulation starts. If false, the
-              simulation runs with a dynamic grid that changes resolution
-              depending on spatial gradients in population density and
-              concentration.`,
+			usage: `static specifies whether to run with a static grid that is determined before the simulation starts. If false, the simulation runs with a dynamic grid that changes resolution depending on spatial gradients in population density and concentration.
+`,
 			shorthand:  "s",
 			defaultVal: false,
 			flagsets:   []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.cloudStartCmd.Flags(), cfg.srStartCmd.Flags()},
 		},
 		{
 			name: "creategrid",
-			usage: `
-              creategrid specifies whether to create the
-              variable-resolution grid as specified in the configuration file before starting
-              the simulation instead of reading it from a file. If --static is false, then
-              this flag will also be automatically set to false.`,
+			usage: `creategrid specifies whether to create the variable-resolution grid as specified in the configuration file before starting the simulation instead of reading it from a file. If --static is false, then this flag will also be automatically set to false.
+`,
 			defaultVal: false,
 			flagsets:   []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.cloudStartCmd.Flags(), cfg.srStartCmd.Flags()},
 		},
 		{
 			name: "layers",
-			usage: `
-              layers specifies a list of vertical layer numbers to
-              be included in the SR matrix.`,
+			usage: `layers specifies a list of vertical layer numbers to be included in the SR matrix.
+`,
 			defaultVal: []int{0, 2, 4, 6},
 			flagsets:   []*pflag.FlagSet{cfg.srCmd.PersistentFlags()},
 		},
 		{
 			name: "begin",
-			usage: `
-              begin specifies the beginning grid index (inclusive) for SR
-              matrix generation.`,
+			usage: `begin specifies the beginning grid index (inclusive) for SR matrix generation.
+`,
 			defaultVal: 0,
 			flagsets:   []*pflag.FlagSet{cfg.srCmd.PersistentFlags()},
 		},
 		{
 			name: "end",
-			usage: `
-              end specifies the ending grid index (exclusive) for SR matrix
-              generation. The default is -1 which represents the last row.`,
+			usage: `end specifies the ending grid index (exclusive) for SR matrix generation. The default is -1 which represents the last row.
+`,
 			defaultVal: -1,
 			flagsets:   []*pflag.FlagSet{cfg.srCmd.PersistentFlags()},
 		},
 		{
 			name: "VarGrid.VariableGridXo",
-			usage: `
-              VarGrid.VariableGridXo specifies the X coordinate of the
-              lower-left corner of the InMAP grid.`,
+			usage: `VarGrid.VariableGridXo specifies the X coordinate of the lower-left corner of the InMAP grid.
+`,
 			defaultVal: -4000.0,
 			flagsets:   []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.gridCmd.Flags(), cfg.cloudStartCmd.Flags(), cfg.srStartCmd.Flags()},
 		},
 		{
-			name: "VarGrid.VariableGridYo",
-			usage: `
-              VarGrid.VariableGridYo specifies the Y coordinate of the
-              lower-left corner of the InMAP grid.`,
+			name:       "VarGrid.VariableGridYo",
+			usage:      `VarGrid.VariableGridYo specifies the Y coordinate of the lower-left corner of the InMAP grid.`,
 			defaultVal: -4000.0,
 			flagsets:   []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.gridCmd.Flags(), cfg.cloudStartCmd.Flags(), cfg.srStartCmd.Flags()},
 		},
 		{
 			name: "VarGrid.VariableGridDx",
-			usage: `
-              VarGrid.VariableGridDx specifies the X edge lengths of grid
-              cells in the outermost nest, in the units of the grid model
-              spatial projection--typically meters or degrees latitude
-              and longitude.`,
+			usage: `VarGrid.VariableGridDx specifies the X edge lengths of grid cells in the outermost nest, in the units of the grid model spatial projection--typically meters or degrees latitude and longitude.
+`,
 			defaultVal: 4000.0,
 			flagsets:   []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.gridCmd.Flags(), cfg.cloudStartCmd.Flags(), cfg.srStartCmd.Flags()},
 		},
 		{
 			name: "VarGrid.VariableGridDy",
-			usage: `
-              VarGrid.VariableGridDy specifies the Y edge lengths of grid
-              cells in the outermost nest, in the units of the grid model
-              spatial projection--typically meters or degrees latitude
-              and longitude.`,
+			usage: `VarGrid.VariableGridDy specifies the Y edge lengths of grid cells in the outermost nest, in the units of the grid model spatial projection--typically meters or degrees latitude and longitude.
+`,
 			defaultVal: 4000.0,
 			flagsets:   []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.gridCmd.Flags(), cfg.cloudStartCmd.Flags(), cfg.srStartCmd.Flags()},
 		},
 		{
-			name: "VarGrid.Xnests",
-			usage: `
-              Xnests specifies nesting multiples in the X direction.`,
+			name:       "VarGrid.Xnests",
+			usage:      `Xnests specifies nesting multiples in the X direction.`,
 			defaultVal: []int{2, 2, 2},
 			flagsets:   []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.gridCmd.Flags(), cfg.cloudStartCmd.Flags(), cfg.srStartCmd.Flags()},
 		},
 		{
-			name: "VarGrid.Ynests",
-			usage: `
-              Ynests specifies nesting multiples in the Y direction.`,
+			name:       "VarGrid.Ynests",
+			usage:      `Ynests specifies nesting multiples in the Y direction.`,
 			defaultVal: []int{2, 2, 2},
 			flagsets:   []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.gridCmd.Flags(), cfg.cloudStartCmd.Flags(), cfg.srStartCmd.Flags()},
 		},
 		{
-			name: "VarGrid.GridProj",
-			usage: `
-              GridProj gives projection info for the CTM grid in Proj4 or WKT format.`,
+			name:       "VarGrid.GridProj",
+			usage:      `GridProj gives projection info for the CTM grid in Proj4 or WKT format.`,
 			defaultVal: "+proj=lcc +lat_1=33.000000 +lat_2=45.000000 +lat_0=40.000000 +lon_0=-97.000000 +x_0=0 +y_0=0 +a=6370997.000000 +b=6370997.000000 +to_meter=1",
 			flagsets:   []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.gridCmd.Flags(), cfg.cloudStartCmd.Flags(), cfg.srStartCmd.Flags(), cfg.srPredictCmd.Flags()},
 		},
 		{
 			name: "VarGrid.HiResLayers",
-			usage: `
-              HiResLayers is the number of layers, starting at ground level, to do
-              nesting in. Layers above this will have all grid cells in the lowest
-              spatial resolution. This option is only used with static grids.`,
+			usage: `HiResLayers is the number of layers, starting at ground level, to do nesting in. Layers above this will have all grid cells in the lowest spatial resolution. This option is only used with static grids.
+`,
 			defaultVal: 1,
 			flagsets:   []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.gridCmd.Flags(), cfg.cloudStartCmd.Flags(), cfg.srStartCmd.Flags()},
 		},
 		{
 			name: "VarGrid.PopDensityThreshold",
-			usage: `
-              PopDensityThreshold is a limit for people per unit area in a grid cell
-              in units of people / m². If
-              the population density in a grid cell is above this level, the cell in question
-              is a candidate for splitting into smaller cells. This option is only used with
-              static grids.`,
+			usage: `PopDensityThreshold is a limit for people per unit area in a grid cell in units of people / m². If the population density in a grid cell is above this level, the cell in question is a candidate for splitting into smaller cells. This option is only used with static grids.
+`,
 			defaultVal: 0.0055,
 			flagsets:   []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.gridCmd.Flags(), cfg.cloudStartCmd.Flags(), cfg.srStartCmd.Flags()},
 		},
 		{
 			name: "VarGrid.PopThreshold",
-			usage: `
-              PopThreshold is a limit for the total number of people in a grid cell.
-              If the total population in a grid cell is above this level, the cell in question
-              is a candidate for splitting into smaller cells. This option is only used with
-              static grids.`,
+			usage: `PopThreshold is a limit for the total number of people in a grid cell. If the total population in a grid cell is above this level, the cell in question is a candidate for splitting into smaller cells. This option is only used with static grids.
+`,
 			defaultVal: 40000.0,
 			flagsets:   []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.gridCmd.Flags(), cfg.cloudStartCmd.Flags(), cfg.srStartCmd.Flags()},
 		},
 		{
 			name: "VarGrid.PopConcThreshold",
-			usage: `
-              PopConcThreshold is the limit for
-              Σ(|ΔConcentration|)*combinedVolume*|ΔPopulation| / {Σ(|totalMass|)*totalPopulation}.
-              See the documentation for PopConcMutator for more information. This
-              option is only used with dynamic grids.`,
+			usage: `PopConcThreshold is the limit for Σ(|ΔConcentration|)*combinedVolume*|ΔPopulation| / {Σ(|totalMass|)*totalPopulation}. See the documentation for PopConcMutator for more information. This option is only used with dynamic grids.
+`,
 			defaultVal: 0.000000001,
 			flagsets:   []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.gridCmd.Flags(), cfg.cloudStartCmd.Flags(), cfg.srStartCmd.Flags()},
 		},
 		{
 			name: "VarGrid.CensusFile",
-			usage: `
-              VarGrid.CensusFile is the path to the shapefile or COARDs-compliant NetCDF file holding population information.`,
+			usage: `VarGrid.CensusFile is the path to the shapefile or COARDs-compliant NetCDF file holding population information.
+`,
 			defaultVal:  "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testPopulation.shp",
 			isInputFile: true,
 			flagsets:    []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.gridCmd.Flags(), cfg.cloudStartCmd.Flags(), cfg.srStartCmd.Flags()},
 		},
 		{
 			name: "VarGrid.CensusPopColumns",
-			usage: `
-              VarGrid.CensusPopColumns is a list of the data fields in CensusFile that should
-              be included as population estimates in the model. They can be population
-              of different demographics or for different population scenarios.`,
+			usage: `VarGrid.CensusPopColumns is a list of the data fields in CensusFile that should be included as population estimates in the model. They can be population of different demographics or for different population scenarios.
+`,
 			defaultVal: []string{"TotalPop", "WhiteNoLat", "Black", "Native", "Asian", "Latino"},
 			flagsets:   []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.gridCmd.Flags(), cfg.cloudStartCmd.Flags(), cfg.srStartCmd.Flags()},
 		},
 		{
 			name: "VarGrid.PopGridColumn",
-			usage: `
-              VarGrid.PopGridColumn is the name of the field in CensusFile that contains the data
-              that should be compared to PopThreshold and PopDensityThreshold when determining
-              if a grid cell should be split. It should be one of the fields
-              in CensusPopColumns.`,
+			usage: `VarGrid.PopGridColumn is the name of the field in CensusFile that contains the data that should be compared to PopThreshold and PopDensityThreshold when determining if a grid cell should be split. It should be one of the fields in CensusPopColumns.
+`,
 			defaultVal: "TotalPop",
 			flagsets:   []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.gridCmd.Flags(), cfg.cloudStartCmd.Flags(), cfg.srStartCmd.Flags()},
 		},
 		{
 			name: "VarGrid.MortalityRateFile",
-			usage: `
-              VarGrid.MortalityRateFile is the path to the shapefile containing baseline
-              mortality rate data.`,
+			usage: `VarGrid.MortalityRateFile is the path to the shapefile containing baseline mortality rate data.
+`,
 			defaultVal:  "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testMortalityRate.shp",
 			isInputFile: true,
 			flagsets:    []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.gridCmd.Flags(), cfg.cloudStartCmd.Flags(), cfg.srStartCmd.Flags()},
 		},
 		{
 			name: "VarGrid.MortalityRateColumns",
-			usage: `
-              VarGrid.MortalityRateColumns gives names of fields in MortalityRateFile that
-              contain baseline mortality rates (as keys) in units of deaths per year per 100,000 people.
-							The values specify the population group that should be used with each mortality rate
-							for population-weighted averaging.
-              `,
+			usage: `VarGrid.MortalityRateColumns gives names of fields in MortalityRateFile that contain baseline mortality rates (as keys) in units of deaths per year per 100,000 people. The values specify the population group that should be used with each mortality rate for population-weighted averaging.
+`,
 			defaultVal: map[string]string{
 				"AllCause":   "TotalPop",
 				"WhNoLMort":  "WhiteNoLat",
@@ -759,88 +714,70 @@ func InitializeConfig() *Cfg {
 		},
 		{
 			name: "InMAPData",
-			usage: `
-              InMAPData is the path to location of baseline meteorology and pollutant data.
-              The path can include environment variables.`,
+			usage: `InMAPData is the path to location of baseline meteorology and pollutant data. The path can include environment variables.
+`,
 			defaultVal:  "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testInMAPInputData.ncf",
 			isInputFile: true,
 			flagsets:    []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.gridCmd.Flags(), cfg.srStartCmd.Flags(), cfg.preprocCmd.Flags(), cfg.cloudStartCmd.Flags()},
 		},
 		{
 			name: "VariableGridData",
-			usage: `
-              VariableGridData is the path to the location of the variable-resolution gridded
-              InMAP data, or the location where it should be created if it doesn't already
-              exist. The path can include environment variables.`,
+			usage: `VariableGridData is the path to the location of the variable-resolution gridded InMAP data, or the location where it should be created if it doesn't already exist. The path can include environment variables.
+`,
 			defaultVal:  "${INMAP_ROOT_DIR}/cmd/inmap/testdata/inmapVarGrid.gob",
 			isInputFile: true,
 			flagsets:    []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.gridCmd.Flags(), cfg.srStartCmd.PersistentFlags()},
 		},
 		{
 			name: "EmissionsShapefiles",
-			usage: `
-              EmissionsShapefiles are the paths to any emissions shapefiles.
-              Can be elevated or ground level; elevated files need to have columns
-              labeled "height", "diam", "temp", and "velocity" containing stack
-              information in units of m, m, K, and m/s, respectively.
-              Emissions will be allocated from the geometries in the shape file
-              to the InMAP computational grid, but the mapping projection of the
-              shapefile must be the same as the projection InMAP uses.
-              Can include environment variables.`,
+			usage: `EmissionsShapefiles are the paths to any emissions shapefiles. Can be elevated or ground level; elevated files need to have columns labeled "height", "diam", "temp", and "velocity" containing stack information in units of m, m, K, and m/s, respectively. Emissions will be allocated from the geometries in the shape file to the InMAP computational grid, but the mapping projection of the shapefile must be the same as the projection InMAP uses. Can include environment variables.
+`,
 			defaultVal:  []string{"${INMAP_ROOT_DIR}/cmd/inmap/testdata/testEmis.shp"},
 			isInputFile: true,
 			flagsets:    []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.srPredictCmd.Flags(), cfg.cloudStartCmd.Flags()},
 		},
 		{
 			name: "EmissionMaskGeoJSON",
-			usage: `EmissionMaskGeoJSON is an optional GeoJSON-formatted polygon string
-that specifies the area outside of which emissions will be ignored. The mask is assumed to 
-use the same spatial reference as VarGrid.GridProj. 
-Example="{\"type\": \"Polygon\",\"coordinates\": [ [ [-4000, -4000], [4000, -4000], [4000, 4000], [-4000, 4000] ] ] }"`,
+			usage: `EmissionMaskGeoJSON is an optional GeoJSON-formatted polygon string that specifies the area outside of which emissions will be ignored. The mask is assumed to  use the same spatial reference as VarGrid.GridProj. Example="{\"type\": \"Polygon\",\"coordinates\": [ [ [-4000, -4000], [4000, -4000], [4000, 4000], [-4000, 4000] ] ] }"
+`,
 			defaultVal:  "",
 			isInputFile: false,
 			flagsets:    []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.srPredictCmd.Flags(), cfg.cloudStartCmd.Flags()},
 		},
 		{
 			name: "EmissionUnits",
-			usage: `
-              EmissionUnits gives the units that the input emissions are in.
-              Acceptable values are 'tons/year', 'kg/year', 'ug/s', and 'μg/s'.`,
+			usage: `EmissionUnits gives the units that the input emissions are in. Acceptable values are 'tons/year', 'kg/year', 'ug/s', and 'μg/s'.
+`,
 			defaultVal: "tons/year",
 			flagsets:   []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.srPredictCmd.Flags(), cfg.cloudStartCmd.Flags()},
 		},
 		{
 			name: "OutputFile",
-			usage: `
-              OutputFile is the path to the desired output shapefile location. It can
-              include environment variables.`,
+			usage: `OutputFile is the path to the desired output shapefile location. It can include environment variables.
+`,
 			defaultVal:   "inmap_output.shp",
 			isOutputFile: true,
 			flagsets:     []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.srPredictCmd.Flags()},
 		},
 		{
 			name: "LogFile",
-			usage: `
-              LogFile is the path to the desired logfile location. It can include
-              environment variables. If LogFile is left blank, the logfile will be saved in
-              the same location as the OutputFile.`,
+			usage: `LogFile is the path to the desired logfile location. It can include environment variables. If LogFile is left blank, the logfile will be saved in the same location as the OutputFile.
+`,
 			defaultVal:   "",
 			isOutputFile: true,
 			flagsets:     []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.gridCmd.Flags()},
 		},
 		{
 			name: "OutputAllLayers",
-			usage: `
-              If OutputAllLayers is true, output data for all model layers. If false, only output
-              the lowest layer.`,
+			usage: `If OutputAllLayers is true, output data for all model layers. If false, only output the lowest layer.
+`,
 			defaultVal: false,
 			flagsets:   []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.cloudStartCmd.Flags()},
 		},
 		{
 			name: "OutputVariables",
-			usage: `
-              OutputVariables specifies which model variables should be included in the
-              output file. It can include environment variables.`,
+			usage: `OutputVariables specifies which model variables should be included in the output file. It can include environment variables.
+`,
 			defaultVal: map[string]string{
 				"TotalPM25": "PrimaryPM25 + pNH4 + pSO4 + pNO3 + SOA",
 				"TotalPopD": "(exp(log(1.078)/10 * TotalPM25) - 1) * TotalPop * AllCause / 100000",
@@ -849,127 +786,109 @@ Example="{\"type\": \"Polygon\",\"coordinates\": [ [ [-4000, -4000], [4000, -400
 		},
 		{
 			name: "NumIterations",
-			usage: `
-              NumIterations is the number of iterations to calculate. If < 1, convergence
-              is automatically calculated.`,
+			usage: `NumIterations is the number of iterations to calculate. If < 1, convergence is automatically calculated.
+`,
 			defaultVal: 0,
 			flagsets:   []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags(), cfg.srStartCmd.Flags()},
 		},
 		{
 			name: "aep.InventoryConfig.NEIFiles",
-			usage: `NEIFiles lists National Emissions Inventory emissions files.
-The file names can include environment variables.
-The format is map[sector name][list of files].`,
+			usage: `NEIFiles lists National Emissions Inventory emissions files. The file names can include environment variables. The format is map[sector name][list of files].
+`,
 			defaultVal: map[string][]string{},
 			//isInputFile: true,
 			flagsets: []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags()},
 		},
 		{
 			name: "aep.InventoryConfig.COARDSFiles",
-			usage: `COARDSFiles lists COARDS-compliant NetCDF emission files
-(NetCDF 4 and greater not supported).
-Information regarding the COARDS NetCDF conventions are
-available here: https://ferret.pmel.noaa.gov/Ferret/documentation/coards-netcdf-conventions.
-The file names can include environment variables.
-The format is map[sector name][list of files].
-For COARDS files, the sector name will also be used
-as the SCC code.`,
+			usage: `COARDSFiles lists COARDS-compliant NetCDF emission files (NetCDF 4 and greater not supported). Information regarding the COARDS NetCDF conventions are available here: https://ferret.pmel.noaa.gov/Ferret/documentation/coards-netcdf-conventions. The file names can include environment variables. The format is map[sector name][list of files]. For COARDS files, the sector name will also be used as the SCC code.
+`,
 			defaultVal: map[string][]string{},
 			//isInputFile: true,
 			flagsets: []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags()},
 		},
 		{
 			name: "aep.InventoryConfig.COARDSYear",
-			usage: `COARDSYear specifies the year of emissions for COARDS emissions files.
-COARDS emissions are assumed to be in units of mass of emissions per year.
-The year will not be used for NEI emissions files.`,
+			usage: `COARDSYear specifies the year of emissions for COARDS emissions files. COARDS emissions are assumed to be in units of mass of emissions per year. The year will not be used for NEI emissions files.
+`,
 			defaultVal: 0,
 			flagsets:   []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags()},
 		},
 		{
-			name: "aep.InventoryConfig.InputUnits",
-			usage: `InputUnits specifies the units of input data. Acceptable
-values are 'tons', 'tonnes', 'kg', 'g', and 'lbs'.
-This value will be used for AEP emissions only, not for shapefiles.`,
+			name:       "aep.InventoryConfig.InputUnits",
+			usage:      `InputUnits specifies the units of input data. Acceptable values are 'tons', 'tonnes', 'kg', 'g', and 'lbs'. This value will be used for AEP emissions only, not for shapefiles.`,
 			defaultVal: "no_default",
 			flagsets:   []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags()},
 		},
 		{
 			name: "aep.SrgSpec",
-			usage: `SrgSpec gives the location of the surrogate specification file.
-It is used for assigning spatial locations to emissions records.`,
+			usage: `SrgSpec gives the location of the surrogate specification file. It is used for assigning spatial locations to emissions records.
+`,
 			defaultVal: "no_default",
 			//isInputFile: true,
 			flagsets: []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags()},
 		},
 		{
 			name: "aep.SrgSpecType",
-			usage: `SrgSpecType specifies the type of data the gridding surrogates
-are being created from. It can be "SMOKE" or "OSM".`,
+			usage: `SrgSpecType specifies the type of data the gridding surrogates are being created from. It can be "SMOKE" or "OSM".
+`,
 			defaultVal: "no_default",
 			flagsets:   []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags()},
 		},
 		{
 			name: "aep.SrgShapefileDirectory",
-			usage: `SrgShapefileDirectory gives the location of the directory holding
-the shapefiles used for creating spatial surrogates.
-It is used for assigning spatial locations to emissions records.
-It is only used when SrgSpecType == "SMOKE".`,
+			usage: `SrgShapefileDirectory gives the location of the directory holding the shapefiles used for creating spatial surrogates. It is used for assigning spatial locations to emissions records. It is only used when SrgSpecType == "SMOKE".
+`,
 			defaultVal: "no_default",
 			flagsets:   []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags()},
 		},
 		{
 			name: "aep.GridRef",
-			usage: `GridRef specifies the locations of the spatial surrogate gridding
-reference files used for processing emissions.
-It is used for assigning spatial locations to emissions records.`,
+			usage: `GridRef specifies the locations of the spatial surrogate gridding reference files used for processing emissions. It is used for assigning spatial locations to emissions records.
+`,
 			defaultVal: []string{"no_default"},
 			//isInputFile: true,
 			flagsets: []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags()},
 		},
 		{
 			name: "aep.SCCExactMatch",
-			usage: `SCCExactMatch specifies whether SCC codes must match exactly when processing
-emissions.`,
+			usage: `SCCExactMatch specifies whether SCC codes must match exactly when processing emissions.
+`,
 			defaultVal: true,
 			flagsets:   []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags()},
 		},
 		{
-			name:       "aep.SpatialConfig.InputSR",
-			usage:      `InputSR specifies the input emissions spatial reference in Proj4 format.`,
+			name: "aep.SpatialConfig.InputSR",
+			usage: `InputSR specifies the input emissions spatial reference in Proj4 format.
+`,
 			defaultVal: "+proj=longlat",
 			flagsets:   []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags()},
 		},
 		{
 			name: "aep.SpatialConfig.SpatialCache",
-			usage: `SpatialCache specifies the location for storing spatial emissions
-data for quick access. If this is left empty, no cache will be used.`,
+			usage: `SpatialCache specifies the location for storing spatial emissions data for quick access. If this is left empty, no cache will be used.
+`,
 			defaultVal: "",
 			flagsets:   []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags()},
 		},
 		{
 			name: "aep.SpatialConfig.MaxCacheEntries",
-			usage: `MaxCacheEntries specifies the maximum number of emissions and concentrations
-surrogates to hold in a memory cache. Larger numbers can result in faster
-processing but increased memory usage.`,
+			usage: `MaxCacheEntries specifies the maximum number of emissions and concentrations surrogates to hold in a memory cache. Larger numbers can result in faster processing but increased memory usage.
+`,
 			defaultVal: 10,
 			flagsets:   []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags()},
 		},
 		{
 			name: "aep.SpatialConfig.GridName",
-			usage: `GridName specifies a name for the grid which is used in the names
-of intermediate and output files.
-Changes to the geometry of the grid must be accompanied by either a
-a change in GridName or the deletion of all the files in the
-SpatialCache directory..`,
+			usage: `GridName specifies a name for the grid which is used in the names of intermediate and output files. Changes to the geometry of the grid must be accompanied by either a a change in GridName or the deletion of all the files in the SpatialCache directory.
+`,
 			defaultVal: "inmap",
 			flagsets:   []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags()},
 		},
 		{
 			name: "SR.OutputFile",
-			usage: `
-              SR.OutputFile is the path where the output file is or should be created
-               when creating a source-receptor matrix. It can contain environment variables.`,
+			usage: `SR.OutputFile is the path where the output file is or should be created when creating a source-receptor matrix. It can contain environment variables.
+`,
 			defaultVal:   "${INMAP_ROOT_DIR}/cmd/inmap/testdata/output_${InMAPRunType}.shp",
 			isOutputFile: false,
 			isInputFile:  false,
@@ -977,207 +896,176 @@ SpatialCache directory..`,
 		},
 		{
 			name: "Preproc.CTMType",
-			usage: `
-              Preproc.CTMType specifies what type of chemical transport
-              model we are going to be reading data from. Valid
-              options are "GEOS-Chem" and "WRF-Chem".`,
+			usage: `Preproc.CTMType specifies what type of chemical transport model we are going to be reading data from. Valid options are "GEOS-Chem" and "WRF-Chem".
+`,
 			defaultVal: "WRF-Chem",
 			flagsets:   []*pflag.FlagSet{cfg.preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.WRFChem.WRFOut",
-			usage: `
-              Preproc.WRFChem.WRFOut is the location of WRF-Chem output files.
-              [DATE] should be used as a wild card for the simulation date.`,
+			usage: `Preproc.WRFChem.WRFOut is the location of WRF-Chem output files. [DATE] should be used as a wild card for the simulation date.
+`,
 			defaultVal: "${INMAP_ROOT_DIR}/cmd/inmap/testdata/preproc/wrfout_d01_[DATE]",
 			flagsets:   []*pflag.FlagSet{cfg.preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.GEOSChem.GEOSA1",
-			usage: `
-              Preproc.GEOSChem.GEOSA1 is the location of the GEOS 1-hour time average files.
-              [DATE] should be used as a wild card for the simulation date.`,
+			usage: `Preproc.GEOSChem.GEOSA1 is the location of the GEOS 1-hour time average files. [DATE] should be used as a wild card for the simulation date.
+`,
 			defaultVal: "${INMAP_ROOT_DIR}/cmd/inmap/testdata/preproc/GEOSFP.[DATE].A1.2x25.nc",
 			flagsets:   []*pflag.FlagSet{cfg.preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.GEOSChem.GEOSA3Cld",
-			usage: `
-              Preproc.GEOSChem.GEOSA3Cld is the location of the GEOS 3-hour average cloud
-              parameter files. [DATE] should be used as a wild card for
-              the simulation date.`,
+			usage: `Preproc.GEOSChem.GEOSA3Cld is the location of the GEOS 3-hour average cloud parameter files. [DATE] should be used as a wild card for the simulation date.
+`,
 			defaultVal: "${INMAP_ROOT_DIR}/cmd/inmap/testdata/preproc/GEOSFP.[DATE].A3cld.2x25.nc",
 			flagsets:   []*pflag.FlagSet{cfg.preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.GEOSChem.GEOSA3Dyn",
-			usage: `
-              Preproc.GEOSChem.GEOSA3Dyn is the location of the GEOS 3-hour average dynamical
-              parameter files. [DATE] should be used as a wild card for
-              the simulation date.`,
+			usage: `Preproc.GEOSChem.GEOSA3Dyn is the location of the GEOS 3-hour average dynamical parameter files. [DATE] should be used as a wild card for the simulation date.
+`,
 			defaultVal: "${INMAP_ROOT_DIR}/cmd/inmap/testdata/preproc/GEOSFP.[DATE].A3dyn.2x25.nc",
 			flagsets:   []*pflag.FlagSet{cfg.preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.GEOSChem.GEOSI3",
-			usage: `
-              Preproc.GEOSChem.GEOSI3 is the location of the GEOS 3-hour instantaneous parameter
-              files. [DATE] should be used as a wild card for
-              the simulation date.`,
+			usage: `Preproc.GEOSChem.GEOSI3 is the location of the GEOS 3-hour instantaneous parameter files. [DATE] should be used as a wild card for the simulation date.
+`,
 			defaultVal: "${INMAP_ROOT_DIR}/cmd/inmap/testdata/preproc/GEOSFP.[DATE].I3.2x25.nc",
 			flagsets:   []*pflag.FlagSet{cfg.preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.GEOSChem.GEOSA3MstE",
-			usage: `
-              Preproc.GEOSChem.GEOSA3MstE is the location of the GEOS 3-hour average moist parameters
-              on level edges files. [DATE] should be used as a wild card for
-              the simulation date.`,
+			usage: `Preproc.GEOSChem.GEOSA3MstE is the location of the GEOS 3-hour average moist parameters on level edges files. [DATE] should be used as a wild card for the simulation date.
+`,
 			defaultVal: "${INMAP_ROOT_DIR}/cmd/inmap/testdata/preproc/GEOSFP.[DATE].A3mstE.2x25.nc",
 			flagsets:   []*pflag.FlagSet{cfg.preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.GEOSChem.GEOSApBp",
-			usage: `
-              Preproc.GEOSChem.GEOSApBp is the location of the constant GEOS pressure level
-              variable file. It is optional; if it is not specified the Ap and Bp information
-              will be extracted from the GEOSChem files.`,
+			usage: `Preproc.GEOSChem.GEOSApBp is the location of the constant GEOS pressure level variable file. It is optional; if it is not specified the Ap and Bp information will be extracted from the GEOSChem files.
+`,
 			defaultVal: "",
 			flagsets:   []*pflag.FlagSet{cfg.preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.GEOSChem.GEOSChem",
-			usage: `
-              Preproc.GEOSChem.GEOSChem is the location of GEOS-Chem output files.
-              [DATE] should be used as a wild card for the simulation date.`,
+			usage: `Preproc.GEOSChem.GEOSChem is the location of GEOS-Chem output files. [DATE] should be used as a wild card for the simulation date.
+`,
 			defaultVal: "${INMAP_ROOT_DIR}/cmd/inmap/testdata/preproc/gc_output.[DATE].nc",
 			flagsets:   []*pflag.FlagSet{cfg.preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.GEOSChem.ChemFileInterval",
-			usage: `
-              Preproc.GEOSChem.ChemFileInterval specifies the time duration represented by each GEOS-Chem output file.
-              E.g. "3h" for 3 hours`,
+			usage: `Preproc.GEOSChem.ChemFileInterval specifies the time duration represented by each GEOS-Chem output file. E.g. "3h" for 3 hours.
+`,
 			defaultVal: "3h",
 			flagsets:   []*pflag.FlagSet{cfg.preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.GEOSChem.ChemRecordInterval",
-			usage: `
-              Preproc.GEOSChem.ChemRecordInterval specifies the time duration represented by each GEOS-Chem output record.
-              E.g. "3h" for 3 hours`,
+			usage: `Preproc.GEOSChem.ChemRecordInterval specifies the time duration represented by each GEOS-Chem output record. E.g. "3h" for 3 hours.
+`,
 			defaultVal: "3h",
 			flagsets:   []*pflag.FlagSet{cfg.preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.GEOSChem.NoChemHourIndex",
-			usage: `
-              If Preproc.GEOSChem.NoChemHourIndex is true, the GEOS-Chem output files will be assumed to not contain a time dimension.`,
+			usage: `If Preproc.GEOSChem.NoChemHourIndex is true, the GEOS-Chem output files will be assumed to not contain a time dimension.
+`,
 			defaultVal: false,
 			flagsets:   []*pflag.FlagSet{cfg.preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.GEOSChem.OlsonLandMap",
-			usage: `
-              Preproc.GEOSChem.OlsonLandMap is the location of the GEOS-Chem Olson land use map file,
-              which is described here:
-              http://wiki.seas.harvard.edu/geos-chem/index.php/Olson_land_map`,
+			usage: `Preproc.GEOSChem.OlsonLandMap is the location of the GEOS-Chem Olson land use map file, which is described here: http://wiki.seas.harvard.edu/geos-chem/index.php/Olson_land_map.
+`,
 			defaultVal:  "${INMAP_ROOT_DIR}/cmd/inmap/testdata/preproc/geoschem-new/Olson_2001_Land_Map.025x025.generic.nc",
 			isInputFile: true,
 			flagsets:    []*pflag.FlagSet{cfg.preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.GEOSChem.Dash",
-			usage: `
-              Preproc.GEOSChem.Dash indicates whether GEOS-Chem chemical variable
-              names should be assumed to be in the form 'IJ-AVG-S__xxx' vs.
-              the form 'IJ_AVG_S__xxx'.`,
+			usage: `Preproc.GEOSChem.Dash indicates whether GEOS-Chem chemical variable names should be assumed to be in the form 'IJ-AVG-S__xxx' vs. the form 'IJ_AVG_S__xxx'.
+`,
 			defaultVal: false,
 			flagsets:   []*pflag.FlagSet{cfg.preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.StartDate",
-			usage: `
-              Preproc.StartDate is the date of the beginning of the simulation.
-              Format = "YYYYMMDD".`,
+			usage: `Preproc.StartDate is the date of the beginning of the simulation. Format = "YYYYMMDD".
+`,
 			defaultVal: "No Default",
 			flagsets:   []*pflag.FlagSet{cfg.preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.EndDate",
-			usage: `
-              Preproc.EndDate is the date of the end of the simulation.
-              Format = "YYYYMMDD".`,
+			usage: `Preproc.EndDate is the date of the end of the simulation. Format = "YYYYMMDD".
+`,
 			defaultVal: "No Default",
 			flagsets:   []*pflag.FlagSet{cfg.preprocCmd.Flags()},
 		},
 		{
 			name: "Preproc.CtmGridXo",
-			usage: `
-              Preproc.CtmGridXo is the lower left of Chemical Transport Model (CTM) grid, x`,
+			usage: `Preproc.CtmGridXo is the lower left of Chemical Transport Model (CTM) grid, x
+`,
 			defaultVal: 0.0,
 			flagsets:   []*pflag.FlagSet{cfg.preprocCmd.Flags()},
 		},
 		{
-			name: "Preproc.CtmGridYo",
-			usage: `
-              Preproc.CtmGridYo is the lower left of grid, y`,
+			name:       "Preproc.CtmGridYo",
+			usage:      `Preproc.CtmGridYo is the lower left of grid, y`,
 			defaultVal: 0.0,
 			flagsets:   []*pflag.FlagSet{cfg.preprocCmd.Flags()},
 		},
 		{
-			name: "Preproc.CtmGridDx",
-			usage: `
-              Preproc.CtmGridDx is the grid cell length in x direction [m]`,
+			name:       "Preproc.CtmGridDx",
+			usage:      `Preproc.CtmGridDx is the grid cell length in x direction [m]`,
 			defaultVal: 1000.0,
 			flagsets:   []*pflag.FlagSet{cfg.preprocCmd.Flags()},
 		},
 		{
-			name: "Preproc.CtmGridDy",
-			usage: `
-              Preproc.CtmGridDy is the grid cell length in y direction [m]`,
+			name:       "Preproc.CtmGridDy",
+			usage:      `Preproc.CtmGridDy is the grid cell length in y direction [m]`,
 			defaultVal: 1000.0,
 			flagsets:   []*pflag.FlagSet{cfg.preprocCmd.Flags()},
 		},
 		{
-			name: "job_name",
-			usage: `
-							job_name specifies the name of a cloud job`,
+			name:       "job_name",
+			usage:      `job_name specifies the name of a cloud job`,
 			defaultVal: "test_job",
 			flagsets:   []*pflag.FlagSet{cfg.cloudCmd.PersistentFlags(), cfg.srCmd.PersistentFlags()},
 		},
 		{
-			name: "addr",
-			usage: `
-							addr specifies the URL to connect to for running cloud jobs`,
+			name:       "addr",
+			usage:      `addr specifies the URL to connect to for running cloud jobs`,
 			defaultVal: "inmap.run:443",
 			flagsets:   []*pflag.FlagSet{cfg.cloudCmd.PersistentFlags(), cfg.srCmd.PersistentFlags()},
 		},
 		{
-			name: "cmds",
-			usage: `
-							cmds specifies the inmap subcommands to run.`,
+			name:       "cmds",
+			usage:      `cmds specifies the inmap subcommands to run.`,
 			defaultVal: []string{"run", "steady"},
 			flagsets:   []*pflag.FlagSet{cfg.cloudStartCmd.Flags(), cfg.srStartCmd.Flags()},
 		},
 		{
-			name: "memory_gb",
-			usage: `
-							memory_gb specifies the gigabytes of RAM memory required for this job.`,
+			name:       "memory_gb",
+			usage:      `memory_gb specifies the gigabytes of RAM memory required for this job.`,
 			defaultVal: 20,
 			flagsets:   []*pflag.FlagSet{cfg.cloudStartCmd.Flags(), cfg.srStartCmd.Flags()},
 		},
 		{
-			name: "preprocessed_inputs",
-			usage: `preprocessed_inputs is a list of preprocessed
-input files to be combined.`,
+			name:       "preprocessed_inputs",
+			usage:      `preprocessed_inputs is a list of preprocessed input files to be combined.`,
 			defaultVal: []string{},
 			flagsets:   []*pflag.FlagSet{cfg.combineCmd.Flags()},
 		},
 		{
 			name: "output_file",
-			usage: `output_file is the location where the combined output
-file should be written.`,
+			usage: `output_file is the location where the combined output file should be written.
+`,
 			defaultVal: "inmapdata_combined.ncf",
 			flagsets:   []*pflag.FlagSet{cfg.combineCmd.Flags()},
 		},

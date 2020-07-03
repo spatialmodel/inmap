@@ -6,7 +6,8 @@
 			"run_config",
 			"emissions",
 			"variable_grid",
-			"results"
+			"results",
+			"output_options"
 		],
 		"Commands": [
 			"cmd/inmap",

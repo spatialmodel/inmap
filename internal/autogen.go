@@ -194,7 +194,7 @@ sidebar_label: %s
 				// Remove .md file extensions from links.
 				bb[i] = bytes.Replace(bb[i], []byte(".md)"), []byte(")"), -1)
 				// Fix links to work correctly on website.
-				bb[i] = bytes.Replace(bb[i], []byte("]("), []byte("](./"), -1)
+				bb[i] = bytes.Replace(bb[i], []byte("]("), []byte("](/docs/cmd/"), -1)
 			}
 		}
 		b = bytes.Join(bb, []byte("\n"))

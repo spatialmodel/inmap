@@ -25,10 +25,9 @@ inmap version [flags]
 ### Options inherited from parent commands
 
 ```
-      --config string   
-                                      config specifies the configuration file location.
+      --config string   config specifies the configuration file location.
 ```
 
 ### SEE ALSO
 
-* [inmap](./inmap)	 - A reduced-form air quality model.
+* [inmap](/docs/cmd/inmap)	 - A reduced-form air quality model.

@@ -29,6 +29,10 @@
         "title": "inmap grid",
         "sidebar_label": "inmap grid"
       },
+      "cmd/inmap_preproc_combine": {
+        "title": "inmap preproc combine",
+        "sidebar_label": "inmap preproc combine"
+      },
       "cmd/inmap_preproc": {
         "title": "inmap preproc",
         "sidebar_label": "inmap preproc"
@@ -68,6 +72,10 @@
       "cmd/inmap": {
         "title": "inmap",
         "sidebar_label": "inmap"
+      },
+      "emissions": {
+        "title": "Emissions",
+        "sidebar_label": "Emissions"
       },
       "install": {
         "title": "InMAP Installation",

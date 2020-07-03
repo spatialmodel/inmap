@@ -10,7 +10,7 @@ update :
 	- sudo chown -R $$USER:$$USER build
 
 host :
-	- cd ../ && docker run --rm -p 3000:3000 -it -v `pwd`:/src mkenney/npm:debian yarn start
+	- docker run --rm -p 3000:3000 -it -v `pwd`:/src mkenney/npm:debian /bin/bash -c "cd website && yarn start"
 
 .PHONY : clean
 clean :
