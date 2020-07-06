@@ -92,6 +92,9 @@ func JobSpec(root *cobra.Command, config *viper.Viper, name string, cmdArgs, inp
 			argVal = ""
 			vals := stringsFromInterface(config.Get(f.Name))
 			for i, val := range vals {
+				if val == "no_default" {
+					continue
+				}
 				val, visitErr = localFileToRunInput(val, js)
 				if visitErr != nil {
 					return
@@ -103,12 +106,12 @@ func JobSpec(root *cobra.Command, config *viper.Viper, name string, cmdArgs, inp
 				}
 			}
 		}
-		if argVal != "false" {
-			if argVal == "true" {
-				js.Args = append(js.Args, fmt.Sprintf("--%s", f.Name), "true")
-			} else {
-				js.Args = append(js.Args, fmt.Sprintf("--%s", f.Name), argVal)
-			}
+		switch {
+		case argVal == "false", argVal == "" && f.Name != "LogFile":
+		case argVal == "true":
+			js.Args = append(js.Args, fmt.Sprintf("--%s", f.Name), "true")
+		default:
+			js.Args = append(js.Args, fmt.Sprintf("--%s", f.Name), argVal)
 		}
 	})
 	if visitErr != nil {
@@ -120,14 +123,32 @@ func JobSpec(root *cobra.Command, config *viper.Viper, name string, cmdArgs, inp
 func stringsFromInterface(val interface{}) []string {
 	switch t := val.(type) {
 	case string:
-		return []string{val.(string)}
+		if t == "{}" || t == "{}\n" {
+			return []string{}
+		}
+		return []string{t}
 	case []string:
-		return val.([]string)
+		return t
 	case []interface{}:
-		valSlice := val.([]interface{})
-		s := make([]string, len(valSlice))
-		for i, v := range valSlice {
+		s := make([]string, len(t))
+		for i, v := range t {
 			s[i] = fmt.Sprint(v)
+		}
+		return s
+	case map[string][]string:
+		var s []string
+		for _, vs := range t {
+			for _, v := range vs {
+				s = append(s, v)
+			}
+		}
+		return s
+	case map[string]interface{}:
+		var s []string
+		for _, vs := range t {
+			for _, v := range vs.([]interface{}) {
+				s = append(s, v.(string))
+			}
 		}
 		return s
 	default:

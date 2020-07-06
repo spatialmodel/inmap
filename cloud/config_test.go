@@ -29,6 +29,9 @@ import (
 
 func TestRunInputFromViper(t *testing.T) {
 	cfg := inmaputil.InitializeConfig()
+	cfg.Viper.Set("aep.InventoryConfig.COARDSFiles", map[string][]string{
+		"xxx": {"../emissions/aep/testdata/emis_coards_hawaii.nc", "../emissions/aep/testdata/emis_coards_hawaii.nc"},
+		"yyy": {"../emissions/aep/testdata/emis_coards_hawaii.nc"}})
 	js, err := cloud.JobSpec(cfg.Root, cfg.Viper, "test_job", []string{"run", "steady"}, cfg.InputFiles(), 1)
 	if err != nil {
 		t.Fatal(err)
@@ -65,20 +68,15 @@ func TestRunInputFromViper(t *testing.T) {
 		"--VarGrid.PopDensityThreshold":       "0.0055",
 		"--VarGrid.VariableGridDy":            "4000",
 		"--EmissionUnits":                     "tons/year",
-		"--EmissionMaskGeoJSON":               "",
 		"--LogFile":                           "",
-		"--aep.GridRef":                       "no_default",
-		"--aep.InventoryConfig.COARDSFiles":   "{}\n",
+		"--aep.InventoryConfig.COARDSFiles":   "ffe280d818c1549074d0e15cfb74377b891287d7f81a4ad9038d0f65b12f6642.nc,ffe280d818c1549074d0e15cfb74377b891287d7f81a4ad9038d0f65b12f6642.nc,ffe280d818c1549074d0e15cfb74377b891287d7f81a4ad9038d0f65b12f6642.nc",
 		"--aep.InventoryConfig.COARDSYear":    "0",
 		"--aep.InventoryConfig.InputUnits":    "no_default",
-		"--aep.InventoryConfig.NEIFiles":      "{}\n",
 		"--aep.SCCExactMatch":                 "true",
 		"--aep.SpatialConfig.GridName":        "inmap",
 		"--aep.SpatialConfig.InputSR":         "+proj=longlat",
 		"--aep.SpatialConfig.MaxCacheEntries": "10",
-		"--aep.SpatialConfig.SpatialCache":    "",
 		"--aep.SrgShapefileDirectory":         "no_default",
-		"--aep.SrgSpec":                       "no_default",
 		"--aep.SrgSpecType":                   "no_default",
 	}
 	if len(js.Args) != len(wantArgs)*2 {
@@ -110,6 +108,7 @@ func TestRunInputFromViper(t *testing.T) {
 		"764874ad5081665459c67d40607f68df6fc689aa695b4822e012aef84cba5394.prj": 432,
 		"26b310adcf36530acdb518bd74b61355b2a2e7825c20a07f3631db412c655881.gob": 21276,
 		"434bf26e3fda1ef9cef7e1fa6cc6b5174d11a22b19cbe10d256adc83b2a97d44.ncf": 14284,
+		"ffe280d818c1549074d0e15cfb74377b891287d7f81a4ad9038d0f65b12f6642.nc":  3484,
 	}
 	if len(js.FileData) != len(wantFiles) {
 		t.Errorf("incorrect number of files: %d != %d", len(js.FileData), len(wantFiles))
@@ -156,7 +155,6 @@ func TestSRPredictInputFromViper(t *testing.T) {
 		"--EmissionsShapefiles": "258bbcefe8c0073d6f323351463be9e9685e74bb92e367ca769b9536ed247213.shp",
 		"--OutputFile":          "inmap_output.shp",
 		"--OutputVariables":     "{\"PrimPM25\":\"PrimaryPM25\"}",
-		"--EmissionMaskGeoJSON": "",
 		"--SR.OutputFile":       "${INMAP_ROOT_DIR}/cmd/inmap/testdata/output_${InMAPRunType}.shp",
 		"--VarGrid.GridProj":    "+proj=lcc +lat_1=33.000000 +lat_2=45.000000 +lat_0=40.000000 +lon_0=-97.000000 +x_0=0 +y_0=0 +a=6370997.000000 +b=6370997.000000 +to_meter=1",
 	}

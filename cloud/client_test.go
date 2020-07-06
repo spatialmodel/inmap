@@ -41,7 +41,6 @@ func init() {
 func TestClient_fake(t *testing.T) {
 	checkConfig := func(cmd []string) {
 		wantCmd := []string{"inmap", "run", "steady",
-			"--EmissionMaskGeoJSON=",
 			"--EmissionUnits=tons/year",
 			"--EmissionsShapefiles=file://test/test/test_user/test_job/258bbcefe8c0073d6f323351463be9e9685e74bb92e367ca769b9536ed247213.shp",
 			"--InMAPData=file://test/test/test_user/test_job/434bf26e3fda1ef9cef7e1fa6cc6b5174d11a22b19cbe10d256adc83b2a97d44.ncf",
@@ -60,18 +59,13 @@ func TestClient_fake(t *testing.T) {
 			"--VarGrid.VariableGridDy=4000", "--VarGrid.VariableGridXo=-4000", "--VarGrid.VariableGridYo=-4000",
 			"--VarGrid.Xnests=2,2,2", "--VarGrid.Ynests=2,2,2",
 			"--VariableGridData=file://test/test/test_user/test_job/26b310adcf36530acdb518bd74b61355b2a2e7825c20a07f3631db412c655881.gob",
-			"--aep.GridRef=no_default",
-			"--aep.InventoryConfig.COARDSFiles={}\n",
 			"--aep.InventoryConfig.COARDSYear=0",
 			"--aep.InventoryConfig.InputUnits=no_default",
-			"--aep.InventoryConfig.NEIFiles={}\n",
 			"--aep.SCCExactMatch=true",
 			"--aep.SpatialConfig.GridName=inmap",
 			"--aep.SpatialConfig.InputSR=+proj=longlat",
 			"--aep.SpatialConfig.MaxCacheEntries=10",
-			"--aep.SpatialConfig.SpatialCache=",
 			"--aep.SrgShapefileDirectory=no_default",
-			"--aep.SrgSpec=no_default",
 			"--aep.SrgSpecType=no_default",
 		}
 		if len(cmd) != len(wantCmd) {
