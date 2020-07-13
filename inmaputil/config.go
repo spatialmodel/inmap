@@ -305,6 +305,9 @@ func getStringMapStringSlice(varName string, cfg *viper.Viper) (map[string][]str
 	case map[string]interface{}:
 		return cast.ToStringMapStringSliceE(i)
 	case string:
+		if i == "" {
+			return make(map[string][]string), nil
+		}
 		b := bytes.NewBuffer(([]byte)(i.(string)))
 		d := json.NewDecoder(b)
 		o := make(map[string][]string)

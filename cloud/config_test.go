@@ -45,6 +45,11 @@ func TestRunInputFromViper(t *testing.T) {
 	}
 
 	wantArgs := map[string]string{
+		"--EmissionMaskGeoJSON":               "",
+		"--aep.GridRef":                       "",
+		"--aep.InventoryConfig.NEIFiles":      "",
+		"--aep.SpatialConfig.SpatialCache":    "",
+		"--aep.SrgSpec":                       "",
 		"--VarGrid.MortalityRateFile":         "764874ad5081665459c67d40607f68df6fc689aa695b4822e012aef84cba5394.shp",
 		"--VarGrid.VariableGridDx":            "4000",
 		"--NumIterations":                     "0",
@@ -151,6 +156,7 @@ func TestSRPredictInputFromViper(t *testing.T) {
 	}
 
 	wantArgs := map[string]string{
+		"--EmissionMaskGeoJSON": "",
 		"--EmissionUnits":       "tons/year",
 		"--EmissionsShapefiles": "258bbcefe8c0073d6f323351463be9e9685e74bb92e367ca769b9536ed247213.shp",
 		"--OutputFile":          "inmap_output.shp",

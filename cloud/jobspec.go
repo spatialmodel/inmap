@@ -127,7 +127,7 @@ func JobSpec(root *cobra.Command, config *viper.Viper, name string, cmdArgs, inp
 			}
 		}
 		switch {
-		case argVal == "false", argVal == "" && f.Name != "LogFile":
+		case argVal == "false":
 		case argVal == "true":
 			js.Args = append(js.Args, fmt.Sprintf("--%s", f.Name), "true")
 		default:

@@ -41,6 +41,7 @@ func init() {
 func TestClient_fake(t *testing.T) {
 	checkConfig := func(cmd []string) {
 		wantCmd := []string{"inmap", "run", "steady",
+			"--EmissionMaskGeoJSON=",
 			"--EmissionUnits=tons/year",
 			"--EmissionsShapefiles=file://test/test/test_user/test_job/258bbcefe8c0073d6f323351463be9e9685e74bb92e367ca769b9536ed247213.shp",
 			"--InMAPData=file://test/test/test_user/test_job/434bf26e3fda1ef9cef7e1fa6cc6b5174d11a22b19cbe10d256adc83b2a97d44.ncf",
@@ -59,13 +60,18 @@ func TestClient_fake(t *testing.T) {
 			"--VarGrid.VariableGridDy=4000", "--VarGrid.VariableGridXo=-4000", "--VarGrid.VariableGridYo=-4000",
 			"--VarGrid.Xnests=2,2,2", "--VarGrid.Ynests=2,2,2",
 			"--VariableGridData=file://test/test/test_user/test_job/26b310adcf36530acdb518bd74b61355b2a2e7825c20a07f3631db412c655881.gob",
+			"--aep.GridRef=",
+			"--aep.InventoryConfig.COARDSFiles=",
 			"--aep.InventoryConfig.COARDSYear=0",
 			"--aep.InventoryConfig.InputUnits=no_default",
+			"--aep.InventoryConfig.NEIFiles=",
 			"--aep.SCCExactMatch=true",
 			"--aep.SpatialConfig.GridName=inmap",
 			"--aep.SpatialConfig.InputSR=+proj=longlat",
 			"--aep.SpatialConfig.MaxCacheEntries=10",
+			"--aep.SpatialConfig.SpatialCache=",
 			"--aep.SrgShapefileDirectory=no_default",
+			"--aep.SrgSpec=",
 			"--aep.SrgSpecType=no_default",
 		}
 		if len(cmd) != len(wantCmd) {
@@ -195,8 +201,9 @@ func TestClient_fake(t *testing.T) {
 func TestClient_fakeCOARDS(t *testing.T) {
 	checkConfig := func(cmd []string) {
 		wantCmd := []string{"inmap", "run", "steady",
+			"--EmissionMaskGeoJSON=",
 			"--EmissionUnits=tons/year",
-			"--EmissionsShapefiles=file://test/test/test_user/test_job/258bbcefe8c0073d6f323351463be9e9685e74bb92e367ca769b9536ed247213.shp",
+			"--EmissionsShapefiles=",
 			"--InMAPData=file://test/test/test_user/test_job/434bf26e3fda1ef9cef7e1fa6cc6b5174d11a22b19cbe10d256adc83b2a97d44.ncf",
 			"--LogFile=file://test/test/test_user/test_job/LogFile",
 			"--NumIterations=0",
@@ -217,10 +224,12 @@ func TestClient_fakeCOARDS(t *testing.T) {
 			"--aep.InventoryConfig.COARDSFiles={\"all\":[\"file://test/test/test_user/test_job/ffe280d818c1549074d0e15cfb74377b891287d7f81a4ad9038d0f65b12f6642.nc\"]}",
 			"--aep.InventoryConfig.COARDSYear=2016",
 			"--aep.InventoryConfig.InputUnits=tons",
+			"--aep.InventoryConfig.NEIFiles=",
 			"--aep.SCCExactMatch=true",
 			"--aep.SpatialConfig.GridName=inmap",
 			"--aep.SpatialConfig.InputSR=+proj=longlat",
 			"--aep.SpatialConfig.MaxCacheEntries=10",
+			"--aep.SpatialConfig.SpatialCache=",
 			"--aep.SrgShapefileDirectory=no_default",
 			"--aep.SrgSpec=file://test/test/test_user/test_job/f299df4d61e915c2d415b18ceaa1339a2cd7f8481d7d3b6d13675bc0516a5c00.json",
 			"--aep.SrgSpecType=OSM",
@@ -248,6 +257,7 @@ func TestClient_fakeCOARDS(t *testing.T) {
 		}
 	}
 	cfg := inmaputil.InitializeConfig()
+	cfg.Set("EmissionsShapefiles", "[]")
 	cfg.Set("aep.InventoryConfig.COARDSFiles", "{\"all\":[\"${INMAP_ROOT_DIR}/emissions/aep/testdata/emis_coards_hawaii.nc\"]}")
 	cfg.Set("aep.SrgSpec", "${INMAP_ROOT_DIR}/emissions/aep/testdata/srgspec_osm.json")
 	cfg.Set("aep.SrgSpecType", "OSM")
@@ -311,9 +321,9 @@ func TestClient_fakeCOARDS(t *testing.T) {
 		}
 		wantFiles := map[string]int{
 			"LogFile":        94100,
-			"OutputFile.shp": 2276,
-			"OutputFile.dbf": 465,
-			"OutputFile.shx": 228,
+			"OutputFile.shp": 644,
+			"OutputFile.dbf": 181,
+			"OutputFile.shx": 132,
 			"OutputFile.prj": 431,
 		}
 		if len(output.Files) != len(wantFiles) {
