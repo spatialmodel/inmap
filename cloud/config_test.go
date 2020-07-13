@@ -69,7 +69,7 @@ func TestRunInputFromViper(t *testing.T) {
 		"--VarGrid.VariableGridDy":            "4000",
 		"--EmissionUnits":                     "tons/year",
 		"--LogFile":                           "",
-		"--aep.InventoryConfig.COARDSFiles":   "ffe280d818c1549074d0e15cfb74377b891287d7f81a4ad9038d0f65b12f6642.nc,ffe280d818c1549074d0e15cfb74377b891287d7f81a4ad9038d0f65b12f6642.nc,ffe280d818c1549074d0e15cfb74377b891287d7f81a4ad9038d0f65b12f6642.nc",
+		"--aep.InventoryConfig.COARDSFiles":   "{\"xxx\":[\"ffe280d818c1549074d0e15cfb74377b891287d7f81a4ad9038d0f65b12f6642.nc\",\"ffe280d818c1549074d0e15cfb74377b891287d7f81a4ad9038d0f65b12f6642.nc\"],\"yyy\":[\"ffe280d818c1549074d0e15cfb74377b891287d7f81a4ad9038d0f65b12f6642.nc\"]}",
 		"--aep.InventoryConfig.COARDSYear":    "0",
 		"--aep.InventoryConfig.InputUnits":    "no_default",
 		"--aep.SCCExactMatch":                 "true",

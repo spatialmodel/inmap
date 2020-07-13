@@ -113,6 +113,7 @@ func downloadBlob(ctx context.Context, path string, c chan string) string {
 	if err != nil {
 		panic(fmt.Errorf("inmaputil: failed creating temporary download directory: %v", err))
 	}
+	ext := filepath.Ext(url.Path)
 	fnames := expandShp(url.Path)
 	for _, fname := range fnames {
 		w, err := os.Create(filepath.Join(dir, filepath.Base(fname)))
@@ -120,7 +121,7 @@ func downloadBlob(ctx context.Context, path string, c chan string) string {
 			panic(fmt.Errorf("inmaputil: failed creating file for download: %v", err))
 		}
 		bucketPath := strings.TrimPrefix(url.Path, "/")
-		bucketPath = bucketPath[0:len(bucketPath)-4] + filepath.Ext(fname)
+		bucketPath = bucketPath[0:len(bucketPath)-len(ext)] + filepath.Ext(fname)
 		r, err := bucket.NewReader(ctx, bucketPath, nil)
 		if err != nil {
 			c <- err.Error()
