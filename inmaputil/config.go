@@ -193,14 +193,32 @@ func VarGridConfig(cfg *viper.Viper) (*inmap.VarGridConfig, error) {
 
 // aeputilConfig unmarshals an aeputil inventory and spatial configuration.
 func aeputilConfig(cfg *viper.Viper) (*aeputil.InventoryConfig, *aeputil.SpatialConfig, error) {
+	outChan := outChan()
+
 	neiFiles, err := getStringMapStringSlice("aep.InventoryConfig.NEIFiles", cfg)
 	if err != nil {
 		return nil, nil, fmt.Errorf("inmaputil: parsing config variable aep.InventoryConfig.NEIFiles: %v", err)
+	}
+	for k, vs := range neiFiles {
+		for i, v := range vs {
+			neiFiles[k][i] = maybeDownload(context.TODO(), os.ExpandEnv(v), outChan)
+		}
 	}
 
 	coardsFiles, err := getStringMapStringSlice("aep.InventoryConfig.COARDSFiles", cfg)
 	if err != nil {
 		return nil, nil, fmt.Errorf("inmaputil: parsing config variable aep.InventoryConfig.COARDSFiles: %v", err)
+	}
+	for k, vs := range coardsFiles {
+		for i, v := range vs {
+			coardsFiles[k][i] = maybeDownload(context.TODO(), os.ExpandEnv(v), outChan)
+		}
+	}
+
+	srgSpec := maybeDownload(context.TODO(), os.ExpandEnv(cfg.GetString("aep.SrgSpec")), outChan)
+	var gridRef []string
+	for _, g := range cfg.GetStringSlice("aep.GridRef") {
+		gridRef = append(gridRef, maybeDownload(context.TODO(), g, outChan))
 	}
 
 	i := &aeputil.InventoryConfig{
@@ -208,10 +226,10 @@ func aeputilConfig(cfg *viper.Viper) (*aeputil.InventoryConfig, *aeputil.Spatial
 		COARDSFiles:           coardsFiles,
 		COARDSYear:            cfg.GetInt("aep.InventoryConfig.COARDSYear"),
 		InputUnits:            cfg.GetString("aep.InventoryConfig.InputUnits"),
-		SrgSpec:               os.ExpandEnv(cfg.GetString("aep.SrgSpec")),
+		SrgSpec:               srgSpec,
 		SrgSpecType:           cfg.GetString("aep.SrgSpecType"),
 		SrgShapefileDirectory: cfg.GetString("aep.SrgShapefileDirectory"),
-		GridRef:               cfg.GetStringSlice("aep.GridRef"),
+		GridRef:               gridRef,
 		SCCExactMatch:         cfg.GetBool("aep.SCCExactMatch"),
 	}
 	i.PolsToKeep = aep.Speciation{
@@ -223,11 +241,11 @@ func aeputilConfig(cfg *viper.Viper) (*aeputil.InventoryConfig, *aeputil.Spatial
 	}
 
 	s := &aeputil.SpatialConfig{
-		SrgSpec:               os.ExpandEnv(cfg.GetString("aep.SrgSpec")),
+		SrgSpec:               srgSpec,
 		SrgSpecType:           cfg.GetString("aep.SrgSpecType"),
 		SrgShapefileDirectory: cfg.GetString("aep.SrgShapefileDirectory"),
 		SCCExactMatch:         cfg.GetBool("aep.SCCExactMatch"),
-		GridRef:               cfg.GetStringSlice("aep.GridRef"),
+		GridRef:               gridRef,
 		OutputSR:              os.ExpandEnv(cfg.GetString("VarGrid.GridProj")),
 		InputSR:               cfg.GetString("aep.SpatialConfig.InputSR"),
 		SpatialCache:          cfg.GetString("aep.SpatialConfig.SpatialCache"),

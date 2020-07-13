@@ -124,8 +124,8 @@ func (c *Client) stageInputs(ctx context.Context, job *cloudrpc.JobSpec) error {
 			return err
 		}
 		for i, arg := range job.Args {
-			if fname == arg {
-				job.Args[i] = url.Scheme + "://" + url.Hostname() + "/" + filePath
+			if strings.Contains(arg, fname) {
+				job.Args[i] = strings.Replace(arg, fname, url.Scheme+"://"+url.Hostname()+"/"+filePath, -1)
 			}
 		}
 	}
