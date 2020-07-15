@@ -327,8 +327,8 @@ func (c *CSTConfig) srSetup(aqm string) (*aeputil.SpatialConfig, *sr.Reader, *rt
 	// Make a copy of the spatial configuration to allow the
 	// use of multiple grids.
 	c.srCache.spatialConfig = &aeputil.SpatialConfig{
-		SrgSpec:               c.SpatialConfig.SrgSpec,
-		SrgSpecType:           c.SpatialConfig.SrgSpecType,
+		SrgSpecSMOKE:          c.SpatialConfig.SrgSpecSMOKE,
+		SrgSpecOSM:            c.SpatialConfig.SrgSpecOSM,
 		SrgShapefileDirectory: c.SpatialConfig.SrgShapefileDirectory,
 		SCCExactMatch:         c.SpatialConfig.SCCExactMatch,
 		GridRef:               c.SpatialConfig.GridRef,

@@ -35,12 +35,13 @@ import (
 
 // SpatialConfig holds emissions spatialization configuration information.
 type SpatialConfig struct {
-	// SrgSpec gives the location of the surrogate specification file.
-	SrgSpec string
+	// SrgSpecSMOKE gives the location of the SMOKE-formatted
+	// surrogate specification file, if any.
+	SrgSpecSMOKE string
 
-	// SrgSpecType specifies the type of data the gridding surrogates
-	// are being created from. It can be "SMOKE" or "OSM".
-	SrgSpecType string
+	// SrgSpecOSM gives the location of the OSM-formatted
+	// surrogate specification file, if any.
+	SrgSpecOSM string
 
 	// SrgShapefileDirectory gives the location of the directory holding
 	// the shapefiles used for creating spatial surrogates.
@@ -250,31 +251,35 @@ func (c *SpatialConfig) SpatialProcessor() (*aep.SpatialProcessor, error) {
 	return c.sp, nil
 }
 
-func readSrgSpec(srgSpecPath, srgShapefileDirectory, srgSpecType string, sccExactMatch bool, diskCachePath string, memCacheEntries int) (*aep.SrgSpecs, error) {
-	if srgSpecPath == "" {
-		return nil, nil
-	}
-	f, err := os.Open(os.ExpandEnv(srgSpecPath))
-	if err != nil {
-		return nil, fmt.Errorf("aep: opening surrogate specification: %v", err)
-	}
-	var srgSpecs *aep.SrgSpecs
-	switch srgSpecType {
-	case "SMOKE":
-		srgSpecs, err = aep.ReadSrgSpecSMOKE(f, os.ExpandEnv(srgShapefileDirectory), sccExactMatch, diskCachePath, memCacheEntries)
+func readSrgSpec(srgSpecSMOKEPath, srgSpecOSMPath, srgShapefileDirectory string, sccExactMatch bool, diskCachePath string, memCacheEntries int) (*aep.SrgSpecs, error) {
+	srgSpecs := aep.NewSrgSpecs()
+	if srgSpecSMOKEPath != "" {
+		f, err := os.Open(os.ExpandEnv(srgSpecSMOKEPath))
+		if err != nil {
+			return nil, fmt.Errorf("aep: opening SMOKE surrogate specification: %v", err)
+		}
+		srgSpecsTemp, err := aep.ReadSrgSpecSMOKE(f, os.ExpandEnv(srgShapefileDirectory), sccExactMatch, diskCachePath, memCacheEntries)
 		if err != nil {
 			return nil, err
 		}
-	case "OSM":
-		srgSpecs, err = aep.ReadSrgSpecOSM(f, diskCachePath, memCacheEntries)
+		if err = f.Close(); err != nil {
+			return nil, err
+		}
+		srgSpecs.AddAll(srgSpecsTemp)
+	}
+	if srgSpecOSMPath != "" {
+		f, err := os.Open(os.ExpandEnv(srgSpecOSMPath))
+		if err != nil {
+			return nil, fmt.Errorf("aep: opening OSM surrogate specification: %v", err)
+		}
+		srgSpecsTemp, err := aep.ReadSrgSpecOSM(f, diskCachePath, memCacheEntries)
 		if err != nil {
 			return nil, err
 		}
-	default:
-		return nil, fmt.Errorf("aeputil: invalid value for SrgSpecType. Acceptable values are 'SMOKE' and 'OSM'.")
-	}
-	if err = f.Close(); err != nil {
-		return nil, err
+		if err = f.Close(); err != nil {
+			return nil, err
+		}
+		srgSpecs.AddAll(srgSpecsTemp)
 	}
 	return srgSpecs, nil
 }
@@ -315,7 +320,7 @@ func (c *SpatialConfig) setupSpatialProcessor() (*aep.SpatialProcessor, error) {
 		return nil, fmt.Errorf("aeputil: GridCells must be specified for spatial processor")
 	}
 
-	srgSpecs, err := readSrgSpec(c.SrgSpec, c.SrgShapefileDirectory, c.SrgSpecType, c.SCCExactMatch, c.SpatialCache, c.MaxCacheEntries)
+	srgSpecs, err := readSrgSpec(c.SrgSpecSMOKE, c.SrgSpecOSM, c.SrgShapefileDirectory, c.SCCExactMatch, c.SpatialCache, c.MaxCacheEntries)
 	if err != nil {
 		return nil, err
 	}

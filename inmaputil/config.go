@@ -215,7 +215,8 @@ func aeputilConfig(cfg *viper.Viper) (*aeputil.InventoryConfig, *aeputil.Spatial
 		}
 	}
 
-	srgSpec := maybeDownload(context.TODO(), os.ExpandEnv(cfg.GetString("aep.SrgSpec")), outChan)
+	srgSpecSMOKE := maybeDownload(context.TODO(), os.ExpandEnv(cfg.GetString("aep.SrgSpecSMOKE")), outChan)
+	srgSpecOSM := maybeDownload(context.TODO(), os.ExpandEnv(cfg.GetString("aep.SrgSpecOSM")), outChan)
 	var gridRef []string
 	for _, g := range cfg.GetStringSlice("aep.GridRef") {
 		gridRef = append(gridRef, maybeDownload(context.TODO(), g, outChan))
@@ -226,8 +227,8 @@ func aeputilConfig(cfg *viper.Viper) (*aeputil.InventoryConfig, *aeputil.Spatial
 		COARDSFiles:           coardsFiles,
 		COARDSYear:            cfg.GetInt("aep.InventoryConfig.COARDSYear"),
 		InputUnits:            cfg.GetString("aep.InventoryConfig.InputUnits"),
-		SrgSpec:               srgSpec,
-		SrgSpecType:           cfg.GetString("aep.SrgSpecType"),
+		SrgSpecSMOKE:          srgSpecSMOKE,
+		SrgSpecOSM:            srgSpecOSM,
 		SrgShapefileDirectory: cfg.GetString("aep.SrgShapefileDirectory"),
 		GridRef:               gridRef,
 		SCCExactMatch:         cfg.GetBool("aep.SCCExactMatch"),
@@ -241,8 +242,8 @@ func aeputilConfig(cfg *viper.Viper) (*aeputil.InventoryConfig, *aeputil.Spatial
 	}
 
 	s := &aeputil.SpatialConfig{
-		SrgSpec:               srgSpec,
-		SrgSpecType:           cfg.GetString("aep.SrgSpecType"),
+		SrgSpecSMOKE:          srgSpecSMOKE,
+		SrgSpecOSM:            srgSpecOSM,
 		SrgShapefileDirectory: cfg.GetString("aep.SrgShapefileDirectory"),
 		SCCExactMatch:         cfg.GetBool("aep.SCCExactMatch"),
 		GridRef:               gridRef,

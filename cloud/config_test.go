@@ -49,7 +49,8 @@ func TestRunInputFromViper(t *testing.T) {
 		"--aep.GridRef":                       "",
 		"--aep.InventoryConfig.NEIFiles":      "",
 		"--aep.SpatialConfig.SpatialCache":    "",
-		"--aep.SrgSpec":                       "",
+		"--aep.SrgSpecSMOKE":                  "",
+		"--aep.SrgSpecOSM":                    "",
 		"--VarGrid.MortalityRateFile":         "764874ad5081665459c67d40607f68df6fc689aa695b4822e012aef84cba5394.shp",
 		"--VarGrid.VariableGridDx":            "4000",
 		"--NumIterations":                     "0",
@@ -82,7 +83,6 @@ func TestRunInputFromViper(t *testing.T) {
 		"--aep.SpatialConfig.InputSR":         "+proj=longlat",
 		"--aep.SpatialConfig.MaxCacheEntries": "10",
 		"--aep.SrgShapefileDirectory":         "no_default",
-		"--aep.SrgSpecType":                   "no_default",
 	}
 	if len(js.Args) != len(wantArgs)*2 {
 		t.Errorf("wrong number of arguments: %d != %d", len(js.Args)/2, len(wantArgs))

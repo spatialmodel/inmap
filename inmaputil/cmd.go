@@ -821,19 +821,20 @@ variable specifies the information to be output.`,
 			flagsets:   []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags()},
 		},
 		{
-			name: "aep.SrgSpec",
-			usage: `SrgSpec gives the location of the surrogate specification file. It is used for assigning spatial locations to emissions records.
+			name: "aep.SrgSpecSMOKE",
+			usage: `SrgSpecSMOKE gives the location of the SMOKE-format surrogate specification file, if any. It is used for assigning spatial locations to emissions records.
 `,
-			defaultVal:  "no_default",
+			defaultVal:  "",
 			isInputFile: true,
 			flagsets:    []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags()},
 		},
 		{
-			name: "aep.SrgSpecType",
-			usage: `SrgSpecType specifies the type of data the gridding surrogates are being created from. It can be "SMOKE" or "OSM".
+			name: "aep.SrgSpecOSM",
+			usage: `SrgSpecOSM gives the location of the OSM-format surrogate specification file, if any. It is used for assigning spatial locations to emissions records.
 `,
-			defaultVal: "no_default",
-			flagsets:   []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags()},
+			defaultVal:  "",
+			isInputFile: true,
+			flagsets:    []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags()},
 		},
 		{
 			name: "aep.SrgShapefileDirectory",

@@ -7,8 +7,7 @@ InMAPData = "${INMAP_ROOT_DIR}/cmd/inmap/testdata/testInMAPInputData.ncf"
 OutputFile = "${INMAP_ROOT_DIR}/cmd/inmap/testdata/output_${InMAPRunType}.shp"
 
 [aep]
-SrgSpec = "${INMAP_ROOT_DIR}/emissions/aep/testdata/srgspec_osm.json"
-SrgSpecType = "OSM"
+SrgSpecOSM = "${INMAP_ROOT_DIR}/emissions/aep/testdata/srgspec_osm.json"
 GridRef = ["${INMAP_ROOT_DIR}/emissions/aep/aeputil/testdata/gridref_osm.txt"]
 
 [aep.InventoryConfig]

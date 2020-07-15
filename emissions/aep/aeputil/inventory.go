@@ -57,13 +57,13 @@ type InventoryConfig struct {
 	// values are `tons', `tonnes', `kg', `g', and `lbs'.
 	InputUnits string
 
-	// SrgSpec gives the location of the surrogate specification file.
-	// It is used for assigning spatial locations to emissions records.
-	SrgSpec string
+	// SrgSpecSMOKE gives the location of the SMOKE-formatted
+	// surrogate specification file, if any.
+	SrgSpecSMOKE string
 
-	// SrgSpecType specifies the type of data the gridding surrogates
-	// are being created from. It can be "SMOKE" or "OSM".
-	SrgSpecType string
+	// SrgSpecOSM gives the location of the OSM-formatted
+	// surrogate specification file, if any.
+	SrgSpecOSM string
 
 	// SrgShapefileDirectory gives the location of the directory holding
 	// the shapefiles used for creating spatial surrogates.
@@ -89,7 +89,7 @@ type InventoryConfig struct {
 // in the NEIFiles field in the receiver. The returned records are
 // split up by sector.
 func (c *InventoryConfig) ReadEmissions() (map[string][]aep.Record, *aep.InventoryReport, error) {
-	srgSpecs, err := readSrgSpec(c.SrgSpec, c.SrgShapefileDirectory, c.SrgSpecType, c.SCCExactMatch, "", 0)
+	srgSpecs, err := readSrgSpec(c.SrgSpecSMOKE, c.SrgSpecOSM, c.SrgShapefileDirectory, c.SCCExactMatch, "", 0)
 	if err != nil {
 		return nil, nil, err
 	}

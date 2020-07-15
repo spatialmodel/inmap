@@ -1,6 +1,5 @@
 [Spatial]
-  SrgSpec = "testdata/surrogate_specification.csv"
-  SrgSpecType = "SMOKE"
+  SrgSpecSMOKE = "testdata/surrogate_specification.csv"
   SrgShapefileDirectory = "../testdata"
   SCCExactMatch = false
   GridRef = [
@@ -13,8 +12,7 @@
 [Inventory]
   InputUnits = "tons"
 
-  SrgSpec = "testdata/surrogate_specification.csv"
-  SrgSpecType = "SMOKE"
+  SrgSpecSMOKE = "testdata/surrogate_specification.csv"
   SrgShapefileDirectory = "../testdata"
   GridRef = [
     "testdata/gridref.txt",

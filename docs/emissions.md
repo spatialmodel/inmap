@@ -44,8 +44,7 @@ An example of how to specify SMOKE-formatted emissions is below.
 
 ``` toml
 [aep]
-SrgSpec = "srgspec.txt"
-SrgSpecType = "SMOKE"
+SrgSpecSMOKE = "srgspec.txt"
 GridRef = ["gridref.txt"]
 
 [aep.InventoryConfig]
@@ -67,14 +66,14 @@ Emissions are assumed to be per year or per month, depending on the type of SMOK
 
 `GridRef` specifies a path to a file that matches emissions records to spatial surrogates. The GridRef file is specified in the [SMOKE manual](https://www.cmascenter.org/smoke/documentation/4.6/html/ch08s04s03.html).
 
-`SrgSpec` specifies a path to a file that matches spatial surrogate codes to the spatial information used to create spatial surrogates. `SrgSpecType` specifies the file format to be used, either "SMOKE" for a [SMOKE-formatted surrogate specification file](https://raw.githubusercontent.com/spatialmodel/inmap/master/emissions/aep/data/nei2014/surrogate_specification_2014.csv) or "OSM" for a surrogate specification file matching [this format](https://github.com/spatialmodel/inmap/blob/master/emissions/aep/testdata/srgspec_osm.json) that uses [OpenStreetMap](https://www.openstreetmap.org/) data to create spatial surrogates.
+`SrgSpecSMOKE` and `SrgSpecOSM` specify paths to files that match spatial surrogate codes to the spatial information used to create spatial surrogates. Two file formats can be used either `SrgSpecSMOKE` for a [SMOKE-formatted surrogate specification file](https://raw.githubusercontent.com/spatialmodel/inmap/master/emissions/aep/data/nei2014/surrogate_specification_2014.csv) or `SrgSpecOSM` for a surrogate specification file matching [this format](https://github.com/spatialmodel/inmap/blob/master/emissions/aep/testdata/srgspec_osm.json) that uses [OpenStreetMap](https://www.openstreetmap.org/) data to create spatial surrogates.
 
 If the fields for `GridRef` and `SrgSpec` are left empty, then emissions records will be allocated directly to the InMAP grid: no spatial surrogates will be used.
 Here is an example of the same configuration above, but changed so that no spatial surrogates are used:
 
 ``` toml
 [aep]
-SrgSpec = ""
+SrgSpecSMOKE = ""
 GridRef = []
 
 [aep.InventoryConfig]
@@ -96,7 +95,7 @@ Specifying COARDS emissions files is almost the same as specifying SMOKE-formatt
 
 ``` toml
 [aep]
-SrgSpec = ""
+SrgSpecSMOKE = ""
 GridRef = []
 
 [aep.InventoryConfig]

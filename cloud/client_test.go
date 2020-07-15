@@ -71,8 +71,8 @@ func TestClient_fake(t *testing.T) {
 			"--aep.SpatialConfig.MaxCacheEntries=10",
 			"--aep.SpatialConfig.SpatialCache=",
 			"--aep.SrgShapefileDirectory=no_default",
-			"--aep.SrgSpec=",
-			"--aep.SrgSpecType=no_default",
+			"--aep.SrgSpecOSM=",
+			"--aep.SrgSpecSMOKE=",
 		}
 		if len(cmd) != len(wantCmd) {
 			t.Errorf("wrong command length: %d != %d", len(cmd), len(wantCmd))
@@ -231,8 +231,8 @@ func TestClient_fakeCOARDS(t *testing.T) {
 			"--aep.SpatialConfig.MaxCacheEntries=10",
 			"--aep.SpatialConfig.SpatialCache=",
 			"--aep.SrgShapefileDirectory=no_default",
-			"--aep.SrgSpec=file://test/test/test_user/test_job/f299df4d61e915c2d415b18ceaa1339a2cd7f8481d7d3b6d13675bc0516a5c00.json",
-			"--aep.SrgSpecType=OSM",
+			"--aep.SrgSpecOSM=file://test/test/test_user/test_job/f299df4d61e915c2d415b18ceaa1339a2cd7f8481d7d3b6d13675bc0516a5c00.json",
+			"--aep.SrgSpecSMOKE=",
 		}
 		if len(cmd) != len(wantCmd) {
 			t.Errorf("wrong command length: %d != %d", len(cmd), len(wantCmd))
@@ -259,8 +259,7 @@ func TestClient_fakeCOARDS(t *testing.T) {
 	cfg := inmaputil.InitializeConfig()
 	cfg.Set("EmissionsShapefiles", "[]")
 	cfg.Set("aep.InventoryConfig.COARDSFiles", "{\"all\":[\"${INMAP_ROOT_DIR}/emissions/aep/testdata/emis_coards_hawaii.nc\"]}")
-	cfg.Set("aep.SrgSpec", "${INMAP_ROOT_DIR}/emissions/aep/testdata/srgspec_osm.json")
-	cfg.Set("aep.SrgSpecType", "OSM")
+	cfg.Set("aep.SrgSpecOSM", "${INMAP_ROOT_DIR}/emissions/aep/testdata/srgspec_osm.json")
 	cfg.Set("aep.GridRef", []string{"${INMAP_ROOT_DIR}/emissions/aep/aeputil/testdata/gridref_osm.txt"})
 	cfg.Set("aep.InventoryConfig.InputUnits", "tons")
 	cfg.Set("aep.InventoryConfig.COARDSYear", 2016)

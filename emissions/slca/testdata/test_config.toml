@@ -49,8 +49,7 @@ FugitiveDustSectors = ["test_adj"]
 
 
 [SpatialConfig]
-SrgSpec = "${INMAP_ROOT_DIR}/emissions/aep/aeputil/testdata/surrogate_specification.csv"
-SrgSpecType = "SMOKE"
+SrgSpecSMOKE = "${INMAP_ROOT_DIR}/emissions/aep/aeputil/testdata/surrogate_specification.csv"
 SrgShapefileDirectory = "${INMAP_ROOT_DIR}/emissions/aep/testdata/"
 SCCExactMatch = false
 GridRef = [
@@ -65,8 +64,7 @@ GridRef = [
 
 [InventoryConfig]
 InputUnits = "tons"
-SrgSpec = "${INMAP_ROOT_DIR}/emissions/aep/aeputil/testdata/surrogate_specification.csv"
-SrgSpecType = "SMOKE"
+SrgSpecSMOKE = "${INMAP_ROOT_DIR}/emissions/aep/aeputil/testdata/surrogate_specification.csv"
 SrgShapefileDirectory = "${INMAP_ROOT_DIR}/emissions/aep/testdata/"
 SCCExactMatch = false
 GridRef = [
@@ -123,8 +121,7 @@ GridRef = [
 
 [EvaluationInventoryConfig]
 InputUnits = "tons"
-SrgSpec = "${INMAP_ROOT_DIR}/emissions/aep/aeputil/testdata/surrogate_specification.csv"
-SrgSpecType = "SMOKE"
+SrgSpecSMOKE = "${INMAP_ROOT_DIR}/emissions/aep/aeputil/testdata/surrogate_specification.csv"
 SrgShapefileDirectory = "${INMAP_ROOT_DIR}/emissions/aep/testdata/"
 SCCExactMatch = false
 GridRef = [

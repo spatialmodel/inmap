@@ -142,8 +142,7 @@ func TestSpatial_coards(t *testing.T) {
 	}
 	c.Inventory.COARDSYear = 2016
 
-	c.Spatial.SrgSpec = "../testdata/srgspec_osm.json"
-	c.Spatial.SrgSpecType = "OSM"
+	c.Spatial.SrgSpecOSM = "../testdata/srgspec_osm.json"
 	c.Spatial.GridRef = []string{"testdata/gridref_osm.txt"}
 	c.Spatial.OutputSR = "+proj=longlat"
 
@@ -242,7 +241,8 @@ func TestSpatial_coards_nosurrogate(t *testing.T) {
 	}
 	c.Inventory.COARDSYear = 2016
 
-	c.Spatial.SrgSpec = ""
+	c.Spatial.SrgSpecSMOKE = ""
+	c.Spatial.SrgSpecOSM = ""
 	c.Spatial.GridRef = []string{}
 	c.Spatial.OutputSR = "+proj=longlat"
 
