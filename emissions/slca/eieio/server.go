@@ -136,7 +136,7 @@ func NewServer(c *ServerConfig, prefix string, hr ...epi.HRer) (*Server, error) 
 		return nil, fmt.Errorf("eioserve: loading demographic consumption: %v", err)
 	}
 
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(grpc.MaxSendMsgSize(3.0e9)) // Send messages up to 3 gb.
 	eieiorpc.RegisterEIEIOrpcServer(grpcServer, model)
 
 	model.grpcServer = grpcweb.WrapServer(grpcServer, grpcweb.WithWebsockets(true))
