@@ -88,6 +88,8 @@ type SpatialProcessor struct {
 	// longer to compute. If srgCellRatio > 1, all surrogate
 	// shapes will be processed.
 	SrgCellRatio int
+
+	MsgChan chan string
 }
 
 // NewSpatialProcessor creates a new spatial processor.
@@ -157,6 +159,9 @@ func newCache(diskCachePath string, memCacheSize int) (*requestcache.Cache, erro
 			}
 			return requestcache.NewCache(dedup, mc, cf), nil
 		} else {
+			if err := os.MkdirAll(diskCachePath, os.ModePerm); err != nil {
+				return nil, err
+			}
 			return requestcache.NewCache(dedup, mc,
 				requestcache.Disk(diskCachePath)), nil
 		}
@@ -282,7 +287,7 @@ func (sp *SpatialProcessor) Surrogate(srgSpec SrgSpec, grid *GridDef, loc *Locat
 		return nil, false, err
 	}
 
-	s := &srgGrid{srg: srgSpec, gridData: grid, loc: loc, sp: sp}
+	s := &srgGrid{srg: srgSpec, gridData: grid, loc: loc, sp: sp, msgChan: sp.MsgChan}
 	req := sp.cache.NewRequestRecursive(context.Background(), s)
 	result := new(GriddedSrgData)
 	if err := req.Result((*griddedSrgDataHolder)(result)); err != nil {
@@ -298,7 +303,7 @@ func (sp *SpatialProcessor) Surrogate(srgSpec SrgSpec, grid *GridDef, loc *Locat
 		if err != nil {
 			return nil, false, err
 		}
-		s := &srgGrid{srg: newSrgSpec, gridData: grid, loc: loc, sp: sp}
+		s := &srgGrid{srg: newSrgSpec, gridData: grid, loc: loc, sp: sp, msgChan: sp.MsgChan}
 		result := new(GriddedSrgData)
 		req := sp.cache.NewRequestRecursive(context.Background(), s)
 		if err := req.Result((*griddedSrgDataHolder)(result)); err != nil {

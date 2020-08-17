@@ -23,7 +23,6 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
-	"log"
 	"math"
 	"runtime"
 	"strings"
@@ -174,6 +173,7 @@ type srgGrid struct {
 	gridData *GridDef
 	loc      *Location
 	sp       *SpatialProcessor
+	msgChan  chan string
 }
 
 func (sg *srgGrid) Key() string {
@@ -194,7 +194,9 @@ func (sg *srgGrid) Run(_ context.Context, _ *requestcache.Cache, res requestcach
 	if len(srg.mergeNames()) != 0 {
 		return sp.createMerged(srg, gridData, loc, res)
 	}
-	log.Printf("creating surrogate `%s` for location %s", srg.name(), loc)
+	if sg.msgChan != nil {
+		sg.msgChan <- fmt.Sprintf("creating surrogate `%s` for location %s", srg.name(), loc)
+	}
 
 	srgData, err := srg.getSrgData(gridData, loc, sp.SimplifyTolerance)
 	if err != nil {

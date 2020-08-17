@@ -21,9 +21,11 @@ package aeputil
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"runtime"
 	"sync"
+	"time"
 
 	"github.com/ctessum/sparse"
 
@@ -345,6 +347,21 @@ func (c *SpatialConfig) setupSpatialProcessor() (*aep.SpatialProcessor, error) {
 	sp := aep.NewSpatialProcessor(srgSpecs, []*aep.GridDef{grid}, gridRef, inSR, c.SCCExactMatch)
 	sp.DiskCachePath = c.SpatialCache
 	sp.SimplifyTolerance = c.SimplifyTolerance
+
+	// Set up logging.
+	sp.MsgChan = make(chan string)
+	logTick := time.Tick(2 * time.Second)
+	go func() {
+		for msg := range sp.MsgChan {
+			select {
+			case <-logTick:
+				log.Println(msg)
+			default:
+				runtime.Gosched()
+			}
+		}
+	}()
+
 	return sp, nil
 }
 
