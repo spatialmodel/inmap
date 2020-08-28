@@ -127,7 +127,7 @@ func (c *Client) RunJob(ctx context.Context, job *cloudrpc.JobSpec) (*cloudrpc.J
 	k8sJob := createJob(userJobName(user, job.Name), job.Cmd, job.Args, c.Image, core.ResourceList{
 		core.ResourceMemory: resource.MustParse(fmt.Sprintf("%dGi", job.MemoryGB)),
 	}, c.Volumes)
-	_, err = c.jobControl.Create(k8sJob)
+	_, err = c.jobControl.Create(ctx, k8sJob, meta.CreateOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +144,7 @@ func (c *Client) Delete(ctx context.Context, job *cloudrpc.JobName) (*cloudrpc.J
 		return nil, err
 	}
 	p := meta.DeletePropagationForeground
-	return job, c.jobControl.Delete(userJobName(user, job.Name), &meta.DeleteOptions{
+	return job, c.jobControl.Delete(ctx, userJobName(user, job.Name), meta.DeleteOptions{
 		PropagationPolicy: &p,
 	})
 }
@@ -158,7 +158,7 @@ func (c *Client) getk8sJob(ctx context.Context, job *cloudrpc.JobName) (*batch.J
 		return nil, err
 	}
 	jobName := userJobName(user, job.Name)
-	jobList, err := c.jobControl.List(meta.ListOptions{})
+	jobList, err := c.jobControl.List(ctx, meta.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
