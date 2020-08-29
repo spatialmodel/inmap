@@ -740,7 +740,7 @@ variable specifies the information to be output.`,
 			name:        "EmissionMaskGeoJSON",
 			usage:       `EmissionMaskGeoJSON is an optional file containing a GeoJSON-formatted polygon string that specifies the area outside of which emissions will be ignored. The mask is assumed to  use the same spatial reference as VarGrid.GridProj. Example="{\"type\": \"Polygon\",\"coordinates\": [ [ [-4000, -4000], [4000, -4000], [4000, 4000], [-4000, 4000] ] ] }"`,
 			defaultVal:  "",
-			isInputFile: false,
+			isInputFile: true,
 			flagsets:    []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.srPredictCmd.Flags(), cfg.cloudStartCmd.Flags()},
 		},
 		{
