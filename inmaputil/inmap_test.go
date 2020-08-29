@@ -19,6 +19,7 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package inmaputil
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -90,7 +91,13 @@ func TestInMAPDynamic_mask(t *testing.T) {
 	cfg.Set("createGrid", false) // this isn't used for the dynamic grid
 	os.Setenv("InMAPRunType", "dynamic")
 	cfg.Set("config", "../cmd/inmap/configExample.toml")
-	cfg.Set("EmissionMaskGeoJSON", `{"type": "Polygon","coordinates": [ [ [-4000, -4000], [4000, -4000], [4000, 4000], [-4000, 4000] ] ] }`)
+	f, err := os.Create("tmp_mask.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove("tmp_mask.json")
+	fmt.Fprint(f, `{"type": "Polygon","coordinates": [ [ [-4000, -4000], [4000, -4000], [4000, 4000], [-4000, 4000] ] ] }`)
+	cfg.Set("EmissionMaskGeoJSON", "tmp_mask.json")
 	cfg.Root.SetArgs([]string{"run", "steady"})
 	defer os.Remove(os.ExpandEnv("$INMAP_ROOT_DIR/cmd/inmap/testdata/output_dynamic.log"))
 	defer inmap.DeleteShapefile(os.ExpandEnv("$INMAP_ROOT_DIR/cmd/inmap/testdata/output_dynamic.shp"))

@@ -23,6 +23,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -322,15 +323,23 @@ func getStringMapStringSlice(varName string, cfg *viper.Viper) (map[string][]str
 }
 
 // parseMask returns a mask polygon represented by the
-// given GeoJSON string.
-func parseMask(maskGeoJSON string) (geom.Polygon, error) {
+// given GeoJSON file.
+func parseMask(maskGeoJSONFile string) (geom.Polygon, error) {
 	var mask geom.Polygon
-	if maskGeoJSON != "" {
-		m, err := geojson.Decode([]byte(maskGeoJSON))
+	if m := maskGeoJSONFile; m != "" {
+		f, err := os.Open(os.ExpandEnv(m))
+		if err != nil {
+			return nil, fmt.Errorf("opening emissions mask file: %w", err)
+		}
+		b, err := ioutil.ReadAll(f)
+		if err != nil {
+			return nil, fmt.Errorf("reading emissions mask file: %w", err)
+		}
+		j, err := geojson.Decode(b)
 		if err != nil {
 			return nil, fmt.Errorf("decoding EmissionMaskGEOJSON: %w", err)
 		}
-		mask = m.(geom.Polygon)
+		mask = j.(geom.Polygon)
 	}
 	return mask, nil
 }

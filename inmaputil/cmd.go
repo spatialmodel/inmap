@@ -737,9 +737,8 @@ variable specifies the information to be output.`,
 			flagsets:    []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.srPredictCmd.Flags(), cfg.cloudStartCmd.Flags()},
 		},
 		{
-			name: "EmissionMaskGeoJSON",
-			usage: `EmissionMaskGeoJSON is an optional GeoJSON-formatted polygon string that specifies the area outside of which emissions will be ignored. The mask is assumed to  use the same spatial reference as VarGrid.GridProj. Example="{\"type\": \"Polygon\",\"coordinates\": [ [ [-4000, -4000], [4000, -4000], [4000, 4000], [-4000, 4000] ] ] }"
-`,
+			name:        "EmissionMaskGeoJSON",
+			usage:       `EmissionMaskGeoJSON is an optional file containing a GeoJSON-formatted polygon string that specifies the area outside of which emissions will be ignored. The mask is assumed to  use the same spatial reference as VarGrid.GridProj. Example="{\"type\": \"Polygon\",\"coordinates\": [ [ [-4000, -4000], [4000, -4000], [4000, 4000], [-4000, 4000] ] ] }"`,
 			defaultVal:  "",
 			isInputFile: false,
 			flagsets:    []*pflag.FlagSet{cfg.runCmd.PersistentFlags(), cfg.srPredictCmd.Flags(), cfg.cloudStartCmd.Flags()},
