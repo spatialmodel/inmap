@@ -162,7 +162,7 @@ concentrations with no temporal variability.`,
 				shapeFiles[i] = maybeDownload(context.TODO(), shapeFiles[i], outChan)
 			}
 
-			mask, err := parseMask(cfg.GetString("EmissionMaskGeoJSON"))
+			mask, err := parseMask(maybeDownload(context.Background(), cfg.GetString("EmissionMaskGeoJSON"), outChan))
 			if err != nil {
 				return err
 			}
