@@ -186,7 +186,7 @@ concentrations with no temporal variability.`,
 				maybeDownload(context.TODO(), os.ExpandEnv(cfg.GetString("InMAPData")), outChan),
 				maybeDownload(context.TODO(), os.ExpandEnv(cfg.GetString("VariableGridData")), outChan),
 				cfg.GetInt("NumIterations"),
-				!cfg.GetBool("static"), cfg.GetBool("createGrid"), DefaultScienceFuncs, nil, nil, nil,
+				!cfg.GetBool("static"), cfg.GetBool("creategrid"), DefaultScienceFuncs, nil, nil, nil,
 				simplechem.Mechanism{})
 		},
 		DisableAutoGenTag: true,
