@@ -197,7 +197,7 @@ func Run(CobraCommand *cobra.Command, LogFile string, OutputFile string, OutputA
 		return err
 	}
 
-	aepSetEmis := setEmissionsAEP(inventoryConfig, spatialConfig, emis)
+	aepSetEmis := setEmissionsAEP(inventoryConfig, spatialConfig, emis, EmissionsMask)
 
 	// Only load the population if we're creating the grid.
 	var pop *inmap.Population
@@ -233,6 +233,7 @@ func Run(CobraCommand *cobra.Command, LogFile string, OutputFile string, OutputA
 				VarGrid.MutateGrid(mutator, ctmData, pop, mr, nil, m, msgLog),
 				aepSetEmis,
 				inmap.SetTimestepCFL(),
+				o.CheckOutputVars(m),
 			}
 		} else { // pre-created static grid
 			var r io.Reader
@@ -330,7 +331,7 @@ func Run(CobraCommand *cobra.Command, LogFile string, OutputFile string, OutputA
 // The returned DomainManipulator must be run after each time the grid changes.
 // extraEmis specifies any extra emissions that should be added. It is ignored
 // if nil.
-func setEmissionsAEP(inventoryConfig *aeputil.InventoryConfig, spatialConfig *aeputil.SpatialConfig, extraEmis *inmap.Emissions) func(d *inmap.InMAP) error {
+func setEmissionsAEP(inventoryConfig *aeputil.InventoryConfig, spatialConfig *aeputil.SpatialConfig, extraEmis *inmap.Emissions, mask geom.Polygon) func(d *inmap.InMAP) error {
 	// Read in emissions records and save in memory.
 	recs := make(map[string][]aep.Record)
 	var err error
@@ -382,6 +383,7 @@ func setEmissionsAEP(inventoryConfig *aeputil.InventoryConfig, spatialConfig *ae
 			}
 		}
 		emis := inmap.NewEmissions()
+		emis.Mask = mask
 		for _, e := range emisRecs {
 			emis.Add(e)
 		}
