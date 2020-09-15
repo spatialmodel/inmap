@@ -149,11 +149,11 @@ func ReadCOARDSFile(file string, begin, end time.Time, units InputUnits, sourceD
 		dx := gridPointsToGridSpacing(lons, i)
 		y := lats[j]
 		x := lons[i]
-		min := geom.Point{X: x - dx/2, Y: y - dy/2}
-		max := geom.Point{X: x + dx/2, Y: y + dy/2}
+		min := geom.Point{X: x - dx/2, Y: y - math.Abs(dy/2)}
+		max := geom.Point{X: x + dx/2, Y: y + math.Abs(dy/2)}
 
 		r := &basicPolygonRecord{
-			Polygonal:    &geom.Bounds{Min:min, Max:max},
+			Polygonal:    &geom.Bounds{Min: min, Max: max},
 			SourceData:   sourceData,
 			SR:           sr,
 			LocationName: fmt.Sprintf("%d_%d", j, i),
