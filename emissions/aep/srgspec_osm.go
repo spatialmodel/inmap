@@ -142,7 +142,7 @@ func (input *readSrgDataOSMInput) Run(ctx context.Context) (interface{}, error) 
 		return nil, err
 	}
 
-	data, err := osm.ExtractFile(context.Background(), os.ExpandEnv(srg.OSMFile), osm.KeepTags(srg.Tags))
+	data, err := osm.ExtractFile(context.Background(), os.ExpandEnv(srg.OSMFile), osm.KeepTags(srg.Tags), false)
 	if err != nil {
 		return nil, fmt.Errorf("aep: extracting OSM spatial surrogate data for tags %v: %v", srg.Tags, err)
 	}

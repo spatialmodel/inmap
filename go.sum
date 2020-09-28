@@ -84,8 +84,8 @@ github.com/ctessum/atmos v0.0.0-20170526022537-cba69f7ca647 h1:lUT29TZ1puayHZ2KL
 github.com/ctessum/atmos v0.0.0-20170526022537-cba69f7ca647/go.mod h1:sPaXeGajd2kT9U0BHxsZRfon2LjMH3Ohs2VOF+ACNSY=
 github.com/ctessum/cdf v0.0.0-20181201011353-edced208ea9d h1:mIQwc9ihMh23CRrvN5Vyv2T5E73NVALNguZizrV9XoI=
 github.com/ctessum/cdf v0.0.0-20181201011353-edced208ea9d/go.mod h1:E45T61NEPsdFg0n3CqBwcG7jbwHTRdhOufhVTm3/Dtc=
-github.com/ctessum/geom v0.2.10-0.20200417141930-c1ad83ff7e0d h1:Z+MI31PiGuMxlejFqT6ibKT8JxEehLDrfGCvqprLSKI=
-github.com/ctessum/geom v0.2.10-0.20200417141930-c1ad83ff7e0d/go.mod h1:E6Ji+jwCV2ejMYnDnmTjeY6SDNCbDDZVwQjbr+fQBoo=
+github.com/ctessum/geom v0.2.10 h1:2jwVCZiwFkn3newoTPhMf/M1+8DEe0jKElUrZs9u4bw=
+github.com/ctessum/geom v0.2.10/go.mod h1:qRaD78k6ttfldYw+SkkdobyWPJDmgc3yYz3thx8WHP4=
 github.com/ctessum/go-leaflet v0.0.0-20170724133759-2f9e4c38fb5e h1:IV59uAui/Q61m9UyCjpOCEl0Bg1g9kwsgxcF5Zt8yTQ=
 github.com/ctessum/go-leaflet v0.0.0-20170724133759-2f9e4c38fb5e/go.mod h1:q862W3zi1fUPpnVc9HFYNESw9P+G52Nkq7r2xy2xWYI=
 github.com/ctessum/gobra v0.0.0-20180516235632-ddfa5eeb3017 h1:51Dc8x+DBWx1x+U9lCAXLG9E3ktMPgW08n2+7uXAOp0=
@@ -331,10 +331,10 @@ github.com/onsi/gomega v0.0.0-20170829124025-dcabb60a477c/go.mod h1:C1qb7wdrVGGV
 github.com/onsi/gomega v1.7.0 h1:XPnZz8VVBHjVsy1vzJmRwIcSwiUO+JFfrv/xGiigmME=
 github.com/onsi/gomega v1.7.0/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1CpauHY=
 github.com/openzipkin/zipkin-go v0.1.1/go.mod h1:NtoC/o8u3JlF1lSlyPNswIbeQH9bJTmOf0Erfk+hxe8=
-github.com/paulmach/orb v0.1.5 h1:GUcATabvxciqEzGd+c01/9ek3B6pUp9OdcIHFSDDSSg=
-github.com/paulmach/orb v0.1.5/go.mod h1:pPwxxs3zoAyosNSbNKn1jiXV2+oovRDObDKfTvRegDI=
-github.com/paulmach/osm v0.1.0 h1:xeA0QB6vIarZjShwGrlEpAMEiNYXoZNdoIX3h/n3Oi8=
-github.com/paulmach/osm v0.1.0/go.mod h1:7faVIKoBMbhrV3ZTgDjm8Qo5AlXhlMi2hVAlejui1Tk=
+github.com/paulmach/orb v0.1.6 h1:C8klK4r0mR0MnfSk+GvEFFKLrQVwjQ+FlhtXgpaupjg=
+github.com/paulmach/orb v0.1.6/go.mod h1:pPwxxs3zoAyosNSbNKn1jiXV2+oovRDObDKfTvRegDI=
+github.com/paulmach/osm v0.1.1 h1:xqzJUl9lAyt6aMOueuft5JUdQf0NIAPK4LwVGhZXnJ0=
+github.com/paulmach/osm v0.1.1/go.mod h1:/UEV7XqKKTG3/46W+MtSmIl81yjV7cGoLkpol3S094I=
 github.com/pelletier/go-toml v1.0.1 h1:0nx4vKBl23+hEaCOV1mFhKS9vhhBtFYWC7rQY0vJAyE=
 github.com/pelletier/go-toml v1.0.1/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
 github.com/peterbourgon/diskv v2.0.1+incompatible h1:UBdAOUP5p4RWqPBg048CAvpKN+vxiaj6gdUUzhl4XmI=
@@ -529,6 +529,8 @@ golang.org/x/sync v0.0.0-20190423024810-112230192c58 h1:8gQV6CLnAEikrhgkHFbMAEha
 golang.org/x/sync v0.0.0-20190423024810-112230192c58/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e h1:vcxGaoTs7kV8m5Np9uUNQin4BrLOthgV7252N8V+FwY=
 golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208 h1:qwRHBd0NqMbJxfbotnDhm2ByMI1Shq4Y6oRJo21SGJA=
+golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sys v0.0.0-20180830151530-49385e6e1522/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20180905080454-ebe1bf3edb33/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20180909124046-d0be0721c37e h1:o3PsSEY8E4eXWkXrIP9YJALUkVZqzHJT5DOasTyn8Vs=
