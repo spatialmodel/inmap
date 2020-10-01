@@ -71,6 +71,10 @@ type SpatialConfig struct {
 	// data for quick access. If this is left empty, no cache will be used.
 	SpatialCache string
 
+	// SrgDataCache specifies the location for caching spatial surrogate input data.
+	// If it is empty, the input surrogate data will be stored in SpatialCache.
+	SrgDataCache string
+
 	// MaxCacheEntries specifies the maximum number of emissions and concentrations
 	// surrogates to hold in a memory cache. Larger numbers can result in faster
 	// processing but increased memory usage.
@@ -322,7 +326,14 @@ func (c *SpatialConfig) setupSpatialProcessor() (*aep.SpatialProcessor, error) {
 		return nil, fmt.Errorf("aeputil: GridCells must be specified for spatial processor")
 	}
 
-	srgSpecs, err := readSrgSpec(c.SrgSpecSMOKE, c.SrgSpecOSM, c.SrgShapefileDirectory, c.SCCExactMatch, c.SpatialCache, c.MaxCacheEntries)
+	var cacheLoc string
+	if c.SrgDataCache != "" {
+		cacheLoc = c.SrgDataCache
+	} else {
+		cacheLoc = c.SpatialCache
+	}
+
+	srgSpecs, err := readSrgSpec(c.SrgSpecSMOKE, c.SrgSpecOSM, c.SrgShapefileDirectory, c.SCCExactMatch, cacheLoc, c.MaxCacheEntries)
 	if err != nil {
 		return nil, err
 	}

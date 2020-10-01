@@ -49,6 +49,7 @@ func TestRunInputFromViper(t *testing.T) {
 		"--aep.GridRef":                       "",
 		"--aep.InventoryConfig.NEIFiles":      "",
 		"--aep.SpatialConfig.SpatialCache":    "",
+		"--aep.SpatialConfig.SrgDataCache":    "",
 		"--aep.SrgSpecSMOKE":                  "",
 		"--aep.SrgSpecOSM":                    "",
 		"--VarGrid.MortalityRateFile":         "764874ad5081665459c67d40607f68df6fc689aa695b4822e012aef84cba5394.shp",

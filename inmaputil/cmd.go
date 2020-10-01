@@ -872,6 +872,12 @@ variable specifies the information to be output.`,
 			flagsets:   []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags()},
 		},
 		{
+			name:       "aep.SpatialConfig.SrgDataCache",
+			usage:      `SrgDataCache specifies the location for caching spatial surrogate input data. If it is empty, the input surrogate data will be stored in SpatialCache.`,
+			defaultVal: "",
+			flagsets:   []*pflag.FlagSet{cfg.steadyCmd.Flags(), cfg.cloudStartCmd.Flags()},
+		},
+		{
 			name: "aep.SpatialConfig.MaxCacheEntries",
 			usage: `MaxCacheEntries specifies the maximum number of emissions and concentrations surrogates to hold in a memory cache. Larger numbers can result in faster processing but increased memory usage.
 `,

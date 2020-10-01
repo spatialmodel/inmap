@@ -251,6 +251,7 @@ func aeputilConfig(cfg *viper.Viper) (*aeputil.InventoryConfig, *aeputil.Spatial
 		OutputSR:              os.ExpandEnv(cfg.GetString("VarGrid.GridProj")),
 		InputSR:               cfg.GetString("aep.SpatialConfig.InputSR"),
 		SpatialCache:          cfg.GetString("aep.SpatialConfig.SpatialCache"),
+		SrgDataCache:          cfg.GetString("aep.SpatialConfig.SrgDataCache"),
 		MaxCacheEntries:       cfg.GetInt("aep.SpatialConfig.MaxCacheEntries"),
 		GridName:              cfg.GetString("aep.SpatialConfig.GridName"),
 	}
