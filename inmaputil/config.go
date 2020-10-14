@@ -340,7 +340,16 @@ func parseMask(maskGeoJSONFile string) (geom.Polygon, error) {
 		if err != nil {
 			return nil, fmt.Errorf("decoding EmissionMaskGEOJSON: %w", err)
 		}
-		mask = j.(geom.Polygon)
+		switch msk := j.(type) {
+		case geom.Polygon:
+			mask = msk
+		case geom.MultiPolygon:
+			for _, p := range msk {
+				mask = append(mask, p...)
+			}
+		default:
+			return nil, fmt.Errorf("invalid emission mask geometry type %T", j)
+		}
 	}
 	return mask, nil
 }

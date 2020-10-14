@@ -28,18 +28,40 @@ import (
 )
 
 func TestParseMask(t *testing.T) {
-	f, err := os.Create("tmp_mask.json")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove("tmp_mask.json")
-	fmt.Fprint(f, `{"type": "Polygon","coordinates": [ [ [1, 1], [1, 1], [1, 1], [1, 1] ] ] }`)
-	mask, err := parseMask("tmp_mask.json")
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := geom.Polygon{geom.Path{geom.Point{X: 1, Y: 1}, geom.Point{X: 1, Y: 1}, geom.Point{X: 1, Y: 1}, geom.Point{X: 1, Y: 1}}}
-	if !reflect.DeepEqual(mask, want) {
-		t.Errorf("%v != %v", mask, want)
-	}
+	t.Run("polygon", func(t *testing.T) {
+		f, err := os.Create("tmp_mask.json")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.Remove("tmp_mask.json")
+		fmt.Fprint(f, `{"type": "Polygon","coordinates": [ [ [1, 1], [1, 1], [1, 1], [1, 1] ] ] }`)
+		mask, err := parseMask("tmp_mask.json")
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := geom.Polygon{geom.Path{geom.Point{X: 1, Y: 1}, geom.Point{X: 1, Y: 1}, geom.Point{X: 1, Y: 1}, geom.Point{X: 1, Y: 1}}}
+		if !reflect.DeepEqual(mask, want) {
+			t.Errorf("%v != %v", mask, want)
+		}
+	})
+	t.Run("multipolygon", func(t *testing.T) {
+		f, err := os.Create("tmp_mask.json")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.Remove("tmp_mask.json")
+		fmt.Fprint(f, `{"type": "MultiPolygon","coordinates": [ [ [ [1, 1], [1, 1], [1, 1], [1, 1] ] ], [ [ [1, 1], [1, 1], [1, 1], [1, 1] ] ] ] }`)
+		mask, err := parseMask("tmp_mask.json")
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := geom.Polygon{
+			geom.Path{geom.Point{X: 1, Y: 1}, geom.Point{X: 1, Y: 1}, geom.Point{X: 1, Y: 1}, geom.Point{X: 1, Y: 1}},
+			geom.Path{geom.Point{X: 1, Y: 1}, geom.Point{X: 1, Y: 1}, geom.Point{X: 1, Y: 1}, geom.Point{X: 1, Y: 1}},
+		}
+		if !reflect.DeepEqual(mask, want) {
+			t.Errorf("%v != %v", mask, want)
+		}
+	})
+
 }
