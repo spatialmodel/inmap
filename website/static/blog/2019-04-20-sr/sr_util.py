@@ -70,19 +70,21 @@ def run_sr(emis, model, output_variables, emis_units="tons/year"):
     job_name = "run_aqm_%s"%start
     emis_file = os.path.join(_tmpdir.name, "%s.shp"%(job_name))
     emis.to_file(emis_file)
-
+    
+    version = "1.7.2"
+    
     if _inmap_exe == None:
         ost = platform.system()
         print("Downloading InMAP executable for %s               "%ost, end='\r')
         if ost == "Windows":
-            _inmap_exe = os.path.join(_tmpdir.name, "inmap_1.6.1.exe")
-            _download("https://github.com/spatialmodel/inmap/releases/download/v1.6.1/inmap1.6.1windows-amd64.exe", _inmap_exe)
+            _inmap_exe = os.path.join(_tmpdir.name, "inmap_%s.exe"%version)
+            _download("https://github.com/spatialmodel/inmap/releases/download/v%s/inmap%swindows-amd64.exe"%(version, version), _inmap_exe)
         elif ost == "Darwin":
-            _inmap_exe = os.path.join(_tmpdir.name, "inmap_1.6.1")
-            _download("https://github.com/spatialmodel/inmap/releases/download/v1.6.1/inmap1.6.1darwin-amd64", _inmap_exe)
+            _inmap_exe = os.path.join(_tmpdir.name, "inmap_%s"%version)
+            _download("https://github.com/spatialmodel/inmap/releases/download/v%s/inmap%sdarwin-amd64"%(version, version), _inmap_exe)
         elif ost == "Linux":
-            _inmap_exe = os.path.join(_tmpdir.name, "inmap_1.6.1")
-            _download("https://github.com/spatialmodel/inmap/releases/download/v1.6.1/inmap1.6.1linux-amd64", _inmap_exe)
+            _inmap_exe = os.path.join(_tmpdir.name, "inmap_%s"%version)
+            _download("https://github.com/spatialmodel/inmap/releases/download/v%s/inmap%slinux-amd64"%(version, version), _inmap_exe)
         else:
             raise(OSError("invalid operating system %s"%(ost)))
         os.chmod(_inmap_exe, stat.S_IXUSR|stat.S_IRUSR|stat.S_IWUSR)
