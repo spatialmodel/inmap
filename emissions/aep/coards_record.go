@@ -71,7 +71,15 @@ func readCOARDSVar(nc *cdf.File, v string) ([]float64, error) {
 
 	noDataI := nc.Header.GetAttribute(v, "_FillValue")
 	if noDataI != nil {
-		noData := float64(noDataI.([]float32)[0])
+		var noData float64
+		switch noDataI.(type) {
+		case []float32:
+			noData = float64(noDataI.([]float32)[0])
+		case []float64:
+			noData = noDataI.([]float64)[0]
+		default:
+			return nil, fmt.Errorf("invalid type for COARDS FillValue: %T", noDataI)
+		}
 		for i, d := range data {
 			if d == noData {
 				data[i] = math.NaN()
