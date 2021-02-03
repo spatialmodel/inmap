@@ -88,7 +88,7 @@ const (
 	// ratios
 	NOxToN = mwN / mwNOx
 	NtoNO3 = mwNO3 / mwN
-	SOxToS = mwSO2 / mwS
+	SOxToS = mwS / mwSO2
 	StoSO4 = mwSO4 / mwS
 	NH3ToN = mwN / mwNH3
 	NtoNH4 = mwNH4 / mwN

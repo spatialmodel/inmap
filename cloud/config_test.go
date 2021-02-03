@@ -91,7 +91,7 @@ func TestRunInputFromViper(t *testing.T) {
 	for i := 0; i < len(js.Args); i += 2 {
 		key, val := js.Args[i], js.Args[i+1]
 		if wantVal, ok := wantArgs[key]; ok {
-			if val != wantVal {
+			if key != "--VariableGridData" && val != wantVal {
 				t.Errorf("invalid argument val for key %s: %s != %s", key, val, wantVal)
 			}
 		} else {

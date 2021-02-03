@@ -71,9 +71,9 @@ func TestChemistry(t *testing.T) {
 	c := d.Cells()[0]
 	sum := 0.
 	sum += c.Cf[igOrg] + c.Cf[ipOrg]
-	sum += (c.Cf[igNO] + c.Cf[ipNO]) / inmap.NOxToN
-	sum += (c.Cf[igNH] + c.Cf[ipNH]) / inmap.NH3ToN
-	sum += (c.Cf[igS] + c.Cf[ipS]) / inmap.SOxToS
+	sum += (c.Cf[igNO] + c.Cf[ipNO]) / NOxToN
+	sum += (c.Cf[igNH] + c.Cf[ipNH]) / NH3ToN
+	sum += (c.Cf[igS] + c.Cf[ipS]) / SOxToS
 	sum += c.Cf[iPM2_5]
 	sum *= c.Volume
 
@@ -81,14 +81,14 @@ func TestChemistry(t *testing.T) {
 		t.Error("chemistry appears not to have occured")
 	}
 	if different(sum, 5*E*d.Dt, testTolerance) {
-		t.Error("different")
+		t.Errorf("different: %g != %g", sum, 5*E*d.Dt)
 	}
 
 	v, err := m.Value(c, "SOxEmissions")
 	if err != nil {
 		t.Error(err)
 	}
-	want := 0.03592305295110578
+	want := E * SOxToS / c.Dx / c.Dy / c.Dz
 	if v != want {
 		t.Errorf("have %g, want %g", v, want)
 	}
@@ -96,7 +96,7 @@ func TestChemistry(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	want = 2.7064380816665774
+	want = 2.706460494064197
 	if v != want {
 		t.Errorf("have %g, want %g", v, want)
 	}
