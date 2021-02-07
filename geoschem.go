@@ -819,7 +819,8 @@ func (gc *GEOSChem) HO() NextData {
 			return nil, err
 		}
 		const cm3perm3 = 100. * 100. * 100.
-		const airFactor = MWa / avNum * cm3perm3 // kg/molec.* cm3/m3
+		const gPerKg = 1000.0
+		const airFactor = MWa / avNum * cm3perm3 / gPerKg // kg/molec.* cm3/m3
 		ho := sparse.ZerosDense(HO.Shape...)
 		for i, hoV := range HO.Elements {
 			// molec HO / cm3 * m3 / kg air * kg air/molec. air* cm3/m3 * ppm
