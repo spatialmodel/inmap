@@ -89,25 +89,26 @@ def run_sr(emis, model, output_variables, emis_units="tons/year"):
             raise(OSError("invalid operating system %s"%(ost)))
         os.chmod(_inmap_exe, stat.S_IXUSR|stat.S_IRUSR|stat.S_IWUSR)
     
-    try:
-        subprocess.check_output([_inmap_exe, "cloud", "start",
-            "--cmds=srpredict",
-            "--job_name=%s"%job_name,
-            "--memory_gb=2",
-            "--EmissionUnits=%s"%emis_units,
-            "--EmissionsShapefiles=%s"%emis_file,
-            "--OutputVariables=%s"%json.dumps(output_variables),
-            "--SR.OutputFile=%s"%model_path])
-    except subprocess.CalledProcessError as err:
-        print(err.output)
-        return
+    subprocess.check_output([_inmap_exe, "cloud", "start",
+        "--cmds=srpredict",
+        "--job_name=%s"%job_name,
+        "--memory_gb=2",
+        "--EmissionUnits=%s"%emis_units,
+        "--EmissionsShapefiles=%s"%emis_file,
+        "--OutputVariables=%s"%json.dumps(output_variables),
+        "--SR.OutputFile=%s"%model_path])
 
     while True:
-        status = subprocess.check_output([_inmap_exe, "cloud", "status", "--job_name=%s"%job_name]).decode("utf-8").strip()
-        print("simulation %s (%.0f seconds)               "%(status, time.time()-start), end='\r')
-        if status == "Complete": break
-        elif status != "Running":
-            raise(ValueError(status))
+        try:
+            status = subprocess.check_output([_inmap_exe, "cloud", "status", "--job_name=%s"%job_name]).decode("utf-8").strip()
+            print("simulation %s (%.0f seconds)               "%(status, time.time()-start), end='\r')
+            if status == "Complete":
+                break
+            elif status != "Running":
+                raise ValueError(status)
+        except subprocess.CalledProcessError as err:
+            # ignore transient errors when checking status
+            print(err.output)
         time.sleep(5)
 
     subprocess.check_call([_inmap_exe, "cloud", "output", "--job_name=%s"%job_name])
