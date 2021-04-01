@@ -29,7 +29,7 @@ import (
 
 const (
 	// Version gives the version number.
-	Version = "1.7.2"
+	Version = "1.8.0"
 
 	// VarGridDataVersion gives the version of the variable grid data reuquired by
 	// this version of the software.

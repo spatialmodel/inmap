@@ -71,7 +71,7 @@ def run_sr(emis, model, output_variables, emis_units="tons/year"):
     emis_file = os.path.join(_tmpdir.name, "%s.shp"%(job_name))
     emis.to_file(emis_file)
     
-    version = "1.7.2"
+    version = "1.8.0"
     
     if _inmap_exe == None:
         ost = platform.system()
