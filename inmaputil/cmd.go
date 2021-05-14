@@ -1063,6 +1063,12 @@ variable specifies the information to be output.`,
 			flagsets:   []*pflag.FlagSet{cfg.cloudStartCmd.Flags(), cfg.srStartCmd.Flags()},
 		},
 		{
+			name:       "version",
+			usage:      `version specifies the version of the InMAP Docker container to use, such as "latest" or "v1.7.2".`,
+			defaultVal: "latest",
+			flagsets:   []*pflag.FlagSet{cfg.cloudStartCmd.Flags(), cfg.srStartCmd.Flags()},
+		},
+		{
 			name:       "preprocessed_inputs",
 			usage:      `preprocessed_inputs is a list of preprocessed input files to be combined.`,
 			defaultVal: []string{},

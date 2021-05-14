@@ -59,7 +59,8 @@ func StartSR(ctx context.Context, jobName string, cmds []string, memoryGB int32,
 	if err != nil {
 		return err
 	}
-	if err = sr.Start(ctx, jobName, layers, begin, end, cfg.Root, cfg.Viper, cmds, cfg.InputFiles(), memoryGB); err != nil {
+	version := cfg.GetString("version")
+	if err = sr.Start(ctx, jobName, version, layers, begin, end, cfg.Root, cfg.Viper, cmds, cfg.InputFiles(), memoryGB); err != nil {
 		return err
 	}
 	return nil

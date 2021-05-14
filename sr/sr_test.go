@@ -180,7 +180,7 @@ func TestSR(t *testing.T) {
 	layers := []int{0, 2, 4}
 	begin := 0 // layer 0
 	end := -1
-	if err = s.Start(ctx, "sr_test2", layers, begin, end, cfg.Root, cfg.Viper, []string{"run", "steady"}, cfg.InputFiles(), 2); err != nil {
+	if err = s.Start(ctx, "sr_test2", "latest", layers, begin, end, cfg.Root, cfg.Viper, []string{"run", "steady"}, cfg.InputFiles(), 2); err != nil {
 		t.Fatal(err)
 	}
 	if err = s.Save(ctx, outfile, "sr_test2", layers, begin, end); err != nil {
@@ -198,7 +198,7 @@ func TestSR(t *testing.T) {
 	}
 	begin = 20 // layer 2
 	end = 22
-	if err = s.Start(ctx, "sr_test", layers, begin, end, cfg.Root, cfg.Viper, []string{"run", "steady"}, cfg.InputFiles(), 2); err != nil {
+	if err = s.Start(ctx, "sr_test", "latest", layers, begin, end, cfg.Root, cfg.Viper, []string{"run", "steady"}, cfg.InputFiles(), 2); err != nil {
 		t.Fatal(err)
 	}
 	if err = s.Save(ctx, outfile, "sr_test", layers, begin, end); err != nil {
