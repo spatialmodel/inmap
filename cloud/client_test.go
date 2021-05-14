@@ -27,7 +27,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/cloud"
 	"github.com/spatialmodel/inmap/cloud/cloudrpc"
 	"github.com/spatialmodel/inmap/inmaputil"
@@ -106,7 +105,7 @@ func TestClient_fake(t *testing.T) {
 	os.Mkdir("test", os.ModePerm)
 	defer os.RemoveAll("test")
 
-	jobSpec, err := cloud.JobSpec(cfg.Root, cfg.Viper, "test_job", []string{"run", "steady"}, cfg.InputFiles(), 1)
+	jobSpec, err := cloud.JobSpec(cfg.Root, cfg.Viper, "latest", "test_job", []string{"run", "steady"}, cfg.InputFiles(), 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,7 +128,7 @@ func TestClient_fake(t *testing.T) {
 
 	t.Run("Status", func(t *testing.T) {
 		status, err := c.Status(ctx, &cloudrpc.JobName{
-			Version: inmap.Version,
+			Version: "latest",
 			Name:    "test_job",
 		})
 		if err != nil {
@@ -147,7 +146,7 @@ func TestClient_fake(t *testing.T) {
 
 	t.Run("Output", func(t *testing.T) {
 		output, err := c.Output(ctx, &cloudrpc.JobName{
-			Version: inmap.Version,
+			Version: "latest",
 			Name:    "test_job",
 		})
 		if err != nil {
@@ -175,7 +174,7 @@ func TestClient_fake(t *testing.T) {
 	})
 	t.Run("Delete", func(t *testing.T) {
 		_, err := c.Delete(ctx, &cloudrpc.JobName{
-			Version: inmap.Version,
+			Version: "latest",
 			Name:    "test_job",
 		})
 		if err != nil {
@@ -273,7 +272,7 @@ func TestClient_fakeCOARDS(t *testing.T) {
 	os.Mkdir("test", os.ModePerm)
 	defer os.RemoveAll("test")
 
-	jobSpec, err := cloud.JobSpec(cfg.Root, cfg.Viper, "test_job", []string{"run", "steady"}, cfg.InputFiles(), 1)
+	jobSpec, err := cloud.JobSpec(cfg.Root, cfg.Viper, "latest", "test_job", []string{"run", "steady"}, cfg.InputFiles(), 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -296,7 +295,7 @@ func TestClient_fakeCOARDS(t *testing.T) {
 
 	t.Run("Status", func(t *testing.T) {
 		status, err := c.Status(ctx, &cloudrpc.JobName{
-			Version: inmap.Version,
+			Version: "latest",
 			Name:    "test_job",
 		})
 		if err != nil {
@@ -314,7 +313,7 @@ func TestClient_fakeCOARDS(t *testing.T) {
 
 	t.Run("Output", func(t *testing.T) {
 		output, err := c.Output(ctx, &cloudrpc.JobName{
-			Version: inmap.Version,
+			Version: "latest",
 			Name:    "test_job",
 		})
 		if err != nil {
@@ -342,7 +341,7 @@ func TestClient_fakeCOARDS(t *testing.T) {
 	})
 	t.Run("Delete", func(t *testing.T) {
 		_, err := c.Delete(ctx, &cloudrpc.JobName{
-			Version: inmap.Version,
+			Version: "latest",
 			Name:    "test_job",
 		})
 		if err != nil {

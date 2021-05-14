@@ -37,7 +37,7 @@ service CloudRPC {
 
 // JobSpec is the input for the RunJob service.
 message JobSpec {
-  // Version is the required InMAP version.
+  // Version is the version of the InMAP Docker image to use, such as "latest" or "v1.7.2".
   string Version = 1;
 
   // Name is a user-specified name for the job.

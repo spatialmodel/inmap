@@ -117,7 +117,8 @@ func (sr *SR) layerGridCells(layers []int) (int, error) {
 // should be calculated for. begin and end are indices in the static variable
 // grid where the computations should begin and end. if end<0, then end will
 // be set to the last grid cell in the static grid.
-func (sr *SR) Start(ctx context.Context, jobName string, layers []int, begin, end int, root *cobra.Command, config *viper.Viper, cmdArgs, inputFiles []string, memoryGB int32) error {
+// Version is the version of the InMAP docker container to use, e.g. "latest" or "v1.7.2".
+func (sr *SR) Start(ctx context.Context, jobName, version string, layers []int, begin, end int, root *cobra.Command, config *viper.Viper, cmdArgs, inputFiles []string, memoryGB int32) error {
 	// Set mandatory configuration variables.
 	config.Set("OutputVariables", outputVarsStr)
 	config.Set("EmissionUnits", "ug/s")
@@ -153,7 +154,7 @@ func (sr *SR) Start(ctx context.Context, jobName string, layers []int, begin, en
 		}
 		config.Set("EmissionsShapefiles", []string{fname})
 
-		js, err := cloud.JobSpec(root, config, sr.jobName(jobName, i, cell), cmdArgs, inputFiles, memoryGB)
+		js, err := cloud.JobSpec(root, config, version, sr.jobName(jobName, i, cell), cmdArgs, inputFiles, memoryGB)
 		if err != nil {
 			return err
 		}
