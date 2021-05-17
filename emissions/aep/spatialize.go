@@ -510,8 +510,8 @@ func (gr GridRef) GetSrgCode(SCC string, c Country, FIPS string) (string, error)
 		_, matchedVal, err = MatchCode(FIPS, gr.data[c][SCC])
 	}
 	if err != nil {
-		return "", fmt.Errorf("in aep.GridRef.GetSrgCode: %v. (SCC=%v, Country=%v, FIPS=%v)",
-			err.Error(), SCC, c, FIPS)
+		return "", fmt.Errorf("in aep.GridRef.GetSrgCode: %v. (SCC=%v, Country=%v, FIPS=%v; data=%v)",
+			err.Error(), SCC, c, FIPS, gr.data)
 	}
 	return matchedVal.(string), nil
 }

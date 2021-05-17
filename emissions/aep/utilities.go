@@ -43,7 +43,7 @@ func MatchCode(code string, matchmap map[string]interface{}) (matchedCode string
 			return
 		}
 	}
-	err = fmt.Errorf("No matching code for %v", code)
+	err = fmt.Errorf("No matching code for %v; available codes are %v", code, matchmap)
 	return
 }
 
