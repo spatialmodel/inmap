@@ -91,7 +91,7 @@ def run_sr(emis, model, output_variables, emis_units="tons/year"):
     
     subprocess.check_output([_inmap_exe, "cloud", "start",
         "--cmds=srpredict",
-        "--version=%s"%version,
+        "--version=v%s"%version,
         "--job_name=%s"%job_name,
         "--memory_gb=2",
         "--EmissionUnits=%s"%emis_units,
