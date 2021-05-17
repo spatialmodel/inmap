@@ -52,6 +52,7 @@ func NewCloudClient(cfg *Cfg) (cloudrpc.CloudRPCClient, error) {
 func CloudJobStart(ctx context.Context, c cloudrpc.CloudRPCClient, cfg *Cfg) error {
 	in, err := cloud.JobSpec(
 		cfg.Root, cfg.Viper,
+		cfg.GetString("version"),
 		cfg.GetString("job_name"),
 		cfg.GetStringSlice("cmds"),
 		cfg.InputFiles(),

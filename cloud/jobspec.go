@@ -29,7 +29,6 @@ import (
 	"strings"
 
 	"github.com/lnashier/viper"
-	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/cloud/cloudrpc"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -41,14 +40,15 @@ import (
 // name is the user-specified job name, cmdArgs is a list of InMAP sub-commands
 // (e.g., "run steady"), and inputFiles is a list of the configuration arguments
 // that represent input files.
-func JobSpec(root *cobra.Command, config *viper.Viper, name string, cmdArgs, inputFiles []string, memoryGB int32) (*cloudrpc.JobSpec, error) {
+// Version is the version of the InMAP Docker image to use, such as "latest" or "v1.7.2".
+func JobSpec(root *cobra.Command, config *viper.Viper, version, name string, cmdArgs, inputFiles []string, memoryGB int32) (*cloudrpc.JobSpec, error) {
 	inputFields := make(map[string]struct{})
 	for _, f := range inputFiles {
 		inputFields[f] = struct{}{}
 	}
 
 	js := &cloudrpc.JobSpec{
-		Version:  inmap.Version,
+		Version:  version,
 		Name:     name,
 		Cmd:      append([]string{"inmap"}, cmdArgs...),
 		MemoryGB: memoryGB,

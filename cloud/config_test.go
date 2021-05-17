@@ -22,7 +22,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/spatialmodel/inmap"
 	"github.com/spatialmodel/inmap/cloud"
 	"github.com/spatialmodel/inmap/inmaputil"
 )
@@ -32,12 +31,9 @@ func TestRunInputFromViper(t *testing.T) {
 	cfg.Viper.Set("aep.InventoryConfig.COARDSFiles", map[string][]string{
 		"xxx": {"../emissions/aep/testdata/emis_coards_hawaii.nc", "../emissions/aep/testdata/emis_coards_hawaii.nc"},
 		"yyy": {"../emissions/aep/testdata/emis_coards_hawaii.nc"}})
-	js, err := cloud.JobSpec(cfg.Root, cfg.Viper, "test_job", []string{"run", "steady"}, cfg.InputFiles(), 1)
+	js, err := cloud.JobSpec(cfg.Root, cfg.Viper, "latest", "test_job", []string{"run", "steady"}, cfg.InputFiles(), 1)
 	if err != nil {
 		t.Fatal(err)
-	}
-	if js.Version != inmap.Version {
-		t.Errorf("version: %s != %s", js.Version, inmap.Version)
 	}
 	wantCmd := []string{"inmap", "run", "steady"}
 	if !reflect.DeepEqual(js.Cmd, wantCmd) {
@@ -144,12 +140,9 @@ func TestRunInputFromViper(t *testing.T) {
 func TestSRPredictInputFromViper(t *testing.T) {
 	cfg := inmaputil.InitializeConfig()
 	cfg.Set("OutputVariables", "{\"PrimPM25\":\"PrimaryPM25\"}")
-	js, err := cloud.JobSpec(cfg.Root, cfg.Viper, "test_job", []string{"srpredict"}, cfg.InputFiles(), 1)
+	js, err := cloud.JobSpec(cfg.Root, cfg.Viper, "latest", "test_job", []string{"srpredict"}, cfg.InputFiles(), 1)
 	if err != nil {
 		t.Fatal(err)
-	}
-	if js.Version != inmap.Version {
-		t.Errorf("version: %s != %s", js.Version, inmap.Version)
 	}
 	wantCmd := []string{"inmap", "srpredict"}
 	if !reflect.DeepEqual(js.Cmd, wantCmd) {
