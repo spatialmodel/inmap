@@ -3,7 +3,7 @@
     "region": 7,
     "name": "primary_hwy",
     "code": "001",
-    "osm_file": "${INMAP_ROOT_DIR}/emissions/aep/testdata/honolulu_hawaii.osm.pbf",
+    "osm_table": "planet_osm_roads",
     "tags": {
       "highway": ["primary"]
     }
@@ -12,7 +12,7 @@
     "region": 7,
     "name": "building_residential",
     "code": "002",
-    "osm_file": "${INMAP_ROOT_DIR}/emissions/aep/testdata/honolulu_hawaii.osm.pbf",
+    "osm_table": "planet_osm_polygon",
     "tags": {
       "building": ["residential"]
     }
@@ -21,7 +21,7 @@
     "region": 7,
     "name": "natural_tree",
     "code": "003",
-    "osm_file": "${INMAP_ROOT_DIR}/emissions/aep/testdata/honolulu_hawaii.osm.pbf",
+    "osm_table": "planet_osm_point",
     "tags": {
       "natural": ["tree"]
     }

@@ -19,15 +19,21 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package aeputil
 
 import (
+	"context"
+	"fmt"
 	"io"
 	"os"
 	"testing"
 
 	"github.com/BurntSushi/toml"
+	backoff "github.com/cenkalti/backoff/v4"
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/proj"
 	"github.com/ctessum/unit"
+	"github.com/jackc/pgx/v4"
 	"github.com/spatialmodel/inmap/emissions/aep"
+	testcontainers "github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 func TestSpatial(t *testing.T) {
@@ -64,19 +70,19 @@ func TestSpatial(t *testing.T) {
 	}
 
 	wantEmis := map[aep.Pollutant]float64{
-		aep.Pollutant{Name: "NOX"}:   1.9694509976996027e+07 + 3329.29929452133,
-		aep.Pollutant{Name: "VOC"}:   650426.9504917137,
-		aep.Pollutant{Name: "PM2_5"}: 1.3251549508572659e+06 + 186.401532717915,
-		aep.Pollutant{Name: "SO2"}:   1.5804381260919824e+07 + 1939.6783010388299,
-		aep.Pollutant{Name: "NH3"}:   34.056105917699995,
+		{Name: "NOX"}:   1.9694509976996027e+07 + 3329.29929452133,
+		{Name: "VOC"}:   650426.9504917137,
+		{Name: "PM2_5"}: 1.3251549508572659e+06 + 186.401532717915,
+		{Name: "SO2"}:   1.5804381260919824e+07 + 1939.6783010388299,
+		{Name: "NH3"}:   34.056105917699995,
 	}
 
 	wantUnits := map[aep.Pollutant]unit.Dimensions{
-		aep.Pollutant{Name: "PM2_5"}: unit.Dimensions{4: 1},
-		aep.Pollutant{Name: "NH3"}:   unit.Dimensions{4: 1},
-		aep.Pollutant{Name: "SO2"}:   unit.Dimensions{4: 1},
-		aep.Pollutant{Name: "NOX"}:   unit.Dimensions{4: 1},
-		aep.Pollutant{Name: "VOC"}:   unit.Dimensions{4: 1},
+		{Name: "PM2_5"}: {4: 1},
+		{Name: "NH3"}:   {4: 1},
+		{Name: "SO2"}:   {4: 1},
+		{Name: "NOX"}:   {4: 1},
+		{Name: "VOC"}:   {4: 1},
 	}
 	iter := c.Spatial.Iterator(IteratorFromMap(records), 0)
 	for {
@@ -119,7 +125,84 @@ func TestSpatial(t *testing.T) {
 	})
 }
 
+// setupTestDB creates and a new PostGIS database for testing,
+// populates it with OpenStreetMap spatial surrogate data, and
+// returns a URL to connect to the database and the running
+// Docker container.
+func setupTestDB(ctx context.Context, t *testing.T) (string, testcontainers.Container) {
+	const (
+		dbhost = "localhost"
+		dbname = "postgresTC"
+		dbuser = "postgres"
+		dbport = "5432"
+	)
+
+	// Create the Postgres TestContainer
+	req := testcontainers.ContainerRequest{
+		FromDockerfile: testcontainers.FromDockerfile{
+			Context:       "../testdata",
+			PrintBuildLog: false,
+		},
+		ExposedPorts: []string{fmt.Sprintf("%s/tcp", dbport)},
+		Env: map[string]string{
+			"POSTGRES_DB":               dbname,
+			"DBHOST":                    dbhost,
+			"DBNAME":                    dbname,
+			"DBUSER":                    dbuser,
+			"DBPORT":                    dbport,
+			"POSTGRES_HOST_AUTH_METHOD": "trust",
+		},
+		WaitingFor: wait.ForLog("database system is ready to accept connections"),
+	}
+
+	postgresC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: req,
+		Started:          true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Get the port that is mapped to 5432.
+	p, _ := postgresC.MappedPort(ctx, "5432")
+
+	postGISURL := fmt.Sprintf("postgres://%s@%s:%s/%s", dbuser, dbhost, p.Port(), dbname)
+
+	var conn *pgx.Conn
+	err = backoff.Retry(func() error {
+		conn, err = pgx.Connect(context.Background(), postGISURL)
+		if err != nil {
+			return err
+		}
+		return nil
+	}, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 10))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err = conn.Exec(ctx, "CREATE EXTENSION IF NOT EXISTS hstore"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Populate database with OSM data for Honolulu, using lat-lon (EPSG:4326) projection.
+	cmd := []string{"osm2pgsql", "-l", "--hstore-all", "--hstore-add-index", "--database=" + dbname, "--host=" + dbhost,
+		"--port=" + dbport, "--username=" + dbuser, "--create", "/honolulu_hawaii.osm.pbf"}
+	status, err := postgresC.Exec(ctx, cmd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status != 0 {
+		t.Fatal("osm2pgsql failed with nonzero status ", status)
+	}
+
+	return postGISURL, postgresC
+}
+
 func TestSpatial_coards(t *testing.T) {
+	ctx := context.Background()
+	postGISURL, postgresC := setupTestDB(ctx, t)
+	defer postgresC.Terminate(ctx)
+
 	type config struct {
 		Inventory InventoryConfig
 		Spatial   SpatialConfig
@@ -141,10 +224,12 @@ func TestSpatial_coards(t *testing.T) {
 		"all": {"../testdata/emis_coards_hawaii.nc"},
 	}
 	c.Inventory.COARDSYear = 2016
+	c.Inventory.PostGISURL = postGISURL
 
 	c.Spatial.SrgSpecOSM = "../testdata/srgspec_osm.json"
 	c.Spatial.GridRef = []string{"testdata/gridref_osm.txt"}
 	c.Spatial.OutputSR = "+proj=longlat"
+	c.Spatial.PostGISURL = postGISURL
 
 	sr, err := proj.Parse(c.Spatial.OutputSR)
 	if err != nil {
@@ -163,19 +248,19 @@ func TestSpatial_coards(t *testing.T) {
 	}
 
 	wantEmis := map[aep.Pollutant]float64{
-		aep.Pollutant{Name: "NOx"}:   1.3984131235786172e+07,
-		aep.Pollutant{Name: "VOC"}:   2.7990005393761573e+06,
-		aep.Pollutant{Name: "PM2_5"}: 5.988116747096776e+06,
-		aep.Pollutant{Name: "SOx"}:   5.494101046635956e+06,
-		aep.Pollutant{Name: "NH3"}:   1.2303264126897848e+06,
+		{Name: "NOx"}:   1.3984131235786172e+07,
+		{Name: "VOC"}:   2.7990005393761573e+06,
+		{Name: "PM2_5"}: 5.988116747096776e+06,
+		{Name: "SOx"}:   5.494101046635956e+06,
+		{Name: "NH3"}:   1.2303264126897848e+06,
 	}
 
 	wantUnits := map[aep.Pollutant]unit.Dimensions{
-		aep.Pollutant{Name: "PM2_5"}: unit.Dimensions{4: 1},
-		aep.Pollutant{Name: "NH3"}:   unit.Dimensions{4: 1},
-		aep.Pollutant{Name: "SOx"}:   unit.Dimensions{4: 1},
-		aep.Pollutant{Name: "NOx"}:   unit.Dimensions{4: 1},
-		aep.Pollutant{Name: "VOC"}:   unit.Dimensions{4: 1},
+		{Name: "PM2_5"}: {4: 1},
+		{Name: "NH3"}:   {4: 1},
+		{Name: "SOx"}:   {4: 1},
+		{Name: "NOx"}:   {4: 1},
+		{Name: "VOC"}:   {4: 1},
 	}
 	iter := c.Spatial.Iterator(IteratorFromMap(records), 0)
 	for {
@@ -263,19 +348,19 @@ func TestSpatial_coards_nosurrogate(t *testing.T) {
 	}
 
 	wantEmis := map[aep.Pollutant]float64{
-		aep.Pollutant{Name: "NOx"}:   758866.7728921714,
-		aep.Pollutant{Name: "VOC"}:   151891.34532749676,
-		aep.Pollutant{Name: "PM2_5"}: 324952.8165140556,
-		aep.Pollutant{Name: "SOx"}:   298144.42248186853,
-		aep.Pollutant{Name: "NH3"}:   66765.23687167828,
+		{Name: "NOx"}:   758866.7728921714,
+		{Name: "VOC"}:   151891.34532749676,
+		{Name: "PM2_5"}: 324952.8165140556,
+		{Name: "SOx"}:   298144.42248186853,
+		{Name: "NH3"}:   66765.23687167828,
 	}
 
 	wantUnits := map[aep.Pollutant]unit.Dimensions{
-		aep.Pollutant{Name: "PM2_5"}: unit.Dimensions{4: 1},
-		aep.Pollutant{Name: "NH3"}:   unit.Dimensions{4: 1},
-		aep.Pollutant{Name: "SOx"}:   unit.Dimensions{4: 1},
-		aep.Pollutant{Name: "NOx"}:   unit.Dimensions{4: 1},
-		aep.Pollutant{Name: "VOC"}:   unit.Dimensions{4: 1},
+		{Name: "PM2_5"}: {4: 1},
+		{Name: "NH3"}:   {4: 1},
+		{Name: "SOx"}:   {4: 1},
+		{Name: "NOx"}:   {4: 1},
+		{Name: "VOC"}:   {4: 1},
 	}
 	iter := c.Spatial.Iterator(IteratorFromMap(records), 0)
 	for {

@@ -23,14 +23,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
-	"os"
 
+	backoff "github.com/cenkalti/backoff/v4"
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/encoding/osm"
+	"github.com/ctessum/geom/encoding/wkb"
 	"github.com/ctessum/geom/index/rtree"
 	"github.com/ctessum/geom/proj"
-	"github.com/ctessum/requestcache/v2"
+	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 // SrgSpecOSM holds OpenStreetMap spatial surrogate specification information.
@@ -39,7 +39,10 @@ type SrgSpecOSM struct {
 	Name   string  `json:"name"`
 	Code   string  `json:"code"`
 
-	OSMFile string `json:"osm_file"`
+	// The name of the PostGIS table that contains the surrogate data.
+	// The default osm2pgsql table names are: planet_osm_line,
+	// planet_osm_roads, planet_osm_polygon, and planet_osm_point.
+	OSMTable string `json:"osm_table"`
 
 	Tags map[string][]string `json:"tags"`
 
@@ -54,28 +57,51 @@ type SrgSpecOSM struct {
 	// in MergeNames.
 	MergeMultipliers []float64 `json:"merge_multipliers"`
 
-	cache *requestcache.Cache
+	conn *pgxpool.Pool
 }
 
 // ReadSrgSpec reads a OpenStreetMap surrogate specification formated as a
 // JSON array of SrgSpecOSM objects.
-// diskCachePath specifies a path to a directory where an on-disk cache should
-// be created (if "", no cache will be created), and memCacheSize specifies the
-// number of surrogate data entries to hold in an in-memory cache.
-func ReadSrgSpecOSM(r io.Reader, diskCachePath string, memCacheSize int) (*SrgSpecs, error) {
+// postGISURL specifies the URL to use to connect to a PostGIS database
+// with the OpenStreetMap data loaded. The URL should be in the format:
+// postgres://username:password@hostname:port/databasename".
+//
+// The OpenStreetMap data can be loaded into the database using the
+// osm2pgsql program, for example with the command:
+// osm2pgsql -l --hstore-all --hstore-add-index --database=databasename --host=hostname --port=port --username=username --create planet_latest.osm.pbf
+//
+// The -l and --hstore-all flags for the osm2pgsql command are both necessary,
+// and the PostGIS database should have the "hstore" extension installed before
+// loading the data.
+func ReadSrgSpecOSM(ctx context.Context, r io.Reader, postGISURL string) (*SrgSpecs, error) {
+	if postGISURL == "" {
+		return nil, fmt.Errorf("PostGIS URL is required")
+	}
+	// Connect to database.
+	var conn *pgxpool.Pool
+	var err error
+	err = backoff.Retry(func() error {
+		conn, err = pgxpool.Connect(ctx, postGISURL)
+		if err != nil {
+			return err
+		}
+		return nil
+	}, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 10))
+	if err != nil {
+		return nil, fmt.Errorf("Unable to connect to PostGIS database %s after 10 tries: %w\n", postGISURL, err)
+	}
+
+	// Read the surrogate specification.
 	d := json.NewDecoder(r)
 	var o []*SrgSpecOSM
-	err := d.Decode(&o)
-	if err != nil {
+	if err = d.Decode(&o); err != nil {
 		return nil, err
 	}
+
+	// Add the db connection to each surrogate.
 	srgs := NewSrgSpecs()
-	cache, err := newCacheV2(diskCachePath, memCacheSize, marshalSrgHolders, unmarshalSrgHolders)
-	if err != nil {
-		return nil, err
-	}
 	for _, s := range o {
-		s.cache = cache
+		s.conn = conn
 		srgs.Add(s)
 	}
 	return srgs, nil
@@ -90,98 +116,123 @@ func (srg *SrgSpecOSM) mergeMultipliers() []float64    { return srg.MergeMultipl
 
 // getSrgData returns the spatial surrogate information for this
 // surrogate definition and location, where tol is tolerance for geometry simplification.
-func (srg *SrgSpecOSM) getSrgData(gridData *GridDef, inputLoc *Location, tol float64) (*rtree.Rtree, error) {
+func (srg *SrgSpecOSM) getSrgData(gridData *GridDef, inputLoc *Location, tol float64) (SearchIntersecter, error) {
 	// Calculate the area of interest for our surrogate data.
-	inputShapeT, err := inputLoc.Reproject(gridData.SR)
+	srgSR, err := proj.Parse("+proj=longlat")
+	if err != nil {
+		panic(err)
+	}
+	inputShapeT, err := inputLoc.Reproject(srgSR) // Convert input shape to surrogate SR.
+	if err != nil {
+		return nil, err
+	}
+	gridTransform, err := gridData.SR.NewTransform(srgSR)
 	if err != nil {
 		return nil, err
 	}
 	inputShapeBounds := inputShapeT.Bounds()
 	srgBounds := inputShapeBounds.Copy()
 	for _, cell := range gridData.Cells {
-		b := cell.Bounds()
-		if b.Overlaps(inputShapeBounds) {
-			srgBounds.Extend(b)
-		}
-	}
-
-	sd := &readSrgDataOSMInput{gridData: gridData, tol: tol, srg: srg}
-	request := srg.cache.NewRequest(context.TODO(), sd)
-	srgs, err := request.Result()
-	if err != nil {
-		return nil, err
-	}
-	return srgs.(readSrgDataOutput).index, nil
-}
-
-type readSrgDataOSMInput struct {
-	gridData *GridDef
-	tol      float64
-	srg      *SrgSpecOSM
-}
-
-func (sd *readSrgDataOSMInput) Key() string {
-	return fmt.Sprintf("osm_srgdata_%s%s_%s_%g", sd.srg.region(), sd.srg.code(),
-		sd.gridData.SR.Name, sd.tol)
-}
-
-// Run returns all of the spatial surrogate information for this
-// surrogate definition, inputI is of type *osmReadSrgDataInput and
-// inputI.tol is tolerance for geometry simplification.
-func (input *readSrgDataOSMInput) Run(ctx context.Context) (interface{}, error) {
-	srg := input.srg
-	log.Printf("processing surrogate `%s` spatial data", srg.Name)
-
-	srgSR, err := proj.Parse("+proj=longlat")
-	if err != nil {
-		panic(err)
-	}
-
-	srgCT, err := srgSR.NewTransform(input.gridData.SR)
-	if err != nil {
-		return nil, err
-	}
-
-	data, err := osm.ExtractFile(context.Background(), os.ExpandEnv(srg.OSMFile), osm.KeepTags(srg.Tags), false)
-	if err != nil {
-		return nil, fmt.Errorf("aep: extracting OSM spatial surrogate data for tags %v: %v", srg.Tags, err)
-	}
-	geomTags, err := data.Geom()
-	if err != nil {
-		return nil, fmt.Errorf("aep: extracting OSM spatial surrogate data for tags %v: %v", srg.Tags, err)
-	}
-	dominantType, err := osm.DominantType(geomTags)
-	if err != nil {
-		return nil, fmt.Errorf("aep: extracting OSM spatial surrogate data for tags %v: %v", srg.Tags, err)
-	}
-	srgs := readSrgDataOutput{
-		index: rtree.NewTree(25, 50),
-	}
-	for _, geomTag := range geomTags {
-		g, err := osmGeometry(geomTag.Geom, dominantType)
+		cellT, err := cell.Transform(gridTransform) // Convert grid cell to surrogate SR.
 		if err != nil {
-			return nil, fmt.Errorf("aep: processing OSM spatial surrogate data: %v", err)
+			panic(err)
 		}
-		if g == nil {
-			continue // ignore geometry that is not the dominant type.
+		b := cellT.Bounds()
+		if b.Overlaps(inputShapeBounds) {
+			srgBounds.Extend(b) // Calculate bounds in surrogate SR.
+		}
+	}
+	boundsText := fmt.Sprintf("ST_GeomFromText('Polygon((%g %g, %g %g, %g %g, %g %g, %g %g))', 4326)", // WGS84
+		srgBounds.Min.X, srgBounds.Min.Y, srgBounds.Max.X, srgBounds.Min.Y, srgBounds.Max.X, srgBounds.Max.Y,
+		srgBounds.Min.X, srgBounds.Max.Y, srgBounds.Min.X, srgBounds.Min.Y)
+
+	srgCT, err := srgSR.NewTransform(gridData.SR)
+	if err != nil {
+		return nil, err
+	}
+
+	srgs := rtree.NewTree(25, 50)
+
+	ctx := context.Background()
+	if srg.OSMTable == "" {
+		return nil, fmt.Errorf("OSM table name not specified for surrogate %s", srg.Name)
+	}
+
+	var tagKeys string
+	for k := range srg.Tags {
+		tagKeys += "'" + k + "',"
+	}
+	tagKeys = tagKeys[:len(tagKeys)-1] // Remove trailing comma.
+
+	rows, err := srg.conn.Query(ctx, `
+	SELECT 
+		hstore_to_array(tags) tags, ST_AsBinary(way) 
+	FROM 
+		`+srg.OSMTable+`
+	WHERE
+		way && `+boundsText+`
+	AND
+		tags ?| ARRAY [`+tagKeys+`];`)
+
+	if err != nil {
+		return nil, fmt.Errorf("reading surrogate data: %w", err)
+	}
+	var tags [][]byte
+	var wayBytes []byte
+	for rows.Next() {
+		// Extract tags and geometry.
+		err = rows.Scan(&tags, &wayBytes)
+		if err != nil {
+			return nil, fmt.Errorf("reading surrogate data: %w", err)
+		}
+
+		// See if any of the tags match the ones we want.
+		keep := false
+		for i := 0; i < len(tags)/2; i++ {
+			key := string(tags[i*2])
+			value := string(tags[i*2+1])
+
+			if wantVals, ok := srg.Tags[key]; ok {
+				if len(wantVals) == 0 {
+					// If no tags are specified, keep all.
+					keep = true
+					break
+				}
+				for _, wantVal := range wantVals {
+					// If the tag matches, keep this record.
+					if value == wantVal {
+						keep = true
+						break
+					}
+				}
+			}
+		}
+		if !keep {
+			continue
+		}
+
+		// Convert geometry to the correct format & projection.
+		g, err := wkb.Decode(wayBytes)
+		if err != nil {
+			return nil, fmt.Errorf("reading surrogate data: %w", err)
 		}
 		g, err = g.Transform(srgCT)
 		if err != nil {
-			return nil, fmt.Errorf("aep: processing OSM spatial surrogate data: %v", err)
+			return nil, fmt.Errorf("transforming surrogate data: %w", err)
 		}
-		if input.tol > 0 {
+		if tol > 0 {
 			switch gs := g.(type) {
 			case geom.Simplifier:
-				g = gs.Simplify(input.tol)
+				g = gs.Simplify(tol)
 			}
 		}
 		srgData := &srgHolder{
 			Geom:   g,
 			Weight: 1,
 		}
-		srgs.srgs = append(srgs.srgs, srgData)
-		srgs.index.Insert(srgData)
+		srgs.Insert(srgData)
 	}
+	rows.Close()
 	return srgs, nil
 }
 

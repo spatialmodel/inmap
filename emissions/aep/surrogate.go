@@ -37,7 +37,7 @@ import (
 )
 
 type srgGenWorker struct {
-	surrogates *rtree.Rtree
+	surrogates SearchIntersecter
 	GridCells  *GridDef
 
 	// srgCellRatio is the number of surrogate shapes to process per
@@ -48,7 +48,7 @@ type srgGenWorker struct {
 }
 
 type srgGenWorkerInitData struct {
-	Surrogates *rtree.Rtree
+	Surrogates SearchIntersecter
 	GridCells  *GridDef
 }
 
@@ -263,7 +263,7 @@ func (g *GriddedSrgData) WriteToShp(file string) error {
 }
 
 func genSrgWorker(singleShapeChan, griddedSrgChan chan *GriddedSrgData,
-	errchan chan error, gridData *GridDef, srgData *rtree.Rtree, srgCellRatio int) {
+	errchan chan error, gridData *GridDef, srgData SearchIntersecter, srgCellRatio int) {
 	var err error
 
 	s := new(srgGenWorker)
@@ -327,10 +327,14 @@ func (s *srgGenWorker) Calculate(data, result *GriddedSrgData) (err error) {
 	return
 }
 
+type SearchIntersecter interface {
+	SearchIntersect(*geom.Bounds) []geom.Geom
+}
+
 // Calculate the intersections between the grid cells and the input shape,
 // and between the surrogate shapes and the input shape
 func (s *srgGenWorker) intersections1(
-	data *GriddedSrgData, surrogates *rtree.Rtree, inputGeom geom.Polygonal) (
+	data *GriddedSrgData, surrogates SearchIntersecter, inputGeom geom.Polygonal) (
 	GridCells []*GridCell, srgs []*srgHolder,
 	singleShapeSrgWeight float64, err error) {
 

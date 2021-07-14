@@ -39,7 +39,7 @@ import (
 )
 
 type SrgSpec interface {
-	getSrgData(gridData *GridDef, loc *Location, tol float64) (*rtree.Rtree, error)
+	getSrgData(gridData *GridDef, loc *Location, tol float64) (SearchIntersecter, error)
 	backupSurrogateNames() []string
 	region() Country
 	code() string
@@ -308,7 +308,7 @@ func (srg *SrgSpecSMOKE) InputShapes() (map[string]*Location, error) {
 }
 
 // get surrogate shapes and weights. tol is a geometry simplification tolerance.
-func (srg *SrgSpecSMOKE) getSrgData(gridData *GridDef, inputLoc *Location, tol float64) (*rtree.Rtree, error) {
+func (srg *SrgSpecSMOKE) getSrgData(gridData *GridDef, inputLoc *Location, tol float64) (SearchIntersecter, error) {
 	// Calculate the area of interest for our surrogate data.
 	inputShapeT, err := inputLoc.Reproject(gridData.SR)
 	if err != nil {
