@@ -1,0 +1,64 @@
+on:
+  release:
+    types: [created]
+
+name: Upload release assets after release is created
+jobs:
+  build:
+    name: build binaries
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.15.x
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Build code
+        run: |
+          echo "GO111MODULE=on" >> $GITHUB_ENV
+          GOOS=windows GOARCH=amd64 go build -o inmap-windows-amd64.exe
+          GOOS=linux   GOARCH=amd64 go build -o inmap-linux-amd64
+          GOOS=darwin  GOARCH=amd64 go build -o inmap-darwin-amd64
+      - name: upload artifacts
+        uses: actions/upload-artifact@master
+        with:
+          name: binaries
+          path: bin/
+
+  upload:
+    name: Upload release assets
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+
+      - name: Branch name
+        id: branch_name
+        run: |
+          echo ::set-output name=SOURCE_NAME::${GITHUB_REF#refs/*/}
+          echo ::set-output name=SOURCE_BRANCH::${GITHUB_REF#refs/heads/}
+          echo ::set-output name=SOURCE_TAG::${GITHUB_REF#refs/tags/}
+      - name: Checkout code
+        uses: actions/checkout@v1
+
+      - name: Download build artefacts
+        uses: actions/download-artifact@v1
+        with:
+          name: binaries
+          path: bin/
+
+      - name: Create asset zips
+        env:
+          SOURCE_TAG: ${{ steps.branch_name.outputs.SOURCE_TAG }}
+        run: |
+          mkdir assets
+          zip assets/inmap-${SOURCE_TAG}-windows-amd64.exe inmap-windows-amd64.exe
+          zip assets/inmap-${SOURCE_TAG}-linux-amd64 inmap-linux-amd64
+          zip assets/inmap-${SOURCE_TAG}-darwin-amd64 inmap-darwin-amd64
+          sha256sum assets/* > assets/SHASUMS256.txt
+      - name: Upload release assets
+        uses: skx/github-action-publish-binaries@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: './assets/*'
