@@ -230,6 +230,7 @@ func aeputilConfig(cfg *viper.Viper) (*aeputil.InventoryConfig, *aeputil.Spatial
 		InputUnits:            cfg.GetString("aep.InventoryConfig.InputUnits"),
 		SrgSpecSMOKE:          srgSpecSMOKE,
 		SrgSpecOSM:            srgSpecOSM,
+		PostGISURL:            os.ExpandEnv(cfg.GetString("aep.PostGISURL")),
 		SrgShapefileDirectory: cfg.GetString("aep.SrgShapefileDirectory"),
 		GridRef:               gridRef,
 		SCCExactMatch:         cfg.GetBool("aep.SCCExactMatch"),
@@ -245,6 +246,7 @@ func aeputilConfig(cfg *viper.Viper) (*aeputil.InventoryConfig, *aeputil.Spatial
 	s := &aeputil.SpatialConfig{
 		SrgSpecSMOKE:          srgSpecSMOKE,
 		SrgSpecOSM:            srgSpecOSM,
+		PostGISURL:            os.ExpandEnv(cfg.GetString("aep.PostGISURL")),
 		SrgShapefileDirectory: cfg.GetString("aep.SrgShapefileDirectory"),
 		SCCExactMatch:         cfg.GetBool("aep.SCCExactMatch"),
 		GridRef:               gridRef,

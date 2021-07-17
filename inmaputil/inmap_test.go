@@ -19,6 +19,7 @@ along with InMAP.  If not, see <http://www.gnu.org/licenses/>.
 package inmaputil
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -27,6 +28,7 @@ import (
 	"testing"
 
 	"github.com/spatialmodel/inmap"
+	"github.com/spatialmodel/inmap/internal/postgis"
 )
 
 // Set up directory location for configuration files.
@@ -107,11 +109,16 @@ func TestInMAPDynamic_mask(t *testing.T) {
 }
 
 func TestInMAPDynamic_coards(t *testing.T) {
+	ctx := context.Background()
+	postGISURL, postgresC := postgis.SetupTestDB(ctx, t, "../emissions/aep/testdata")
+	defer postgresC.Terminate(ctx)
+
 	cfg := InitializeConfig()
 	cfg.Set("static", false)
 	cfg.Set("createGrid", false) // this isn't used for the dynamic grid
 	os.Setenv("InMAPRunType", "dynamic_coards")
 	cfg.Set("config", "../cmd/inmap/configExample_coards.toml")
+	cfg.Set("aep.PostGISURL", postGISURL)
 	cfg.Root.SetArgs([]string{"run", "steady"})
 	defer os.Remove(os.ExpandEnv("$INMAP_ROOT_DIR/cmd/inmap/testdata/output_dynamic_coards.log"))
 	defer inmap.DeleteShapefile(os.ExpandEnv("$INMAP_ROOT_DIR/cmd/inmap/testdata/output_dynamic_coards.shp"))
@@ -121,12 +128,17 @@ func TestInMAPDynamic_coards(t *testing.T) {
 }
 
 func TestInMAPDynamic_coardsflag(t *testing.T) {
+	ctx := context.Background()
+	postGISURL, postgresC := postgis.SetupTestDB(ctx, t, "../emissions/aep/testdata")
+	defer postgresC.Terminate(ctx)
+
 	cfg := InitializeConfig()
 	cfg.Set("static", false)
 	cfg.Set("createGrid", false) // this isn't used for the dynamic grid
 	os.Setenv("InMAPRunType", "dynamic_coards")
 	cfg.Set("config", "../cmd/inmap/configExample_coards.toml")
 	cfg.Set("aep.InventoryConfig.COARDSFiles", "{\"all\":[\"${INMAP_ROOT_DIR}/emissions/aep/testdata/emis_coards_hawaii.nc\"]}")
+	cfg.Set("aep.PostGISURL", postGISURL)
 	cfg.Root.SetArgs([]string{"run", "steady"})
 	defer os.Remove(os.ExpandEnv("$INMAP_ROOT_DIR/cmd/inmap/testdata/output_dynamic_coards.log"))
 	defer inmap.DeleteShapefile(os.ExpandEnv("$INMAP_ROOT_DIR/cmd/inmap/testdata/output_dynamic_coards.shp"))

@@ -1,6 +1,6 @@
 # (In)tervention (M)odel for (A)ir (P)ollution
 
-[![Build Status](https://travis-ci.com/spatialmodel/inmap.svg?branch=master)](https://travis-ci.com/spatialmodel/inmap) [![Coverage Status](https://coveralls.io/repos/github/spatialmodel/inmap/badge.svg?branch=master)](https://coveralls.io/github/spatialmodel/inmap?branch=master) [![GoDoc](http://godoc.org/github.com/spatialmodel/inmap?status.svg)](http://godoc.org/github.com/spatialmodel/inmap) [![Go Report Card](https://goreportcard.com/badge/github.com/spatialmodel/inmap)](https://goreportcard.com/report/github.com/spatialmodel/inmap)
+[![Code check](https://github.com/spatialmodel/inmap/actions/workflows/check.yml/badge.svg)](https://github.com/spatialmodel/inmap/actions/workflows/check.yml) [![Coverage Status](https://coveralls.io/repos/github/spatialmodel/inmap/badge.svg?branch=master)](https://coveralls.io/github/spatialmodel/inmap?branch=master) [![Go Reference](https://pkg.go.dev/badge/github.com/spatialmodel/inmap.svg)](https://pkg.go.dev/github.com/spatialmodel/inmap) [![Go Report Card](https://goreportcard.com/badge/github.com/spatialmodel/inmap)](https://goreportcard.com/report/github.com/spatialmodel/inmap)
 
 _Note: This is the documentation for InMAP v1.8.0. Documentation for other versions is available [here](https://github.com/spatialmodel/inmap/releases)._
 

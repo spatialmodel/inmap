@@ -1,6 +1,6 @@
 on: [push, pull_request]
 
-name: run tests
+name: Code check
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -11,27 +11,17 @@ jobs:
         go-version: 1.16.x
     - name: Checkout code
       uses: actions/checkout@v2
-    - uses: actions/cache@v2
-      with:
-        path: |
-          ~/go/pkg/mod
-          ~/.cache/go-build
-          ~/Library/Caches/go-build
-          %LocalAppData%\go-build
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
     - name: Run linters
       uses: golangci/golangci-lint-action@v2
       with:
-        version: v1.29
-        args: --timeout=10m --verbose
+        version: v1.41.1
+        args: --new --timeout=10m -E bodyclose,misspell,gocyclo,dupl,gofmt,revive,unconvert,goimports,depguard,gocritic,funlen
 
   test:
     strategy:
       matrix:
         go-version: [1.14.x, 1.15.x, 1.16.x]
-        platform: [ubuntu-latest, macos-latest, windows-latest]
+        platform: [ubuntu-latest]
     runs-on: ${{ matrix.platform }}
     steps:
     - name: Install Go
@@ -54,7 +44,8 @@ jobs:
     - name: Run tests
       run: |
         go install ./cmd/inmap
-        go test -v ./...
+        export INMAP_ROOT_DIR=${PWD}
+        go test -short -timeout=30m ./...
 
   coverage:
     runs-on: ubuntu-latest
@@ -79,7 +70,8 @@ jobs:
     - name: Calc coverage
       run: |
         go install ./cmd/inmap
-        go test -v -covermode=count -coverprofile=coverage.out ./...
+        export INMAP_ROOT_DIR=${PWD}
+        go test -v --short -timeout=30m -covermode=count -coverprofile=coverage.out ./...
     - name: Convert coverage.out to coverage.lcov
       uses: jandelgado/gcov2lcov-action@v1.0.6
     - name: Coveralls

@@ -30,6 +30,7 @@ import (
 	"github.com/spatialmodel/inmap/cloud"
 	"github.com/spatialmodel/inmap/cloud/cloudrpc"
 	"github.com/spatialmodel/inmap/inmaputil"
+	"github.com/spatialmodel/inmap/internal/postgis"
 )
 
 // Set up directory location for configuration files.
@@ -64,6 +65,7 @@ func TestClient_fake(t *testing.T) {
 			"--aep.InventoryConfig.COARDSYear=0",
 			"--aep.InventoryConfig.InputUnits=no_default",
 			"--aep.InventoryConfig.NEIFiles=",
+			"--aep.PostGISURL=",
 			"--aep.SCCExactMatch=true",
 			"--aep.SpatialConfig.GridName=inmap",
 			"--aep.SpatialConfig.InputSR=+proj=longlat",
@@ -199,6 +201,10 @@ func TestClient_fake(t *testing.T) {
 }
 
 func TestClient_fakeCOARDS(t *testing.T) {
+	ctx := context.Background()
+	postGISURL, postgresC := postgis.SetupTestDB(ctx, t, "../emissions/aep/testdata")
+	defer postgresC.Terminate(ctx)
+
 	checkConfig := func(cmd []string) {
 		wantCmd := []string{"inmap", "run", "steady",
 			"--EmissionMaskGeoJSON=",
@@ -225,6 +231,7 @@ func TestClient_fakeCOARDS(t *testing.T) {
 			"--aep.InventoryConfig.COARDSYear=2016",
 			"--aep.InventoryConfig.InputUnits=tons",
 			"--aep.InventoryConfig.NEIFiles=",
+			"--aep.PostGISURL=" + postGISURL,
 			"--aep.SCCExactMatch=true",
 			"--aep.SpatialConfig.GridName=inmap",
 			"--aep.SpatialConfig.InputSR=+proj=longlat",
@@ -232,7 +239,7 @@ func TestClient_fakeCOARDS(t *testing.T) {
 			"--aep.SpatialConfig.SpatialCache=",
 			"--aep.SpatialConfig.SrgDataCache=",
 			"--aep.SrgShapefileDirectory=no_default",
-			"--aep.SrgSpecOSM=file://test/test/test_user/test_job/f299df4d61e915c2d415b18ceaa1339a2cd7f8481d7d3b6d13675bc0516a5c00.json",
+			"--aep.SrgSpecOSM=file://test/test/test_user/test_job/b43a1c3e7e6841aadfb0b9efeb36f07a26e9cb04af5e3c6057e9ea4f4be4e9cd.json",
 			"--aep.SrgSpecSMOKE=",
 		}
 		if len(cmd) != len(wantCmd) {
@@ -257,6 +264,7 @@ func TestClient_fakeCOARDS(t *testing.T) {
 			}
 		}
 	}
+
 	cfg := inmaputil.InitializeConfig()
 	cfg.Set("EmissionsShapefiles", "[]")
 	cfg.Set("aep.InventoryConfig.COARDSFiles", "{\"all\":[\"${INMAP_ROOT_DIR}/emissions/aep/testdata/emis_coards_hawaii.nc\"]}")
@@ -264,6 +272,7 @@ func TestClient_fakeCOARDS(t *testing.T) {
 	cfg.Set("aep.GridRef", []string{"${INMAP_ROOT_DIR}/emissions/aep/aeputil/testdata/gridref_osm.txt"})
 	cfg.Set("aep.InventoryConfig.InputUnits", "tons")
 	cfg.Set("aep.InventoryConfig.COARDSYear", 2016)
+	cfg.Set("aep.PostGISURL", postGISURL)
 
 	c, err := cloud.NewFakeClient(checkConfig, checkRun, "file://test/test", cfg.Root, cfg.Viper, cfg.InputFiles(), cfg.OutputFiles())
 	if err != nil {
@@ -276,7 +285,7 @@ func TestClient_fakeCOARDS(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx := context.WithValue(context.Background(), "user", "test_user")
+	ctx = context.WithValue(context.Background(), "user", "test_user")
 
 	t.Run("RunJob", func(t *testing.T) {
 		status, err := c.RunJob(ctx, jobSpec)
