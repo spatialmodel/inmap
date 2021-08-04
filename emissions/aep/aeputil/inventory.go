@@ -164,10 +164,11 @@ func (c *InventoryConfig) ReadEmissions() (map[string][]aep.Record, *aep.Invento
 				return nil, nil, fmt.Errorf("aeputil: COARDSYear == %d, but must be set to a positive value when COARDS files are present", c.COARDSYear)
 			}
 			file = os.ExpandEnv(file)
-			recordGenerator, err := aep.ReadCOARDSFile(file, coardsBegin, coardsEnd, units, sourceData)
+			emis, err := aep.ReadCOARDSFile(file, coardsBegin, coardsEnd, units, sourceData)
 			if err != nil {
 				return nil, nil, fmt.Errorf("aeputil: reading COARDS file: %v", err)
 			}
+			recordGenerator := emis.RecordGenerator(emis.Bounds())
 
 			t := &recordTotaler{
 				name:  file,

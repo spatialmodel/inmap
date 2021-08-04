@@ -32,29 +32,30 @@ func TestReadCOARDSFile(t *testing.T) {
 	begin := time.Date(2016, time.January, 1, 0, 0, 0, 0, time.UTC)
 	end := time.Date(2017, time.January, 1, 0, 0, 0, 0, time.UTC)
 	sourceData := SourceData{}
-	generator, err := ReadCOARDSFile(file, begin, end, Ton, sourceData)
+	emis, err := ReadCOARDSFile(file, begin, end, Ton, sourceData)
 	if err != nil {
 		t.Fatal(err)
 	}
+	generator := emis.RecordGenerator(emis.Bounds())
 
 	totalEmis := new(Emissions)
 
 	wantGeometry := []*geom.Bounds{
-		&geom.Bounds{Min: geom.Point{X: -161.25, Y: 15}, Max: geom.Point{X: -158.75, Y: 17}},
-		&geom.Bounds{Min: geom.Point{X: -158.75, Y: 15}, Max: geom.Point{X: -156.25, Y: 17}},
-		&geom.Bounds{Min: geom.Point{X: -156.25, Y: 15}, Max: geom.Point{X: -153.75, Y: 17}},
-		&geom.Bounds{Min: geom.Point{X: -161.25, Y: 17}, Max: geom.Point{X: -158.75, Y: 19}},
-		&geom.Bounds{Min: geom.Point{X: -158.75, Y: 17}, Max: geom.Point{X: -156.25, Y: 19}},
-		&geom.Bounds{Min: geom.Point{X: -156.25, Y: 17}, Max: geom.Point{X: -153.75, Y: 19}},
-		&geom.Bounds{Min: geom.Point{X: -161.25, Y: 19}, Max: geom.Point{X: -158.75, Y: 21}},
-		&geom.Bounds{Min: geom.Point{X: -158.75, Y: 19}, Max: geom.Point{X: -156.25, Y: 21}},
-		&geom.Bounds{Min: geom.Point{X: -156.25, Y: 19}, Max: geom.Point{X: -153.75, Y: 21}},
-		&geom.Bounds{Min: geom.Point{X: -161.25, Y: 21}, Max: geom.Point{X: -158.75, Y: 23}},
-		&geom.Bounds{Min: geom.Point{X: -158.75, Y: 21}, Max: geom.Point{X: -156.25, Y: 23}},
-		&geom.Bounds{Min: geom.Point{X: -156.25, Y: 21}, Max: geom.Point{X: -153.75, Y: 23}},
-		&geom.Bounds{Min: geom.Point{X: -161.25, Y: 23}, Max: geom.Point{X: -158.75, Y: 25}},
-		&geom.Bounds{Min: geom.Point{X: -158.75, Y: 23}, Max: geom.Point{X: -156.25, Y: 25}},
-		&geom.Bounds{Min: geom.Point{X: -156.25, Y: 23}, Max: geom.Point{X: -153.75, Y: 25}},
+		{Min: geom.Point{X: -161.25, Y: 15}, Max: geom.Point{X: -158.75, Y: 17}},
+		{Min: geom.Point{X: -158.75, Y: 15}, Max: geom.Point{X: -156.25, Y: 17}},
+		{Min: geom.Point{X: -156.25, Y: 15}, Max: geom.Point{X: -153.75, Y: 17}},
+		{Min: geom.Point{X: -161.25, Y: 17}, Max: geom.Point{X: -158.75, Y: 19}},
+		{Min: geom.Point{X: -158.75, Y: 17}, Max: geom.Point{X: -156.25, Y: 19}},
+		{Min: geom.Point{X: -156.25, Y: 17}, Max: geom.Point{X: -153.75, Y: 19}},
+		{Min: geom.Point{X: -161.25, Y: 19}, Max: geom.Point{X: -158.75, Y: 21}},
+		{Min: geom.Point{X: -158.75, Y: 19}, Max: geom.Point{X: -156.25, Y: 21}},
+		{Min: geom.Point{X: -156.25, Y: 19}, Max: geom.Point{X: -153.75, Y: 21}},
+		{Min: geom.Point{X: -161.25, Y: 21}, Max: geom.Point{X: -158.75, Y: 23}},
+		{Min: geom.Point{X: -158.75, Y: 21}, Max: geom.Point{X: -156.25, Y: 23}},
+		{Min: geom.Point{X: -156.25, Y: 21}, Max: geom.Point{X: -153.75, Y: 23}},
+		{Min: geom.Point{X: -161.25, Y: 23}, Max: geom.Point{X: -158.75, Y: 25}},
+		{Min: geom.Point{X: -158.75, Y: 23}, Max: geom.Point{X: -156.25, Y: 25}},
+		{Min: geom.Point{X: -156.25, Y: 23}, Max: geom.Point{X: -153.75, Y: 25}},
 	}
 
 	var i int
@@ -75,11 +76,11 @@ func TestReadCOARDSFile(t *testing.T) {
 		i++
 	}
 	emisWant := map[Pollutant]*unit.Unit{
-		Pollutant{Name: "NH3"}:   unit.New(4.1533555064591676e+07, unit.Kilogram),
-		Pollutant{Name: "NOx"}:   unit.New(4.0896043774575606e+07, unit.Kilogram),
-		Pollutant{Name: "PM2_5"}: unit.New(1.3217351922194459e+08, unit.Kilogram),
-		Pollutant{Name: "SOx"}:   unit.New(4.145479962381774e+07, unit.Kilogram),
-		Pollutant{Name: "VOC"}:   unit.New(3.340366574798584e+07, unit.Kilogram),
+		{Name: "NH3"}:   unit.New(4.1533555064591676e+07, unit.Kilogram),
+		{Name: "NOx"}:   unit.New(4.0896043774575606e+07, unit.Kilogram),
+		{Name: "PM2_5"}: unit.New(1.3217351922194459e+08, unit.Kilogram),
+		{Name: "SOx"}:   unit.New(4.145479962381774e+07, unit.Kilogram),
+		{Name: "VOC"}:   unit.New(3.340366574798584e+07, unit.Kilogram),
 	}
 	emisHave := totalEmis.Totals()
 	if !reflect.DeepEqual(emisWant, emisHave) {

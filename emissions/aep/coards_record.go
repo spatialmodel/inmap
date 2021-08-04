@@ -22,6 +22,7 @@ import (
 	"io"
 	"math"
 	"os"
+	"sort"
 	"time"
 
 	"github.com/ctessum/cdf"
@@ -89,6 +90,77 @@ func readCOARDSVar(nc *cdf.File, v string) ([]float64, error) {
 	return data, nil
 }
 
+// Raster is a holder for gridded data.
+type Raster struct {
+	units      InputUnits
+	begin, end time.Time
+	sourceData SourceData
+	lats, lons []float64
+	variables  map[string][]float64
+}
+
+// Bounds returns the bounding box of the grid.
+func (r *Raster) Bounds() *geom.Bounds {
+	return &geom.Bounds{
+		Min: geom.Point{X: r.lons[0], Y: r.lats[0]},
+		Max: geom.Point{X: r.lons[len(r.lons)-1], Y: r.lats[len(r.lats)-1]},
+	}
+}
+
+// RecordGenerator returns a function that generates the emissions
+// records from the receiver within the given bounding box.
+// The generator will return io.EOF after the last record.
+func (r *Raster) RecordGenerator(b *geom.Bounds) func() (Record, error) {
+	convert := r.units.Conversion(1)
+	durationSeconds := r.end.Sub(r.begin).Seconds()
+	duration := unit.New(durationSeconds, unit.Second)
+	sr, err := proj.Parse("+proj=longlat")
+	if err != nil {
+		panic(err)
+	}
+
+	j := sort.SearchFloat64s(r.lats, b.Min.Y)
+	i := sort.SearchFloat64s(r.lons, b.Min.X)
+	jEnd := maxInt(sort.SearchFloat64s(r.lats, b.Max.Y), len(r.lats))
+	iEnd := maxInt(sort.SearchFloat64s(r.lons, b.Max.X), len(r.lons))
+	generator := func() (Record, error) {
+		if j >= jEnd {
+			return nil, io.EOF
+		}
+		dy := gridPointsToGridSpacing(r.lats, j)
+		dx := gridPointsToGridSpacing(r.lons, i)
+		y := r.lats[j]
+		x := r.lons[i]
+		min := geom.Point{X: x - dx/2, Y: y - math.Abs(dy/2)}
+		max := geom.Point{X: x + dx/2, Y: y + math.Abs(dy/2)}
+
+		rec := &basicPolygonRecord{
+			Polygonal:    &geom.Bounds{Min: min, Max: max},
+			SourceData:   r.sourceData,
+			SR:           sr,
+			LocationName: fmt.Sprintf("%d_%d", j, i),
+		}
+
+		e := new(Emissions)
+		for name, data := range r.variables {
+			rate := unit.Div(
+				convert(data[len(r.lons)*j+i]),
+				duration,
+			)
+			e.Add(r.begin, r.end, name, "", rate)
+		}
+		rec.Emissions = *e
+
+		i++
+		if i == iEnd {
+			i = 0
+			j++
+		}
+		return rec, nil
+	}
+	return generator
+}
+
 // ReadCOARDSFile reads a COARDS-compliant NetCDF file
 // (NetCDF 4 and greater not supported) and returns a record generator.
 // The generator will return io.EOF after the last record.
@@ -101,7 +173,7 @@ func readCOARDSVar(nc *cdf.File, v string) ([]float64, error) {
 // Data in the COARDS file are assumed to be row-major (i.e., latitude-major).
 // Information regarding the COARDS NetCDF conventions are
 // available here: https://ferret.pmel.noaa.gov/Ferret/documentation/coards-netcdf-conventions.
-func ReadCOARDSFile(file string, begin, end time.Time, units InputUnits, sourceData SourceData) (func() (Record, error), error) {
+func ReadCOARDSFile(file string, begin, end time.Time, units InputUnits, sourceData SourceData) (*Raster, error) {
 	f, err := os.Open(file)
 	if err != nil {
 		return nil, fmt.Errorf("aep: opening COARDS file %s: %v", file, err)
@@ -110,11 +182,6 @@ func ReadCOARDSFile(file string, begin, end time.Time, units InputUnits, sourceD
 	nc, err := cdf.Open(f)
 	if err != nil {
 		return nil, fmt.Errorf("aep: opening COARDS file %s: %v", file, err)
-	}
-
-	sr, err := proj.Parse("+proj=longlat")
-	if err != nil {
-		panic(err)
 	}
 
 	// Read in emissions variables.
@@ -144,45 +211,20 @@ func ReadCOARDSFile(file string, begin, end time.Time, units InputUnits, sourceD
 		return nil, fmt.Errorf("aep: reading from COARDS file %s: lat and lon variables must be length >= 2 but are %d and %d", file, len(lats), len(lons))
 	}
 
-	convert := units.Conversion(1)
-	durationSeconds := end.Sub(begin).Seconds()
-	duration := unit.New(durationSeconds, unit.Second)
+	return &Raster{
+		units:      units,
+		begin:      begin,
+		end:        end,
+		sourceData: sourceData,
+		lats:       lats,
+		lons:       lons,
+		variables:  variables,
+	}, nil
+}
 
-	var i, j int
-	generator := func() (Record, error) {
-		if j == len(lats) {
-			return nil, io.EOF
-		}
-		dy := gridPointsToGridSpacing(lats, j)
-		dx := gridPointsToGridSpacing(lons, i)
-		y := lats[j]
-		x := lons[i]
-		min := geom.Point{X: x - dx/2, Y: y - math.Abs(dy/2)}
-		max := geom.Point{X: x + dx/2, Y: y + math.Abs(dy/2)}
-
-		r := &basicPolygonRecord{
-			Polygonal:    &geom.Bounds{Min: min, Max: max},
-			SourceData:   sourceData,
-			SR:           sr,
-			LocationName: fmt.Sprintf("%d_%d", j, i),
-		}
-
-		e := new(Emissions)
-		for name, data := range variables {
-			rate := unit.Div(
-				convert(data[len(lons)*j+i]),
-				duration,
-			)
-			e.Add(begin, end, name, "", rate)
-		}
-		r.Emissions = *e
-
-		i++
-		if i == len(lons) {
-			i = 0
-			j++
-		}
-		return r, nil
+func maxInt(a, b int) int {
+	if a > b {
+		return a
 	}
-	return generator, nil
+	return b
 }

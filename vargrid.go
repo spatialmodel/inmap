@@ -374,7 +374,7 @@ func writeNCF(f *cdf.File, Var string, data *sparse.DenseArray) error {
 // Population is a holder for information about the human population in
 // the model domain.
 type Population struct {
-	tree *rtree.Rtree
+	tree func(*geom.Bounds) func() (*population, error)
 }
 
 // MortalityRates is a holder for information about the average human
@@ -863,8 +863,18 @@ func (c *Cell) loadPopMortalityRate(config *VarGridConfig, mortRates *MortalityR
 	}
 
 	// Second, intersect each grid cell with population polygons
-	for _, pInterface := range pop.tree.SearchIntersect(c.Bounds()) {
-		p := pInterface.(*population)
+	popGen := pop.tree(c.Bounds())
+	for {
+		p, err := popGen()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			panic(err)
+		}
+		if p == nil {
+			continue
+		}
 		pIntersection := c.Polygonal.Intersection(p.Polygonal)
 		if pIntersection == nil {
 			continue
@@ -940,12 +950,12 @@ type mortality struct {
 // to spatial reference sr and then discarding any geometries that do not
 // overlap with bounds. The function outputs an index holding the population
 // information and a map giving the array index of each population type.
-func (config *VarGridConfig) loadPopulation(sr *proj.SR, bounds *geom.Bounds) (*rtree.Rtree, map[string]int, error) {
+func (config *VarGridConfig) loadPopulation(sr *proj.SR, bounds *geom.Bounds) (func(*geom.Bounds) func() (*population, error), map[string]int, error) {
 	x := filepath.Ext(config.CensusFile)
 	if x == ".shp" {
 		return config.loadPopulationShapefile(sr, bounds)
 	} else if x == ".ncf" || x == ".nc" {
-		return config.loadPopulationCOARDS(sr, bounds)
+		return config.loadPopulationCOARDS(sr)
 	}
 	return nil, nil, fmt.Errorf("inmap: invalid CensusFile type %s; valid types are .shp, .nc and .ncf", x)
 }
@@ -954,7 +964,7 @@ func (config *VarGridConfig) loadPopulation(sr *proj.SR, bounds *geom.Bounds) (*
 // to spatial reference sr and discarding any geometryies that do not overlap
 // with bounds. The function outputs an index holding the population
 // information and a map giving the array index of each population type.
-func (config *VarGridConfig) loadPopulationShapefile(sr *proj.SR, bounds *geom.Bounds) (*rtree.Rtree, map[string]int, error) {
+func (config *VarGridConfig) loadPopulationShapefile(sr *proj.SR, bounds *geom.Bounds) (func(*geom.Bounds) func() (*population, error), map[string]int, error) {
 	var err error
 	popshp, err := shp.NewDecoder(config.CensusFile)
 	if err != nil {
@@ -1014,7 +1024,17 @@ func (config *VarGridConfig) loadPopulationShapefile(sr *proj.SR, bounds *geom.B
 	}
 
 	popshp.Close()
-	return pop, popIndices, nil
+	return func(b *geom.Bounds) func() (*population, error) {
+		pops := pop.SearchIntersect(b)
+		i := -1
+		return func() (*population, error) {
+			i++
+			if i >= len(pops) {
+				return nil, io.EOF
+			}
+			return pops[i].(*population), nil
+		}
+	}, popIndices, nil
 }
 
 // loadPopulationCOARDS loads population information from a
@@ -1025,9 +1045,9 @@ func (config *VarGridConfig) loadPopulationShapefile(sr *proj.SR, bounds *geom.B
 // Data in the COARDS file are assumed to be row-major (i.e., latitude-major).
 // Information regarding the COARDS NetCDF conventions are
 // available here: https://ferret.pmel.noaa.gov/Ferret/documentation/coards-netcdf-conventions.COARDs.
-func (config *VarGridConfig) loadPopulationCOARDS(sr *proj.SR, bounds *geom.Bounds) (*rtree.Rtree, map[string]int, error) {
+func (config *VarGridConfig) loadPopulationCOARDS(sr *proj.SR) (func(*geom.Bounds) func() (*population, error), map[string]int, error) {
 	// Pretend this is an emissions file to avoid rewriting the COARDS reader.
-	recs, err := aep.ReadCOARDSFile(config.CensusFile, time.Unix(0, 0), time.Unix(1, 0), aep.Kg, aep.SourceData{})
+	raster, err := aep.ReadCOARDSFile(config.CensusFile, time.Unix(0, 0), time.Unix(1, 0), aep.Kg, aep.SourceData{})
 	if err != nil {
 		return nil, nil, fmt.Errorf("inmap: reading NetCDF CensusFile: %w", err)
 	}
@@ -1036,51 +1056,14 @@ func (config *VarGridConfig) loadPopulationCOARDS(sr *proj.SR, bounds *geom.Boun
 	if err != nil {
 		panic(err)
 	}
+
 	ct, err := inputSR.NewTransform(sr)
 	if err != nil {
-		return nil, nil, fmt.Errorf("inmap: creating population geotiff transform: %w", err)
+		return nil, nil, fmt.Errorf("inmap: loading population COARDS file: %w", err)
 	}
-
-	index := rtree.NewTree(25, 50)
-	for {
-		rec, err := recs()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return nil, nil, fmt.Errorf("inmap: reading NetCDF CensusFile records: %w", err)
-		}
-		loc := rec.Location()
-		g, err := loc.Geom.Transform(ct)
-		if err != nil {
-			return nil, nil, fmt.Errorf("inmap: reading NetCDF CensusFile records: %w", err)
-		}
-		if !bounds.Overlaps(g.Bounds()) {
-			continue // Discard if not within area of interest
-		}
-
-		vals := rec.Totals()
-		pops := make([]float64, len(config.CensusPopColumns))
-		var nonZero bool
-		for i, p := range config.CensusPopColumns {
-			u, ok := vals[aep.Pollutant{Name: p}]
-			if !ok {
-				return nil, nil, fmt.Errorf("inmap: missing CensusFIle CensusPopColumn %s", p)
-			}
-			v := u.Value()
-			if math.IsNaN(v) {
-				continue
-			}
-			nonZero = true
-			pops[i] = v
-		}
-
-		if nonZero {
-			index.Insert(&population{
-				Polygonal: g.(geom.Polygonal),
-				PopData:   pops,
-			})
-		}
+	inverseCT, err := sr.NewTransform(inputSR)
+	if err != nil {
+		return nil, nil, fmt.Errorf("inmap: loading population COARDS file: %w", err)
 	}
 
 	popIndex := make(map[string]int)
@@ -1088,7 +1071,75 @@ func (config *VarGridConfig) loadPopulationCOARDS(sr *proj.SR, bounds *geom.Boun
 		popIndex[p] = i
 	}
 
-	return index, popIndex, nil
+	return func(b *geom.Bounds) func() (*population, error) {
+		gb, err := densePolygonFromBounds(b).Transform(inverseCT)
+		if err != nil {
+			panic(err)
+		}
+		gen := raster.RecordGenerator(gb.Bounds())
+
+		return func() (*population, error) {
+			rec, err := gen()
+			if err != nil {
+				if err == io.EOF {
+					return nil, io.EOF
+				}
+				return nil, fmt.Errorf("inmap: reading NetCDF CensusFile records: %w", err)
+			}
+
+			vals := rec.Totals()
+			pops := make([]float64, len(config.CensusPopColumns))
+			var nonZero bool
+			for i, p := range config.CensusPopColumns {
+				u, ok := vals[aep.Pollutant{Name: p}]
+				if !ok {
+					return nil, fmt.Errorf("inmap: missing CensusFile CensusPopColumn %s", p)
+				}
+				v := u.Value()
+				if math.IsNaN(v) {
+					continue
+				}
+				nonZero = true
+				pops[i] = v
+			}
+
+			if nonZero {
+				lg, err := rec.Location().Transform(ct)
+				if err != nil {
+					panic(err)
+				}
+				return &population{
+					Polygonal: lg.(geom.Polygonal),
+					PopData:   pops,
+				}, nil
+			}
+			return nil, nil
+		}
+	}, popIndex, nil
+}
+
+func densePolygonFromBounds(b *geom.Bounds) geom.Polygon {
+	dx := b.Max.X - b.Min.X
+	dy := b.Max.Y - b.Min.Y
+	return geom.Polygon{{
+		{X: b.Min.X, Y: b.Min.Y},
+		{X: b.Min.X + dx/4, Y: b.Min.Y},
+		{X: b.Min.X + dx/2, Y: b.Min.Y},
+		{X: b.Min.X + dx*3/4, Y: b.Min.Y},
+		{X: b.Max.X, Y: b.Min.Y},
+		{X: b.Max.X, Y: b.Min.Y + dy/4},
+		{X: b.Max.X, Y: b.Min.Y + dy/2},
+		{X: b.Max.X, Y: b.Min.Y + dy*3/4},
+		{X: b.Max.X, Y: b.Max.Y},
+		{X: b.Max.X - dx/4, Y: b.Max.Y},
+		{X: b.Max.X - dx/2, Y: b.Max.Y},
+		{X: b.Max.X - dx*3/4, Y: b.Max.Y},
+		{X: b.Min.X, Y: b.Max.Y},
+		{X: b.Min.X, Y: b.Max.Y - dy/4},
+		{X: b.Min.X, Y: b.Max.Y - dy/2},
+		{X: b.Min.X, Y: b.Max.Y - dy*3/4},
+		{X: b.Min.X, Y: b.Min.Y},
+	}}
 }
 
 func s2f(s string) (float64, error) {
