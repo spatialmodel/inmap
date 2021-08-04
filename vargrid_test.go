@@ -20,6 +20,7 @@ package inmap
 
 import (
 	"flag"
+	"io"
 	"math"
 	"os"
 	"reflect"
@@ -899,8 +900,18 @@ func TestLoadPopulationCOARDS(t *testing.T) {
 	}
 	var popSum float64
 	min, max := math.Inf(1), math.Inf(-1)
-	for _, popI := range data.SearchIntersect(cfg.bounds()) {
-		pop := popI.(*population)
+	popGen := data(cfg.bounds())
+	for {
+		pop, err := popGen()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			t.Fatal(err)
+		}
+		if pop == nil {
+			continue
+		}
 		v := pop.PopData[0]
 		popSum += v
 		min = math.Min(min, v)
