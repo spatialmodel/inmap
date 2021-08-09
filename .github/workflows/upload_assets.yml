@@ -21,6 +21,7 @@ jobs:
           GOOS=windows GOARCH=amd64 go build -o bin/inmap-windows-amd64.exe
           GOOS=linux   GOARCH=amd64 go build -o bin/inmap-linux-amd64
           GOOS=darwin  GOARCH=amd64 go build -o bin/inmap-darwin-amd64
+          GOOS=darwin  GOARCH=arm64 go build -o bin/inmap-darwin-arm64
       - name: upload artifacts
         uses: actions/upload-artifact@v2
         with:
@@ -56,6 +57,7 @@ jobs:
           zip assets/inmap-${SOURCE_TAG}-windows-amd64.exe bin/inmap-windows-amd64.exe
           zip assets/inmap-${SOURCE_TAG}-linux-amd64 bin/inmap-linux-amd64
           zip assets/inmap-${SOURCE_TAG}-darwin-amd64 bin/inmap-darwin-amd64
+          zip assets/inmap-${SOURCE_TAG}-darwin-arm64 bin/inmap-darwin-arm64
           sha256sum assets/* > assets/SHASUMS256.txt
       - name: Upload release assets
         uses: skx/github-action-publish-binaries@master
