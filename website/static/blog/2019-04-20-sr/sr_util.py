@@ -71,7 +71,7 @@ def run_sr(emis, model, output_variables, emis_units="tons/year"):
     emis_file = os.path.join(_tmpdir.name, "%s.shp"%(job_name))
     emis.to_file(emis_file)
     
-    version = "1.8.0"
+    version = "1.9.0"
     
     if _inmap_exe == None:
         ost = platform.system()
@@ -93,7 +93,7 @@ def run_sr(emis, model, output_variables, emis_units="tons/year"):
         "--cmds=srpredict",
         "--version=v%s"%version,
         "--job_name=%s"%job_name,
-        "--memory_gb=2",
+        "--memory_gb=3",
         "--EmissionUnits=%s"%emis_units,
         "--EmissionsShapefiles=%s"%emis_file,
         "--OutputVariables=%s"%json.dumps(output_variables),
