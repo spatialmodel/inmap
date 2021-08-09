@@ -19,6 +19,8 @@ def _download(url, file_name):
     with open(file_name, "wb") as file:
         # get request
         response = requests.get(url)
+        if not response.ok:
+            raise Exception("Downloading file from {} failed".format(url))
         # write to file
         file.write(response.content)
 
@@ -72,6 +74,8 @@ def run_sr(emis, model, output_variables, emis_units="tons/year"):
     emis.to_file(emis_file)
 
     arch = platform.machine()
+
+    if arch == "x86_64": arch = "amd64"
     
     version = "1.9.0"
     
