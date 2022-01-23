@@ -24,8 +24,8 @@ import (
 	"testing"
 
 	"github.com/BurntSushi/toml"
-	"github.com/spatialmodel/inmap/emissions/aep"
 	"github.com/ctessum/unit"
+	"github.com/spatialmodel/inmap/emissions/aep"
 )
 
 func TestScale(t *testing.T) {
@@ -59,18 +59,18 @@ func TestScale(t *testing.T) {
 	}
 
 	beforeWant := map[aep.Pollutant]*unit.Unit{
-		aep.Pollutant{Name: "NOX"}:   unit.New(1.9697839276290547e+07, unit.Dimensions{4: 1}),
-		aep.Pollutant{Name: "VOC"}:   unit.New(650426.9504917137, unit.Dimensions{4: 1}),
-		aep.Pollutant{Name: "PM2_5"}: unit.New(1.3253413523899838e+06, unit.Dimensions{4: 1}),
-		aep.Pollutant{Name: "SO2"}:   unit.New(1.5806320939220862e+07, unit.Dimensions{4: 1}),
-		aep.Pollutant{Name: "NH3"}:   unit.New(34.056105917699995, unit.Dimensions{4: 1}),
+		{Name: "NOX"}:   unit.New(1.9697839276290547e+07, unit.Dimensions{4: 1}),
+		{Name: "VOC"}:   unit.New(650426.9504917137, unit.Dimensions{4: 1}),
+		{Name: "PM2_5"}: unit.New(1.3253413523899838e+06, unit.Dimensions{4: 1}),
+		{Name: "SO2"}:   unit.New(1.5806320939220862e+07, unit.Dimensions{4: 1}),
+		{Name: "NH3"}:   unit.New(34.056105917699995, unit.Dimensions{4: 1}),
 	}
 	afterWant := map[aep.Pollutant]*unit.Unit{
-		aep.Pollutant{Name: "NOX"}:   unit.New(1.9697839276290547e+07, unit.Dimensions{4: 1}),
-		aep.Pollutant{Name: "VOC"}:   unit.New(650426.9504917137, unit.Dimensions{4: 1}),
-		aep.Pollutant{Name: "PM2_5"}: unit.New(1.3253413523899838e+06, unit.Dimensions{4: 1}),
-		aep.Pollutant{Name: "SO2"}:   unit.New(1.5806320939220862e+07, unit.Dimensions{4: 1}),
-		aep.Pollutant{Name: "NH3"}:   unit.New(34.056105917699995, unit.Dimensions{4: 1}),
+		{Name: "NOX"}:   unit.New(1.9697839276290547e+07, unit.Dimensions{4: 1}),
+		{Name: "VOC"}:   unit.New(650426.9504917137, unit.Dimensions{4: 1}),
+		{Name: "PM2_5"}: unit.New(1.3253413523899838e+06, unit.Dimensions{4: 1}),
+		{Name: "SO2"}:   unit.New(1.5806320939220862e+07, unit.Dimensions{4: 1}),
+		{Name: "NH3"}:   unit.New(34.056105917699995, unit.Dimensions{4: 1}),
 	}
 	before := sum(emis)
 	if !reflect.DeepEqual(before, beforeWant) {

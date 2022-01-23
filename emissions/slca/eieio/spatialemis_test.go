@@ -50,7 +50,7 @@ func TestEmissions(t *testing.T) {
 	}
 	emis := array2vec(emisRPC.Data)
 
-	want := 4.9888857564566237e+08 // ug/s; ~= 17342.6039028 ton/year *  17342.6039028 ug/s / (ton/year)
+	want := 4.988885756456615e+08 // ug/s; ~= 17342.6039028 ton/year *  17342.6039028 ug/s / (ton/year)
 	have := mat.Sum(emis)
 	if want != have {
 		t.Errorf("have %g, want %g", have, want)

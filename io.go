@@ -123,7 +123,7 @@ func (e *Emissions) Add(er *EmisRecord) {
 			frac = 1
 		}
 	default:
-		panic(fmt.Errorf("Invalid geometry %T", t))
+		panic(fmt.Errorf("invalid geometry %T", t))
 	}
 	if g != nil {
 		er2 := er
@@ -190,18 +190,18 @@ func ReadEmissionShapefiles(gridSR *proj.SR, units string, c chan string, mask g
 		fname = strings.Replace(fname, ".shp", "", -1)
 		f, err := shp.NewDecoder(fname + ".shp")
 		if err != nil {
-			return nil, fmt.Errorf("there was a problem reading the emissions shapefile '%s'. "+
-				"The error message was %v.", fname, err)
+			return nil, fmt.Errorf("there was a problem reading the emissions shapefile '%s' "+
+				"The error message was %v", fname, err)
 		}
 		sr, err := f.SR()
 		if err != nil {
 			return nil, fmt.Errorf("there was a problem reading the projection information for "+
-				"the emissions shapefile '%s'. The error message was %v.", fname, err)
+				"the emissions shapefile '%s'. The error message was %v", fname, err)
 		}
 		trans, err := sr.NewTransform(gridSR)
 		if err != nil {
 			return nil, fmt.Errorf("there was a problem creating a spatial reprojector for "+
-				"the emissions shapefile '%s'. The error message was %v.", fname, err)
+				"the emissions shapefile '%s'. The error message was %v", fname, err)
 		}
 		for {
 			var e EmisRecord
@@ -268,16 +268,10 @@ func FromAEP(r []aep.RecordGridded, grids []*aep.GridDef, gi int, VOC, NOx, NH3,
 		}
 		return v.Value()
 	}
-
-	// Find the centroids of the grid cells.
 	grid := grids[gi]
-	centroids := make([]geom.Point, len(grid.Cells))
-	for i, c := range grid.Cells {
-		centroids[i] = c.Centroid()
-	}
 
 	var eRecs []*EmisRecord
-	groundERecs := make(map[geom.Point]*EmisRecord)
+	groundERecs := make(map[int]*EmisRecord)
 
 	for _, rec := range r {
 		gridSrg, _, inGrid, err := rec.GridFactors(gi)
@@ -289,9 +283,8 @@ func FromAEP(r []aep.RecordGridded, grids []*aep.GridDef, gi int, VOC, NOx, NH3,
 		}
 		e := rec.GetEmissions().Totals()
 		for i, frac := range gridSrg.Elements {
-			p := centroids[i]
 			er := EmisRecord{
-				Geom: p,
+				Geom: grid.Cells[i].Polygonal,
 			}
 
 			// Convert units.
@@ -363,10 +356,10 @@ func FromAEP(r []aep.RecordGridded, grids []*aep.GridDef, gi int, VOC, NOx, NH3,
 			} else {
 				// For ground level sources, combine with other records
 				// at the same point.
-				if _, ok := groundERecs[p]; !ok {
-					groundERecs[p] = &er
+				if _, ok := groundERecs[i]; !ok {
+					groundERecs[i] = &er
 				} else {
-					groundERecs[p].add(&er)
+					groundERecs[i].add(&er)
 				}
 			}
 		}
@@ -419,7 +412,7 @@ func calcWeightFactor(e geom.Geom, c *Cell) float64 {
 			return 0.
 		}
 		el := e.(geom.Linear)
-		il := intersection.(geom.Linear)
+		il := intersection
 		weightFactor = il.Length() / el.Length()
 	default:
 		log.Fatalf("unsupported geometry type: %#v in emissions file", e)
@@ -544,7 +537,7 @@ func NewOutputter(fileName string, allLayers bool, outputVariables map[string]st
 	}
 
 	for _, val := range o.outputVariables {
-		regx, _ := regexp.Compile("\\{(.*?)\\}")
+		regx := regexp.MustCompile(`{(.*?)}`)
 		matches := regx.FindAllString(val, -1)
 		if len(matches) > 0 {
 			for _, m := range matches {
