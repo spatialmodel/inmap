@@ -751,14 +751,6 @@ func TestCellIntersections(t *testing.T) {
 	}
 }
 
-// sortCells sorts the cells by layer, x centroid, and y centroid.
-func sortCells(cells []*Cell) {
-	sc := &cellsSorter{
-		cells: cells,
-	}
-	sort.Sort(sc)
-}
-
 type cellsSorter struct {
 	cells []*Cell
 }
@@ -872,7 +864,7 @@ func TestFromAEP(t *testing.T) {
 			recs: []aep.Record{r1},
 			result: []*EmisRecord{
 				{
-					Geom:     geom.Point{X: 2000, Y: -2000},
+					Geom:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
 					PM25:     kgPerSecondToUgPerSecond,
 					Height:   1,
 					Diam:     1,
@@ -886,7 +878,7 @@ func TestFromAEP(t *testing.T) {
 			recs: []aep.Record{r2},
 			result: []*EmisRecord{
 				{
-					Geom: geom.Point{X: -2000, Y: 2000},
+					Geom: &geom.Bounds{Min: geom.Point{X: -4000, Y: 0}, Max: geom.Point{X: 0, Y: 4000}},
 					PM25: kgPerSecondToUgPerSecond,
 				},
 			},
@@ -896,7 +888,7 @@ func TestFromAEP(t *testing.T) {
 			recs: []aep.Record{r1, r2},
 			result: []*EmisRecord{
 				{
-					Geom:     geom.Point{X: 2000, Y: -2000},
+					Geom:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
 					PM25:     kgPerSecondToUgPerSecond,
 					Height:   1,
 					Diam:     1,
@@ -904,7 +896,7 @@ func TestFromAEP(t *testing.T) {
 					Velocity: 1,
 				},
 				{
-					Geom: geom.Point{X: -2000, Y: 2000},
+					Geom: &geom.Bounds{Min: geom.Point{X: -4000, Y: 0}, Max: geom.Point{X: 0, Y: 4000}},
 					PM25: kgPerSecondToUgPerSecond,
 				},
 			},
@@ -914,7 +906,7 @@ func TestFromAEP(t *testing.T) {
 			recs: []aep.Record{r1, r1, r1},
 			result: []*EmisRecord{
 				{
-					Geom:     geom.Point{X: 2000, Y: -2000},
+					Geom:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
 					PM25:     kgPerSecondToUgPerSecond,
 					Height:   1,
 					Diam:     1,
@@ -922,7 +914,7 @@ func TestFromAEP(t *testing.T) {
 					Velocity: 1,
 				},
 				{
-					Geom:     geom.Point{X: 2000, Y: -2000},
+					Geom:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
 					PM25:     kgPerSecondToUgPerSecond,
 					Height:   1,
 					Diam:     1,
@@ -930,7 +922,7 @@ func TestFromAEP(t *testing.T) {
 					Velocity: 1,
 				},
 				{
-					Geom:     geom.Point{X: 2000, Y: -2000},
+					Geom:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
 					PM25:     kgPerSecondToUgPerSecond,
 					Height:   1,
 					Diam:     1,
@@ -944,7 +936,7 @@ func TestFromAEP(t *testing.T) {
 			recs: []aep.Record{r2, r2, r2},
 			result: []*EmisRecord{
 				{
-					Geom: geom.Point{X: -2000, Y: 2000},
+					Geom: &geom.Bounds{Min: geom.Point{X: -4000, Y: 0}, Max: geom.Point{X: 0, Y: 4000}},
 					PM25: 3 * kgPerSecondToUgPerSecond,
 				},
 			},
@@ -954,7 +946,7 @@ func TestFromAEP(t *testing.T) {
 			recs: []aep.Record{r1, r2, r1},
 			result: []*EmisRecord{
 				{
-					Geom:     geom.Point{X: 2000, Y: -2000},
+					Geom:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
 					PM25:     kgPerSecondToUgPerSecond,
 					Height:   1,
 					Diam:     1,
@@ -962,7 +954,7 @@ func TestFromAEP(t *testing.T) {
 					Velocity: 1,
 				},
 				{
-					Geom:     geom.Point{X: 2000, Y: -2000},
+					Geom:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
 					PM25:     kgPerSecondToUgPerSecond,
 					Height:   1,
 					Diam:     1,
@@ -970,7 +962,7 @@ func TestFromAEP(t *testing.T) {
 					Velocity: 1,
 				},
 				{
-					Geom: geom.Point{X: -2000, Y: 2000},
+					Geom: &geom.Bounds{Min: geom.Point{X: -4000, Y: 0}, Max: geom.Point{X: 0, Y: 4000}},
 					PM25: kgPerSecondToUgPerSecond,
 				},
 			},
@@ -980,7 +972,7 @@ func TestFromAEP(t *testing.T) {
 			recs: []aep.Record{r2, r1, r2},
 			result: []*EmisRecord{
 				{
-					Geom:     geom.Point{X: 2000, Y: -2000},
+					Geom:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
 					PM25:     kgPerSecondToUgPerSecond,
 					Height:   1,
 					Diam:     1,
@@ -988,7 +980,7 @@ func TestFromAEP(t *testing.T) {
 					Velocity: 1,
 				},
 				{
-					Geom: geom.Point{X: -2000, Y: 2000},
+					Geom: &geom.Bounds{Min: geom.Point{X: -4000, Y: 0}, Max: geom.Point{X: 0, Y: 4000}},
 					PM25: 2 * kgPerSecondToUgPerSecond,
 				},
 			},
@@ -1017,7 +1009,7 @@ func TestFromAEP(t *testing.T) {
 			for i, have := range er {
 				want := test.result[i]
 				if !reflect.DeepEqual(want, have) {
-					t.Errorf("want %v but have %v", want, have)
+					t.Errorf("want %#v but have %#v", want, have)
 				}
 			}
 		})
@@ -1086,7 +1078,7 @@ func BenchmarkFromAEP(b *testing.B) {
 	resultFuncs := []func(int) []*EmisRecord{
 		func(n int) []*EmisRecord { // elevated emissions
 			r := &EmisRecord{
-				Geom:     geom.Point{X: 2000, Y: -2000},
+				Geom:     &geom.Bounds{Min: geom.Point{X: 0, Y: -4000}, Max: geom.Point{X: 4000, Y: 0}},
 				PM25:     kgPerSecondToUgPerSecond,
 				Height:   1,
 				Diam:     1,
@@ -1102,7 +1094,7 @@ func BenchmarkFromAEP(b *testing.B) {
 		func(n int) []*EmisRecord {
 			return []*EmisRecord{
 				{
-					Geom: geom.Point{X: -2000, Y: 2000},
+					Geom: &geom.Bounds{Min: geom.Point{X: -4000, Y: 0}, Max: geom.Point{X: 0, Y: 4000}},
 					PM25: float64(n) * kgPerSecondToUgPerSecond,
 				},
 			}

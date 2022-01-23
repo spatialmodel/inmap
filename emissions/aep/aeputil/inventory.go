@@ -145,9 +145,7 @@ func (c *InventoryConfig) ReadEmissions() (map[string][]aep.Record, *aep.Invento
 		}
 		inventoryReport.AddData(sectorReport.Data...)
 
-		for _, rec := range recs {
-			records[sector] = append(records[sector], rec)
-		}
+		records[sector] = append(records[sector], recs...)
 	}
 
 	// Read COARDS files.
