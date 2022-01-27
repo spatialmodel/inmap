@@ -274,6 +274,13 @@ func FromAEP(r []aep.RecordGridded, grids []*aep.GridDef, gi int, VOC, NOx, NH3,
 	groundERecs := make(map[int]*EmisRecord)
 
 	for _, rec := range r {
+		var totalEmis float64
+		for _, v := range rec.Totals() {
+			totalEmis += math.Abs(v.Value())
+		}
+		if totalEmis == 0 {
+			continue
+		}
 		gridSrg, _, inGrid, err := rec.GridFactors(gi)
 		if err != nil {
 			return nil, err
