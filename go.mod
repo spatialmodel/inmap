@@ -39,6 +39,7 @@ require (
 	github.com/lnashier/viper v0.0.0-20180730210402-cc7336125d12
 	github.com/magiconair/properties v1.7.3 // indirect
 	github.com/mattn/go-sqlite3 v1.11.0
+	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/pelletier/go-toml v1.0.1 // indirect
 	github.com/rs/cors v1.3.0 // indirect
 	github.com/russross/blackfriday v2.0.0+incompatible // indirect
