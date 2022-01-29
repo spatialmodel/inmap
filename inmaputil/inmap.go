@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"os"
 	"runtime"
 	"sync"
@@ -361,6 +362,13 @@ func setEmissionsAEP(inventoryConfig *aeputil.InventoryConfig, spatialConfig *ae
 				break
 			} else if err != nil {
 				return err
+			}
+			var totalEmis float64
+			for _, v := range rec.Totals() {
+				totalEmis += math.Abs(v.Value())
+			}
+			if totalEmis == 0 {
+				continue
 			}
 			spatialRecs = append(spatialRecs, rec.(aep.RecordGridded))
 		}
