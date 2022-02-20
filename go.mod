@@ -8,9 +8,7 @@ require (
 	github.com/aws/aws-sdk-go v1.38.35
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/cenkalti/backoff/v4 v4.1.1
-	github.com/cilium/ebpf v0.8.0 // indirect
 	github.com/cpuguy83/go-md2man v1.0.9-0.20180619205630-691ee98543af // indirect
-	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
 	github.com/ctessum/atmos v0.0.0-20170526022537-cba69f7ca647
 	github.com/ctessum/cdf v0.0.0-20181201011353-edced208ea9d
 	github.com/ctessum/geom v0.2.10
@@ -29,6 +27,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da
 	github.com/golang/protobuf v1.5.2
 	github.com/gonum/floats v0.0.0-20181209220543-c233463c7e82
+	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/gopherjs/gopherjs v0.0.0-20181103185306-d547d1d9531e
 	github.com/gopherjs/vecty v0.0.0-20180525005238-a3bd138280bf
 	github.com/gorilla/websocket v1.4.2
@@ -56,8 +55,6 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/tealeg/xlsx v1.0.3
 	github.com/testcontainers/testcontainers-go v0.11.1
-	github.com/urfave/cli v1.22.5 // indirect
-	github.com/vishvananda/netns v0.0.0-20211101163701-50045581ed74 // indirect
 	gocloud.dev v0.23.0
 	golang.org/x/build v0.0.0-20190226180436-80ca8d25ddd4
 	golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e
