@@ -119,6 +119,12 @@ func (r *Raster) RecordGenerator(b *geom.Bounds) func() (Record, error) {
 		panic(err)
 	}
 
+	if !sort.Float64sAreSorted(r.lats) {
+		panic(fmt.Errorf("in COARDS file: lats are not sorted"))
+	}
+	if !sort.Float64sAreSorted(r.lons) {
+		panic(fmt.Errorf("in COARDS file: lons are not sorted"))
+	}
 	j := sort.SearchFloat64s(r.lats, b.Min.Y)
 	i := sort.SearchFloat64s(r.lons, b.Min.X)
 	jEnd := maxInt(sort.SearchFloat64s(r.lats, b.Max.Y), len(r.lats))
