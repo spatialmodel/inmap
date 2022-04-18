@@ -105,6 +105,14 @@ def run_sr(emis, model, output_variables, emis_units="tons/year"):
         "--OutputVariables=%s"%json.dumps(output_variables),
         "--SR.OutputFile=%s"%model_path])
 
+    # You can also run the simulation locally by replacing the above command with the below command:
+    # subprocess.check_output([_inmap_exe, "srpredict",
+    #    "--EmissionUnits=%s"%emis_units,
+    #    "--EmissionsShapefiles=%s"%emis_file,
+    #    "--OutputVariables=%s"%json.dumps(output_variables),
+    #    "--SR.OutputFile=/path/to/isrm/file/you/downloaded.ncf"])
+    # You can download the ISRM source receptor matrix itself from here: https://zenodo.org/record/3590127#.Yl2SSvPMKWA
+    
     while True:
         try:
             status = subprocess.check_output([_inmap_exe, "cloud", "status", "--job_name=%s"%job_name]).decode("utf-8").strip()
