@@ -4,7 +4,7 @@
         <title>InMAP Blog</title>
         <link>https://inmap.run/blog</link>
         <description>The best place to stay up-to-date with the latest InMAP news and events.</description>
-        <lastBuildDate>Sat, 20 Apr 2019 06:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Thu, 15 Dec 2022 06:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
         <image>
@@ -12,7 +12,15 @@
             <url>https://inmap.run/img/textLogo.svg</url>
             <link>https://inmap.run/blog</link>
         </image>
-        <copyright>Copyright © 2020 the InMAP authors.</copyright>
+        <copyright>Copyright © 2023 the InMAP authors.</copyright>
+        <item>
+            <title><![CDATA[Tutorial: Accessing the source-receptor matrices from AWS]]></title>
+            <link>https://inmap.run/blog/2022/12/15/tutorial.html</link>
+            <guid>https://inmap.run/blog/2022/12/15/tutorial.html</guid>
+            <pubDate>Thu, 15 Dec 2022 06:00:00 GMT</pubDate>
+            <description><![CDATA[<p>This tutorial provides you a simple access to the source-receptor matrices using AWS and Python. After installing all the dependencies, you can easily follow the instructions to work with the SR matrices.</p>
+]]></description>
+        </item>
         <item>
             <title><![CDATA[Working with source-receptor matrices using https://inmap.run and GeoPandas in Python]]></title>
             <link>https://inmap.run/blog/2019/04/20/sr.html</link>
