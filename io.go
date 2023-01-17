@@ -489,11 +489,11 @@ type Outputter struct {
 // NewOutputter initializes a new Outputter holder and adds a set of default
 // output functions. Default functions include:
 //
-// 'exp(x)' which applies the exponental function e^x.
+// 'exp(x)' which applies the exponential function e^x.
 //
-// 'log(x)' which applies the natural logarithm function log(e).
+// 'log(x)' which applies the natural logarithm function log(x).
 //
-// 'log10(x)' which applies the base-10 logarithm function log10(e).
+// 'log10(x)' which applies the base-10 logarithm function log10(x).
 //
 // 'sum(x)' which sums a variable across all grid cells.
 func NewOutputter(fileName string, allLayers bool, outputVariables map[string]string, outputFunctions map[string]govaluate.ExpressionFunction, m Mechanism) (*Outputter, error) {
@@ -506,15 +506,15 @@ func NewOutputter(fileName string, allLayers bool, outputVariables map[string]st
 		},
 		"log": func(arg ...interface{}) (interface{}, error) {
 			if len(arg) != 1 {
-				return nil, fmt.Errorf("inmap: got %d arguments for function 'exp', but need 1", len(arg))
+				return nil, fmt.Errorf("inmap: got %d arguments for function 'log', but need 1", len(arg))
 			}
 			return (float64)(math.Log(arg[0].(float64))), nil
 		},
 		"log10": func(arg ...interface{}) (interface{}, error) {
 			if len(arg) != 1 {
-				return nil, fmt.Errorf("inmap: got %d arguments for function 'exp', but need 1", len(arg))
+				return nil, fmt.Errorf("inmap: got %d arguments for function 'log10', but need 1", len(arg))
 			}
-			return (float64)(math.Log(arg[0].(float64))), nil
+			return (float64)(math.Log10(arg[0].(float64))), nil
 		},
 		"sum": func(arg ...interface{}) (interface{}, error) {
 			if len(arg) != 1 {
