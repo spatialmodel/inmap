@@ -2,12 +2,24 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://inmap.run/blog</id>
     <title>InMAP Blog</title>
-    <updated>2019-04-20T06:00:00.000Z</updated>
+    <updated>2022-12-15T06:00:00.000Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://inmap.run/blog"/>
     <subtitle>The best place to stay up-to-date with the latest InMAP news and events.</subtitle>
     <logo>https://inmap.run/img/textLogo.svg</logo>
-    <rights>Copyright © 2020 the InMAP authors.</rights>
+    <rights>Copyright © 2023 the InMAP authors.</rights>
+    <entry>
+        <title type="html"><![CDATA[Tutorial: Accessing the source-receptor matrices from AWS]]></title>
+        <id>https://inmap.run/blog/2022/12/15/tutorial.html</id>
+        <link href="https://inmap.run/blog/2022/12/15/tutorial.html"/>
+        <updated>2022-12-15T06:00:00.000Z</updated>
+        <summary type="html"><![CDATA[<p>This tutorial provides you a simple access to the source-receptor matrices using AWS and Python. After installing all the dependencies, you can easily follow the instructions to work with the SR matrices.</p>
+]]></summary>
+        <author>
+            <name>Xiao Ran, Chris Tessum</name>
+            <uri>https://github.com/xiaor2</uri>
+        </author>
+    </entry>
     <entry>
         <title type="html"><![CDATA[Working with source-receptor matrices using https://inmap.run and GeoPandas in Python]]></title>
         <id>https://inmap.run/blog/2019/04/20/sr.html</id>
@@ -18,7 +30,6 @@ This tutorial demonstrates how to use source-receptor matrices to estimate healt
 ]]></summary>
         <author>
             <name>Chris Tessum</name>
-            <email/>
             <uri>https://github.com/ctessum</uri>
         </author>
     </entry>
@@ -32,7 +43,6 @@ scenario and use the InMAP model to estimate the resulting health impacts.</p>
 ]]></summary>
         <author>
             <name>Xinyu Zhang</name>
-            <email/>
             <uri>https://www.linkedin.com/in/xinyu-ryan-zhang/</uri>
         </author>
     </entry>
