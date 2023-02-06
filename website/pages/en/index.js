@@ -164,7 +164,7 @@ const Methodology = () => (
           <p>Because InMAP is a reduced complexity air quality model, it may not be the perfect tool for every job. However, InMAP is well suited for many situations, such as:</p>
               <ul>
                   <li> Projects that require many model runs, such as those that include scenario or uncertainty assessment.</li>
-                  <li> Projects that would benefit from the combination of a large spatial resolution an high spatial resolution compared to what is available in other models.</li>
+                  <li> Projects that would benefit from the combination of a large spatial coverage and high spatial resolution compared to what is available in other models.</li>
                   <li> Projects interested in investigation environmental injustice or equity issues.</li>
                   <li> Projects that do not have access to the time, expertise, or resources required to run comprehensive chemical transport models.</li>
               </ul>
