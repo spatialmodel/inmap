@@ -57,9 +57,8 @@ require (
 	github.com/testcontainers/testcontainers-go v0.11.1
 	gocloud.dev v0.23.0
 	golang.org/x/build v0.0.0-20190226180436-80ca8d25ddd4
-	golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e
-	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd
-	golang.org/x/sys v0.0.0-20220209214540-3681064d5158 // indirect
+	golang.org/x/crypto v0.1.0
+	golang.org/x/net v0.1.0
 	gonum.org/v1/gonum v0.0.0-20191009222026-5d5638e6749a
 	gonum.org/v1/plot v0.0.0-20190526055220-ccfad0c86201
 	google.golang.org/grpc v1.37.0
