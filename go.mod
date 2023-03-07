@@ -43,7 +43,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.11.0
 	github.com/moby/sys/mountinfo v0.6.0 // indirect
 	github.com/opencontainers/image-spec v1.0.2 // indirect
-	github.com/opencontainers/runc v1.1.0 // indirect
+	github.com/opencontainers/runc v1.1.2 // indirect
 	github.com/pelletier/go-toml v1.0.1 // indirect
 	github.com/rs/cors v1.3.0 // indirect
 	github.com/russross/blackfriday v2.0.0+incompatible // indirect
