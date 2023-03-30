@@ -31,7 +31,7 @@ const (
 	// Version gives the version number.
 	Version = "1.9.0"
 
-	// VarGridDataVersion gives the version of the variable grid data reuquired by
+	// VarGridDataVersion gives the version of the variable grid data required by
 	// this version of the software.
 	VarGridDataVersion = "1.6.1"
 
