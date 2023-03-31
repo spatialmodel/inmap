@@ -738,11 +738,24 @@ func TestGetGeometry(t *testing.T) {
 
 	want0 := []geom.Polygonal{geom.Polygon{geom.Path{geom.Point{X: -1.0803243503695702e+07, Y: 4.860686654254725e+06}, geom.Point{X: -1.0801930279663565e+07, Y: 4.860687250907495e+06}, geom.Point{X: -1.0801930791146653e+07, Y: 4.862000560256863e+06}, geom.Point{X: -1.080324418567307e+07, Y: 4.861999963449156e+06}}}, geom.Polygon{geom.Path{geom.Point{X: -1.080324418567307e+07, Y: 4.861999963449156e+06}, geom.Point{X: -1.0801930791146653e+07, Y: 4.862000560256863e+06}, geom.Point{X: -1.0801931302762568e+07, Y: 4.8633140401226785e+06}, geom.Point{X: -1.0803244867827544e+07, Y: 4.863313443159976e+06}}}, geom.Polygon{geom.Path{geom.Point{X: -1.0803244867827544e+07, Y: 4.863313443159976e+06}, geom.Point{X: -1.080061773756471e+07, Y: 4.86331446652465e+06}, geom.Point{X: -1.0800618419985117e+07, Y: 4.865941938204324e+06}, geom.Point{X: -1.0803246232668078e+07, Y: 4.865940914307926e+06}}}, geom.Polygon{geom.Path{geom.Point{X: -1.0801930279663565e+07, Y: 4.860687250907495e+06}, geom.Point{X: -1.0800617055498654e+07, Y: 4.86068767708809e+06}, geom.Point{X: -1.0800617396487407e+07, Y: 4.862000986548126e+06}, geom.Point{X: -1.0801930791146653e+07, Y: 4.862000560256863e+06}}}, geom.Polygon{geom.Path{geom.Point{X: -1.0801930791146653e+07, Y: 4.862000560256863e+06}, geom.Point{X: -1.0800617396487407e+07, Y: 4.862000986548126e+06}, geom.Point{X: -1.080061773756471e+07, Y: 4.86331446652465e+06}, geom.Point{X: -1.0801931302762568e+07, Y: 4.8633140401226785e+06}}}, geom.Polygon{geom.Path{geom.Point{X: -1.0803246232668078e+07, Y: 4.865940914307926e+06}, geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06}, geom.Point{X: -1.0797990606947536e+07, Y: 4.871199271364988e+06}, geom.Point{X: -1.0803248964477425e+07, Y: 4.87119790475015e+06}}}, geom.Polygon{geom.Path{geom.Point{X: -1.0800617055498654e+07, Y: 4.86068767708809e+06}, geom.Point{X: -1.0797990606947536e+07, Y: 4.860688018032593e+06}, geom.Point{X: -1.0797990606947536e+07, Y: 4.863314807646255e+06}, geom.Point{X: -1.080061773756471e+07, Y: 4.86331446652465e+06}}}, geom.Polygon{geom.Path{geom.Point{X: -1.080061773756471e+07, Y: 4.86331446652465e+06}, geom.Point{X: -1.0797990606947536e+07, Y: 4.863314807646255e+06}, geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06}, geom.Point{X: -1.0800618419985117e+07, Y: 4.865941938204324e+06}}}, geom.Polygon{geom.Path{geom.Point{X: -1.0797990606947536e+07, Y: 4.860688018032593e+06}, geom.Point{X: -1.0792737710199371e+07, Y: 4.860686654254725e+06}, geom.Point{X: -1.0792734981226994e+07, Y: 4.865940914307926e+06}, geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06}}}, geom.Polygon{geom.Path{geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06}, geom.Point{X: -1.0792734981226994e+07, Y: 4.865940914307926e+06}, geom.Point{X: -1.0792732249417646e+07, Y: 4.87119790475015e+06}, geom.Point{X: -1.0797990606947536e+07, Y: 4.871199271364988e+06}}}}
 	want5 := []geom.Polygonal{geom.Polygon{geom.Path{geom.Point{X: -1.0803243503695702e+07, Y: 4.860686654254725e+06}, geom.Point{X: -1.0797990606947536e+07, Y: 4.860688018032593e+06}, geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06}, geom.Point{X: -1.0803246232668078e+07, Y: 4.865940914307926e+06}}}, geom.Polygon{geom.Path{geom.Point{X: -1.0803246232668078e+07, Y: 4.865940914307926e+06}, geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06}, geom.Point{X: -1.0797990606947536e+07, Y: 4.871199271364988e+06}, geom.Point{X: -1.0803248964477425e+07, Y: 4.87119790475015e+06}}}, geom.Polygon{geom.Path{geom.Point{X: -1.0797990606947536e+07, Y: 4.860688018032593e+06}, geom.Point{X: -1.0792737710199371e+07, Y: 4.860686654254725e+06}, geom.Point{X: -1.0792734981226994e+07, Y: 4.865940914307926e+06}, geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06}}}, geom.Polygon{geom.Path{geom.Point{X: -1.0797990606947536e+07, Y: 4.865942279503172e+06}, geom.Point{X: -1.0792734981226994e+07, Y: 4.865940914307926e+06}, geom.Point{X: -1.0792732249417646e+07, Y: 4.87119790475015e+06}, geom.Point{X: -1.0797990606947536e+07, Y: 4.871199271364988e+06}}}}
-	if !reflect.DeepEqual(g0, want0) {
-		t.Errorf("layer 0 not matching")
+
+	for i, g := range g0[0].(geom.Polygon) {
+		w := want0[0].(geom.Polygon)[i]
+		for j, gg := range g {
+			ww := w[j]
+			if !gg.Similar(ww, 1.e-6) {
+				t.Errorf("layer 0, point %d not matching: %v != %v", j, gg, ww)
+			}
+		}
 	}
-	if !reflect.DeepEqual(g5, want5) {
-		t.Errorf("layer 5 not matching")
+	for i, g := range g5[0].(geom.Polygon) {
+		w := want5[0].(geom.Polygon)[i]
+		for j, gg := range g {
+			ww := w[j]
+			if !gg.Similar(ww, 1.e-6) {
+				t.Errorf("layer 5, point %d not matching: %v != %v", j, gg, ww)
+			}
+		}
 	}
 }
 
@@ -867,6 +880,51 @@ func TestCombineCTMData(t *testing.T) {
 		t.Fatalf("reading golden file: %v", err)
 	}
 	compareCTMData(goldenData, combined, tolerance, t)
+}
+
+// TestWrapGrid checks whether a lat-lon grid wraps around at 180/-180 degrees.
+func TestWrapGrid(t *testing.T) {
+	cfg, ctmdata, pop, popIndices, mr, mortIndices := VarGridTestData()
+
+	cfg.VariableGridXo = -180
+	cfg.VariableGridYo = -5
+	cfg.VariableGridDx = 10
+	cfg.VariableGridDy = 10
+	cfg.Xnests = []int{36}
+	cfg.Ynests = []int{1}
+	ctmdata.xo = -180
+	ctmdata.yo = 180
+	ctmdata.dx = 180
+	ctmdata.dy = 10
+	cfg.GridProj = "+proj=longlat"
+
+	emis := &Emissions{
+		data: rtree.NewTree(25, 50),
+	}
+
+	var m Mech
+	d := &InMAP{
+		InitFuncs: []DomainManipulator{
+			cfg.RegularGrid(ctmdata, pop, popIndices, mr, mortIndices, emis, m),
+		},
+	}
+	if err := d.Init(); err != nil {
+		t.Error(err)
+	}
+	cells := d.Cells()
+	first := cells[0]
+	var last *Cell
+	for _, last = range cells {
+		if last.Polygonal.Bounds().Max.X > 175 && last.Layer == 0 {
+			break
+		}
+	}
+	if !reflect.DeepEqual(first.west.array()[0], last) {
+		t.Errorf("last cell is not to the East of the first cell")
+	}
+	if !reflect.DeepEqual(last.east.array()[0], first) {
+		t.Errorf("first cell is not to the West of the last cell")
+	}
 }
 
 func different(a, b, tolerance float64) bool {

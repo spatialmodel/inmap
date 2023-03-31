@@ -29,11 +29,11 @@ import (
 
 const (
 	// Version gives the version number.
-	Version = "1.9.0"
+	Version = "1.10.0-beta.1"
 
-	// VarGridDataVersion gives the version of the variable grid data reuquired by
+	// VarGridDataVersion gives the version of the variable grid data required by
 	// this version of the software.
-	VarGridDataVersion = "1.6.1"
+	VarGridDataVersion = "1.10.0"
 
 	// InMAPDataVersion is the version of the InMAP data required by this version
 	// of the software.
@@ -88,6 +88,13 @@ type InMAP struct {
 	index *rtree.Rtree
 
 	cellLock sync.Mutex
+
+	// HorizontalWrap is the X coordinate value at which the grid
+	// should wrap. For example, for a latitude-longitude grid,
+	// the value should be 180.
+	// To prevent the grid from wrapping, set HorizontalWrap to
+	// NaN.
+	HorizontalWrap float64
 }
 
 // Init initializes the simulation by running d.InitFuncs.
