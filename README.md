@@ -2,7 +2,7 @@
 
 [![Code check](https://github.com/spatialmodel/inmap/actions/workflows/check.yml/badge.svg)](https://github.com/spatialmodel/inmap/actions/workflows/check.yml) [![Coverage Status](https://coveralls.io/repos/github/spatialmodel/inmap/badge.svg?branch=master)](https://coveralls.io/github/spatialmodel/inmap?branch=master) [![Go Reference](https://pkg.go.dev/badge/github.com/spatialmodel/inmap.svg)](https://pkg.go.dev/github.com/spatialmodel/inmap) [![Go Report Card](https://goreportcard.com/badge/github.com/spatialmodel/inmap)](https://goreportcard.com/report/github.com/spatialmodel/inmap)
 
-_Note: This is the documentation for InMAP v1.9.0. Documentation for other versions is available [here](https://github.com/spatialmodel/inmap/releases)._
+_Note: This is the documentation for InMAP v1.10.0-beta.1. Documentation for other versions is available [here](https://github.com/spatialmodel/inmap/releases)._
 
 Visit the InMAP website at https://inmap.run!
 
