@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/spatialmodel/inmap,73,45
+/spatialmodel/inmap/releases,40,17
+/spatialmodel/inmap/actions,12,1
+/spatialmodel/inmap/releases/tag/v1.10.0-beta.1,8,3
+/spatialmodel/inmap/search,8,2
+/spatialmodel/inmap/releases/tag/v1.9.6,6,5
+/spatialmodel/inmap/tree/master/cmd/inmap,6,4
+/spatialmodel/inmap/blob/master/website/static/blog/2019-04-20-sr/sr_util.py,5,2
+/spatialmodel/inmap/network/dependents,5,1
+/spatialmodel/inmap/blob/master/cmd/inmap/configExample.toml,4,3
