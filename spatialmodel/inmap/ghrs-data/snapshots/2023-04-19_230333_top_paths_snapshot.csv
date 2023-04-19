@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/spatialmodel/inmap,102,70
+/spatialmodel/inmap/releases,29,16
+/spatialmodel/inmap/tree/master/emissions,12,8
+/spatialmodel/inmap/blob/master/Dockerfile,8,3
+/spatialmodel/inmap/tree/master/emissions/aep,6,3
+/spatialmodel/inmap/tree/master/cmd/inmap,6,2
+/spatialmodel/inmap/tree/master/docs,5,4
+/spatialmodel/inmap/tree/master/emissions/slca,5,2
+/spatialmodel/inmap/blob/master/website/static/blog/2019-04-20-sr/sr_util.py,4,4
+/spatialmodel/inmap/blob/master/emissions/slca/eieio/data/aggregates.xlsx,4,3
