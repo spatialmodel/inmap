@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/spatialmodel/inmap,55,34
+/spatialmodel/inmap/releases,20,12
+/spatialmodel/inmap/issues,8,3
+/spatialmodel/inmap/blob/master/cmd/inmap/configExample.toml,6,4
+/spatialmodel/inmap/blob/master/website/static/blog/2019-04-20-sr/sr_util.py,6,4
+/spatialmodel/inmap/blob/master/emissions/slca/population.go,3,2
+/spatialmodel/inmap/blob/master/website/static/blog/2019-04-20-sr/sr_example.ipynb,3,2
+/spatialmodel/inmap/compare/v1.9.6...v1.10.0-beta.1,3,2
+/spatialmodel/inmap/blob/master/cmd/inmap/configExampleGEOSChem.toml,2,2
+/spatialmodel/inmap/blob/master/docs/cmd/inmap_preproc.md,2,2
