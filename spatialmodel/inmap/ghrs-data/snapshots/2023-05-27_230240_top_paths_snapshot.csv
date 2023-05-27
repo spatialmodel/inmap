@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/spatialmodel/inmap,98,55
+/spatialmodel/inmap/releases,64,26
+/spatialmodel/inmap/blob/master/eval/nei2005Config.toml,30,10
+/spatialmodel/inmap/tree/master/cmd/inmap,24,9
+/spatialmodel/inmap/blob/master/cmd/inmap/configExample.toml,18,8
+/spatialmodel/inmap/blob/master/docs/cmd/inmap.md,17,5
+/spatialmodel/inmap/blob/4b8b6f6d3d6945a23fc3ce9ba2743e1fa3077f14/cmd/inmap/configExampleRemote.toml,16,2
+/spatialmodel/inmap/tree/master/emissions,10,4
+/spatialmodel/inmap/blob/4b8b6f6d3d6945a23fc3ce9ba2743e1fa3077f14/geoschem.go,10,1
+/spatialmodel/inmap/blob/master/docs/quickstart.md,9,2
