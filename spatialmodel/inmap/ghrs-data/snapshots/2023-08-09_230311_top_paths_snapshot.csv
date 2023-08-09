@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/spatialmodel/inmap,72,29
+/spatialmodel/inmap/releases,40,12
+/spatialmodel/inmap/tree/master,27,6
+/spatialmodel/inmap/tree/master/cmd/inmap,24,5
+/spatialmodel/inmap/tree/master/eval,18,5
+/spatialmodel/inmap/tree/master/emissions,15,5
+/spatialmodel/inmap/blob/master/docs/cmd/inmap.md,15,3
+/spatialmodel/inmap/blob/master/eval/nei2005Config.toml,14,5
+/spatialmodel/inmap/blob/master/README.md,14,4
+/spatialmodel/inmap/tree/master/.github,14,2
