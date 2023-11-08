@@ -406,6 +406,13 @@ func (gc *GEOSChem) readChemGroupAlt(varGroup map[string]float64) NextData {
 	return nextDataGroupAltNCF(gc.geosChem, geosChemFormat, varGroup, gc.ALT(), gc.start, gc.end, gc.chemRecordDeltaInterval, gc.chemFileDeltaInterval, readNCF, gc.msgChan)
 }
 
+func (gc *GEOSChem) readChemGroupSTP(varGroup map[string]float64) NextData {
+	if gc.noChemHour {
+		return nextDataGroupSTPNCF(gc.geosChem, geosChemFormat, varGroup, gc.start, gc.end, gc.chemRecordDeltaInterval, gc.chemFileDeltaInterval, readNCFNoHour, gc.msgChan)
+	}
+	return nextDataGroupSTPNCF(gc.geosChem, geosChemFormat, varGroup, gc.start, gc.end, gc.chemRecordDeltaInterval, gc.chemFileDeltaInterval, readNCF, gc.msgChan)
+}
+
 var geosLayerConvert = func(nz int) func(NextData) NextData {
 	const (
 		geosLayers          = 72
@@ -704,37 +711,37 @@ func (gc *GEOSChem) W() NextData {
 }
 
 // AVOC helps fulfill the Preprocessor interface.
-func (gc *GEOSChem) AVOC() NextData { return gc.readChemGroupAlt(gc.aVOC) }
+func (gc *GEOSChem) AVOC() NextData { return gc.readChemGroupSTP(gc.aVOC) }
 
 // BVOC helps fulfill the Preprocessor interface.
-func (gc *GEOSChem) BVOC() NextData { return gc.readChemGroupAlt(gc.bVOC) }
+func (gc *GEOSChem) BVOC() NextData { return gc.readChemGroupSTP(gc.bVOC) }
 
 // NOx helps fulfill the Preprocessor interface.
-func (gc *GEOSChem) NOx() NextData { return gc.readChemGroupAlt(gc.nox) }
+func (gc *GEOSChem) NOx() NextData { return gc.readChemGroupSTP(gc.nox) }
 
 // SOx helps fulfill the Preprocessor interface.
-func (gc *GEOSChem) SOx() NextData { return gc.readChemGroupAlt(gc.sox) }
+func (gc *GEOSChem) SOx() NextData { return gc.readChemGroupSTP(gc.sox) }
 
 // NH3 helps fulfill the Preprocessor interface.
-func (gc *GEOSChem) NH3() NextData { return gc.readChemGroupAlt(gc.nh3) }
+func (gc *GEOSChem) NH3() NextData { return gc.readChemGroupSTP(gc.nh3) }
 
 // ASOA helps fulfill the Preprocessor interface.
-func (gc *GEOSChem) ASOA() NextData { return gc.readChemGroupAlt(gc.aSOA) }
+func (gc *GEOSChem) ASOA() NextData { return gc.readChemGroupSTP(gc.aSOA) }
 
 // BSOA helps fulfill the Preprocessor interface.
-func (gc *GEOSChem) BSOA() NextData { return gc.readChemGroupAlt(gc.bSOA) }
+func (gc *GEOSChem) BSOA() NextData { return gc.readChemGroupSTP(gc.bSOA) }
 
 // PNO helps fulfill the Preprocessor interface.
-func (gc *GEOSChem) PNO() NextData { return gc.readChemGroupAlt(gc.pNO) }
+func (gc *GEOSChem) PNO() NextData { return gc.readChemGroupSTP(gc.pNO) }
 
 // PS helps fulfill the Preprocessor interface.
-func (gc *GEOSChem) PS() NextData { return gc.readChemGroupAlt(gc.pS) }
+func (gc *GEOSChem) PS() NextData { return gc.readChemGroupSTP(gc.pS) }
 
 // PNH helps fulfill the Preprocessor interface.
-func (gc *GEOSChem) PNH() NextData { return gc.readChemGroupAlt(gc.pNH) }
+func (gc *GEOSChem) PNH() NextData { return gc.readChemGroupSTP(gc.pNH) }
 
 // TotalPM25 helps fulfill the Preprocessor interface.
-func (gc *GEOSChem) TotalPM25() NextData { return gc.readChemGroupAlt(gc.totalPM25) }
+func (gc *GEOSChem) TotalPM25() NextData { return gc.readChemGroupSTP(gc.totalPM25) }
 
 // SurfaceHeatFlux helps fulfill the Preprocessor interface by returning
 // sensible heat flux from turbulence [W/m2].
