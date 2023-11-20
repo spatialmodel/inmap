@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/spatialmodel/inmap,110,42
+/spatialmodel/inmap/releases,66,28
+/spatialmodel/inmap/releases/tag/v1.9.6,23,6
+/spatialmodel/inmap/blob/master/eval/nei2005Config.toml,22,5
+/spatialmodel/inmap/blob/master/docs/cmd/inmap.md,20,9
+/spatialmodel/inmap/blob/v1.9.6/docs/cmd/inmap_grid.md,18,1
+/spatialmodel/inmap/blob/v1.9.6/sr/srreader.go,17,4
+/spatialmodel/inmap/blob/master/dynamicgrid_test.go,15,5
+/spatialmodel/inmap/blob/master/website/static/blog/2019-04-20-sr/sr_util.py,15,5
+/spatialmodel/inmap/tree/master/cmd/inmap,14,4
