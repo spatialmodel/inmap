@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/spatialmodel/inmap,129,58
+/spatialmodel/inmap/releases,97,32
+/spatialmodel/inmap/blob/master/eval/nei2005Config.toml,34,9
+/spatialmodel/inmap/tree/v1.9.6,26,4
+/spatialmodel/inmap/blob/master/docs/cmd/inmap.md,22,4
+/spatialmodel/inmap/tree/master/emissions,18,6
+/spatialmodel/inmap/tree/master/emissions/aep,17,5
+/spatialmodel/inmap/blob/master/emissions/aep/spatialize.go,14,2
+/spatialmodel/inmap/tree/v1.9.6/emissions/aep,14,2
+/spatialmodel/inmap/blob/master/emissions/aep/sourcedata.go,12,2
