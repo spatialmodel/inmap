@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/spatialmodel/inmap,70,42
+/spatialmodel/inmap/releases,53,16
+/spatialmodel/inmap/tree/master/docs,20,4
+/spatialmodel/inmap/blob/master/docs/cmd/inmap_preproc.md,16,3
+/spatialmodel/inmap/tree/master/cmd/inmap,15,3
+/spatialmodel/inmap/tree/master/docs/cmd,14,1
+/spatialmodel/inmap/tree/master,11,2
+/spatialmodel/inmap/tree/master/emissions,11,2
+/spatialmodel/inmap/releases/tag/v1.9.6,8,6
+/spatialmodel/inmap/blob/master/cmd/inmap/configExampleGEOSChem.toml,8,2
