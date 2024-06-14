@@ -496,6 +496,13 @@ type Outputter struct {
 // 'log10(x)' which applies the base-10 logarithm function log10(x).
 //
 // 'sum(x)' which sums a variable across all grid cells.
+//
+// 'isnan(x)' which reports whether x is an IEEE 754 “not-a-number” value.
+//
+// 'isinf(x, sign)' which reports whether x is an infinity, according to sign. 
+// If sign > 0, isinf reports whether x is positive infinity. If sign < 0, 
+// isinf reports whether x is negative infinity. If sign == 0, isinf reports 
+// whether x is either infinity.
 func NewOutputter(fileName string, allLayers bool, outputVariables map[string]string, outputFunctions map[string]govaluate.ExpressionFunction, m Mechanism) (*Outputter, error) {
 	defaultOutputFuncs := map[string]govaluate.ExpressionFunction{
 		"exp": func(arg ...interface{}) (interface{}, error) {
@@ -521,6 +528,18 @@ func NewOutputter(fileName string, allLayers bool, outputVariables map[string]st
 				return nil, fmt.Errorf("inmap: got %d arguments for function 'sum', but need 1", len(arg))
 			}
 			return floats.Sum(arg[0].([]float64)), nil
+		},
+		"isnan": func(arg ...interface{}) (interface{}, error) {
+			if len(arg) != 1 {
+				return nil, fmt.Errorf("inmap: got %d arguments for function 'isnan', but need 1", len(arg))
+			}
+			return math.IsNaN(arg[0].(float64)), nil
+		},
+		"isinf": func(arg ...interface{}) (interface{}, error) {
+			if len(arg) != 2 {
+				return nil, fmt.Errorf("inmap: got %d arguments for function 'isinf', but need 2", len(arg))
+			}
+			return math.IsInf(arg[0].(float64), arg[1].(int)), nil
 		},
 	}
 
