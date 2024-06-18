@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/spatialmodel/inmap,95,38
+/spatialmodel/inmap/releases,75,17
+/spatialmodel/inmap/tree/master/cmd/inmap,55,10
+/spatialmodel/inmap/blob/master/vargrid.go,50,3
+/spatialmodel/inmap/blob/master/eval/nei2005Config.toml,37,10
+/spatialmodel/inmap/blob/master/cmd/inmap/configExample.toml,26,6
+/spatialmodel/inmap/blob/master/website/static/blog/2022-12-15-tutorial/sr_example.ipynb,18,2
+/spatialmodel/inmap/tree/master/cmd/inmap/testdata,17,4
+/spatialmodel/inmap/tree/master/docs,15,6
+/spatialmodel/inmap/blob/master/docs/cmd/inmap.md,15,5
