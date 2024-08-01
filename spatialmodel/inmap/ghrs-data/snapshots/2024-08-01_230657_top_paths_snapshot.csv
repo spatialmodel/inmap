@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/spatialmodel/inmap,52,30
+/spatialmodel/inmap/tree/master/emissions/aep,47,3
+/spatialmodel/inmap/releases,34,16
+/spatialmodel/inmap/tree/master/emissions/aep/aeputil,33,1
+/spatialmodel/inmap/blob/master/emissions/aep/aeputil/spatial_test.go,22,1
+/spatialmodel/inmap/tree/master/emissions/aep/aeputil/testdata,20,1
+/spatialmodel/inmap/tree/master/emissions,16,3
+/spatialmodel/inmap/tree/master/cmd/inmap,14,3
+/spatialmodel/inmap/tree/master/docs,12,2
+/spatialmodel/inmap/blob/master/emissions/aep/spatialize.go,12,1
