@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/spatialmodel/inmap,51,34
+/spatialmodel/inmap/tree/master/science,24,2
+/spatialmodel/inmap/tree/master/emissions/aep,23,3
+/spatialmodel/inmap/releases,20,8
+/spatialmodel/inmap/tree/master/cmd/inmap,17,4
+/spatialmodel/inmap/tree/master/emissions,15,5
+/spatialmodel/inmap/tree/master/emissions/aep/aeputil/testdata,13,1
+/spatialmodel/inmap/blob/v1.9.6/emissions/aep/aeputil/inventory.go,12,1
+/spatialmodel/inmap/blob/v1.9.6/emissions/aep/inventory.go,12,1
+/spatialmodel/inmap/tree/master/emissions/aep/aeputil,12,1
