@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/spatialmodel/inmap,86,48
+/spatialmodel/inmap/releases,47,19
+/spatialmodel/inmap/blob/v1.9.6/emissions/aep/inventory.go,21,1
+/spatialmodel/inmap/blob/v1.9.6/emissions/aep/ff10.go,17,1
+/spatialmodel/inmap/blob/v1.9.6/emissions/aep/emissions.go,15,1
+/spatialmodel/inmap/releases/tag/v1.9.6,9,6
+/spatialmodel/inmap/blob/v1.9.6/emissions/aep/pointsourcedata.go,9,1
+/spatialmodel/inmap/tree/master/emissions,8,5
+/spatialmodel/inmap/tree/master/cmd/inmap,8,3
+/spatialmodel/inmap/blob/v1.9.6/vargrid.go,8,1
