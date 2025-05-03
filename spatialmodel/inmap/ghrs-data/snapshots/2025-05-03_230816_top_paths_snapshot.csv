@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/spatialmodel/inmap,77,42
+/spatialmodel/inmap/releases,50,28
+/spatialmodel/inmap/blob/v1.9.6/emissions/aep/spatialize.go,21,1
+/spatialmodel/inmap/blob/v1.9.6/emissions/aep/inventory.go,18,1
+/spatialmodel/inmap/blob/v1.9.6/emissions/aep/aeputil/spatial.go,12,1
+/spatialmodel/inmap/blob/v1.9.6/emissions/aep/surrogate.go,11,1
+/spatialmodel/inmap/blob/v1.9.6/emissions/aep/emissions.go,10,1
+/spatialmodel/inmap/blob/master/cmd/inmap/configExample.toml,8,3
+/spatialmodel/inmap/blob/v1.9.6/emissions/aep/ff10.go,8,1
+/spatialmodel/inmap/releases/tag/v1.9.6,7,6
