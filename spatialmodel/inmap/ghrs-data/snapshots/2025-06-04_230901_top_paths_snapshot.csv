@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/spatialmodel/inmap,39,30
+/spatialmodel/inmap/releases,19,9
+/spatialmodel/inmap/blob/master/website/static/blog/2022-12-15-tutorial/sr_example.ipynb,13,5
+/spatialmodel/inmap/blob/master/eval/nei2005Config.toml,6,2
+/spatialmodel/inmap/blob/v1.9.6/emissions/aep/aeputil/spatial.go,6,1
+/spatialmodel/inmap/blob/v1.9.6/emissions/aep/aeputil/spatial_test.go,5,1
+/spatialmodel/inmap/blob/master/README.md,4,3
+/spatialmodel/inmap/tree/master,4,2
+/spatialmodel/inmap/tree/master/cmd/inmap,3,3
+/spatialmodel/inmap/tree/master/docs,3,3
