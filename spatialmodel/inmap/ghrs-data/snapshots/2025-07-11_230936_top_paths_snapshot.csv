@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/spatialmodel/inmap/releases,36,18
+/spatialmodel/inmap,30,24
+/spatialmodel/inmap/blob/master/website/static/blog/2019-04-20-sr/sr_example.ipynb,9,3
+/spatialmodel/inmap/blob/master/eval/nei2005Config.toml,4,4
+/spatialmodel/inmap/blob/master/preproc.go,4,3
+/spatialmodel/inmap/tree/master/emissions/aep,4,2
+/spatialmodel/inmap/releases/tag/v1.9.6,3,3
+/spatialmodel/inmap/blob/master/docs/geos-chem.md,3,2
+/spatialmodel/inmap/compare/v1.9.6...v1.10.0-beta.1,3,1
+/spatialmodel/inmap/issues,2,2
