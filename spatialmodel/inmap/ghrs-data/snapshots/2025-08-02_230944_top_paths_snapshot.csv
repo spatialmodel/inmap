@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/spatialmodel/inmap,43,27
+/spatialmodel/inmap/releases,37,15
+/spatialmodel/inmap/blob/v1.9.6/emissions/aep/inventory.go,7,1
+/spatialmodel/inmap/blob/v1.9.6/emissions/aep/ff10.go,6,1
+/spatialmodel/inmap/blob/v1.9.6/emissions/aep/spatialize.go,6,1
+/spatialmodel/inmap/releases/tag/v1.9.6,5,4
+/spatialmodel/inmap/blob/v1.9.6/emissions/aep/emissions.go,5,1
+/spatialmodel/inmap/compare/v1.9.5...v1.9.6,4,4
+/spatialmodel/inmap/blob/master/website/static/blog/2019-04-20-sr/sr_util.py,4,3
+/spatialmodel/inmap/blob/v1.9.6/emissions/aep/srgspec.go,4,1
