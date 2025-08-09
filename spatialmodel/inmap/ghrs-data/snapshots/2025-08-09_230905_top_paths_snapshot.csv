@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/spatialmodel/inmap,53,27
+/spatialmodel/inmap/releases,31,16
+/spatialmodel/inmap/tree/master,9,5
+/spatialmodel/inmap/releases/tag/v1.9.6,7,7
+/spatialmodel/inmap/blob/master/website/static/blog/2019-04-20-sr/sr_util.py,7,4
+/spatialmodel/inmap/tree/master/cmd/inmap,7,4
+/spatialmodel/inmap/blob/v1.9.6/emissions/aep/spatialize.go,6,1
+/spatialmodel/inmap/blob/master/cmd/inmap/configExampleGEOSChem.toml,4,3
+/spatialmodel/inmap/blob/master/cmd/inmap/main.go,4,3
+/spatialmodel/inmap/blob/v1.9.0/README.md,4,3
