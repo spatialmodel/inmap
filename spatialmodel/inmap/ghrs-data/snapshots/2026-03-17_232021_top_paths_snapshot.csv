@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/spatialmodel/inmap/releases,74,27
+/spatialmodel/inmap,60,39
+/spatialmodel/inmap/releases/tag/v1.9.6,9,6
+/spatialmodel/inmap/blob/master/eval/nei2005Config.toml,8,5
+/spatialmodel/inmap/tree/master/eval,7,4
+/spatialmodel/inmap/tree/master,5,4
+/spatialmodel/inmap/blob/master/docs/cmd/inmap_preproc_combine,5,2
+/spatialmodel/inmap/tree/master/docs,5,2
+/spatialmodel/inmap/blob/master/docs/results.md,5,1
+/spatialmodel/inmap/compare/v1.9.5...v1.9.6,4,4
