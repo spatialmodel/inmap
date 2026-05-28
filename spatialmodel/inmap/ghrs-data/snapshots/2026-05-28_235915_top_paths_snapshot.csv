@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/spatialmodel/inmap,34,21
+/spatialmodel/inmap/releases,26,11
+/spatialmodel/inmap/releases/tag/v1.9.6,8,5
+/spatialmodel/inmap/blob/v1.9.0/README.md,5,2
+/spatialmodel/inmap/blob/master/website/static/blog/2019-04-20-sr/sr_util.py,4,3
+/spatialmodel/inmap/pulls,2,2
+/spatialmodel/inmap/blob/52b7c71b840ca318979d9935ae25c9e8a580397e/emissions/aep/aeputil/testdata/example_config.toml,2,1
+/spatialmodel/inmap/blob/master/docs/cmd/inmap.md,2,1
+/spatialmodel/inmap/blob/master/website/static/blog/2022-12-15-tutorial/sr_example.ipynb,2,1
+/spatialmodel/inmap/actions,1,1
