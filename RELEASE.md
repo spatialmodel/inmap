@@ -17,3 +17,5 @@ This file contains a checklist for steps to take to release a new version of InM
 1. Create a release on github and add any new input or evaluation data as downloads.
 
 1. Github actions will automatically add precompiled binaries to the release.
+
+1. Github actions will automatically rebuild and redeploy the website; no manual step is needed.

@@ -1,17 +1,24 @@
-#!/usr/bin/env bash
+# Development targets for the InMAP website. The published website is built
+# and deployed by the 'website' GitHub Actions workflow; these targets are for
+# previewing changes locally. See README.md in this directory.
 
-docusaurus :
-	- docker run --rm -it -v `pwd`/tempdir:/src --user $(id -u):$(id -g) mkenney/npm:debian npx docusaurus-init
-	- sudo chown -R $$USER:$$USER tempdir
-	- mv tempdir/website/node_modules .
+# The command documentation in ../docs is automatically generated and is not
+# checked in, so it has to be created before the website can be built.
+docs :
+	cd .. && go generate .
 
-update :
-	- cd ../ && docker run --rm -it -v `pwd`:/src mkenney/npm:debian /bin/bash -c "cd website && yarn run build"
-	- sudo chown -R $$USER:$$USER build
+node_modules : package-lock.json
+	npm ci
 
-host :
-	- docker run --rm -p 3000:3000 -it -v `pwd`:/src mkenney/npm:debian /bin/bash -c "cd website && yarn start"
+# Build the website into build/InMAP.
+build : docs node_modules
+	npx docusaurus-build
 
-.PHONY : clean
+# Serve the website at localhost:3000.
+host : docs node_modules
+	npx docusaurus-start
+
 clean :
-	- rm -rf node_modules tempdir
+	rm -rf node_modules build
+
+.PHONY : docs build host clean
