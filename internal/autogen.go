@@ -44,9 +44,16 @@ func init() {
 func main() {
 	cfg := inmaputil.InitializeConfig()
 
-	// Generate documentation for the available commands.
-	doc.GenMarkdownTree(cfg.Root, "./docs/cmd/")
-	editCobraDoc("./docs/cmd")
+	// Generate documentation for the available commands. The directory is
+	// created here because the generated documentation is not checked in.
+	const cmdDir = "./docs/cmd"
+	if err := os.MkdirAll(cmdDir, 0755); err != nil {
+		log.Fatal(err)
+	}
+	if err := doc.GenMarkdownTree(cfg.Root, cmdDir); err != nil {
+		log.Fatal(err)
+	}
+	editCobraDoc(cmdDir)
 
 	writeOutputOptions()
 }
@@ -91,7 +98,20 @@ func writeOutputOptions() {
 		log.Fatal(err)
 	}
 
-	r, err := os.Open(cfg.VariableGridData)
+	// Create a variable-resolution grid in a temporary location rather than
+	// relying on a pre-existing one, which may have been created by an
+	// incompatible version of InMAP.
+	tmpDir, err := ioutil.TempDir("", "inmap-autogen")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+	gridFile := filepath.Join(tmpDir, "inmapVarGrid.gob")
+	if err := inmaputil.Grid(cfg.InMAPData, gridFile, &cfg.VarGrid); err != nil {
+		log.Fatal(err)
+	}
+
+	r, err := os.Open(gridFile)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -170,6 +190,9 @@ sidebar_label: %s
 
 `
 	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 		if info.IsDir() {
 			return nil
 		}
