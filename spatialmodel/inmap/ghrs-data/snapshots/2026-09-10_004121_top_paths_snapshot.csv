@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/spatialmodel/inmap,44,31
+/spatialmodel/inmap/releases,23,10
+/spatialmodel/inmap/blob/master/preproc.go,15,7
+/spatialmodel/inmap/blob/master/README.md,4,4
+/spatialmodel/inmap/releases/tag/v1.9.6,4,2
+/spatialmodel/inmap/tree/v1.5.1,4,1
+/spatialmodel/inmap/blob/master/docs/cmd/inmap_preproc.md,3,3
+/spatialmodel/inmap/tree/master,3,3
+/spatialmodel/inmap/blob/master/docs/output_options.md,3,2
+/spatialmodel/inmap/compare/v1.9.5...v1.9.6,3,2
