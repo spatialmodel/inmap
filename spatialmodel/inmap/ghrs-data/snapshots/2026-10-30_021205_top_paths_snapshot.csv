@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/spatialmodel/inmap,24,19
+/spatialmodel/inmap/releases,13,10
+/spatialmodel/inmap/tree/master/cmd,3,2
+/spatialmodel/inmap/blob/master/LICENSE.txt,2,2
+/spatialmodel/inmap/blob/master/cmd/inmap/configExample.toml,2,2
+/spatialmodel/inmap/blob/master/docs/cmd/inmap_preproc.md,2,2
+/spatialmodel/inmap/blob/master/wrfchem.go,2,2
+/spatialmodel/inmap/tree/master/cmd/inmap,2,2
+/spatialmodel/inmap/tree/master/cmd/inmap/testdata,2,2
+/spatialmodel/inmap/blob/master/website/static/blog/2019-04-20-sr/sr_util.py,2,1
