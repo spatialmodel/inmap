@@ -63,6 +63,28 @@ var NasariACS = Nasari{
 	Label:  "NasariACS",
 }
 
+// GlobalGEMM is an exposure-response model for all adults in a pooled
+// global cohort, following:
+// Burnett R, Chen H, Szyszkowicz M, Fann N, Hubbell B, Pope CA III,
+// Apte JS, Brauer M, Cohen A, Weichenthal S, Coggins J, Di Q,
+// Brunekreef B, Frostad J, Lim SS, Kan H, Walker KD, Thurston GD, Hayes
+// RB, Lim CC, Turner MC, Jerrett M, Krewski D, Gapstur SM, Diver WR,
+// Ostro B, Goldberg D, Crouse DL, Martin RV, Peters P, Pinault L,
+// Tjepkema M, van Donkelaar A, Villeneuve PJ, Miller AB, Yin P, Zhou M,
+// Wang L, Janssen NAH, Marra M, Atkinson RW, Tsang H, Thach TQ, Cannon
+// JB, Allen RT, Hart JE, Laden F, Cesaroni G, Forastiere F, Weinmayr G,
+// Jaensch A, Nagel G, Concin H, Spadaro JV. (2018). Global estimates of
+// mortality associated with long-term exposure to outdoor fine
+// particulate matter. Proceedings of the National Academy of Sciences:
+// DOI: 10.1073/pnas.1803222115.
+var GlobalGEMM = Nasari{
+    Gamma:  0.1430,
+    Delta:  15.5,
+    Lambda: 36.8,
+    F:      func(z float64) float64 { return math.Log(z/2.6) },
+    Label:  "GlobalGEMM",
+}
+
 // Cox implements a Cox proportional hazards model.
 type Cox struct {
 	// Beta is the model coefficient
